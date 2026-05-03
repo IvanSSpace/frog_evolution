@@ -14,6 +14,10 @@ export default defineConfig({
     assetsInlineLimit: 0,
     rollupOptions: {
       output: {
+        manualChunks: {
+          phaser: ['phaser'],
+          vendor: ['react', 'react-dom', 'zustand', '@tanstack/react-query'],
+        },
         assetFileNames: (assetInfo) => {
           if (assetInfo.name && assetInfo.name === 'index.css') {
             return 'assets/[name]-[hash].css'
