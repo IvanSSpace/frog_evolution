@@ -3,51 +3,65 @@ import React from 'react'
 type BadgeProps = { children: React.ReactNode }
 
 function NotifBadge({ children }: BadgeProps) {
-  return (
-    <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 border-2 border-white rounded-full flex items-center justify-center text-white text-[10px] font-bold leading-none">
-      {children}
-    </span>
-  )
+  return <span className="ff-badge">{children}</span>
 }
 
-type BtnProps = {
+type TileSkin = 'mint' | 'green' | 'purple' | 'red' | 'teal' | 'amber' | 'cream'
+
+type TileProps = {
   emoji: string
-  bg: string
-  border?: string
+  skin: TileSkin
   size?: 'md' | 'lg'
   badge?: boolean
+  onClick?: () => void
 }
 
-function Btn({ emoji, bg, border, size = 'md', badge = false }: BtnProps) {
-  const dim = size === 'lg' ? 'w-16 h-16 text-3xl rounded-2xl' : 'w-12 h-12 text-2xl rounded-xl'
-  const borderCls = border ? `border-4 ${border}` : ''
+const SKIN_VARS: Record<TileSkin, React.CSSProperties> = {
+  mint:   { ['--ff-tile-from' as never]: '#a7f3d0', ['--ff-tile-to' as never]: '#34d399', ['--ff-tile-border' as never]: '#065f46' },
+  green:  { ['--ff-tile-from' as never]: '#86efac', ['--ff-tile-to' as never]: '#16a34a', ['--ff-tile-border' as never]: '#14532d' },
+  purple: { ['--ff-tile-from' as never]: '#d8b4fe', ['--ff-tile-to' as never]: '#9333ea', ['--ff-tile-border' as never]: '#3b0764' },
+  red:    { ['--ff-tile-from' as never]: '#fca5a5', ['--ff-tile-to' as never]: '#dc2626', ['--ff-tile-border' as never]: '#7f1d1d' },
+  teal:   { ['--ff-tile-from' as never]: '#5eead4', ['--ff-tile-to' as never]: '#0d9488', ['--ff-tile-border' as never]: '#134e4a' },
+  amber:  { ['--ff-tile-from' as never]: '#fcd34d', ['--ff-tile-to' as never]: '#d97706', ['--ff-tile-border' as never]: '#78350f' },
+  cream:  { ['--ff-tile-from' as never]: '#fef3c7', ['--ff-tile-to' as never]: '#fbbf24', ['--ff-tile-border' as never]: '#78350f' },
+}
+
+function Tile({ emoji, skin, size = 'md', badge = false, onClick }: TileProps) {
+  const dim = size === 'lg' ? 'w-16 h-16 text-3xl' : 'w-12 h-12 text-2xl'
   return (
     <button
-      className={`relative flex-shrink-0 flex items-center justify-center ${dim} ${bg} ${borderCls} shadow-md active:scale-95 transition-transform`}
-      style={{ pointerEvents: 'auto' }}
+      onClick={onClick}
+      style={{ pointerEvents: 'auto', ...SKIN_VARS[skin] }}
+      className={`ff-tile flex-shrink-0 ${dim} active:scale-100`}
     >
-      {emoji}
+      <span style={{ filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))' }}>{emoji}</span>
       {badge && <NotifBadge>!</NotifBadge>}
     </button>
   )
 }
 
-export function BottomBar() {
-  return (
-    <div className="w-full h-full flex items-center justify-between px-3 py-2" style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)' }}>
-      {/* Left — current frog */}
-      <Btn emoji="🐸" bg="bg-teal-100" border="border-teal-400" size="lg" />
+type BottomBarProps = {
+  onOpenShop?: () => void
+  onOpenFrogShop?: () => void
+}
 
-      {/* Center — 4 action buttons */}
+export function BottomBar({ onOpenShop, onOpenFrogShop }: BottomBarProps) {
+  return (
+    <div className="ff-bar bottom w-full h-full flex items-center justify-between px-3 py-2"
+         style={{ pointerEvents: 'auto' }}>
+      {/* Слева — лавка лягушек */}
+      <Tile emoji="🐸" skin="mint" size="lg" onClick={onOpenFrogShop} />
+
+      {/* Центр — действия */}
       <div className="flex gap-2 items-center">
-        <Btn emoji="⬆️"  bg="bg-green-500"  />
-        <Btn emoji="🎨"  bg="bg-purple-400" badge />
-        <Btn emoji="🎁"  bg="bg-red-400"    badge />
-        <Btn emoji="🛍️" bg="bg-emerald-400" />
+        <Tile emoji="⬆️"  skin="green"  onClick={onOpenShop} />
+        <Tile emoji="🎨"  skin="purple" badge />
+        <Tile emoji="🎁"  skin="red"    badge />
+        <Tile emoji="🛍️" skin="teal" />
       </div>
 
-      {/* Right — journal */}
-      <Btn emoji="📖" bg="bg-orange-100" border="border-orange-500" size="lg" badge />
+      {/* Справа — журнал */}
+      <Tile emoji="📖" skin="cream" size="lg" badge />
     </div>
   )
 }

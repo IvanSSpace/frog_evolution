@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
-import { useGameStore } from '../../store/gameStore'
+import { useGameStore, getDropIntervalMs, getMagnetSpawnInterval, getMagnetDuration, getMagnetMergesPerCycle } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
-import { FROG_LEVELS, MAX_LEVEL, textureKeyForLevel } from '../config/frogs'
+import { FROG_LEVELS, MAX_LEVEL, textureKeyForLevel, rollPoopType, POOP_INTERVAL_MS, getTargetIncomePerSec, getPoopValueExact, stochasticRound, type PoopType } from '../config/frogs'
 
 // Игра рендерится в физических пикселях (window * DPR), CSS-зум 1/DPR в game/index.ts
 // Все размеры/координаты ниже задаются в CSS-пикселях, умножение на DPR делается здесь
@@ -9,25 +9,20 @@ const DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 3))
 
 const DASH_RADIUS = 70 * DPR
 const FIELD_PAD_X = 48 * DPR
-const FIELD_PAD_Y = 24 * DPR
+const FIELD_PAD_Y = 60 * DPR        // верхний отступ от верха канваса
+const FIELD_PAD_Y_BOTTOM = 90 * DPR // нижний отступ — крупнее, чтобы лягушки не уходили слишком вниз
 const MERGE_RADIUS = 50 * DPR
 
 // Бокс-дропы
 const MAX_ENTITIES = 16            // суммарный лимит лягушки + коробки
-const BOX_INTERVAL_MS = 10000      // интервал заполнения прогресс-бара
 const BOX_FALL_DURATION = 380      // длительность падения (быстрее)
 const BOX_DISPLAY_SIZE = 56 * DPR  // размер коробки на экране
 const BOX_IDLE_INTERVAL = 5500     // период подпрыгивания
+const BOX_OPEN_RADIUS = 80 * DPR   // радиус разлёта тапа — открывает все коробки рядом
 
 // SVG грузится в физических пикселях (CSS * DPR), плюс +50% для запаса
 const TEXTURE_QUALITY = DPR * 1.5
 const BASE_SCALE = DPR / TEXTURE_QUALITY  // = 1/1.5 ≈ 0.667
-
-interface Poop {
-  img: Phaser.GameObjects.Image
-  value: number
-  expiresAt: number
-}
 
 interface BoxData {
   img: Phaser.GameObjects.Image
@@ -37,6 +32,17 @@ interface BoxData {
   idleTween: Phaser.Tweens.TweenChain | null
 }
 
+interface MagnetData {
+  container: Phaser.GameObjects.Container
+  emoji: Phaser.GameObjects.Text
+  x: number
+  y: number
+  expiresAt: number
+  pair: [FrogData, FrogData]
+  mergesDone: number
+  mergesTarget: number
+}
+
 interface FrogData {
   container: Phaser.GameObjects.Container
   body: Phaser.GameObjects.Image
@@ -44,16 +50,18 @@ interface FrogData {
   isMoving: boolean
   isDragging: boolean
   isMerging: boolean
+  isAttracted: boolean
   level: number
-  dragPoopTimer: Phaser.Time.TimerEvent | null
+  poopTimer: Phaser.Time.TimerEvent | null
 }
 
 export class MainScene extends Phaser.Scene {
   private frogs: FrogData[] = []
-  private poops: Poop[] = []
   private boxes: BoxData[] = []
   private boxProgressMs = 0
-  private boxWaiting = false
+
+  private magnets: MagnetData[] = []
+  private magnetSpawnMs = 0
 
   constructor() {
     super({ key: 'MainScene' })
@@ -82,16 +90,20 @@ export class MainScene extends Phaser.Scene {
 
     // Временная рамка игрового поля
     const fieldW = width - FIELD_PAD_X * 2
-    const fieldH = height - FIELD_PAD_Y * 2
-    this.add.rectangle(width / 2, height / 2, fieldW, fieldH)
+    const fieldH = height - FIELD_PAD_Y - FIELD_PAD_Y_BOTTOM
+    const fieldCenterY = (FIELD_PAD_Y + (height - FIELD_PAD_Y_BOTTOM)) / 2
+    this.add.rectangle(width / 2, fieldCenterY, fieldW, fieldH)
       .setStrokeStyle(2, 0xffffff, 0.35)
       .setFillStyle(0x000000, 0)
 
-    // Тест: по одной лягушке каждого уровня в сетке — для подгонки размеров
+    // Подписка на покупку лягушки из магазина
+    eventBus.on('frog:purchased', this.onFrogPurchased)
+
+    // ТЕСТ: по одной лягушке каждого уровня (1..7), сетка 3+3+1
     const cols = 3
     const rows = Math.ceil(MAX_LEVEL / cols)
     const cellW = (width - FIELD_PAD_X * 2) / cols
-    const cellH = (height - FIELD_PAD_Y * 2) / rows
+    const cellH = (height - FIELD_PAD_Y - FIELD_PAD_Y_BOTTOM) / rows
     for (let lvl = 1; lvl <= MAX_LEVEL; lvl++) {
       const idx = lvl - 1
       const col = idx % cols
@@ -108,6 +120,7 @@ export class MainScene extends Phaser.Scene {
 
     const body = this.add.image(0, 0, textureKeyForLevel(level))
     body.scaleY = 1.0
+    body.setTint(FROG_LEVELS[level - 1].tint)
     body.setInteractive({ useHandCursor: true })
     this.input.setDraggable(body)
 
@@ -119,10 +132,33 @@ export class MainScene extends Phaser.Scene {
       isMoving: false,
       isDragging: false,
       isMerging: false,
+      isAttracted: false,
       level,
-      dragPoopTimer: null,
+      poopTimer: null,
     }
     this.frogs.push(frog)
+    this.syncEntityCount()
+
+    // Лягушка какает по своему таймеру 1.7с — независимо от прыжка/драга
+    // startAt со случайным смещением — чтобы лягушки какали вразнобой, а не синхронно
+    frog.poopTimer = this.time.addEvent({
+      delay: POOP_INTERVAL_MS,
+      startAt: Math.random() * POOP_INTERVAL_MS,
+      loop: true,
+      callback: () => {
+        if (frog.isMerging) return
+        const type = rollPoopType(frog.level)
+        this.spawnAutoPoop(frog, type)
+        // Лёгкое сжатие тела на каждый пук (поверх idle, не блокирует)
+        this.tweens.add({
+          targets: frog.body,
+          scaleY: 0.85,
+          duration: 70,
+          yoyo: true,
+          ease: 'Power2.easeIn',
+        })
+      },
+    })
 
     let dragMoved = false
     let dragStartX = 0
@@ -156,30 +192,7 @@ export class MainScene extends Phaser.Scene {
         },
       })
 
-      // Poop periodically while held, but no jumping
-      frog.dragPoopTimer = this.time.addEvent({
-        delay: 1200,
-        loop: true,
-        callback: () => {
-          this.spawnPoop(frog.container.x, frog.container.y, frog.facingRight)
-          // Squish при каждой какашке
-          this.tweens.killTweensOf(frog.body)
-          this.tweens.add({
-            targets: frog.body,
-            scaleY: 0.8,
-            duration: 60,
-            ease: 'Power2.easeIn',
-            onComplete: () => {
-              this.tweens.add({
-                targets: frog.body,
-                scaleY: 1.0,
-                duration: 150,
-                ease: 'Back.easeOut',
-              })
-            },
-          })
-        },
-      })
+      // Какание идёт по своему таймеру (frog.poopTimer) — драг его не блокирует
     })
 
     body.on('drag', (pointer: Phaser.Input.Pointer) => {
@@ -205,8 +218,6 @@ export class MainScene extends Phaser.Scene {
 
     body.on('dragend', (pointer: Phaser.Input.Pointer) => {
       frog.isDragging = false
-      frog.dragPoopTimer?.remove()
-      frog.dragPoopTimer = null
 
       // Сначала проверяем мердж в позиции отпускания пальца
       if (frog.level < MAX_LEVEL) {
@@ -228,7 +239,7 @@ export class MainScene extends Phaser.Scene {
       const minX = FIELD_PAD_X + margin
       const maxX = width - FIELD_PAD_X - margin
       const minY = FIELD_PAD_Y + margin
-      const maxY = height - FIELD_PAD_Y - margin
+      const maxY = height - FIELD_PAD_Y_BOTTOM - margin
       const clampedX = Phaser.Math.Clamp(frog.container.x, minX, maxX)
       const clampedY = Phaser.Math.Clamp(frog.container.y, minY, maxY)
       const outOfBounds = clampedX !== frog.container.x || clampedY !== frog.container.y
@@ -297,6 +308,10 @@ export class MainScene extends Phaser.Scene {
 
   private performDash(frog: FrogData) {
     if (frog.isMerging) return
+    if (frog.isAttracted) {
+      this.scheduleNextDash(frog)
+      return
+    }
     if (frog.isMoving) {
       this.scheduleNextDash(frog)
       return
@@ -309,7 +324,7 @@ export class MainScene extends Phaser.Scene {
     const fromX = frog.container.x
     const fromY = frog.container.y
     const toX = Phaser.Math.Clamp(fromX + Math.cos(angle) * dist, FIELD_PAD_X + 10 * DPR, width - FIELD_PAD_X - 10 * DPR)
-    const toY = Phaser.Math.Clamp(fromY + Math.sin(angle) * dist, FIELD_PAD_Y + 10 * DPR, height - FIELD_PAD_Y - 10 * DPR)
+    const toY = Phaser.Math.Clamp(fromY + Math.sin(angle) * dist, FIELD_PAD_Y + 10 * DPR, height - FIELD_PAD_Y_BOTTOM - 10 * DPR)
 
     const movingRight = toX >= fromX
     if (movingRight !== frog.facingRight) {
@@ -320,10 +335,9 @@ export class MainScene extends Phaser.Scene {
     frog.isMoving = true
     this.tweens.killTweensOf(frog.body)
 
-    // 1. Poop appears at current position
-    this.spawnPoop(fromX, fromY, frog.facingRight)
+    // Какашки идут по своему таймеру (frog.poopTimer), независимо от прыжка
 
-    // 2. Short pause, then leap
+    // Короткая пауза перед прыжком
     this.time.delayedCall(350, () => {
       // Лягушку взяли пока шла пауза — отменяем прыжок
       if (frog.isDragging) {
@@ -389,8 +403,9 @@ export class MainScene extends Phaser.Scene {
       }
     }
 
-    // Иначе обычная какашка + squish
-    this.spawnPoop(frog.container.x, frog.container.y, frog.facingRight)
+    // Тап = +1 монета (не зависит от уровня), отдельно от какашек
+    useGameStore.getState().addGold(1)
+    this.spawnFloatingText(frog.container.x, frog.container.y - 20 * DPR, '+1', 'regular')
 
     this.tweens.killTweensOf(frog.body)
     this.tweens.add({
@@ -412,56 +427,100 @@ export class MainScene extends Phaser.Scene {
     })
   }
 
-  private spawnPoop(x: number, y: number, facingRight: boolean) {
-    const value = 1
-    // Spawn from behind the frog, slightly above center
-    const behindX = x + (facingRight ? -10 * DPR : 10 * DPR)
-    const img = this.add.image(behindX, y + 6 * DPR, 'poop')
-    img.setInteractive({ useHandCursor: true })
-    img.setAlpha(0)
-    img.setScale(0.4 * BASE_SCALE)
+  // ============== КАКАШКИ (auto-collect) ==============
 
-    // Shoot diagonally: 75° from vertical = mostly backward, little downward
-    const rad = (75 * Math.PI) / 180
-    const dist = 16 * DPR
-    const dx = dist * Math.sin(rad)
-    const dy = dist * Math.cos(rad)
-    const landX = behindX + (facingRight ? -dx : dx)
-    const landY = y + 10 * DPR + dy
+  private spawnAutoPoop(frog: FrogData, type: PoopType) {
+    const x = frog.container.x
+    const y = frog.container.y
+    const facingRight = frog.facingRight
+    // Сумма вычисляется по точной цели уровня (target/sec × interval),
+    // округляется стохастически — среднее за время точно матчит target.
+    const value = stochasticRound(getPoopValueExact(frog.level))
+
+    const tintByType: Record<PoopType, number> = {
+      regular: 0x8b5a2b, // тёмно-коричневый
+      big: 0xc88b4c,     // светло-золотисто-коричневый
+      huge: 0xc0c0c0,    // серебряный
+    }
+    // Размер у всех типов одинаковый, но крупнее базы
+    const finalScale = BASE_SCALE * 1.3
+
+    // Положение приземления какашки — отдельно по X и Y, индекс = уровень-1
+    // horizDistByLevel — насколько далеко по ГОРИЗОНТАЛИ от лягушки (положительное — назад от неё)
+    // vertOffsetByLevel — насколько НИЖЕ центра лягушки приземлится (положительное — вниз, отрицательное — вверх)
+    const horizDistByLevel = [20, 26, 34, 38, 40, 42, 42] // L1..L7
+    const vertOffsetByLevel = [14, 16, 16, 18, 20, 10, 26] // L1..L7
+
+    const horizDist = (horizDistByLevel[Math.min(frog.level - 1, 6)] ?? 28) * DPR
+    const vertOffset = (vertOffsetByLevel[Math.min(frog.level - 1, 6)] ?? 16) * DPR
+
+    const behindX = x + (facingRight ? -10 * DPR : 10 * DPR)
+    const startY = y + 6 * DPR
+    const img = this.add.image(behindX, startY, 'poop')
+    img.setAlpha(0)
+    img.setScale(0.4 * finalScale)
+    img.setTint(tintByType[type])
+
+    // Phase 1: какашка появляется сзади и приземляется на (landX, landY)
+    const landX = behindX + (facingRight ? -horizDist : horizDist)
+    const landY = y + vertOffset
 
     this.tweens.add({
       targets: img,
       x: landX,
       y: landY,
       alpha: 1,
-      scale: BASE_SCALE,
+      scale: finalScale,
       duration: 220,
       ease: 'Power2.easeOut',
-    })
+      onComplete: () => {
+        // Какашка статична, медленно тает на месте.
+        // Если стохастический round дал 0 (для совсем малых таргетов) — без денег и цифры,
+        // визуал какашки всё равно показываем.
+        if (value > 0) {
+          useGameStore.getState().addGold(value)
+          eventBus.emit('poop:collected', { value })
+          this.spawnFloatingText(landX, landY - 22 * DPR, `+${value}`, type)
+        }
 
-    const poopObj: Poop = { img, value, expiresAt: Date.now() + 1000 }
-    img.on('pointerdown', () => this.collectPoop(poopObj))
-    this.poops.push(poopObj)
+        this.tweens.add({
+          targets: img,
+          alpha: 0,
+          duration: 1100,
+          ease: 'Sine.easeIn',
+          onComplete: () => img.destroy(),
+        })
+      },
+    })
   }
 
-  private collectPoop(poopObj: Poop) {
-    const { img, value } = poopObj
-    if (!img.active) return
+  private spawnFloatingText(x: number, y: number, text: string, _type: PoopType) {
+    // Все цифры — золотые, очень мелкие, медленно поднимаются
+    const t = this.add.text(x, y, text, {
+      fontFamily: 'Russo One, sans-serif',
+      fontSize: `${11 * DPR}px`,
+      color: '#fde047',
+      stroke: '#3a2207',
+      strokeThickness: 2.5 * DPR,
+    })
+    t.setOrigin(0.5)
+    t.setDepth(99998)
 
-    useGameStore.getState().addGold(value)
-    eventBus.emit('poop:collected', { value })
-
+    // Сначала летит вверх без затухания
     this.tweens.add({
-      targets: img,
-      y: img.y - 40 * DPR,
+      targets: t,
+      y: y - 32 * DPR,
+      duration: 1800,
+      ease: 'Sine.easeOut',
+    })
+    // Затухание стартует позже и идёт быстрее, продолжая полёт
+    this.tweens.add({
+      targets: t,
       alpha: 0,
-      scale: 1.5 * BASE_SCALE,
-      duration: 350,
-      ease: 'Power2',
-      onComplete: () => {
-        img.destroy()
-        this.poops = this.poops.filter((p) => p !== poopObj)
-      },
+      delay: 1000,
+      duration: 700,
+      ease: 'Sine.easeIn',
+      onComplete: () => t.destroy(),
     })
   }
 
@@ -495,10 +554,10 @@ export class MainScene extends Phaser.Scene {
     this.tweens.killTweensOf(b.body)
     a.body.disableInteractive()
     b.body.disableInteractive()
-    a.dragPoopTimer?.remove()
-    a.dragPoopTimer = null
-    b.dragPoopTimer?.remove()
-    b.dragPoopTimer = null
+    a.poopTimer?.remove()
+    a.poopTimer = null
+    b.poopTimer?.remove()
+    b.poopTimer = null
 
     eventBus.emit('merge:happened', { level: a.level })
 
@@ -534,6 +593,15 @@ export class MainScene extends Phaser.Scene {
             })
           },
         })
+
+        // Если уровень открыт впервые — эмитим событие для модалки
+        console.log('[performMerge] newLevel=', newLevel, 'a.level=', a.level, 'b.level=', b.level)
+        const wasNew = useGameStore.getState().markDiscovered(newLevel)
+        console.log('[performMerge] markDiscovered returned', wasNew)
+        if (wasNew) {
+          console.log('[performMerge] emitting frog:discovered')
+          eventBus.emit('frog:discovered', { level: newLevel })
+        }
       })
     })
   }
@@ -612,8 +680,10 @@ export class MainScene extends Phaser.Scene {
 
   private removeFrog(frog: FrogData) {
     this.frogs = this.frogs.filter((f) => f !== frog)
-    frog.dragPoopTimer?.remove()
+    frog.poopTimer?.remove()
+    frog.poopTimer = null
     frog.container.destroy()
+    this.syncEntityCount()
   }
 
   // ============== БОКС-ДРОПЫ ==============
@@ -625,7 +695,7 @@ export class MainScene extends Phaser.Scene {
   private spawnBox() {
     const { width, height } = this.scale
     const x = Phaser.Math.Between(FIELD_PAD_X + 40 * DPR, width - FIELD_PAD_X - 40 * DPR)
-    const targetY = Phaser.Math.Between(FIELD_PAD_Y + 40 * DPR, height - FIELD_PAD_Y - 40 * DPR)
+    const targetY = Phaser.Math.Between(FIELD_PAD_Y + 40 * DPR, height - FIELD_PAD_Y_BOTTOM - 40 * DPR)
 
     // Стартуем выше канваса — коробка просто влетает в кадр без fade
     const startY = -BOX_DISPLAY_SIZE
@@ -636,13 +706,22 @@ export class MainScene extends Phaser.Scene {
 
     const box: BoxData = { img, isLanding: true, baseScale, baseY: targetY, idleTween: null }
     this.boxes.push(box)
+    this.syncEntityCount()
 
     // Инпут вешаем сразу, во время падения handler игнорирует через isLanding
     img.setInteractive({ useHandCursor: true })
-    img.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+    img.on('pointerdown', () => {
       if (box.isLanding) return
-      event.stopPropagation()
-      this.onBoxTapped(box)
+      // Открываем тапнутую коробку + все приземлившиеся в радиусе
+      const cx = box.img.x
+      const cy = box.img.y
+      const targets: BoxData[] = []
+      for (const b of this.boxes) {
+        if (b.isLanding) continue
+        const d = Phaser.Math.Distance.Between(cx, cy, b.img.x, b.img.y)
+        if (d <= BOX_OPEN_RADIUS) targets.push(b)
+      }
+      for (const t of targets) this.onBoxTapped(t)
     })
 
     this.tweens.add({
@@ -731,6 +810,7 @@ export class MainScene extends Phaser.Scene {
     const baseScale = box.baseScale
 
     this.boxes = this.boxes.filter((b) => b !== box)
+    this.syncEntityCount()
     this.tweens.killTweensOf(box.img)
     box.idleTween = null
     box.img.disableInteractive()
@@ -768,8 +848,8 @@ export class MainScene extends Phaser.Scene {
     this.cameras.main.shake(120, 0.005)
     this.flashAt(x, y)
 
-    // Спавн лягушки level 1 с pop
-    this.time.delayedCall(80, () => {
+    // Спавн лягушки level 1 с pop — без задержки, реакция мгновенная
+    this.time.delayedCall(0, () => {
       const newFrog = this.spawnFrog(x, y, 1)
       newFrog.container.setScale(0)
       this.tweens.add({
@@ -788,41 +868,258 @@ export class MainScene extends Phaser.Scene {
       })
     })
 
-    // Если ждали освободившегося слота — спавним новую коробку
-    if (this.boxWaiting) {
-      this.time.delayedCall(250, () => {
-        if (this.canSpawnBox()) {
-          this.spawnBox()
-          this.boxProgressMs = 0
-          this.boxWaiting = false
-          useGameStore.getState().setBoxWaiting(false)
-        }
-      })
+    // Освободившийся слот подхватит сам update() — не нужно дёргать вручную
+  }
+
+  // ============== МАГНИТ ==============
+
+  // Ищет ближайшую пару лягушек одного уровня — кандидата для магнита
+  private findClosestSameLevelPair(): [FrogData, FrogData] | null {
+    const byLevel = new Map<number, FrogData[]>()
+    for (const f of this.frogs) {
+      if (f.isMerging || f.isDragging || f.isAttracted) continue
+      if (f.level >= MAX_LEVEL) continue
+      const arr = byLevel.get(f.level) ?? []
+      arr.push(f)
+      byLevel.set(f.level, arr)
     }
+
+    let bestPair: [FrogData, FrogData] | null = null
+    let bestDist = Infinity
+    for (const frogs of byLevel.values()) {
+      if (frogs.length < 2) continue
+      for (let i = 0; i < frogs.length; i++) {
+        for (let j = i + 1; j < frogs.length; j++) {
+          const a = frogs[i]
+          const b = frogs[j]
+          const d = Phaser.Math.Distance.Between(a.container.x, a.container.y, b.container.x, b.container.y)
+          if (d < bestDist) {
+            bestDist = d
+            bestPair = [a, b]
+          }
+        }
+      }
+    }
+    return bestPair
+  }
+
+  private hasMergeablePair(): boolean {
+    return this.findClosestSameLevelPair() !== null
+  }
+
+  private spawnMagnet(level: number) {
+    const pair = this.findClosestSameLevelPair()
+    if (!pair) return
+
+    const [a, b] = pair
+
+    // Освобождаем пару от их текущих движений чтобы магнит чисто тянул
+    for (const f of [a, b]) {
+      this.tweens.killTweensOf(f.container)
+      f.isMoving = false
+    }
+
+    const x = (a.container.x + b.container.x) / 2
+    const y = (a.container.y + b.container.y) / 2
+    const duration = getMagnetDuration(level)
+
+    const container = this.add.container(x, y)
+    container.setDepth(99000)
+
+    const emoji = this.add.text(0, 0, '🧲', { fontSize: `${30 * DPR}px` })
+    emoji.setOrigin(0.5)
+    container.add(emoji)
+    container.setScale(0)
+
+    // Pop-in
+    this.tweens.add({
+      targets: container,
+      scale: 1,
+      duration: 200,
+      ease: 'Back.easeOut',
+    })
+
+    // Лёгкая пульсация эмодзи
+    this.tweens.add({
+      targets: emoji,
+      scale: 1.12,
+      duration: 600,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    })
+
+    const magnet: MagnetData = {
+      container, emoji, x, y,
+      expiresAt: Date.now() + duration,
+      pair,
+      mergesDone: 0,
+      mergesTarget: getMagnetMergesPerCycle(level),
+    }
+    this.magnets.push(magnet)
+  }
+
+  private removeMagnet(magnet: MagnetData) {
+    this.magnets = this.magnets.filter((m) => m !== magnet)
+    this.tweens.killTweensOf(magnet.emoji)
+    this.tweens.killTweensOf(magnet.container)
+    this.tweens.add({
+      targets: magnet.container,
+      scale: 0,
+      alpha: 0,
+      duration: 180,
+      ease: 'Power2.easeIn',
+      onComplete: () => magnet.container.destroy(),
+    })
+  }
+
+  private updateMagnets() {
+    const now = Date.now()
+
+    // Сбрасываем флаг притяжения — переустановим у целевой пары
+    for (const f of this.frogs) f.isAttracted = false
+
+    for (const m of [...this.magnets]) {
+      if (now >= m.expiresAt) {
+        this.removeMagnet(m)
+        continue
+      }
+
+      const [a, b] = m.pair
+
+      // Если кто-то из пары уничтожен / в drag / merge — отменяем магнит
+      if (
+        !this.frogs.includes(a) || !this.frogs.includes(b) ||
+        a.isDragging || a.isMerging || b.isDragging || b.isMerging
+      ) {
+        this.removeMagnet(m)
+        continue
+      }
+
+      // Притягиваем именно эту пару к точке магнита
+      const pull = 0.06
+      a.container.x = Phaser.Math.Linear(a.container.x, m.x, pull)
+      a.container.y = Phaser.Math.Linear(a.container.y, m.y, pull)
+      b.container.x = Phaser.Math.Linear(b.container.x, m.x, pull)
+      b.container.y = Phaser.Math.Linear(b.container.y, m.y, pull)
+      a.isAttracted = true
+      b.isAttracted = true
+
+      // Когда сошлись — мерджим в точке магнита
+      const d = Phaser.Math.Distance.Between(a.container.x, a.container.y, b.container.x, b.container.y)
+      if (d < MERGE_RADIUS * 0.7) {
+        this.performMerge(a, b, m.x, m.y)
+        m.mergesDone += 1
+
+        if (m.mergesDone >= m.mergesTarget) {
+          this.removeMagnet(m)
+          continue
+        }
+
+        // Ищем следующую пару — если есть, переезжаем магнит к ней
+        const next = this.findClosestSameLevelPair()
+        if (!next) {
+          this.removeMagnet(m)
+          continue
+        }
+        const [na, nb] = next
+        for (const f of [na, nb]) {
+          this.tweens.killTweensOf(f.container)
+          f.isMoving = false
+        }
+        const newX = (na.container.x + nb.container.x) / 2
+        const newY = (na.container.y + nb.container.y) / 2
+        m.pair = next
+        m.x = newX
+        m.y = newY
+        // Плавный полёт магнита к новой паре
+        this.tweens.add({
+          targets: m.container,
+          x: newX,
+          y: newY,
+          duration: 220,
+          ease: 'Power2.easeOut',
+        })
+      }
+    }
+  }
+
+  // ============== ПОКУПКА ЛЯГУШЕК ==============
+
+  private onFrogPurchased = ({ level }: { level: number }) => {
+    const { width, height } = this.scale
+    const x = Phaser.Math.Between(FIELD_PAD_X + 30 * DPR, width - FIELD_PAD_X - 30 * DPR)
+    const y = Phaser.Math.Between(FIELD_PAD_Y + 30 * DPR, height - FIELD_PAD_Y_BOTTOM - 30 * DPR)
+    const newFrog = this.spawnFrog(x, y, level)
+    // Pop-in
+    newFrog.container.setScale(0)
+    this.tweens.add({
+      targets: newFrog.container,
+      scale: BASE_SCALE * 1.2,
+      duration: 160,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: newFrog.container,
+          scale: BASE_SCALE,
+          duration: 100,
+          ease: 'Power2.easeOut',
+        })
+      },
+    })
+  }
+
+  private syncEntityCount() {
+    useGameStore.getState().setEntityCount(this.frogs.length + this.boxes.length)
+    this.syncIncomePerSec()
+  }
+
+  private syncIncomePerSec() {
+    let total = 0
+    for (const f of this.frogs) total += getTargetIncomePerSec(f.level)
+    useGameStore.getState().setIncomePerSec(total)
   }
 
   // ============== UPDATE ==============
 
   update(_time: number, delta: number) {
-    // Прогресс падения коробки
-    if (!this.boxWaiting) {
-      this.boxProgressMs += delta
-      if (this.boxProgressMs >= BOX_INTERVAL_MS) {
-        if (this.canSpawnBox()) {
-          this.spawnBox()
-          this.boxProgressMs = 0
-        } else {
-          this.boxProgressMs = BOX_INTERVAL_MS // фиксируем на 100%
-          this.boxWaiting = true
-          useGameStore.getState().setBoxWaiting(true)
-        }
-      }
-    }
-    const progress = Math.min(1, this.boxProgressMs / BOX_INTERVAL_MS)
+    // Динамический интервал из апгрейда "Скорость дропа"
     const store = useGameStore.getState()
+    const intervalMs = getDropIntervalMs(store.upgrades.dropSpeed)
+
+    // Прогресс копится до 100%, дальше ждёт освободившегося слота
+    this.boxProgressMs = Math.min(this.boxProgressMs + delta, intervalMs)
+    if (this.boxProgressMs >= intervalMs && this.canSpawnBox()) {
+      this.spawnBox()
+      this.boxProgressMs = 0
+    }
+    const progress = Math.min(1, this.boxProgressMs / intervalMs)
+    const waiting = this.boxProgressMs >= intervalMs && !this.canSpawnBox()
     if (Math.abs(store.boxProgress - progress) > 0.005) {
       store.setBoxProgress(progress)
     }
+    if (store.boxWaiting !== waiting) {
+      store.setBoxWaiting(waiting)
+    }
+
+    // Магнит — спавн по таймеру если куплен И включён И есть пара
+    const magnetLevel = store.upgrades.magnet
+    if (magnetLevel > 0 && store.magnetEnabled) {
+      this.magnetSpawnMs += delta
+      const spawnInt = getMagnetSpawnInterval(magnetLevel)
+      if (this.magnetSpawnMs >= spawnInt) {
+        if (this.hasMergeablePair() && this.magnets.length === 0) {
+          this.spawnMagnet(magnetLevel)
+          this.magnetSpawnMs = 0
+        } else {
+          // Замираем на 100% и ждём появления пары
+          this.magnetSpawnMs = spawnInt
+        }
+      }
+    } else {
+      this.magnetSpawnMs = 0
+    }
+    if (this.magnets.length > 0) this.updateMagnets()
 
     // Depth sort: чем ниже лягушка/коробка, тем она поверх
     for (const frog of this.frogs) {
@@ -834,18 +1131,6 @@ export class MainScene extends Phaser.Scene {
       box.img.setDepth(box.baseY)
     }
 
-    const now = Date.now()
-    this.poops = this.poops.filter((p) => {
-      if (p.expiresAt < now && p.img.active) {
-        this.tweens.add({
-          targets: p.img,
-          alpha: 0,
-          duration: 200,
-          onComplete: () => p.img.destroy(),
-        })
-        return false
-      }
-      return true
-    })
+    // Какашки auto-collect через onComplete твинов — никакой ручной очистки не нужно
   }
 }
