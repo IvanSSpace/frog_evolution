@@ -134,13 +134,22 @@ export class MainScene extends Phaser.Scene {
     eventBus.on('location:changed', this.onLocationChanged)
 
     eventBus.on('rareCrate:claim', ({ level }) => {
-      const state = useGameStore.getState()
-      const loc = getLocationById(state.currentLocation)
-      const { width, height } = this.scale
-      const cx = width / 2
-      const cy = height / 2
-      const newFrog = this.spawnFrog(cx, cy, level)
-      state.addFrogToLocation(loc.id, level)
+      const store = useGameStore.getState()
+      const cfg = FROG_LEVELS[level - 1]
+      const targetLocation = cfg.location
+      const currentLocation = store.currentLocation
+      store.addFrogToLocation(targetLocation, level)
+
+      if (targetLocation !== currentLocation) {
+        const { width, height } = this.scale
+        const cx = width / 2
+        const cy = (FIELD_PAD_Y + (height - FIELD_PAD_Y_BOTTOM)) / 2
+        this.playCrossLocationFlyAway(cx, cy, level)
+        return
+      }
+
+      const { x, y } = this.randomFieldPos()
+      const newFrog = this.spawnFrog(x, y, level)
       newFrog.container.setScale(0)
       this.tweens.add({
         targets: newFrog.container,
