@@ -44,8 +44,9 @@ export const UPGRADE_CONFIG = {
   },
   rareBoxSpeed: {
     maxLevel: 10,
-    // базовый интервал 30с, -2с за каждый уровень, до 10с на макс уровне
-    intervalMs: [30000, 28000, 26000, 24000, 22000, 20000, 18000, 16000, 14000, 12000, 10000],
+    // counts[i] = порог открытий обычных боксов для мега-бокса на уровне i
+    // 30 - 1.5*level, округлено: 30→15 за 10 уровней
+    counts: [30, 29, 27, 26, 24, 23, 21, 20, 18, 17, 15],
     costs: [
       50_000,
       150_000,
@@ -105,8 +106,8 @@ export function getCrateLevel(upgradeLevel: number): number {
   return arr[Math.min(upgradeLevel, arr.length - 1)]
 }
 
-export function getRareBoxIntervalMs(upgradeLevel: number): number {
-  const arr = UPGRADE_CONFIG.rareBoxSpeed.intervalMs
+export function getRareBoxThreshold(upgradeLevel: number): number {
+  const arr = UPGRADE_CONFIG.rareBoxSpeed.counts
   return arr[Math.min(upgradeLevel, arr.length - 1)]
 }
 
@@ -341,6 +342,8 @@ interface GameState {
   boxWaiting: boolean
   setBoxProgress: (v: number) => void
   setBoxWaiting: (v: boolean) => void
+  rareBoxProgress: number
+  setRareBoxProgress: (v: number) => void
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -458,4 +461,6 @@ export const useGameStore = create<GameState>((set, get) => ({
   boxWaiting: false,
   setBoxProgress: (v) => set({ boxProgress: v }),
   setBoxWaiting: (v) => set({ boxWaiting: v }),
+  rareBoxProgress: 0,
+  setRareBoxProgress: (v) => set({ rareBoxProgress: v }),
 }))
