@@ -4,6 +4,8 @@ import { eventBus } from '../../store/eventBus'
 import { FROG_LEVELS, MAX_LEVEL, textureKeyForLevel, rollPoopType, POOP_INTERVAL_MS, getTargetIncomePerSec, getPoopValueExact, stochasticRound, type PoopType } from '../config/frogs'
 import { hapticImpact } from '../../utils/telegram'
 
+const mapKeyForLocation = (locId: number): string => locId === 2 ? 'map2' : 'map'
+
 // Игра рендерится в физических пикселях (window * DPR), CSS-зум 1/DPR в game/index.ts
 // Все размеры/координаты ниже задаются в CSS-пикселях, умножение на DPR делается здесь
 const DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 3))
@@ -96,6 +98,7 @@ export class MainScene extends Phaser.Scene {
 
     this.load.svg('poop', '/poop.svg', { width: 18 * TEXTURE_QUALITY, height: 18 * TEXTURE_QUALITY })
     this.load.image('map', '/map.webp')
+    this.load.image('map2', '/map2.webp')
     this.load.image('box', '/box.webp')
   }
 
@@ -107,7 +110,7 @@ export class MainScene extends Phaser.Scene {
     this.prevLocation = useGameStore.getState().currentLocation
     this.cameras.main.setZoom(1)
 
-    this.bg = this.add.image(width / 2, height / 2, 'map')
+    this.bg = this.add.image(width / 2, height / 2, mapKeyForLocation(this.prevLocation))
     this.bg.setDisplaySize(width, height)
     this.bg.setDepth(-1) // фон всегда под лягушками
 
@@ -257,7 +260,7 @@ export class MainScene extends Phaser.Scene {
     newContainer.setScale(newStartScale)
     newContainer.setAlpha(0) // плавно проявится в начале перехода
     // Свежий фон для новой локации
-    const newBg = this.add.image(0, 0, 'map')
+    const newBg = this.add.image(0, 0, mapKeyForLocation(newLoc))
     newBg.setDisplaySize(width, height)
     newContainer.add(newBg)
 
