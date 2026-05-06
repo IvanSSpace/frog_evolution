@@ -66,7 +66,7 @@
     },
     "rare_box_speed": {
       "name": "Mega Crate",
-      "effect": "every {{sec}}s"
+      "effect": "every {{count}} boxes"
     }
   },
   "discovery": {
