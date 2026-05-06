@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { useGameStore, getDropIntervalMs, getMagnetSpawnInterval, getMagnetDuration, getMagnetMergesPerCycle, getCrateLevel, getLocationById, getRareBoxIntervalMs } from '../../store/gameStore'
+import { useGameStore, getDropIntervalMs, getMagnetSpawnInterval, getMagnetDuration, getMagnetMergesPerCycle, getCrateLevel, getLocationById, getRareBoxThreshold } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
 import { FROG_LEVELS, MAX_LEVEL, textureKeyForLevel, rollPoopType, POOP_INTERVAL_MS, getTargetIncomePerSec, getPoopValueExact, stochasticRound, type PoopType } from '../config/frogs'
 import { hapticImpact } from '../../utils/telegram'
@@ -71,7 +71,7 @@ export class MainScene extends Phaser.Scene {
   private frogs: FrogData[] = []
   private boxes: BoxData[] = []
   private boxProgressMs = 0
-  private rareBoxProgressMs = 0
+  private boxOpenCount = 0
 
   private magnets: MagnetData[] = []
   private magnetSpawnMs = 0
@@ -223,7 +223,8 @@ export class MainScene extends Phaser.Scene {
     this.magnets = []
 
     this.boxProgressMs = 0
-    this.rareBoxProgressMs = 0
+    this.boxOpenCount = 0
+    useGameStore.getState().setRareBoxProgress(0)
     this.magnetSpawnMs = 0
     this.syncEntityCount()
   }
@@ -410,7 +411,8 @@ export class MainScene extends Phaser.Scene {
         this.input.enabled = true
         this.isLocationTransitioning = false
         this.boxProgressMs = 0
-        this.rareBoxProgressMs = 0
+        this.boxOpenCount = 0
+        useGameStore.getState().setRareBoxProgress(0)
         this.magnetSpawnMs = 0
         this.syncEntityCount()
         eventBus.emit('location:transitionEnd', { id: newLoc })
@@ -1218,6 +1220,20 @@ export class MainScene extends Phaser.Scene {
       return
     }
 
+    // Считаем открытые обычные боксы → мега-бокс каждые N открытий (только на Болоте)
+    const storeForCount = useGameStore.getState()
+    if (storeForCount.currentLocation === 1) {
+      this.boxOpenCount++
+      const threshold = getRareBoxThreshold(storeForCount.upgrades.rareBoxSpeed)
+      if (this.boxOpenCount >= threshold && this.canSpawnBox()) {
+        this.spawnBox(true)
+        this.boxOpenCount = 0
+        storeForCount.setRareBoxProgress(0)
+      } else {
+        storeForCount.setRareBoxProgress(Math.min(this.boxOpenCount / threshold, 1))
+      }
+    }
+
     // Спавн лягушки. На Болоте (loc 1) применяется crateQuality, на других локациях — minLevel.
     this.time.delayedCall(0, () => {
       const state = useGameStore.getState()
@@ -1529,14 +1545,6 @@ export class MainScene extends Phaser.Scene {
       if (this.boxProgressMs !== 0) this.boxProgressMs = 0
       if (store.boxProgress !== 0) store.setBoxProgress(0)
       if (store.boxWaiting) store.setBoxWaiting(false)
-    }
-
-    // Редкий бокс (интервал зависит от апгрейда rareBoxSpeed)
-    const rareIntervalMs = getRareBoxIntervalMs(store.upgrades.rareBoxSpeed)
-    this.rareBoxProgressMs += delta
-    if (this.rareBoxProgressMs >= rareIntervalMs && this.canSpawnBox()) {
-      this.spawnBox(true)
-      this.rareBoxProgressMs = 0
     }
 
     // Магнит работает только на локации, где это разрешено (сейчас — только Болото L1)
