@@ -7,6 +7,7 @@ import { ShopModal } from './ui/components/ShopModal'
 import { FrogShopModal } from './ui/components/FrogShopModal'
 import { WelcomeBackModal } from './ui/components/WelcomeBackModal'
 import { DiscoveryModal } from './ui/components/DiscoveryModal'
+import { RareCrateModal } from './ui/components/RareCrateModal'
 import { SettingsModal } from './ui/components/SettingsModal'
 import { LocationStack } from './ui/components/LocationStack'
 import { eventBus } from './store/eventBus'
@@ -29,6 +30,7 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [welcomeBack, setWelcomeBack] = useState<{ earned: number; hours: number } | null>(null)
   const [discovered, setDiscovered] = useState<number | null>(null)
+  const [rareCrate, setRareCrate] = useState<{ minLevel: number; maxLevel: number } | null>(null)
 
   useEffect(() => {
     // Авторизация → загрузка состояния с сервера → запуск авто-синка
@@ -75,14 +77,25 @@ function App() {
     }
     eventBus.on('frog:discovered', onDiscovered)
 
+    const handleRareCrateOpened = ({ x: _x, y: _y, minLevel, maxLevel }: { x: number; y: number; minLevel: number; maxLevel: number }) => {
+      setRareCrate({ minLevel, maxLevel })
+    }
+    eventBus.on('rareCrate:opened', handleRareCrateOpened)
+
     return () => {
       window.clearInterval(heartbeat)
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('beforeunload', saveSessionTimestamp)
       eventBus.off('frog:discovered', onDiscovered)
+      eventBus.off('rareCrate:opened', handleRareCrateOpened)
       stopSync()
     }
   }, [])
+
+  const handleRareCrateClaim = (wonLevel: number) => {
+    setRareCrate(null)
+    eventBus.emit('rareCrate:claim', { level: wonLevel })
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -108,6 +121,13 @@ function App() {
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       {discovered !== null && (
         <DiscoveryModal level={discovered} onClose={() => setDiscovered(null)} />
+      )}
+      {rareCrate && (
+        <RareCrateModal
+          minLevel={rareCrate.minLevel}
+          maxLevel={rareCrate.maxLevel}
+          onClose={handleRareCrateClaim}
+        />
       )}
       {welcomeBack && (
         <WelcomeBackModal
