@@ -9,6 +9,7 @@ export function Header() {
   const boxProgress = useGameStore((s) => s.boxProgress)
   const boxWaiting = useGameStore((s) => s.boxWaiting)
   const currentLocation = useGameStore((s) => s.currentLocation)
+  const rareBoxProgress = useGameStore((s) => s.rareBoxProgress)
   useGameStore((s) => s.numberFormat) // subscribe to format changes
   const showBoxProgress = currentLocation === 1
 
@@ -40,8 +41,9 @@ export function Header() {
         </div>
       </div>
 
-      <div className="justify-self-end">
+      <div className="justify-self-end flex flex-col items-end gap-2">
         {showBoxProgress && <BoxProgress progress={boxProgress} waiting={boxWaiting} />}
+        {showBoxProgress && <RareBoxProgress progress={rareBoxProgress} />}
       </div>
     </div>
   )
@@ -54,6 +56,27 @@ function BoxProgress({ progress, waiting }: { progress: number; waiting: boolean
       <div className={`text-2xl leading-none ${waiting ? 'animate-pulse' : ''}`}>📦</div>
       <div className="ff-progress-track w-24 h-2.5">
         <div className={`ff-progress-fill ${waiting ? 'waiting' : ''}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  )
+}
+
+function RareBoxProgress({ progress }: { progress: number }) {
+  const pct = Math.round(progress * 100)
+  const isReady = pct >= 100
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <div className={`text-2xl leading-none ${isReady ? 'animate-pulse' : ''}`}>✨</div>
+      <div className="ff-progress-track w-24 h-2.5">
+        <div
+          className="ff-progress-fill"
+          style={{
+            width: `${pct}%`,
+            background: isReady
+              ? 'linear-gradient(90deg, #fcd34d, #f59e0b)'
+              : 'linear-gradient(90deg, #c4b5fd, #8b5cf6)',
+          }}
+        />
       </div>
     </div>
   )
