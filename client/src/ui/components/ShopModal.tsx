@@ -6,6 +6,7 @@ import {
   getMagnetSpawnInterval,
   getMagnetDuration,
   getCrateLevel,
+  getRareBoxIntervalMs,
   UPGRADE_CONFIG,
 } from '../../store/gameStore'
 import { hapticNotification } from '../../utils/telegram'
@@ -65,6 +66,7 @@ function ShopCards() {
       {isBoloto && <DropSpeedCard />}
       {isBoloto && <CrateQualityCard />}
       {isBoloto && <MagnetCard />}
+      <RareBoxSpeedCard />
       <TractorCard />
     </div>
   )
@@ -234,6 +236,36 @@ function CrateQualityCard() {
       isMax={isMax}
       canAfford={canAfford}
       onBuy={() => hapticNotification(buyUpgrade('crateQuality') ? 'success' : 'error')}
+    />
+  )
+}
+
+function RareBoxSpeedCard() {
+  const { t } = useTranslation()
+  const level = useGameStore((s) => s.upgrades.rareBoxSpeed)
+  const gold = useGameStore((s) => s.gold)
+  const buyUpgrade = useGameStore((s) => s.buyUpgrade)
+  useGameStore((s) => s.numberFormat)
+  const cfg = UPGRADE_CONFIG.rareBoxSpeed
+  const isMax = level >= cfg.maxLevel
+  const cost = isMax ? 0 : getUpgradeCost('rareBoxSpeed', level)
+  const canAfford = gold >= cost
+  const curSec = (getRareBoxIntervalMs(level) / 1000).toFixed(0)
+  const nextSec = isMax ? curSec : (getRareBoxIntervalMs(level + 1) / 1000).toFixed(0)
+  const effect = isMax
+    ? t('shop.rare_box_speed.effect', { sec: curSec })
+    : `${t('shop.rare_box_speed.effect', { sec: curSec })} → ${nextSec}s`
+  return (
+    <UpgradeCard
+      icon="✨"
+      title={t('shop.rare_box_speed.name')}
+      effect={effect}
+      level={level}
+      maxLevel={cfg.maxLevel}
+      cost={cost}
+      isMax={isMax}
+      canAfford={canAfford}
+      onBuy={() => hapticNotification(buyUpgrade('rareBoxSpeed') ? 'success' : 'error')}
     />
   )
 }

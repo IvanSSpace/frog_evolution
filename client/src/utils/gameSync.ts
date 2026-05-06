@@ -21,6 +21,7 @@ interface ServerGameState {
     tractor: number
     magnet: number
     crateQuality: number
+    rareBoxSpeed?: number
   }
   frogPurchases: number[]
   discoveredLevels: number[]
@@ -64,6 +65,7 @@ export async function loadGameState(): Promise<boolean> {
         tractor: data.upgrades?.tractor ?? 0,
         magnet: data.upgrades?.magnet ?? 0,
         crateQuality: data.upgrades?.crateQuality ?? 0,
+        rareBoxSpeed: data.upgrades?.rareBoxSpeed ?? 0,
       },
       frogPurchases: Array.isArray(data.frogPurchases) ? data.frogPurchases : store.frogPurchases,
       discoveredLevels: Array.isArray(data.discoveredLevels) ? data.discoveredLevels : store.discoveredLevels,

@@ -10,6 +10,7 @@ interface Upgrades {
   tractor: number
   magnet: number
   crateQuality: number
+  rareBoxSpeed: number
 }
 
 // Таблица: индекс = текущий уровень, intervalMs[i] / capHours[i] = эффект на уровне i,
@@ -40,6 +41,23 @@ export const UPGRADE_CONFIG = {
     // уровень апгрейда → уровень лягушки из бокса (0 = L1 по умолчанию)
     frogLevel: [1, 2, 3, 4, 5, 6],
     costs: [5_000_000, 50_000_000, 500_000_000, 5_000_000_000, 50_000_000_000],
+  },
+  rareBoxSpeed: {
+    maxLevel: 10,
+    // базовый интервал 30с, -2с за каждый уровень, до 10с на макс уровне
+    intervalMs: [30000, 28000, 26000, 24000, 22000, 20000, 18000, 16000, 14000, 12000, 10000],
+    costs: [
+      50_000,
+      150_000,
+      750_000,
+      3_800_000,
+      18_000_000,
+      90_000_000,
+      450_000_000,
+      2_250_000_000,
+      11_000_000_000,
+      55_000_000_000,
+    ],
   },
 } as const
 
@@ -87,6 +105,11 @@ export function getCrateLevel(upgradeLevel: number): number {
   return arr[Math.min(upgradeLevel, arr.length - 1)]
 }
 
+export function getRareBoxIntervalMs(upgradeLevel: number): number {
+  const arr = UPGRADE_CONFIG.rareBoxSpeed.intervalMs
+  return arr[Math.min(upgradeLevel, arr.length - 1)]
+}
+
 export function getTractorIncomePerSec(level: number): number {
   const arr = UPGRADE_CONFIG.tractor.incomePerSecByLevel
   return arr[Math.min(level, arr.length - 1)]
@@ -126,7 +149,7 @@ const FORMAT_KEY = 'frog_format'
 const STORAGE_VERSION = 14
 
 function loadUpgrades(): Upgrades {
-  const defaults: Upgrades = { dropSpeed: 0, tractor: 0, magnet: 0, crateQuality: 0 }
+  const defaults: Upgrades = { dropSpeed: 0, tractor: 0, magnet: 0, crateQuality: 0, rareBoxSpeed: 0 }
   try {
     const ver = parseInt(localStorage.getItem(VERSION_KEY) ?? '0', 10)
     if (ver !== STORAGE_VERSION) {
@@ -146,6 +169,7 @@ function loadUpgrades(): Upgrades {
         tractor:      Math.min(parsed.tractor      ?? 0, UPGRADE_CONFIG.tractor.maxLevel),
         magnet:       Math.min(parsed.magnet       ?? 0, UPGRADE_CONFIG.magnet.maxLevel),
         crateQuality: Math.min(parsed.crateQuality ?? 0, UPGRADE_CONFIG.crateQuality.maxLevel),
+        rareBoxSpeed: Math.min(parsed.rareBoxSpeed ?? 0, UPGRADE_CONFIG.rareBoxSpeed.maxLevel),
       }
     }
   } catch {/* ignore */}
@@ -332,7 +356,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   upgrades: loadUpgrades(),
   devResetUpgrades: () => {
-    const defaults: Upgrades = { dropSpeed: 0, tractor: 0, magnet: 0, crateQuality: 0 }
+    const defaults: Upgrades = { dropSpeed: 0, tractor: 0, magnet: 0, crateQuality: 0, rareBoxSpeed: 0 }
     saveUpgrades(defaults)
     set({ upgrades: defaults })
   },

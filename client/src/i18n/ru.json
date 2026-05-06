@@ -63,6 +63,10 @@
       "name": "Качество боксов",
       "boxes": "Боксы: {{name}}",
       "boxes_first": "Боксы: {{from}} → {{to}}"
+    },
+    "rare_box_speed": {
+      "name": "Мега-бокс",
+      "effect": "раз в {{sec}}с"
     }
   },
   "discovery": {

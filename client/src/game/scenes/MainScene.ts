@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { useGameStore, getDropIntervalMs, getMagnetSpawnInterval, getMagnetDuration, getMagnetMergesPerCycle, getCrateLevel, getLocationById } from '../../store/gameStore'
+import { useGameStore, getDropIntervalMs, getMagnetSpawnInterval, getMagnetDuration, getMagnetMergesPerCycle, getCrateLevel, getLocationById, getRareBoxIntervalMs } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
 import { FROG_LEVELS, MAX_LEVEL, textureKeyForLevel, rollPoopType, POOP_INTERVAL_MS, getTargetIncomePerSec, getPoopValueExact, stochasticRound, type PoopType } from '../config/frogs'
 import { hapticImpact } from '../../utils/telegram'
@@ -23,7 +23,7 @@ const BOX_DISPLAY_SIZE = 56 * DPR  // размер коробки на экра�
 const BOX_IDLE_INTERVAL = 5500     // период подпрыгивания
 const BOX_OPEN_RADIUS = 80 * DPR   // радиус разлёта тапа — открывает все коробки рядом
 
-const RARE_BOX_INTERVAL_MS = 60_000
+// RARE_BOX_INTERVAL_MS теперь динамический (getRareBoxIntervalMs), база 30с
 const RARE_BOX_TINT = 0xffd700
 const RARE_BOX_SCALE_MULT = 1.25
 
@@ -1521,9 +1521,10 @@ export class MainScene extends Phaser.Scene {
       if (store.boxWaiting) store.setBoxWaiting(false)
     }
 
-    // Редкий бокс
+    // Редкий бокс (интервал зависит от апгрейда rareBoxSpeed)
+    const rareIntervalMs = getRareBoxIntervalMs(store.upgrades.rareBoxSpeed)
     this.rareBoxProgressMs += delta
-    if (this.rareBoxProgressMs >= RARE_BOX_INTERVAL_MS && this.canSpawnBox()) {
+    if (this.rareBoxProgressMs >= rareIntervalMs && this.canSpawnBox()) {
       this.spawnBox(true)
       this.rareBoxProgressMs = 0
     }

@@ -63,6 +63,10 @@
       "name": "Calidad de cajas",
       "boxes": "Cajas: {{name}}",
       "boxes_first": "Cajas: {{from}} → {{to}}"
+    },
+    "rare_box_speed": {
+      "name": "Mega caja",
+      "effect": "cada {{sec}}s"
     }
   },
   "discovery": {

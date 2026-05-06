@@ -63,6 +63,10 @@
       "name": "Crate Quality",
       "boxes": "Crates: {{name}}",
       "boxes_first": "Crates: {{from}} → {{to}}"
+    },
+    "rare_box_speed": {
+      "name": "Mega Crate",
+      "effect": "every {{sec}}s"
     }
   },
   "discovery": {
