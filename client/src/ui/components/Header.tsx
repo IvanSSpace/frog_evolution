@@ -1,16 +1,13 @@
 import { useGameStore } from '../../store/gameStore'
-
-const fmt = (n: number) => n.toLocaleString('ru-RU')
-const fmtRate = (n: number) => {
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`
-  return n.toFixed(n >= 10 ? 0 : 1)
-}
+import { fmt, fmtRate } from '../../utils/formatting'
 
 export function Header() {
   const gold = useGameStore((s) => s.gold)
   const incomePerSec = useGameStore((s) => s.incomePerSec)
   const boxProgress = useGameStore((s) => s.boxProgress)
   const boxWaiting = useGameStore((s) => s.boxWaiting)
+  const currentLocation = useGameStore((s) => s.currentLocation)
+  const showBoxProgress = currentLocation === 1
 
   return (
     <div
@@ -42,9 +39,9 @@ export function Header() {
         </div>
       </div>
 
-      {/* Справа — прогресс падения коробки */}
+      {/* Справа — прогресс падения коробки (только на Болоте) */}
       <div className="justify-self-end">
-        <BoxProgress progress={boxProgress} waiting={boxWaiting} />
+        {showBoxProgress && <BoxProgress progress={boxProgress} waiting={boxWaiting} />}
       </div>
     </div>
   )

@@ -9,10 +9,9 @@ import {
 } from '../../store/gameStore'
 import { FROG_LEVELS } from '../../game/config/frogs'
 import { hapticNotification } from '../../utils/telegram'
+import { fmt } from '../../utils/formatting'
 
 type Props = { onClose: () => void }
-
-const fmt = (n: number) => n.toLocaleString('ru-RU')
 
 export function ShopModal({ onClose }: Props) {
   return (
@@ -52,13 +51,23 @@ export function ShopModal({ onClose }: Props) {
           </button>
         </div>
 
-        <div className="flex flex-col gap-3 p-4 overflow-y-auto">
-          <DropSpeedCard />
-          <TractorCard />
-          <MagnetCard />
-          <CrateQualityCard />
-        </div>
+        <ShopCards />
       </div>
+    </div>
+  )
+}
+
+function ShopCards() {
+  const currentLocation = useGameStore((s) => s.currentLocation)
+  const isBoloto = currentLocation === 1
+  return (
+    <div className="flex flex-col gap-3 p-4 overflow-y-auto">
+      {/* Болото-only апгрейды (бокс-дропы и магнит) */}
+      {isBoloto && <DropSpeedCard />}
+      {isBoloto && <CrateQualityCard />}
+      {isBoloto && <MagnetCard />}
+      {/* Трактор работает на любой локации */}
+      <TractorCard />
     </div>
   )
 }

@@ -1,10 +1,10 @@
+import { fmt } from '../../utils/formatting'
+
 type Props = {
   earned: number
   hours: number
   onClose: () => void
 }
-
-const fmt = (n: number) => n.toLocaleString('ru-RU')
 
 export function WelcomeBackModal({ earned, hours, onClose }: Props) {
   return (

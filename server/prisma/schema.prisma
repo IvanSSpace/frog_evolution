@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  telegramId String   @unique @map("telegram_id")
+  username   String?
+  firstName  String?  @map("first_name")
+  lastName   String?  @map("last_name")
+  photoUrl   String?  @map("photo_url")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  gameState GameState?
+
+  @@map("users")
+}
+
+// Полное состояние игры — синхронизирует localStorage клиента
+model GameState {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @unique @map("user_id")
+
+  gold              BigInt   @default(0)
+  // Все апгрейды (включая crateQuality)
+  upgrades          Json     @default("{\"dropSpeed\":0,\"tractor\":0,\"magnet\":0,\"crateQuality\":0}")
+  // Сколько раз каждая лягушка куплена (массив длины 24, 0-индекс = L1)
+  frogPurchases     Json     @default("[]")
+  // Какие уровни лягушек открыты (для DiscoveryModal)
+  discoveredLevels  Json     @default("[]")
+  // Включён ли магнит юзером (тоггл)
+  magnetEnabled     Boolean  @default(true) @map("magnet_enabled")
+  // Текущая локация (1=Болото, 2=Лес, 3=Земля, 4=Космос)
+  currentLocation   Int      @default(1) @map("current_location")
+  // Лягушки на каждой локации — массив из 4 массивов уровней.
+  // Дефолт: Болото с одной L1..L6, остальные пустые.
+  locationFrogs     Json     @default("[[1,2,3,4,5,6],[],[],[]]") @map("location_frogs")
+  // Когда юзер последний раз был онлайн — для расчёта офлайн-дохода трактора
+  lastSessionAt     DateTime @default(now()) @map("last_session_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("game_states")
+}

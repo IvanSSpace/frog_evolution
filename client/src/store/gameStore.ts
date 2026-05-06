@@ -121,7 +121,7 @@ const MAGNET_ENABLED_KEY = 'frog_evolution_magnet_enabled'
 const VERSION_KEY = 'frog_evolution_storage_version'
 const SESSION_KEY = 'frog_evolution_last_session'
 // Бампается когда меняются конфиги — старые сейвы сбрасываются
-const STORAGE_VERSION = 11
+const STORAGE_VERSION = 14
 
 function loadUpgrades(): Upgrades {
   const defaults: Upgrades = { dropSpeed: 0, tractor: 0, magnet: 0, crateQuality: 0 }
@@ -132,6 +132,8 @@ function loadUpgrades(): Upgrades {
       localStorage.removeItem(UPGRADES_KEY)
       localStorage.removeItem(PURCHASES_KEY)
       localStorage.removeItem(DISCOVERED_KEY)
+      localStorage.removeItem(LOCATION_FROGS_KEY)
+      localStorage.removeItem(LOCATION_KEY)
       return defaults
     }
     const raw = localStorage.getItem(UPGRADES_KEY)
@@ -186,6 +188,29 @@ function saveDiscovered(arr: number[]) {
 }
 
 const LOCATION_KEY = 'frog_evolution_current_location'
+const LOCATION_FROGS_KEY = 'frog_evolution_location_frogs'
+
+// Резиденты каждой локации — массив уровней лягушек, сейчас находящихся на её поле.
+// Болото изначально содержит по одной L1..L6 (стартовый набор для теста).
+function loadLocationFrogs(): number[][] {
+  try {
+    const raw = localStorage.getItem(LOCATION_FROGS_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed) && parsed.length === LOCATIONS.length) {
+        return parsed.map((arr) => Array.isArray(arr) ? arr.filter((n) => Number.isFinite(n) && n > 0) : [])
+      }
+    }
+  } catch {/* ignore */}
+  // Дефолт: Болото — L1..L6 по одной, остальные пустые
+  const arr: number[][] = LOCATIONS.map(() => [])
+  arr[0] = [1, 2, 3, 4, 5, 6]
+  return arr
+}
+
+function saveLocationFrogsArr(arr: number[][]) {
+  try { localStorage.setItem(LOCATION_FROGS_KEY, JSON.stringify(arr)) } catch {/* ignore */}
+}
 
 function loadCurrentLocation(): number {
   try {
@@ -262,6 +287,11 @@ interface GameState {
   currentLocation: number
   setCurrentLocation: (id: number) => void
 
+  // Лягушки на каждой локации (массив уровней). Сцена синкает это при спавне/мердже.
+  locationFrogs: number[][]
+  addFrogToLocation: (locationId: number, level: number) => void
+  removeFrogFromLocation: (locationId: number, level: number) => void
+
   boxProgress: number
   boxWaiting: boolean
   setBoxProgress: (v: number) => void
@@ -269,7 +299,7 @@ interface GameState {
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
-  gold: 300_000_000,
+  gold: 0,
 
   addGold: (amount) => set((s) => ({ gold: s.gold + amount })),
 
@@ -324,13 +354,36 @@ export const useGameStore = create<GameState>((set, get) => ({
     eventBus.emit('location:changed', { id })
   },
 
+  locationFrogs: loadLocationFrogs(),
+  addFrogToLocation: (locationId, level) => set((s) => {
+    const idx = locationId - 1
+    if (idx < 0 || idx >= s.locationFrogs.length) return {}
+    const next = s.locationFrogs.map((arr, i) => i === idx ? [...arr, level] : arr)
+    saveLocationFrogsArr(next)
+    return { locationFrogs: next }
+  }),
+  removeFrogFromLocation: (locationId, level) => set((s) => {
+    const idx = locationId - 1
+    if (idx < 0 || idx >= s.locationFrogs.length) return {}
+    const i = s.locationFrogs[idx].indexOf(level)
+    if (i < 0) return {}
+    const next = s.locationFrogs.map((arr, j) => {
+      if (j !== idx) return arr
+      return [...arr.slice(0, i), ...arr.slice(i + 1)]
+    })
+    saveLocationFrogsArr(next)
+    return { locationFrogs: next }
+  }),
+
   frogPurchases: loadFrogPurchases(),
   buyFrog: (level) => {
     const state = get()
     if (level < 1 || level > MAX_LEVEL) return { ok: false, reason: 'invalid' }
     const cfg = FROG_LEVELS[level - 1]
     if (!cfg.availableInShop) return { ok: false, reason: 'invalid' }
-    if (state.entityCount >= ENTITY_CAP) return { ok: false, reason: 'capFull' }
+    // Cap проверяем на родной локации лягушки, а не на текущей сцене
+    const targetLocFrogs = state.locationFrogs[cfg.location - 1] ?? []
+    if (targetLocFrogs.length >= ENTITY_CAP) return { ok: false, reason: 'capFull' }
     const purchases = state.frogPurchases[level - 1] ?? 0
     const cost = getFrogPrice(level, purchases)
     if (state.gold < cost) return { ok: false, reason: 'noGold' }

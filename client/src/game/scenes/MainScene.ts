@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { useGameStore, getDropIntervalMs, getMagnetSpawnInterval, getMagnetDuration, getMagnetMergesPerCycle, getCrateLevel, getLocationById } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
-import { FROG_LEVELS, MAX_LEVEL, textureKeyForLevel, rollPoopType, POOP_INTERVAL_MS, getTargetIncomePerSec, getPoopValueExact, stochasticRound, frogLevelsForLocation, type PoopType } from '../config/frogs'
+import { FROG_LEVELS, MAX_LEVEL, textureKeyForLevel, rollPoopType, POOP_INTERVAL_MS, getTargetIncomePerSec, getPoopValueExact, stochasticRound, type PoopType } from '../config/frogs'
 import { hapticImpact } from '../../utils/telegram'
 
 // Игра рендерится в физических пикселях (window * DPR), CSS-зум 1/DPR в game/index.ts
@@ -64,6 +64,17 @@ export class MainScene extends Phaser.Scene {
   private magnets: MagnetData[] = []
   private magnetSpawnMs = 0
 
+  private prevLocation = 1
+  private isLocationTransitioning = false
+  private bg!: Phaser.GameObjects.Image
+  // Аккумулятор для фонового дохода с лягушек неактивных локаций
+  // (на текущей локации монеты приходят через настоящие какашки visible-лягушек)
+  private bgIncomeAccum = 0
+
+  // Camera всегда на зум 1.0 — без камерных трюков, чтобы canvas не «дёргался»
+  // и не было чёрной рамки. Эффект «другого масштаба» полностью отрабатывают
+  // контейнеры oldContainer / newContainer.
+
   constructor() {
     super({ key: 'MainScene' })
   }
@@ -91,8 +102,14 @@ export class MainScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale
 
-    const bg = this.add.image(width / 2, height / 2, 'map')
-    bg.setDisplaySize(width, height)
+    // Зум-переход красиво смотрится только если за пределами поля чёрный, а не серый
+    this.cameras.main.setBackgroundColor(0x0b1a0b)
+    this.prevLocation = useGameStore.getState().currentLocation
+    this.cameras.main.setZoom(1)
+
+    this.bg = this.add.image(width / 2, height / 2, 'map')
+    this.bg.setDisplaySize(width, height)
+    this.bg.setDepth(-1) // фон всегда под лягушками
 
     // Временная рамка игрового поля
     const fieldW = width - FIELD_PAD_X * 2
@@ -110,22 +127,23 @@ export class MainScene extends Phaser.Scene {
     this.spawnLocationFrogs()
   }
 
-  // Спавнит по одной лягушке каждого уровня текущей локации (тест-режим)
-  private spawnLocationFrogs() {
+  // Случайная позиция в пределах игрового поля (с лёгким отступом от края)
+  private randomFieldPos(): { x: number; y: number } {
     const { width, height } = this.scale
-    const locId = useGameStore.getState().currentLocation
-    const levels = frogLevelsForLocation(locId)
-    if (levels.length === 0) return
+    const margin = 40 * DPR
+    const x = Phaser.Math.Between(FIELD_PAD_X + margin, width - FIELD_PAD_X - margin)
+    const y = Phaser.Math.Between(FIELD_PAD_Y + margin, height - FIELD_PAD_Y_BOTTOM - margin)
+    return { x, y }
+  }
 
-    const cols = 3
-    const rows = Math.ceil(levels.length / cols)
-    const cellW = (width - FIELD_PAD_X * 2) / cols
-    const cellH = (height - FIELD_PAD_Y - FIELD_PAD_Y_BOTTOM) / rows
-    levels.forEach((lvl, idx) => {
-      const col = idx % cols
-      const row = Math.floor(idx / cols)
-      const x = FIELD_PAD_X + cellW * (col + 0.5)
-      const y = FIELD_PAD_Y + cellH * (row + 0.5)
+  // Спавнит лягушек текущей локации из store на хаотичных позициях
+  private spawnLocationFrogs() {
+    const state = useGameStore.getState()
+    const locId = state.currentLocation
+    const levels = state.locationFrogs[locId - 1] ?? []
+    if (levels.length === 0) return
+    levels.forEach((lvl) => {
+      const { x, y } = this.randomFieldPos()
       this.spawnFrog(x, y, lvl)
     })
   }
@@ -161,9 +179,193 @@ export class MainScene extends Phaser.Scene {
     this.syncEntityCount()
   }
 
-  private onLocationChanged = () => {
-    this.clearField()
-    this.spawnLocationFrogs()
+  // Dual-container переход между локациями.
+  // Старая локация уходит за границы экрана, новая раскрывается из центра
+  // (или наоборот). Обе карты отрисованы одновременно — выглядит как «зум
+  // через слой» в фильмах.
+  //
+  // Going UP   (Болото → Лес → ... → Космос):
+  //   Старая (1.0 → 0.18) сжимается в точку в центре.
+  //   Новая (стартует на 6.0 — почти невидима за пределами экрана) → 1.0.
+  //
+  // Going DOWN (Космос → ... → Болото):
+  //   Старая (1.0 → 6.0 + alpha → 0) разлетается за пределы экрана.
+  //   Новая (0.18 → 1.0) была маленькой картой в центре, разрастается на весь экран.
+  private onLocationChanged = ({ id }: { id: number }) => {
+    const oldLoc = this.prevLocation
+    const newLoc = id
+    this.prevLocation = newLoc
+    if (oldLoc === newLoc) return
+
+    // Если уже идёт переход — снапаем его до конца и стартуем новый
+    if (this.isLocationTransitioning) {
+      this.tweens.killTweensOf(this.cameras.main)
+      this.cameras.main.setZoom(1)
+      this.clearField()
+      this.spawnLocationFrogs()
+      this.isLocationTransitioning = false
+      this.input.enabled = true
+    }
+
+    this.isLocationTransitioning = true
+    this.input.enabled = false
+    eventBus.emit('location:transitionStart', { from: oldLoc, to: newLoc })
+
+    const goingUp = newLoc > oldLoc
+    const { width, height } = this.scale
+    const cx = width / 2
+    const cy = height / 2
+
+    // 1. Эфемерные сущности (коробки, магниты) убиваем сразу — не нужны в анимации
+    for (const b of [...this.boxes]) {
+      this.tweens.killTweensOf(b.img)
+      b.img.destroy()
+    }
+    this.boxes = []
+    for (const m of [...this.magnets]) {
+      this.tweens.killTweensOf(m.emoji)
+      m.emoji.destroy()
+    }
+    this.magnets = []
+
+    // 2. Заворачиваем старых лягушек + фон в oldContainer (за центром экрана)
+    const oldContainer = this.add.container(cx, cy)
+    // Фон — кладём первым (нижний по списку → нижний по depth внутри контейнера)
+    const oldBg = this.bg
+    oldContainer.add(oldBg)
+    oldBg.x = 0
+    oldBg.y = 0
+    // Затем лягушки — поверх фона
+    const oldFrogs = [...this.frogs]
+    for (const f of oldFrogs) {
+      this.tweens.killTweensOf(f.container)
+      this.tweens.killTweensOf(f.body)
+      if (f.poopTimer) f.poopTimer.paused = true
+      const wx = f.container.x
+      const wy = f.container.y
+      oldContainer.add(f.container)
+      f.container.x = wx - cx
+      f.container.y = wy - cy
+    }
+    // Убираем из живого списка — старые лягушки больше не часть сцены
+    this.frogs = []
+
+    // 3. Спавним новых лягушек внутрь newContainer + добавляем СВОЙ фон
+    const newContainer = this.add.container(cx, cy)
+    // Going down: стартуем буквально с точки (0.005), чтобы поле «появилось из ниоткуда»
+    const newStartScale = goingUp ? 8 : 0.005
+    newContainer.setScale(newStartScale)
+    newContainer.setAlpha(0) // плавно проявится в начале перехода
+    // Свежий фон для новой локации
+    const newBg = this.add.image(0, 0, 'map')
+    newBg.setDisplaySize(width, height)
+    newContainer.add(newBg)
+
+    const state = useGameStore.getState()
+    const levels = state.locationFrogs[newLoc - 1] ?? []
+    if (levels.length > 0) {
+      levels.forEach((lvl) => {
+        const { x: wx, y: wy } = this.randomFieldPos()
+        const frog = this.spawnFrog(wx, wy, lvl)
+        // Замораживаем: убиваем idle-tween, паузим какашки.
+        // Dash на новых лягушках сам пропустится через флаг isLocationTransitioning.
+        this.tweens.killTweensOf(frog.body)
+        this.tweens.killTweensOf(frog.container)
+        frog.body.scaleY = 1.0
+        if (frog.poopTimer) frog.poopTimer.paused = true
+        // Перемещаем frog.container внутрь newContainer и переводим в локальные координаты
+        newContainer.add(frog.container)
+        frog.container.x = wx - cx
+        frog.container.y = wy - cy
+      })
+    }
+
+    // 4. Слой-порядок: при подъёме старая остаётся ВПЕРЕДИ (мы видим как она
+    // сжимается в точку, а новая «обнимает» её сзади). При спуске наоборот —
+    // новая ВПЕРЕДИ (мы зумимся внутрь маленькой карты, проходим сквозь старую).
+    if (goingUp) {
+      oldContainer.setDepth(200)
+      newContainer.setDepth(100)
+    } else {
+      newContainer.setDepth(200)
+      oldContainer.setDepth(100)
+    }
+
+    // 5. Анимация — снапная и одинаковая в обе стороны
+    const duration = 450
+    // При подъёме старое сжимается почти в точку, при спуске — растёт за экран
+    const oldEndScale = goingUp ? 0.01 : 8
+
+    // Камера фиксирована на зум 1 — «масштаб» делают контейнеры
+    this.cameras.main.setZoom(1)
+
+    // Масштаб старой и новой — синхронно, на всю длительность, плавно
+    this.tweens.add({
+      targets: oldContainer,
+      scale: oldEndScale,
+      duration,
+      ease: 'Sine.easeInOut',
+    })
+
+    // Альфа старой — снимаем только в самом конце, когда контейнер уже
+    // практически точка. До этого видим как поле сжимается в одну точку.
+    this.tweens.add({
+      targets: oldContainer,
+      alpha: 0,
+      duration: duration * 0.22,
+      delay: duration * 0.78,
+      ease: 'Sine.easeIn',
+    })
+
+    // Плавный fade-in новой локации в первой трети перехода
+    this.tweens.add({
+      targets: newContainer,
+      alpha: 1,
+      duration: duration * 0.35,
+      ease: 'Sine.easeOut',
+    })
+
+    this.tweens.add({
+      targets: newContainer,
+      scale: 1,
+      duration,
+      ease: 'Sine.easeInOut',
+      onComplete: () => {
+        // Уничтожаем старый контейнер вместе со всеми его потомками (включая oldBg)
+        oldContainer.destroy(true)
+
+        // Поднимаем детей newContainer обратно на корневой уровень сцены,
+        // переводя их в мировые координаты.
+        const children = [...newContainer.list]
+        for (const child of children) {
+          const c = child as Phaser.GameObjects.Container | Phaser.GameObjects.Image
+          const lx = c.x
+          const ly = c.y
+          newContainer.remove(c, false)
+          this.add.existing(c)
+          c.x = lx + cx
+          c.y = ly + cy
+        }
+        newContainer.destroy(false)
+
+        // Новый фон становится текущим, ставим depth -1 чтобы был под лягушками
+        newBg.setDepth(-1)
+        this.bg = newBg
+
+        // Возобновляем idle-анимацию и таймеры какашек у новых лягушек
+        for (const f of this.frogs) {
+          if (f.poopTimer) f.poopTimer.paused = false
+          this.startIdleAnim(f)
+        }
+
+        this.input.enabled = true
+        this.isLocationTransitioning = false
+        this.boxProgressMs = 0
+        this.magnetSpawnMs = 0
+        this.syncEntityCount()
+        eventBus.emit('location:transitionEnd', { id: newLoc })
+      },
+    })
   }
 
   private spawnFrog(x: number, y: number, level: number = 1): FrogData {
@@ -360,6 +562,11 @@ export class MainScene extends Phaser.Scene {
 
   private performDash(frog: FrogData) {
     if (frog.isMerging) return
+    // Во время перехода между локациями — замораживаем, перепланируем после
+    if (this.isLocationTransitioning) {
+      this.scheduleNextDash(frog)
+      return
+    }
     if (frog.isAttracted) {
       this.scheduleNextDash(frog)
       return
@@ -628,40 +835,85 @@ export class MainScene extends Phaser.Scene {
     this.spawnVortexParticles(cx, cy, VORTEX_DURATION)
 
     this.time.delayedCall(VORTEX_DURATION, () => {
+      const oldLevel = a.level
       this.removeFrog(a)
       this.removeFrog(b)
       this.flashAt(cx, cy)
 
       const newLevel = Math.min(a.level + 1, MAX_LEVEL)
-      this.time.delayedCall(60, () => {
-        const newFrog = this.spawnFrog(cx, cy, newLevel)
-        // Pop-in: scale 0 → 1.2 → 1.0 (учитывая BASE_SCALE)
-        newFrog.container.setScale(0)
-        this.tweens.add({
-          targets: newFrog.container,
-          scale: BASE_SCALE * 1.2,
-          duration: 160,
-          ease: 'Back.easeOut',
-          onComplete: () => {
-            this.tweens.add({
-              targets: newFrog.container,
-              scale: BASE_SCALE,
-              duration: 100,
-              ease: 'Power2.easeOut',
-            })
-          },
-        })
+      const newCfg = FROG_LEVELS[newLevel - 1]
+      const store = useGameStore.getState()
+      const currentLocId = store.currentLocation
 
-        // Если уровень открыт впервые — эмитим событие для модалки
-        console.log('[performMerge] newLevel=', newLevel, 'a.level=', a.level, 'b.level=', b.level)
-        const wasNew = useGameStore.getState().markDiscovered(newLevel)
-        console.log('[performMerge] markDiscovered returned', wasNew)
-        if (wasNew) {
-          console.log('[performMerge] emitting frog:discovered')
-          eventBus.emit('frog:discovered', { level: newLevel })
+      // Синкаем store: −2 старых уровня в текущей локации
+      store.removeFrogFromLocation(currentLocId, oldLevel)
+      store.removeFrogFromLocation(currentLocId, oldLevel)
+      // +1 новый уровень в его родной локации (может отличаться от текущей)
+      store.addFrogToLocation(newCfg.location, newLevel)
+
+      const isCrossLocation = newCfg.location !== currentLocId
+
+      this.time.delayedCall(60, () => {
+        if (isCrossLocation) {
+          // Лягушка улетает в свою локацию
+          this.playCrossLocationFlyAway(cx, cy, newLevel)
+        } else {
+          // Обычный pop-in
+          const newFrog = this.spawnFrog(cx, cy, newLevel)
+          newFrog.container.setScale(0)
+          this.tweens.add({
+            targets: newFrog.container,
+            scale: BASE_SCALE * 1.2,
+            duration: 160,
+            ease: 'Back.easeOut',
+            onComplete: () => {
+              this.tweens.add({
+                targets: newFrog.container,
+                scale: BASE_SCALE,
+                duration: 100,
+                ease: 'Power2.easeOut',
+              })
+            },
+          })
         }
+
+        // Discovery (всегда)
+        const wasNew = store.markDiscovered(newLevel)
+        if (wasNew) eventBus.emit('frog:discovered', { level: newLevel })
       })
     })
+  }
+
+  // Анимация: большая полупрозрачная лягушка увеличивается и исчезает за 0.5с
+  private playCrossLocationFlyAway(x: number, y: number, level: number) {
+    const cfg = FROG_LEVELS[level - 1]
+    const ghost = this.add.image(x, y, textureKeyForLevel(level))
+    ghost.setTint(cfg.tint)
+    ghost.setScale(BASE_SCALE)
+    ghost.setAlpha(0.2)
+    ghost.setDepth(99999)
+
+    this.tweens.add({
+      targets: ghost,
+      scale: BASE_SCALE * 6,
+      alpha: 0,
+      duration: 500,
+      ease: 'Cubic.easeOut',
+      onComplete: () => ghost.destroy(),
+    })
+
+    // Плавающий текст с именем локации
+    this.spawnFloatingText(x, y - 40 * DPR, `→ ${this.locationName(cfg.location)}`, 'huge' as PoopType)
+  }
+
+  private locationName(id: number): string {
+    switch (id) {
+      case 1: return 'Болото'
+      case 2: return 'Лес'
+      case 3: return 'Земля'
+      case 4: return 'Космос'
+      default: return ''
+    }
   }
 
   private spiralFrogTo(frog: FrogData, cx: number, cy: number, duration: number) {
@@ -915,6 +1167,7 @@ export class MainScene extends Phaser.Scene {
         ? getCrateLevel(state.upgrades.crateQuality)
         : loc.minLevel
       const newFrog = this.spawnFrog(x, y, frogLevel)
+      state.addFrogToLocation(loc.id, frogLevel)
       newFrog.container.setScale(0)
       this.tweens.add({
         targets: newFrog.container,
@@ -1112,10 +1365,26 @@ export class MainScene extends Phaser.Scene {
 
   private onFrogPurchased = ({ level }: { level: number }) => {
     const { width, height } = this.scale
+    const cfg = FROG_LEVELS[level - 1]
+    const store = useGameStore.getState()
+    const targetLocation = cfg.location
+    const currentLocation = store.currentLocation
+
+    // Лягушка всегда «приписывается» к своей родной локации в store
+    store.addFrogToLocation(targetLocation, level)
+
+    if (targetLocation !== currentLocation) {
+      // Куплена лягушка с другой локации — показываем призрачную анимацию по центру поля
+      const cx = width / 2
+      const cy = (FIELD_PAD_Y + (height - FIELD_PAD_Y_BOTTOM)) / 2
+      this.playCrossLocationFlyAway(cx, cy, level)
+      return
+    }
+
+    // На своей локации — обычный спавн на случайной позиции с pop-in
     const x = Phaser.Math.Between(FIELD_PAD_X + 30 * DPR, width - FIELD_PAD_X - 30 * DPR)
     const y = Phaser.Math.Between(FIELD_PAD_Y + 30 * DPR, height - FIELD_PAD_Y_BOTTOM - 30 * DPR)
     const newFrog = this.spawnFrog(x, y, level)
-    // Pop-in
     newFrog.container.setScale(0)
     this.tweens.add({
       targets: newFrog.container,
@@ -1138,32 +1407,69 @@ export class MainScene extends Phaser.Scene {
     this.syncIncomePerSec()
   }
 
+  // Суммарный доход в секунду — со ВСЕХ лягушек на ВСЕХ локациях
   private syncIncomePerSec() {
+    const allLocs = useGameStore.getState().locationFrogs
     let total = 0
-    for (const f of this.frogs) total += getTargetIncomePerSec(f.level)
+    for (const arr of allLocs) {
+      for (const lvl of arr) total += getTargetIncomePerSec(lvl)
+    }
     useGameStore.getState().setIncomePerSec(total)
   }
 
   // ============== UPDATE ==============
 
   update(_time: number, delta: number) {
-    // Динамический интервал из апгрейда "Скорость дропа"
-    const store = useGameStore.getState()
-    const intervalMs = getDropIntervalMs(store.upgrades.dropSpeed)
+    // Во время перехода между локациями замораживаем всю логику —
+    // лягушки в wrapper-контейнере с локальными координатами, любые расчёты
+    // позиций выдадут неправильные значения.
+    if (this.isLocationTransitioning) return
 
-    // Прогресс копится до 100%, дальше ждёт освободившегося слота
-    this.boxProgressMs = Math.min(this.boxProgressMs + delta, intervalMs)
-    if (this.boxProgressMs >= intervalMs && this.canSpawnBox()) {
-      this.spawnBox()
-      this.boxProgressMs = 0
+    const store = useGameStore.getState()
+
+    // Фоновый доход с лягушек на НЕ-текущих локациях.
+    // На текущей локации монеты приходят через анимацию какашек у visible-лягушек,
+    // фоновые лягушки никогда не видны → начисляем им золото напрямую.
+    const currentLocId = store.currentLocation
+    let bgIncomePerSec = 0
+    store.locationFrogs.forEach((arr, idx) => {
+      const locId = idx + 1
+      if (locId === currentLocId) return
+      for (const lvl of arr) bgIncomePerSec += getTargetIncomePerSec(lvl)
+    })
+    if (bgIncomePerSec > 0) {
+      this.bgIncomeAccum += bgIncomePerSec * (delta / 1000)
+      if (this.bgIncomeAccum >= 1) {
+        const whole = Math.floor(this.bgIncomeAccum)
+        store.addGold(whole)
+        this.bgIncomeAccum -= whole
+      }
     }
-    const progress = Math.min(1, this.boxProgressMs / intervalMs)
-    const waiting = this.boxProgressMs >= intervalMs && !this.canSpawnBox()
-    if (Math.abs(store.boxProgress - progress) > 0.005) {
-      store.setBoxProgress(progress)
-    }
-    if (store.boxWaiting !== waiting) {
-      store.setBoxWaiting(waiting)
+
+    // Динамический интервал из апгрейда "Скорость дропа"
+    const intervalMs = getDropIntervalMs(store.upgrades.dropSpeed)
+    const isBoloto = currentLocId === 1
+
+    // Боксы падают ТОЛЬКО на Болоте (loc 1). На других локациях прогресс заморожен.
+    if (isBoloto) {
+      this.boxProgressMs = Math.min(this.boxProgressMs + delta, intervalMs)
+      if (this.boxProgressMs >= intervalMs && this.canSpawnBox()) {
+        this.spawnBox()
+        this.boxProgressMs = 0
+      }
+      const progress = Math.min(1, this.boxProgressMs / intervalMs)
+      const waiting = this.boxProgressMs >= intervalMs && !this.canSpawnBox()
+      if (Math.abs(store.boxProgress - progress) > 0.005) {
+        store.setBoxProgress(progress)
+      }
+      if (store.boxWaiting !== waiting) {
+        store.setBoxWaiting(waiting)
+      }
+    } else {
+      // На не-Болотных локациях прогресс держим на 0 и снимаем waiting
+      if (this.boxProgressMs !== 0) this.boxProgressMs = 0
+      if (store.boxProgress !== 0) store.setBoxProgress(0)
+      if (store.boxWaiting) store.setBoxWaiting(false)
     }
 
     // Магнит работает только на локации, где это разрешено (сейчас — только Болото L1)

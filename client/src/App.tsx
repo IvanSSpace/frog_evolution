@@ -9,6 +9,7 @@ import { DiscoveryModal } from './ui/components/DiscoveryModal'
 import { LocationStack } from './ui/components/LocationStack'
 import { eventBus } from './store/eventBus'
 import { authenticate } from './utils/auth'
+import { loadGameState, startSync, stopSync } from './utils/gameSync'
 import { hapticSelection } from './utils/telegram'
 import {
   useGameStore,
@@ -27,11 +28,15 @@ function App() {
   const [discovered, setDiscovered] = useState<number | null>(null)
 
   useEffect(() => {
-    // Авторизация в Telegram (в dev-режиме браузера проверка пропускается)
-    authenticate().then((result) => {
+    // Авторизация → загрузка состояния с сервера → запуск авто-синка
+    authenticate().then(async (result) => {
       if (result.mode === 'failed') {
         console.error('[app] auth failed — продолжаем без сервера')
+        return
       }
+      // Тянем серверное состояние (если доступно) — переписывает локальный стор
+      const loaded = await loadGameState()
+      if (loaded) startSync()
     })
 
     // Расчёт офлайн-дохода трактора при загрузке
@@ -72,6 +77,7 @@ function App() {
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('beforeunload', saveSessionTimestamp)
       eventBus.off('frog:discovered', onDiscovered)
+      stopSync()
     }
   }, [])
 
@@ -82,7 +88,7 @@ function App() {
           <Header />
         </div>
         <div className="flex-1" />
-        <div style={{ height: '20%' }}>
+        <div style={{ height: '13%' }}>
           <BottomBar
             onOpenShop={() => setShopOpen(true)}
             onOpenFrogShop={() => setFrogShopOpen(true)}

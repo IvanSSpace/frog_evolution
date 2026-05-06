@@ -2,10 +2,9 @@ import { useState } from 'react'
 import { useGameStore, ENTITY_CAP } from '../../store/gameStore'
 import { FROG_LEVELS, getFrogPrice, getTargetIncomePerSec } from '../../game/config/frogs'
 import { hapticNotification } from '../../utils/telegram'
+import { fmt } from '../../utils/formatting'
 
 type Props = { onClose: () => void }
-
-const fmt = (n: number) => n.toLocaleString('ru-RU')
 
 export function FrogShopModal({ onClose }: Props) {
   const [toast, setToast] = useState<string | null>(null)

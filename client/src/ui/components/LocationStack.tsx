@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useGameStore, LOCATIONS, getLocationById, type LocationConfig } from '../../store/gameStore'
+import { eventBus } from '../../store/eventBus'
 import { hapticSelection } from '../../utils/telegram'
 
 // Эмодзи и цвета для локаций (placeholder — потом юзер заменит на свои картинки)
@@ -14,17 +15,31 @@ export function LocationStack() {
   const currentLocation = useGameStore((s) => s.currentLocation)
   const setCurrentLocation = useGameStore((s) => s.setCurrentLocation)
   const [collapsed, setCollapsed] = useState(false)
+  const [transitioning, setTransitioning] = useState(false)
+
+  useEffect(() => {
+    const onStart = () => setTransitioning(true)
+    const onEnd = () => setTransitioning(false)
+    eventBus.on('location:transitionStart', onStart)
+    eventBus.on('location:transitionEnd', onEnd)
+    return () => {
+      eventBus.off('location:transitionStart', onStart)
+      eventBus.off('location:transitionEnd', onEnd)
+    }
+  }, [])
 
   // Сверху вниз — от высшей локации (Космос) к стартовой (Болото)
   const ordered = [...LOCATIONS].slice().reverse()
 
   const handleSelect = (id: number) => {
+    if (transitioning) return
     if (id === currentLocation) return
     hapticSelection()
     setCurrentLocation(id)
   }
 
   const toggleCollapse = () => {
+    if (transitioning) return // нельзя сворачивать пока идёт переход
     hapticSelection()
     setCollapsed((v) => !v)
   }
@@ -50,6 +65,7 @@ export function LocationStack() {
               key={loc.id}
               loc={loc}
               isCurrent={loc.id === currentLocation}
+              disabled={transitioning}
               onClick={() => handleSelect(loc.id)}
             />
           ))
@@ -57,15 +73,18 @@ export function LocationStack() {
             <LocationButton
               loc={getLocationById(currentLocation)}
               isCurrent
+              disabled={transitioning}
               onClick={toggleCollapse}
             />
           )}
 
       <button
         onClick={toggleCollapse}
+        disabled={transitioning}
         aria-label={collapsed ? 'развернуть' : 'свернуть'}
         style={{
           pointerEvents: 'auto',
+          cursor: transitioning ? 'not-allowed' : 'pointer',
           width: 28,
           height: 18,
           background: 'linear-gradient(180deg, #f9a8d4 0%, #db2777 100%)',
@@ -80,7 +99,6 @@ export function LocationStack() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          cursor: 'pointer',
           padding: 0,
           marginTop: 2,
         }}
@@ -92,8 +110,8 @@ export function LocationStack() {
 }
 
 function LocationButton({
-  loc, isCurrent, onClick,
-}: { loc: LocationConfig; isCurrent: boolean; onClick: () => void }) {
+  loc, isCurrent, onClick, disabled = false,
+}: { loc: LocationConfig; isCurrent: boolean; onClick: () => void; disabled?: boolean }) {
   const v = LOCATION_VISUAL[loc.id] ?? LOCATION_VISUAL[1]
 
   return (
@@ -117,10 +135,12 @@ function LocationButton({
       )}
       <button
         onClick={onClick}
+        disabled={disabled}
         aria-label={loc.name}
         title={loc.name}
         style={{
           pointerEvents: 'auto',
+          cursor: disabled ? 'not-allowed' : 'pointer',
           width: 38,
           height: 38,
           borderRadius: '50%',
@@ -132,7 +152,6 @@ function LocationButton({
           fontSize: 20,
           lineHeight: 1,
           padding: 0,
-          cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
