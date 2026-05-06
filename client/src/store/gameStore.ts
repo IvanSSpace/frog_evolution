@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { eventBus } from './eventBus'
 import { getFrogPrice, MAX_LEVEL, FROG_LEVELS } from '../game/config/frogs'
+import { setGlobalFormat, type NumberFormat } from '../utils/formatting'
 
 // ============== АПГРЕЙДЫ ==============
 
@@ -120,6 +121,7 @@ const DISCOVERED_KEY = 'frog_evolution_discovered'
 const MAGNET_ENABLED_KEY = 'frog_evolution_magnet_enabled'
 const VERSION_KEY = 'frog_evolution_storage_version'
 const SESSION_KEY = 'frog_evolution_last_session'
+const FORMAT_KEY = 'frog_format'
 // Бампается когда меняются конфиги — старые сейвы сбрасываются
 const STORAGE_VERSION = 14
 
@@ -237,6 +239,21 @@ function saveMagnetEnabled(v: boolean) {
   try { localStorage.setItem(MAGNET_ENABLED_KEY, String(v)) } catch {/* ignore */}
 }
 
+function loadNumberFormat(): NumberFormat {
+  try {
+    const raw = localStorage.getItem(FORMAT_KEY)
+    if (raw === 'short') return 'short'
+  } catch { /* ignore */ }
+  return 'full'
+}
+
+function saveNumberFormat(f: NumberFormat) {
+  try { localStorage.setItem(FORMAT_KEY, f) } catch { /* ignore */ }
+}
+
+const _initialFormat = loadNumberFormat()
+setGlobalFormat(_initialFormat)
+
 export function saveSessionTimestamp() {
   try { localStorage.setItem(SESSION_KEY, Date.now().toString()) } catch {/* ignore */}
 }
@@ -262,6 +279,7 @@ interface GameState {
 
   upgrades: Upgrades
   buyUpgrade: (key: keyof Upgrades) => boolean
+  devResetUpgrades: () => void
 
   // Лягушки на поле + коробки (real-time, обновляется из MainScene)
   entityCount: number
@@ -292,6 +310,9 @@ interface GameState {
   addFrogToLocation: (locationId: number, level: number) => void
   removeFrogFromLocation: (locationId: number, level: number) => void
 
+  numberFormat: NumberFormat
+  setNumberFormat: (f: NumberFormat) => void
+
   boxProgress: number
   boxWaiting: boolean
   setBoxProgress: (v: number) => void
@@ -310,6 +331,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   upgrades: loadUpgrades(),
+  devResetUpgrades: () => {
+    const defaults: Upgrades = { dropSpeed: 0, tractor: 0, magnet: 0, crateQuality: 0 }
+    saveUpgrades(defaults)
+    set({ upgrades: defaults })
+  },
   buyUpgrade: (key) => {
     const state = get()
     const level = state.upgrades[key]
@@ -395,6 +421,13 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     eventBus.emit('frog:purchased', { level })
     return { ok: true }
+  },
+
+  numberFormat: _initialFormat,
+  setNumberFormat: (f) => {
+    saveNumberFormat(f)
+    setGlobalFormat(f)
+    set({ numberFormat: f })
   },
 
   boxProgress: 0,

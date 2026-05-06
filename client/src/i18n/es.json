@@ -1,0 +1,104 @@
+{
+  "frogs": {
+    "1":  "Ranita",
+    "2":  "Rana",
+    "3":  "Croakita",
+    "4":  "Gracus",
+    "5":  "Croador",
+    "6":  "Croasaurio",
+    "7":  "Ojotes",
+    "8":  "Retumbo",
+    "9":  "Ranazilla",
+    "10": "Croalce",
+    "11": "Patilargo",
+    "12": "Hechicera",
+    "13": "Terracroac",
+    "14": "Agallón",
+    "15": "Tresojos",
+    "16": "Croasaurio Rex",
+    "17": "Pantanera",
+    "18": "Sapo Khan",
+    "19": "Croátlas",
+    "20": "Ranadiós",
+    "21": "Cosmosapo",
+    "22": "Ouroborana",
+    "23": "Prismarana",
+    "24": "Sapo Vidente"
+  },
+  "locations": {
+    "1": "Pantano",
+    "2": "Bosque",
+    "3": "Tierra",
+    "4": "Espacio"
+  },
+  "header": {
+    "per_sec": "💩/seg"
+  },
+  "frog_shop": {
+    "title": "RANAS",
+    "bought": "Compradas:",
+    "income": "Ingreso:",
+    "income_unit": "💩 / seg",
+    "no_gold": "No hay suficiente 💩",
+    "cap_full": "Campo lleno ({{cap}}/{{cap}})"
+  },
+  "shop": {
+    "title": "MEJORAS",
+    "max": "MAX",
+    "level": "Nv {{current}} / {{max}}",
+    "drop_speed": {
+      "name": "Velocidad de caída"
+    },
+    "tractor": {
+      "name": "Tractor",
+      "not_bought": "no comprado",
+      "offline": "{{hours}} h sin conexión"
+    },
+    "magnet": {
+      "name": "Imán",
+      "not_bought": "no comprado",
+      "effect": "cada {{interval}}s / {{duration}}s"
+    },
+    "crate": {
+      "name": "Calidad de cajas",
+      "boxes": "Cajas: {{name}}",
+      "boxes_first": "Cajas: {{from}} → {{to}}"
+    }
+  },
+  "discovery": {
+    "title": "¡NUEVA RANA\nDESCUBIERTA!",
+    "continue": "CONTINUAR"
+  },
+  "welcome_back": {
+    "title": "¡BIENVENIDO!",
+    "worked": "El tractor trabajó {{hours}} h",
+    "claim": "RECLAMAR"
+  },
+  "magnet": {
+    "on": "activar imán",
+    "off": "desactivar imán"
+  },
+  "settings_modal": {
+    "tab_bestiary": "Bestiario",
+    "tab_settings": "Ajustes",
+    "close": "✕"
+  },
+  "bestiary": {
+    "locked": "???",
+    "income_label": "Ingreso/seg",
+    "size_label": "Tamaño",
+    "location_label": "Ubicación",
+    "merge_only": "solo fusión"
+  },
+  "settings": {
+    "language": "Idioma",
+    "music": "Música",
+    "sounds": "Efectos de sonido",
+    "number_format": "Formato de números",
+    "format_short": "Corto (1.5K)",
+    "format_full": "Completo (1.500)",
+    "bug_report": "Reportar error 🐛",
+    "music_stub": "Próximamente",
+    "sounds_stub": "Próximamente"
+  }
+}

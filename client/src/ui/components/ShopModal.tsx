@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import {
   useGameStore,
   getUpgradeCost,
@@ -7,13 +8,13 @@ import {
   getCrateLevel,
   UPGRADE_CONFIG,
 } from '../../store/gameStore'
-import { FROG_LEVELS } from '../../game/config/frogs'
 import { hapticNotification } from '../../utils/telegram'
 import { fmt } from '../../utils/formatting'
 
 type Props = { onClose: () => void }
 
 export function ShopModal({ onClose }: Props) {
+  const { t } = useTranslation()
   return (
     <div
       onClick={onClose}
@@ -29,16 +30,15 @@ export function ShopModal({ onClose }: Props) {
         className="ff-panel ff-pop"
         style={{ width: '100%', maxWidth: 380, maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}
       >
-        {/* Шапка панели */}
         <div className="relative flex items-center justify-between px-5 pt-4 pb-3"
              style={{ borderBottom: '3px dashed rgba(77,107,31,0.4)' }}>
           <h2 className="ff-display ff-stroke-white text-3xl"
               style={{ color: '#dc2626', letterSpacing: 1.5 }}>
-            ПРОКАЧКА
+            {t('shop.title')}
           </h2>
           <button
             onClick={onClose}
-            aria-label="закрыть"
+            aria-label={t('settings_modal.close')}
             className="ff-tile w-9 h-9 text-lg"
             style={{
               ['--ff-tile-from' as never]: '#fca5a5',
@@ -47,7 +47,7 @@ export function ShopModal({ onClose }: Props) {
               color: '#fff',
             }}
           >
-            ✕
+            {t('settings_modal.close')}
           </button>
         </div>
 
@@ -62,11 +62,9 @@ function ShopCards() {
   const isBoloto = currentLocation === 1
   return (
     <div className="flex flex-col gap-3 p-4 overflow-y-auto">
-      {/* Болото-only апгрейды (бокс-дропы и магнит) */}
       {isBoloto && <DropSpeedCard />}
       {isBoloto && <CrateQualityCard />}
       {isBoloto && <MagnetCard />}
-      {/* Трактор работает на любой локации */}
       <TractorCard />
     </div>
   )
@@ -85,9 +83,10 @@ type GenericCardProps = {
 }
 
 function UpgradeCard({ icon, title, effect, level, maxLevel, cost, isMax, canAfford, onBuy }: GenericCardProps) {
+  const { t } = useTranslation()
+  useGameStore((s) => s.numberFormat) // subscribe to format changes
   return (
     <div className="ff-card p-3 flex items-center gap-3">
-      {/* Иконка в светло-зелёном квадрате */}
       <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center text-3xl rounded-2xl"
            style={{
              background: 'linear-gradient(180deg, #ecfccb 0%, #bef264 100%)',
@@ -97,16 +96,14 @@ function UpgradeCard({ icon, title, effect, level, maxLevel, cost, isMax, canAff
         <span style={{ filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))' }}>{icon}</span>
       </div>
 
-      {/* Текст */}
       <div className="flex-1 min-w-0">
         <div className="ff-display text-base text-emerald-900 leading-tight">{title}</div>
         <div className="ff-body text-xs text-emerald-800 mt-0.5 font-bold leading-tight">{effect}</div>
         <div className="ff-body text-[10px] text-emerald-700 font-bold mt-0.5">
-          Lvl {level} / {maxLevel}
+          {t('shop.level', { current: level, max: maxLevel })}
         </div>
       </div>
 
-      {/* Кнопка покупки */}
       <button
         onClick={onBuy}
         disabled={isMax || !canAfford}
@@ -114,13 +111,14 @@ function UpgradeCard({ icon, title, effect, level, maxLevel, cost, isMax, canAff
           isMax ? 'ff-btn-grey' : canAfford ? 'ff-btn-green' : 'ff-btn-red'
         }`}
       >
-        {isMax ? 'MAX' : `${fmt(cost)} 💩`}
+        {isMax ? t('shop.max') : `${fmt(cost)} 💩`}
       </button>
     </div>
   )
 }
 
 function DropSpeedCard() {
+  const { t } = useTranslation()
   const level = useGameStore((s) => s.upgrades.dropSpeed)
   const gold = useGameStore((s) => s.gold)
   const buyUpgrade = useGameStore((s) => s.buyUpgrade)
@@ -133,8 +131,8 @@ function DropSpeedCard() {
   return (
     <UpgradeCard
       icon="📦"
-      title="Скорость дропа"
-      effect={isMax ? `${cur}с` : `${cur}с → ${next}с`}
+      title={t('shop.drop_speed.name')}
+      effect={isMax ? `${cur}s` : `${cur}s → ${next}s`}
       level={level}
       maxLevel={cfg.maxLevel}
       cost={cost}
@@ -146,6 +144,7 @@ function DropSpeedCard() {
 }
 
 function TractorCard() {
+  const { t } = useTranslation()
   const level = useGameStore((s) => s.upgrades.tractor)
   const gold = useGameStore((s) => s.gold)
   const buyUpgrade = useGameStore((s) => s.buyUpgrade)
@@ -155,12 +154,14 @@ function TractorCard() {
   const canAfford = gold >= cost
   const hours = cfg.capHours[level]
   const nextHours = isMax ? hours : cfg.capHours[level + 1]
-  const cur = level === 0 ? 'не куплен' : `${hours} ч офлайн`
-  const next = isMax ? '' : `${nextHours} ч`
+  const cur = level === 0
+    ? t('shop.tractor.not_bought')
+    : t('shop.tractor.offline', { hours })
+  const next = isMax ? '' : `${nextHours}h`
   return (
     <UpgradeCard
       icon="🚜"
-      title="Трактор"
+      title={t('shop.tractor.name')}
       effect={isMax ? cur : `${cur} → ${next}`}
       level={level}
       maxLevel={cfg.maxLevel}
@@ -173,6 +174,7 @@ function TractorCard() {
 }
 
 function MagnetCard() {
+  const { t } = useTranslation()
   const level = useGameStore((s) => s.upgrades.magnet)
   const gold = useGameStore((s) => s.gold)
   const buyUpgrade = useGameStore((s) => s.buyUpgrade)
@@ -180,18 +182,18 @@ function MagnetCard() {
   const isMax = level >= cfg.maxLevel
   const cost = isMax ? 0 : getUpgradeCost('magnet', level)
   const canAfford = gold >= cost
-  const interval = getMagnetSpawnInterval(level)
-  const duration = getMagnetDuration(level)
-  const nextInterval = isMax ? interval : getMagnetSpawnInterval(level + 1)
-  const nextDuration = isMax ? duration : getMagnetDuration(level + 1)
+  const interval = (getMagnetSpawnInterval(level) / 1000).toFixed(0)
+  const duration = (getMagnetDuration(level) / 1000).toFixed(0)
+  const nextInterval = isMax ? interval : (getMagnetSpawnInterval(level + 1) / 1000).toFixed(0)
+  const nextDuration = isMax ? duration : (getMagnetDuration(level + 1) / 1000).toFixed(0)
   const cur = level === 0
-    ? 'не куплен'
-    : `раз в ${(interval / 1000).toFixed(0)}с / ${(duration / 1000).toFixed(0)}с`
-  const next = isMax ? '' : `${(nextInterval / 1000).toFixed(0)}с / ${(nextDuration / 1000).toFixed(0)}с`
+    ? t('shop.magnet.not_bought')
+    : t('shop.magnet.effect', { interval, duration })
+  const next = isMax ? '' : t('shop.magnet.effect', { interval: nextInterval, duration: nextDuration })
   return (
     <UpgradeCard
       icon="🧲"
-      title="Магнит"
+      title={t('shop.magnet.name')}
       effect={isMax ? cur : `${cur} → ${next}`}
       level={level}
       maxLevel={cfg.maxLevel}
@@ -204,6 +206,7 @@ function MagnetCard() {
 }
 
 function CrateQualityCard() {
+  const { t } = useTranslation()
   const level = useGameStore((s) => s.upgrades.crateQuality)
   const gold = useGameStore((s) => s.gold)
   const buyUpgrade = useGameStore((s) => s.buyUpgrade)
@@ -213,17 +216,17 @@ function CrateQualityCard() {
   const canAfford = gold >= cost
   const curFrogLevel = getCrateLevel(level)
   const nextFrogLevel = isMax ? curFrogLevel : getCrateLevel(level + 1)
-  const curName = FROG_LEVELS[curFrogLevel - 1]?.name ?? `L${curFrogLevel}`
-  const nextName = FROG_LEVELS[nextFrogLevel - 1]?.name ?? `L${nextFrogLevel}`
+  const curName = t(`frogs.${curFrogLevel}`)
+  const nextName = t(`frogs.${nextFrogLevel}`)
   const effect = isMax
-    ? `Боксы: ${curName}`
+    ? t('shop.crate.boxes', { name: curName })
     : level === 0
-      ? `Боксы: Фрогги → ${nextName}`
+      ? t('shop.crate.boxes_first', { from: curName, to: nextName })
       : `${curName} → ${nextName}`
   return (
     <UpgradeCard
       icon="📦"
-      title="Качество боксов"
+      title={t('shop.crate.name')}
       effect={effect}
       level={level}
       maxLevel={cfg.maxLevel}

@@ -1,12 +1,15 @@
+import { useTranslation } from 'react-i18next'
 import { useGameStore } from '../../store/gameStore'
 import { fmt, fmtRate } from '../../utils/formatting'
 
 export function Header() {
+  const { t } = useTranslation()
   const gold = useGameStore((s) => s.gold)
   const incomePerSec = useGameStore((s) => s.incomePerSec)
   const boxProgress = useGameStore((s) => s.boxProgress)
   const boxWaiting = useGameStore((s) => s.boxWaiting)
   const currentLocation = useGameStore((s) => s.currentLocation)
+  useGameStore((s) => s.numberFormat) // subscribe to format changes
   const showBoxProgress = currentLocation === 1
 
   return (
@@ -17,10 +20,8 @@ export function Header() {
         pointerEvents: 'auto',
       }}
     >
-      {/* Слева — пусто (переключатель локаций — отдельный фиксированный блок справа) */}
       <div />
 
-      {/* Центр — баланс золота + доход/сек */}
       <div className="flex flex-col items-center gap-1">
         <div className="ff-balance">
           <span className="text-xl leading-none">💩</span>
@@ -35,11 +36,10 @@ export function Header() {
             letterSpacing: '0.3px',
           }}
         >
-          +{fmtRate(incomePerSec)} 💩/сек
+          +{fmtRate(incomePerSec)} {t('header.per_sec')}
         </div>
       </div>
 
-      {/* Справа — прогресс падения коробки (только на Болоте) */}
       <div className="justify-self-end">
         {showBoxProgress && <BoxProgress progress={boxProgress} waiting={boxWaiting} />}
       </div>

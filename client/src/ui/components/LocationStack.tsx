@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useGameStore, LOCATIONS, getLocationById, type LocationConfig } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
 import { hapticSelection } from '../../utils/telegram'
@@ -112,6 +113,8 @@ export function LocationStack() {
 function LocationButton({
   loc, isCurrent, onClick, disabled = false,
 }: { loc: LocationConfig; isCurrent: boolean; onClick: () => void; disabled?: boolean }) {
+  const { t } = useTranslation()
+  const locName = t(`locations.${loc.id}`)
   const v = LOCATION_VISUAL[loc.id] ?? LOCATION_VISUAL[1]
 
   return (
@@ -136,8 +139,8 @@ function LocationButton({
       <button
         onClick={onClick}
         disabled={disabled}
-        aria-label={loc.name}
-        title={loc.name}
+        aria-label={locName}
+        title={locName}
         style={{
           pointerEvents: 'auto',
           cursor: disabled ? 'not-allowed' : 'pointer',

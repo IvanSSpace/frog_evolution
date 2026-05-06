@@ -43,9 +43,10 @@ function Tile({ emoji, skin, size = 'md', badge = false, onClick }: TileProps) {
 type BottomBarProps = {
   onOpenShop?: () => void
   onOpenFrogShop?: () => void
+  onOpenSettings?: () => void
 }
 
-export function BottomBar({ onOpenShop, onOpenFrogShop }: BottomBarProps) {
+export function BottomBar({ onOpenShop, onOpenFrogShop, onOpenSettings }: BottomBarProps) {
   return (
     <div className="ff-bar bottom w-full h-full flex items-center justify-between px-3 py-2"
          style={{ pointerEvents: 'auto' }}>
@@ -61,7 +62,7 @@ export function BottomBar({ onOpenShop, onOpenFrogShop }: BottomBarProps) {
       </div>
 
       {/* Справа — журнал */}
-      <Tile emoji="📖" skin="cream" size="lg" badge />
+      <Tile emoji="📖" skin="cream" size="lg" badge onClick={onOpenSettings} />
     </div>
   )
 }

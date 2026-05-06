@@ -1,0 +1,104 @@
+{
+  "frogs": {
+    "1":  "Froggy",
+    "2":  "Frog",
+    "3":  "Ribbette",
+    "4":  "Croacus",
+    "5":  "Croaker",
+    "6":  "Croakosaur",
+    "7":  "Bulgy",
+    "8":  "Thumper",
+    "9":  "Frogzilla",
+    "10": "Crocmoose",
+    "11": "Longlegs",
+    "12": "Swampwitch",
+    "13": "Earthcroak",
+    "14": "Gillotus",
+    "15": "Thirdeye",
+    "16": "Croak-Rex",
+    "17": "Marshspirit",
+    "18": "Toad Khan",
+    "19": "Croakatlas",
+    "20": "Froggod",
+    "21": "Cosmotoad",
+    "22": "Ourobofrog",
+    "23": "Prismafrog",
+    "24": "Toad Seer"
+  },
+  "locations": {
+    "1": "Swamp",
+    "2": "Forest",
+    "3": "Earth",
+    "4": "Space"
+  },
+  "header": {
+    "per_sec": "💩/sec"
+  },
+  "frog_shop": {
+    "title": "FROGS",
+    "bought": "Owned:",
+    "income": "Income:",
+    "income_unit": "💩 / sec",
+    "no_gold": "Not enough 💩",
+    "cap_full": "Field full ({{cap}}/{{cap}})"
+  },
+  "shop": {
+    "title": "UPGRADES",
+    "max": "MAX",
+    "level": "Lvl {{current}} / {{max}}",
+    "drop_speed": {
+      "name": "Drop Speed"
+    },
+    "tractor": {
+      "name": "Tractor",
+      "not_bought": "not purchased",
+      "offline": "{{hours}} h offline"
+    },
+    "magnet": {
+      "name": "Magnet",
+      "not_bought": "not purchased",
+      "effect": "every {{interval}}s / {{duration}}s"
+    },
+    "crate": {
+      "name": "Crate Quality",
+      "boxes": "Crates: {{name}}",
+      "boxes_first": "Crates: {{from}} → {{to}}"
+    }
+  },
+  "discovery": {
+    "title": "NEW FROG\nDISCOVERED!",
+    "continue": "CONTINUE"
+  },
+  "welcome_back": {
+    "title": "WELCOME BACK!",
+    "worked": "Tractor worked {{hours}} h",
+    "claim": "CLAIM"
+  },
+  "magnet": {
+    "on": "enable magnet",
+    "off": "disable magnet"
+  },
+  "settings_modal": {
+    "tab_bestiary": "Bestiary",
+    "tab_settings": "Settings",
+    "close": "✕"
+  },
+  "bestiary": {
+    "locked": "???",
+    "income_label": "Income/sec",
+    "size_label": "Size",
+    "location_label": "Location",
+    "merge_only": "merge only"
+  },
+  "settings": {
+    "language": "Language",
+    "music": "Music",
+    "sounds": "Sound Effects",
+    "number_format": "Number Format",
+    "format_short": "Short (1.5K)",
+    "format_full": "Full (1,500)",
+    "bug_report": "Bug Report 🐛",
+    "music_stub": "Coming soon",
+    "sounds_stub": "Coming soon"
+  }
+}

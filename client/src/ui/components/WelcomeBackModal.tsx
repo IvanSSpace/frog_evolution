@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { fmt } from '../../utils/formatting'
 
 type Props = {
@@ -7,6 +8,8 @@ type Props = {
 }
 
 export function WelcomeBackModal({ earned, hours, onClose }: Props) {
+  const { t } = useTranslation()
+
   return (
     <div
       onClick={onClose}
@@ -35,13 +38,12 @@ export function WelcomeBackModal({ earned, hours, onClose }: Props) {
 
           <h2 className="ff-display ff-stroke-white mt-3 text-2xl"
               style={{ color: '#15803d', letterSpacing: 1 }}>
-            С ВОЗВРАЩЕНИЕМ!
+            {t('welcome_back.title')}
           </h2>
           <p className="ff-body mt-2 text-sm font-bold text-emerald-800">
-            Трактор работал {hours.toFixed(1)} ч
+            {t('welcome_back.worked', { hours: hours.toFixed(1) })}
           </p>
 
-          {/* Капсула с результатом */}
           <div
             className="ff-display mt-4 inline-flex items-center gap-2 px-5 py-3 tabular-nums"
             style={{
@@ -65,7 +67,7 @@ export function WelcomeBackModal({ earned, hours, onClose }: Props) {
             className="ff-btn ff-btn-green mt-6 text-base w-full"
             style={{ paddingTop: 12, paddingBottom: 12 }}
           >
-            ЗАБРАТЬ
+            {t('welcome_back.claim')}
           </button>
         </div>
       </div>

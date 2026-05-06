@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Header } from './ui/components/Header'
 import { BottomBar } from './ui/components/BottomBar'
@@ -6,6 +7,7 @@ import { ShopModal } from './ui/components/ShopModal'
 import { FrogShopModal } from './ui/components/FrogShopModal'
 import { WelcomeBackModal } from './ui/components/WelcomeBackModal'
 import { DiscoveryModal } from './ui/components/DiscoveryModal'
+import { SettingsModal } from './ui/components/SettingsModal'
 import { LocationStack } from './ui/components/LocationStack'
 import { eventBus } from './store/eventBus'
 import { authenticate } from './utils/auth'
@@ -24,6 +26,7 @@ const queryClient = new QueryClient()
 function App() {
   const [shopOpen, setShopOpen] = useState(false)
   const [frogShopOpen, setFrogShopOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [welcomeBack, setWelcomeBack] = useState<{ earned: number; hours: number } | null>(null)
   const [discovered, setDiscovered] = useState<number | null>(null)
 
@@ -92,6 +95,7 @@ function App() {
           <BottomBar
             onOpenShop={() => setShopOpen(true)}
             onOpenFrogShop={() => setFrogShopOpen(true)}
+            onOpenSettings={() => setSettingsOpen(true)}
           />
         </div>
       </div>
@@ -101,6 +105,7 @@ function App() {
 
       {shopOpen && <ShopModal onClose={() => setShopOpen(false)} />}
       {frogShopOpen && <FrogShopModal onClose={() => setFrogShopOpen(false)} />}
+      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       {discovered !== null && (
         <DiscoveryModal level={discovered} onClose={() => setDiscovered(null)} />
       )}
@@ -116,18 +121,19 @@ function App() {
 }
 
 function MagnetToggle() {
+  const { t } = useTranslation()
   const magnetLevel = useGameStore((s) => s.upgrades.magnet)
   const magnetEnabled = useGameStore((s) => s.magnetEnabled)
   const toggleMagnet = useGameStore((s) => s.toggleMagnet)
   const currentLocation = useGameStore((s) => s.currentLocation)
 
-  if (magnetLevel < 1) return null // не куплен — не показываем
-  if (currentLocation !== 1) return null // магнит работает только на Болоте
+  if (magnetLevel < 1) return null
+  if (currentLocation !== 1) return null
 
   return (
     <button
       onClick={() => { hapticSelection(); toggleMagnet() }}
-      aria-label={magnetEnabled ? 'выключить магнит' : 'включить магнит'}
+      aria-label={magnetEnabled ? t('magnet.off') : t('magnet.on')}
       style={{
         position: 'fixed',
         top: 'calc(12% + 2px)',

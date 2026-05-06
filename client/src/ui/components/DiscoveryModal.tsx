@@ -1,4 +1,6 @@
+import { useTranslation } from 'react-i18next'
 import { configForLevel } from '../../game/config/frogs'
+import { TintedFrog } from './TintedFrog'
 
 type Props = {
   level: number
@@ -7,7 +9,9 @@ type Props = {
 
 export function DiscoveryModal({ level, onClose }: Props) {
   console.log('[DiscoveryModal] render level=', level)
+  const { t } = useTranslation()
   const cfg = configForLevel(level)
+  const frogName = t(`frogs.${level}`)
 
   return (
     <div
@@ -27,7 +31,6 @@ export function DiscoveryModal({ level, onClose }: Props) {
           'radial-gradient(ellipse at 50% 30%, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.92) 70%)',
       }}
     >
-      {/* Внешний широкий конус — мягкое свечение */}
       <div
         style={{
           position: 'absolute',
@@ -43,7 +46,6 @@ export function DiscoveryModal({ level, onClose }: Props) {
           filter: 'blur(8px)',
         }}
       />
-      {/* Внутренний резкий конус */}
       <div
         style={{
           position: 'absolute',
@@ -59,7 +61,6 @@ export function DiscoveryModal({ level, onClose }: Props) {
           pointerEvents: 'none',
         }}
       />
-      {/* Лёгкие "пылинки" в свете */}
       <div
         style={{
           position: 'absolute',
@@ -75,34 +76,32 @@ export function DiscoveryModal({ level, onClose }: Props) {
         }}
       />
 
-      {/* Контент */}
       <div className="relative flex flex-col items-center" style={{ zIndex: 1 }}>
-        {/* Заголовок */}
         <div
           className="ff-display text-center leading-[0.95] ff-pop"
           style={{
             fontSize: 'clamp(28px, 8.5vw, 44px)',
             color: '#ffe066',
             letterSpacing: 1.5,
+            whiteSpace: 'pre-line',
             textShadow:
               '-3px 0 0 #7f1d1d, 3px 0 0 #7f1d1d, 0 -3px 0 #7f1d1d, 0 3px 0 #7f1d1d, -3px -3px 0 #7f1d1d, 3px -3px 0 #7f1d1d, -3px 3px 0 #7f1d1d, 3px 3px 0 #7f1d1d, 0 6px 0 rgba(0,0,0,0.45)',
           }}
         >
-          ОТКРЫТА НОВАЯ<br />ЛЯГУШКА!
+          {t('discovery.title')}
         </div>
 
-        {/* Изображение */}
-        <img
-          src={cfg.path}
-          alt={cfg.name}
+        <TintedFrog
+          path={cfg.path}
+          tint={cfg.tint}
+          alt={frogName}
           className="w-44 h-44 object-contain mt-6"
           style={{
-            filter: 'drop-shadow(0 0 32px rgba(255, 230, 100, 0.85)) drop-shadow(0 8px 12px rgba(0,0,0,0.45))',
+            filter: 'drop-shadow(0 0 32px rgba(255,230,100,0.85)) drop-shadow(0 8px 12px rgba(0,0,0,0.45))',
             animation: 'discFloat 2.4s ease-in-out infinite',
           }}
         />
 
-        {/* Имя в "плашке" */}
         <div
           className="ff-display mt-5 px-6 py-2.5"
           style={{
@@ -117,16 +116,15 @@ export function DiscoveryModal({ level, onClose }: Props) {
             textShadow: '0 3px 0 rgba(0,0,0,0.4), 0 0 16px rgba(255,255,255,0.3)',
           }}
         >
-          {cfg.name}
+          {frogName}
         </div>
 
-        {/* Кнопка */}
         <button
           onClick={onClose}
           className="ff-btn ff-btn-yellow mt-8 text-lg"
           style={{ paddingLeft: 28, paddingRight: 28, paddingTop: 12, paddingBottom: 12 }}
         >
-          ПРОДОЛЖИТЬ
+          {t('discovery.continue')}
         </button>
       </div>
 
