@@ -43,6 +43,11 @@
 - Telegram auto-detect языка — добавить позже в v2
 - Язык на сервере — localStorage достаточно
 
+### Rare Crate
+- [x] **RARE-01**: Редкий «золотой» бокс спавнится реже обычного (отдельная логика/интервал в MainScene)
+- [x] **RARE-02**: Тап на золотой бокс открывает React-модалку со слот-машиной (прокрутка лягушек → остановка на случайной)
+- [x] **RARE-03**: После закрытия модалки выигранная лягушка спавнится на поле через `gameStore`
+
 ## Traceability
 
 | Phase | Requirements |
@@ -51,3 +56,4 @@
 | 2 — Settings Modal | UI-01, UI-02, UI-03, UI-04, UI-05, UI-06, UI-07 |
 | 3 — Bestiary | BEST-01, BEST-02, BEST-03, BEST-04 |
 | 4 — Number Format | FMT-01, FMT-02, FMT-03 |
+| 5 — Rare Crate | RARE-01, RARE-02, RARE-03 |
