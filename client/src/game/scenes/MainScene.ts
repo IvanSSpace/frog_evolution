@@ -4,7 +4,11 @@ import { eventBus } from '../../store/eventBus'
 import { FROG_LEVELS, MAX_LEVEL, textureKeyForLevel, rollPoopType, POOP_INTERVAL_MS, getTargetIncomePerSec, getPoopValueExact, stochasticRound, type PoopType } from '../config/frogs'
 import { hapticImpact } from '../../utils/telegram'
 
-const mapKeyForLocation = (locId: number): string => locId === 2 ? 'map2' : 'map'
+const mapKeyForLocation = (locId: number): string => {
+  if (locId === 2) return 'map2'
+  if (locId === 3) return 'map3'
+  return 'map'
+}
 
 // Игра рендерится в физических пикселях (window * DPR), CSS-зум 1/DPR в game/index.ts
 // Все размеры/координаты ниже задаются в CSS-пикселях, умножение на DPR делается здесь
@@ -105,6 +109,7 @@ export class MainScene extends Phaser.Scene {
     this.load.svg('poop', '/poop.svg', { width: 18 * TEXTURE_QUALITY, height: 18 * TEXTURE_QUALITY })
     this.load.image('map', '/map.webp')
     this.load.image('map2', '/map2.webp')
+    this.load.image('map3', '/map3.webp')
     this.load.image('box', '/box.webp')
   }
 
