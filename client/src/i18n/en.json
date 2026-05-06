@@ -90,6 +90,10 @@
     "location_label": "Location",
     "merge_only": "merge only"
   },
+  "rare_crate": {
+    "title": "RARE PRIZE!",
+    "claim": "Claim!"
+  },
   "settings": {
     "language": "Language",
     "music": "Music",

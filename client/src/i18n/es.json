@@ -90,6 +90,10 @@
     "location_label": "Ubicación",
     "merge_only": "solo fusión"
   },
+  "rare_crate": {
+    "title": "¡PREMIO RARO!",
+    "claim": "¡Reclamar!"
+  },
   "settings": {
     "language": "Idioma",
     "music": "Música",

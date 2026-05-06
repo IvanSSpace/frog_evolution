@@ -90,6 +90,10 @@
     "location_label": "Локация",
     "merge_only": "только мерж"
   },
+  "rare_crate": {
+    "title": "РЕДКИЙ ПРИЗ!",
+    "claim": "Забрать!"
+  },
   "settings": {
     "language": "Язык",
     "music": "Музыка",
