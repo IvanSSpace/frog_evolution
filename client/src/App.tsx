@@ -6,7 +6,10 @@ import { ShopModal } from './ui/components/ShopModal'
 import { FrogShopModal } from './ui/components/FrogShopModal'
 import { WelcomeBackModal } from './ui/components/WelcomeBackModal'
 import { DiscoveryModal } from './ui/components/DiscoveryModal'
+import { LocationStack } from './ui/components/LocationStack'
 import { eventBus } from './store/eventBus'
+import { authenticate } from './utils/auth'
+import { hapticSelection } from './utils/telegram'
 import {
   useGameStore,
   saveSessionTimestamp,
@@ -24,6 +27,13 @@ function App() {
   const [discovered, setDiscovered] = useState<number | null>(null)
 
   useEffect(() => {
+    // Авторизация в Telegram (в dev-режиме браузера проверка пропускается)
+    authenticate().then((result) => {
+      if (result.mode === 'failed') {
+        console.error('[app] auth failed — продолжаем без сервера')
+      }
+    })
+
     // Расчёт офлайн-дохода трактора при загрузке
     const elapsedMs = getOfflineElapsedMs()
     const tractorLevel = useGameStore.getState().upgrades.tractor
@@ -81,6 +91,7 @@ function App() {
       </div>
 
       <MagnetToggle />
+      <LocationStack />
 
       {shopOpen && <ShopModal onClose={() => setShopOpen(false)} />}
       {frogShopOpen && <FrogShopModal onClose={() => setFrogShopOpen(false)} />}
@@ -102,12 +113,14 @@ function MagnetToggle() {
   const magnetLevel = useGameStore((s) => s.upgrades.magnet)
   const magnetEnabled = useGameStore((s) => s.magnetEnabled)
   const toggleMagnet = useGameStore((s) => s.toggleMagnet)
+  const currentLocation = useGameStore((s) => s.currentLocation)
 
   if (magnetLevel < 1) return null // не куплен — не показываем
+  if (currentLocation !== 1) return null // магнит работает только на Болоте
 
   return (
     <button
-      onClick={toggleMagnet}
+      onClick={() => { hapticSelection(); toggleMagnet() }}
       aria-label={magnetEnabled ? 'выключить магнит' : 'включить магнит'}
       style={{
         position: 'fixed',

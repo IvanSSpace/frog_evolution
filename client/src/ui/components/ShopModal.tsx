@@ -4,8 +4,11 @@ import {
   getDropIntervalMs,
   getMagnetSpawnInterval,
   getMagnetDuration,
+  getCrateLevel,
   UPGRADE_CONFIG,
 } from '../../store/gameStore'
+import { FROG_LEVELS } from '../../game/config/frogs'
+import { hapticNotification } from '../../utils/telegram'
 
 type Props = { onClose: () => void }
 
@@ -53,7 +56,7 @@ export function ShopModal({ onClose }: Props) {
           <DropSpeedCard />
           <TractorCard />
           <MagnetCard />
-          <PlaceholderCard title="Апгрейд 4" />
+          <CrateQualityCard />
         </div>
       </div>
     </div>
@@ -128,7 +131,7 @@ function DropSpeedCard() {
       cost={cost}
       isMax={isMax}
       canAfford={canAfford}
-      onBuy={() => buyUpgrade('dropSpeed')}
+      onBuy={() => hapticNotification(buyUpgrade('dropSpeed') ? 'success' : 'error')}
     />
   )
 }
@@ -155,7 +158,7 @@ function TractorCard() {
       cost={cost}
       isMax={isMax}
       canAfford={canAfford}
-      onBuy={() => buyUpgrade('tractor')}
+      onBuy={() => hapticNotification(buyUpgrade('tractor') ? 'success' : 'error')}
     />
   )
 }
@@ -186,27 +189,39 @@ function MagnetCard() {
       cost={cost}
       isMax={isMax}
       canAfford={canAfford}
-      onBuy={() => buyUpgrade('magnet')}
+      onBuy={() => hapticNotification(buyUpgrade('magnet') ? 'success' : 'error')}
     />
   )
 }
 
-function PlaceholderCard({ title }: { title: string }) {
+function CrateQualityCard() {
+  const level = useGameStore((s) => s.upgrades.crateQuality)
+  const gold = useGameStore((s) => s.gold)
+  const buyUpgrade = useGameStore((s) => s.buyUpgrade)
+  const cfg = UPGRADE_CONFIG.crateQuality
+  const isMax = level >= cfg.maxLevel
+  const cost = isMax ? 0 : getUpgradeCost('crateQuality', level)
+  const canAfford = gold >= cost
+  const curFrogLevel = getCrateLevel(level)
+  const nextFrogLevel = isMax ? curFrogLevel : getCrateLevel(level + 1)
+  const curName = FROG_LEVELS[curFrogLevel - 1]?.name ?? `L${curFrogLevel}`
+  const nextName = FROG_LEVELS[nextFrogLevel - 1]?.name ?? `L${nextFrogLevel}`
+  const effect = isMax
+    ? `Боксы: ${curName}`
+    : level === 0
+      ? `Боксы: Фрогги → ${nextName}`
+      : `${curName} → ${nextName}`
   return (
-    <div className="ff-card p-3 flex items-center gap-3 opacity-60">
-      <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center text-3xl rounded-2xl"
-           style={{
-             background: 'linear-gradient(180deg, #f5f5f4 0%, #d6d3d1 100%)',
-             border: '2px solid #57534e',
-             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)',
-           }}>
-        ⚙️
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="ff-display text-base text-stone-800">{title}</div>
-        <div className="ff-body text-[11px] text-stone-600 font-bold mt-0.5">скоро…</div>
-      </div>
-      <button className="ff-btn ff-btn-grey text-sm" disabled>— 💩</button>
-    </div>
+    <UpgradeCard
+      icon="📦"
+      title="Качество боксов"
+      effect={effect}
+      level={level}
+      maxLevel={cfg.maxLevel}
+      cost={cost}
+      isMax={isMax}
+      canAfford={canAfford}
+      onBuy={() => hapticNotification(buyUpgrade('crateQuality') ? 'success' : 'error')}
+    />
   )
 }

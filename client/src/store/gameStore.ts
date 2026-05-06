@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { eventBus } from './eventBus'
-import { getFrogPrice, MAX_LEVEL } from '../game/config/frogs'
+import { getFrogPrice, MAX_LEVEL, FROG_LEVELS } from '../game/config/frogs'
 
 // ============== АПГРЕЙДЫ ==============
 
@@ -8,6 +8,7 @@ interface Upgrades {
   dropSpeed: number
   tractor: number
   magnet: number
+  crateQuality: number
 }
 
 // Таблица: индекс = текущий уровень, intervalMs[i] / capHours[i] = эффект на уровне i,
@@ -15,14 +16,13 @@ interface Upgrades {
 export const UPGRADE_CONFIG = {
   dropSpeed: {
     maxLevel: 8,
-    // Первый уровень даёт +43% (10с → 7с), затем плавнее
     intervalMs: [10000, 7000, 5500, 4500, 3500, 2800, 2200, 1800, 1500],
-    costs: [200, 500, 1500, 4000, 10000, 30000, 75000, 200000],
+    costs: [99, 3_000, 20_000, 130_000, 900_000, 5_800_000, 58_000_000, 580_000_000],
   },
   tractor: {
     maxLevel: 8,
     capHours: [0, 2, 3, 3.5, 4, 4.5, 5, 5.5, 6],
-    costs: [500, 1500, 4500, 13000, 40000, 120000, 350000, 1000000],
+    costs: [550, 3_500, 23_000, 250_000, 2_500_000, 25_000_000, 250_000_000, 2_500_000_000],
     // incomePerSec масштабируется с уровнем (×3 за уровень)
     incomePerSecByLevel: [0, 30, 100, 300, 1000, 3000, 10000, 30000, 100000],
   },
@@ -31,9 +31,14 @@ export const UPGRADE_CONFIG = {
     spawnIntervalMs: [Infinity, 10000, 8000, 7000, 6000, 5000, 4000],
     durationMs:      [0,        5000,  5500,  6000,  6500,  7000,  8000],
     radiusPx:        [0,        120,   140,   160,   180,   200,   220],
-    // Сколько пар магнит сольёт за одну активацию
     mergesPerCycle:  [0,        1,     1,     2,     2,     3,     3],
-    costs: [2_000, 8_000, 30_000, 100_000, 350_000, 1_200_000],
+    costs: [300_000, 1_000_000, 5_000_000, 50_000_000, 500_000_000, 5_000_000_000],
+  },
+  crateQuality: {
+    maxLevel: 5,
+    // уровень апгрейда → уровень лягушки из бокса (0 = L1 по умолчанию)
+    frogLevel: [1, 2, 3, 4, 5, 6],
+    costs: [5_000_000, 50_000_000, 500_000_000, 5_000_000_000, 50_000_000_000],
   },
 } as const
 
@@ -76,9 +81,35 @@ export function getMagnetMergesPerCycle(level: number): number {
   return arr[Math.min(level, arr.length - 1)]
 }
 
+export function getCrateLevel(upgradeLevel: number): number {
+  const arr = UPGRADE_CONFIG.crateQuality.frogLevel
+  return arr[Math.min(upgradeLevel, arr.length - 1)]
+}
+
 export function getTractorIncomePerSec(level: number): number {
   const arr = UPGRADE_CONFIG.tractor.incomePerSecByLevel
   return arr[Math.min(level, arr.length - 1)]
+}
+
+// ============== ЛОКАЦИИ ==============
+
+export interface LocationConfig {
+  id: number
+  name: string
+  minLevel: number      // первый уровень лягушек
+  maxLevel: number      // последний уровень
+  magnetEnabled: boolean // работает ли магнит на этой локации
+}
+
+export const LOCATIONS: readonly LocationConfig[] = [
+  { id: 1, name: 'Болото', minLevel: 1,  maxLevel: 6,  magnetEnabled: true  },
+  { id: 2, name: 'Лес',    minLevel: 7,  maxLevel: 12, magnetEnabled: false },
+  { id: 3, name: 'Земля',  minLevel: 13, maxLevel: 18, magnetEnabled: false },
+  { id: 4, name: 'Космос', minLevel: 19, maxLevel: 24, magnetEnabled: false },
+] as const
+
+export function getLocationById(id: number): LocationConfig {
+  return LOCATIONS.find((l) => l.id === id) ?? LOCATIONS[0]
 }
 
 // ============== ПЕРСИСТЕНС ==============
@@ -90,10 +121,10 @@ const MAGNET_ENABLED_KEY = 'frog_evolution_magnet_enabled'
 const VERSION_KEY = 'frog_evolution_storage_version'
 const SESSION_KEY = 'frog_evolution_last_session'
 // Бампается когда меняются конфиги — старые сейвы сбрасываются
-const STORAGE_VERSION = 6
+const STORAGE_VERSION = 11
 
 function loadUpgrades(): Upgrades {
-  const defaults: Upgrades = { dropSpeed: 0, tractor: 0, magnet: 0 }
+  const defaults: Upgrades = { dropSpeed: 0, tractor: 0, magnet: 0, crateQuality: 0 }
   try {
     const ver = parseInt(localStorage.getItem(VERSION_KEY) ?? '0', 10)
     if (ver !== STORAGE_VERSION) {
@@ -107,9 +138,10 @@ function loadUpgrades(): Upgrades {
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Upgrades>
       return {
-        dropSpeed: Math.min(parsed.dropSpeed ?? 0, UPGRADE_CONFIG.dropSpeed.maxLevel),
-        tractor: Math.min(parsed.tractor ?? 0, UPGRADE_CONFIG.tractor.maxLevel),
-        magnet: Math.min(parsed.magnet ?? 0, UPGRADE_CONFIG.magnet.maxLevel),
+        dropSpeed:    Math.min(parsed.dropSpeed    ?? 0, UPGRADE_CONFIG.dropSpeed.maxLevel),
+        tractor:      Math.min(parsed.tractor      ?? 0, UPGRADE_CONFIG.tractor.maxLevel),
+        magnet:       Math.min(parsed.magnet       ?? 0, UPGRADE_CONFIG.magnet.maxLevel),
+        crateQuality: Math.min(parsed.crateQuality ?? 0, UPGRADE_CONFIG.crateQuality.maxLevel),
       }
     }
   } catch {/* ignore */}
@@ -151,6 +183,21 @@ function loadDiscovered(): number[] {
 
 function saveDiscovered(arr: number[]) {
   try { localStorage.setItem(DISCOVERED_KEY, JSON.stringify(arr)) } catch {/* ignore */}
+}
+
+const LOCATION_KEY = 'frog_evolution_current_location'
+
+function loadCurrentLocation(): number {
+  try {
+    const raw = localStorage.getItem(LOCATION_KEY)
+    const n = parseInt(raw ?? '1', 10)
+    if (Number.isFinite(n) && LOCATIONS.some((l) => l.id === n)) return n
+  } catch {/* ignore */}
+  return 1
+}
+
+function saveCurrentLocation(id: number) {
+  try { localStorage.setItem(LOCATION_KEY, String(id)) } catch {/* ignore */}
 }
 
 function loadMagnetEnabled(): boolean {
@@ -211,6 +258,10 @@ interface GameState {
   magnetEnabled: boolean
   toggleMagnet: () => void
 
+  // Текущая локация (1=Болото, 2=Лес, 3=Земля, 4=Космос)
+  currentLocation: number
+  setCurrentLocation: (id: number) => void
+
   boxProgress: number
   boxWaiting: boolean
   setBoxProgress: (v: number) => void
@@ -265,10 +316,20 @@ export const useGameStore = create<GameState>((set, get) => ({
     return { magnetEnabled: next }
   }),
 
+  currentLocation: loadCurrentLocation(),
+  setCurrentLocation: (id) => {
+    if (!LOCATIONS.some((l) => l.id === id)) return
+    saveCurrentLocation(id)
+    set({ currentLocation: id })
+    eventBus.emit('location:changed', { id })
+  },
+
   frogPurchases: loadFrogPurchases(),
   buyFrog: (level) => {
     const state = get()
     if (level < 1 || level > MAX_LEVEL) return { ok: false, reason: 'invalid' }
+    const cfg = FROG_LEVELS[level - 1]
+    if (!cfg.availableInShop) return { ok: false, reason: 'invalid' }
     if (state.entityCount >= ENTITY_CAP) return { ok: false, reason: 'capFull' }
     const purchases = state.frogPurchases[level - 1] ?? 0
     const cost = getFrogPrice(level, purchases)

@@ -1,7 +1,8 @@
 import Phaser from 'phaser'
-import { useGameStore, getDropIntervalMs, getMagnetSpawnInterval, getMagnetDuration, getMagnetMergesPerCycle } from '../../store/gameStore'
+import { useGameStore, getDropIntervalMs, getMagnetSpawnInterval, getMagnetDuration, getMagnetMergesPerCycle, getCrateLevel, getLocationById } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
-import { FROG_LEVELS, MAX_LEVEL, textureKeyForLevel, rollPoopType, POOP_INTERVAL_MS, getTargetIncomePerSec, getPoopValueExact, stochasticRound, type PoopType } from '../config/frogs'
+import { FROG_LEVELS, MAX_LEVEL, textureKeyForLevel, rollPoopType, POOP_INTERVAL_MS, getTargetIncomePerSec, getPoopValueExact, stochasticRound, frogLevelsForLocation, type PoopType } from '../config/frogs'
+import { hapticImpact } from '../../utils/telegram'
 
 // Игра рендерится в физических пикселях (window * DPR), CSS-зум 1/DPR в game/index.ts
 // Все размеры/координаты ниже задаются в CSS-пикселях, умножение на DPR делается здесь
@@ -68,10 +69,15 @@ export class MainScene extends Phaser.Scene {
   }
 
   preload() {
-    // Каждый уровень — свой SVG файл из /public/frogs_svg/ со своим размером
+    // Каждый уровень — свой SVG. Если несколько уровней используют один файл
+    // (placeholder), грузим его один раз — textureKeyForLevel переиспользует ключ.
+    const loaded = new Set<string>()
     FROG_LEVELS.forEach((cfg, idx) => {
       const level = idx + 1
-      this.load.svg(textureKeyForLevel(level), cfg.path, {
+      const key = textureKeyForLevel(level)
+      if (loaded.has(key)) return
+      loaded.add(key)
+      this.load.svg(key, cfg.path, {
         width: 50 * TEXTURE_QUALITY * cfg.size,
         height: 47 * TEXTURE_QUALITY * cfg.size,
       })
@@ -98,20 +104,66 @@ export class MainScene extends Phaser.Scene {
 
     // Подписка на покупку лягушки из магазина
     eventBus.on('frog:purchased', this.onFrogPurchased)
+    // Подписка на смену локации — очищаем поле и спавним лягушек новой локации
+    eventBus.on('location:changed', this.onLocationChanged)
 
-    // ТЕСТ: по одной лягушке каждого уровня (1..7), сетка 3+3+1
+    this.spawnLocationFrogs()
+  }
+
+  // Спавнит по одной лягушке каждого уровня текущей локации (тест-режим)
+  private spawnLocationFrogs() {
+    const { width, height } = this.scale
+    const locId = useGameStore.getState().currentLocation
+    const levels = frogLevelsForLocation(locId)
+    if (levels.length === 0) return
+
     const cols = 3
-    const rows = Math.ceil(MAX_LEVEL / cols)
+    const rows = Math.ceil(levels.length / cols)
     const cellW = (width - FIELD_PAD_X * 2) / cols
     const cellH = (height - FIELD_PAD_Y - FIELD_PAD_Y_BOTTOM) / rows
-    for (let lvl = 1; lvl <= MAX_LEVEL; lvl++) {
-      const idx = lvl - 1
+    levels.forEach((lvl, idx) => {
       const col = idx % cols
       const row = Math.floor(idx / cols)
       const x = FIELD_PAD_X + cellW * (col + 0.5)
       const y = FIELD_PAD_Y + cellH * (row + 0.5)
       this.spawnFrog(x, y, lvl)
+    })
+  }
+
+  // Полная очистка поля при смене локации
+  private clearField() {
+    // Лягушки
+    for (const frog of [...this.frogs]) {
+      frog.poopTimer?.remove()
+      frog.poopTimer = null
+      this.tweens.killTweensOf(frog.container)
+      this.tweens.killTweensOf(frog.body)
+      frog.container.destroy()
     }
+    this.frogs = []
+
+    // Коробки
+    for (const box of [...this.boxes]) {
+      this.tweens.killTweensOf(box.img)
+      box.img.destroy()
+    }
+    this.boxes = []
+
+    // Магниты (если были)
+    for (const m of [...this.magnets]) {
+      this.tweens.killTweensOf(m.emoji)
+      m.emoji.destroy()
+    }
+    this.magnets = []
+
+    this.boxProgressMs = 0
+    this.magnetSpawnMs = 0
+    this.syncEntityCount()
+  }
+
+  private onLocationChanged = () => {
+    this.clearField()
+    this.spawnLocationFrogs()
   }
 
   private spawnFrog(x: number, y: number, level: number = 1): FrogData {
@@ -403,6 +455,9 @@ export class MainScene extends Phaser.Scene {
       }
     }
 
+    // Лёгкая вибрация на тап по лягушке
+    hapticImpact('light')
+
     // Тап = +1 монета (не зависит от уровня), отдельно от какашек
     useGameStore.getState().addGold(1)
     this.spawnFloatingText(frog.container.x, frog.container.y - 20 * DPR, '+1', 'regular')
@@ -448,11 +503,11 @@ export class MainScene extends Phaser.Scene {
     // Положение приземления какашки — отдельно по X и Y, индекс = уровень-1
     // horizDistByLevel — насколько далеко по ГОРИЗОНТАЛИ от лягушки (положительное — назад от неё)
     // vertOffsetByLevel — насколько НИЖЕ центра лягушки приземлится (положительное — вниз, отрицательное — вверх)
-    const horizDistByLevel = [20, 26, 34, 38, 40, 42, 42] // L1..L7
-    const vertOffsetByLevel = [14, 16, 16, 18, 20, 10, 26] // L1..L7
+    const horizDistByLevel = [20, 26, 34, 40, 42, 42] // L1..L6
+    const vertOffsetByLevel = [14, 16, 16, 20, 10, 26] // L1..L6
 
-    const horizDist = (horizDistByLevel[Math.min(frog.level - 1, 6)] ?? 28) * DPR
-    const vertOffset = (vertOffsetByLevel[Math.min(frog.level - 1, 6)] ?? 16) * DPR
+    const horizDist = (horizDistByLevel[Math.min(frog.level - 1, 5)] ?? 28) * DPR
+    const vertOffset = (vertOffsetByLevel[Math.min(frog.level - 1, 5)] ?? 16) * DPR
 
     const behindX = x + (facingRight ? -10 * DPR : 10 * DPR)
     const startY = y + 6 * DPR
@@ -560,6 +615,9 @@ export class MainScene extends Phaser.Scene {
     b.poopTimer = null
 
     eventBus.emit('merge:happened', { level: a.level })
+
+    // Заметная вибрация на мердж
+    hapticImpact('medium')
 
     const VORTEX_DURATION = 350
     a.container.setDepth(99997)
@@ -712,6 +770,7 @@ export class MainScene extends Phaser.Scene {
     img.setInteractive({ useHandCursor: true })
     img.on('pointerdown', () => {
       if (box.isLanding) return
+      hapticImpact('medium')
       // Открываем тапнутую коробку + все приземлившиеся в радиусе
       const cx = box.img.x
       const cy = box.img.y
@@ -848,9 +907,14 @@ export class MainScene extends Phaser.Scene {
     this.cameras.main.shake(120, 0.005)
     this.flashAt(x, y)
 
-    // Спавн лягушки level 1 с pop — без задержки, реакция мгновенная
+    // Спавн лягушки. На Болоте (loc 1) применяется crateQuality, на других локациях — minLevel.
     this.time.delayedCall(0, () => {
-      const newFrog = this.spawnFrog(x, y, 1)
+      const state = useGameStore.getState()
+      const loc = getLocationById(state.currentLocation)
+      const frogLevel = loc.id === 1
+        ? getCrateLevel(state.upgrades.crateQuality)
+        : loc.minLevel
+      const newFrog = this.spawnFrog(x, y, frogLevel)
       newFrog.container.setScale(0)
       this.tweens.add({
         targets: newFrog.container,
@@ -1102,9 +1166,10 @@ export class MainScene extends Phaser.Scene {
       store.setBoxWaiting(waiting)
     }
 
-    // Магнит — спавн по таймеру если куплен И включён И есть пара
+    // Магнит работает только на локации, где это разрешено (сейчас — только Болото L1)
+    const location = getLocationById(store.currentLocation)
     const magnetLevel = store.upgrades.magnet
-    if (magnetLevel > 0 && store.magnetEnabled) {
+    if (location.magnetEnabled && magnetLevel > 0 && store.magnetEnabled) {
       this.magnetSpawnMs += delta
       const spawnInt = getMagnetSpawnInterval(magnetLevel)
       if (this.magnetSpawnMs >= spawnInt) {

@@ -6,6 +6,7 @@ type Events = {
   'merge:happened': { level: number }
   'frog:purchased': { level: number }
   'frog:discovered': { level: number }
+  'location:changed': { id: number }
 }
 
 export const eventBus = mitt<Events>()

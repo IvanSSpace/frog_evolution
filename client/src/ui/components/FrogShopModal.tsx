@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useGameStore, ENTITY_CAP } from '../../store/gameStore'
 import { FROG_LEVELS, getFrogPrice, getTargetIncomePerSec } from '../../game/config/frogs'
+import { hapticNotification } from '../../utils/telegram'
 
 type Props = { onClose: () => void }
 
@@ -51,8 +52,10 @@ export function FrogShopModal({ onClose }: Props) {
         </div>
 
         <div className="flex flex-col gap-3 p-4 overflow-y-auto">
-          {FROG_LEVELS.map((_cfg, idx) => (
-            <FrogCard key={idx} level={idx + 1} onResult={showToast} />
+          {FROG_LEVELS.map((cfg, idx) => (
+            cfg.availableInShop
+              ? <FrogCard key={idx} level={idx + 1} onResult={showToast} />
+              : null
           ))}
         </div>
 
@@ -91,7 +94,10 @@ function FrogCard({ level, onResult }: { level: number; onResult: (msg: string) 
 
   const handleBuy = () => {
     const r = buyFrog(level)
-    if (!r.ok) {
+    if (r.ok) {
+      hapticNotification('success')
+    } else {
+      hapticNotification('error')
       if (r.reason === 'capFull') onResult(`Поле занято (${ENTITY_CAP}/${ENTITY_CAP})`)
       else if (r.reason === 'noGold') onResult('Не хватает 💩')
     }
