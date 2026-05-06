@@ -9,6 +9,8 @@ type Events = {
   'location:changed': { id: number }
   'location:transitionStart': { from: number; to: number }
   'location:transitionEnd': { id: number }
+  'rareCrate:opened': { x: number; y: number; minLevel: number; maxLevel: number }
+  'rareCrate:claim': { level: number }
 }
 
 export const eventBus = mitt<Events>()
