@@ -1209,11 +1209,7 @@ export class MainScene extends Phaser.Scene {
     this.flashAt(x, y)
 
     if (box.isRare) {
-      const state = useGameStore.getState()
-      const baseLevel = getCrateLevel(state.upgrades.crateQuality)
-      const minLevel = Math.max(1, baseLevel)
-      const maxLevel = Math.min(12, baseLevel + 4)
-      eventBus.emit('rareCrate:opened', { x, y, minLevel, maxLevel })
+      eventBus.emit('rareCrate:opened', { x, y, minLevel: 1, maxLevel: MAX_LEVEL })
       return
     }
 
