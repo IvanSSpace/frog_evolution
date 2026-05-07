@@ -1,9 +1,22 @@
-
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+current_phase: 7
+status: active
+last_updated: "2026-05-07T16:44:02.278Z"
+progress:
+  total_phases: 7
+  completed_phases: 1
+  total_plans: 4
+  completed_plans: 3
+  percent: 75
+---
 
 # Project State
 
 **Milestone:** Локализация + Панель настроек + Редкие боксы + Уникальные планеты
-**Status:** Complete
+**Status:** active
 **Current Phase:** 7
 **Last Updated:** 2026-05-07
 
@@ -20,6 +33,7 @@
 | 7 — Unique Planet Animations | complete |
 
 ## Notes
+
 - Проект инициализирован 2026-05-06
 - YOLO режим — выполнение без подтверждений
 - Язык хранится в localStorage (`frog_lang`), дефолт `ru`
