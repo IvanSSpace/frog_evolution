@@ -75,6 +75,16 @@
 
 **Status:** complete
 
+### Phase 8: Full Planet Uniqueness
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 7
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 8 to break down)
+
 ---
 
 ## Phase 4: Number Format
@@ -96,8 +106,6 @@
 
 **Status:** complete
 
----
-
 ## Phase 5: Rare Crate
 
 **Goal:** Редкий золотой бокс падает реже обычного. При нажатии — React-модалка со слот-машиной: лягушки крутятся и останавливаются на случайной. Лягушка спавнится в игру.
@@ -117,8 +125,6 @@
 4. Лягушка появляется на поле после закрытия модалки
 
 **Status:** pending
-
----
 
 ## Phase 7: Unique Planet Animations & Textures
 
