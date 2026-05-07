@@ -1,6 +1,6 @@
 # Roadmap — Frog Evolution: Локализация + Настройки + Редкие боксы
 
-**5 phases** | **19 requirements mapped** | All v1 requirements covered ✓
+**7 phases** | **19 requirements mapped** | All v1 requirements covered ✓
 
 | # | Phase | Goal | Requirements | Files |
 |---|-------|------|--------------|-------|
@@ -9,6 +9,8 @@
 | 3 | Bestiary | Вкладка с карточками лягушек (открытые/силуэты) | BEST-01–04 | `BestiaryTab.tsx` внутри SettingsModal |
 | 4 | Number Format | Переключатель формата денег применяется везде | FMT-01–03 | `formatting.ts`, `gameStore.ts`, `Header.tsx` |
 | 5 | Rare Crate | 3/3 | Complete    | 2026-05-06 |
+| 6 | Rare Box Rework | 5/5 | Complete    | 2026-05-07 |
+| 7 | Unique Planet Animations | Гарантированно уникальные анимации для всех 450 планет | ANIM-01–05, TEX-01–05 | `StarMapScene.ts` | Complete | 2026-05-07 |
 
 ---
 
@@ -115,3 +117,39 @@
 4. Лягушка появляется на поле после закрытия модалки
 
 **Status:** pending
+
+---
+
+## Phase 7: Unique Planet Animations & Textures
+
+**Goal:** Гарантировать визуально уникальную **анимацию при клике И уникальную текстуру** (внешний вид) для каждой из 450 планет (16 main + 434 BG). Игрок не должен видеть повторов — ни в анимациях, ни в самой планете, особенно среди одного archetype/type.
+
+**Requirements:** ANIM-01–05, TEX-01–05
+
+**Plans:**
+1. Анимации: глобальный uniqueness-check + минимум 2 компонента recipe + 10 новых компонентов
+2. Анимации: композитные модификаторы (rotation/scale/HSL) + per-planet hue shift
+3. Текстуры: 2-3 sub-variant'а в каждом archetype (gas_giant — banded/spotted/storm; ice — patchy/crystalline/glacial; etc.)
+4. Текстуры: расширить universal modifiers (rings stacks, surface lines, gradient bands, multi-color spots, asymmetric atmospheres)
+5. Текстуры: uniqueness signature + seed refinement аналогично анимациям
+
+**Success Criteria:**
+1. ≥99% планет имеют уникальную recipe-signature анимации
+2. ≥99% планет имеют уникальную texture-signature
+3. Каждый animation pool ≥10 компонентов; каждый archetype имеет ≥2 sub-variant'а текстуры
+4. Total animation components ≥65 (сейчас 54)
+5. Visual smoke: 5 случайных планет одного archetype показывают разные текстуры И разные анимации
+6. TypeScript компиляция чистая, build проходит
+
+**Status:** Complete (2026-05-07)
+
+**Achieved:**
+- 100% уникальных recipe-signatures для 450 планет (verify_anim_uniqueness.cjs)
+- 100% уникальных texture-signatures для 434 BG-планет (verify_texture_uniqueness.cjs)
+- 64 компонента анимаций (54 → +10 новых: atomShells, supernova, accretionDisk, flickerStars, lightDance, dimensionRift, frostExplode, timeWave, glyphFlash, prismShift)
+- 9 архетипов получили 3 sub-variant'а текстур каждый (27 уникальных стилей рендера)
+- 6 новых universal modifiers: surface lines, gradient bands, multi-color spots, stacked rings, asymmetric atmosphere, color speckle
+- Per-planet HSL hue shift ±25° для unique tint в общих палитрах
+- Recipe-level rotation/scale modifiers (25% chance)
+- Все pools ≥10 компонентов
+- TypeScript clean, build passes
