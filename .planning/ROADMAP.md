@@ -141,7 +141,9 @@
 
 **Depends on:** Phase 11.
 
-**Status:** pending
+**Status:** complete (2026-05-08)
+
+**Outcome:** Phaser-native `FrogElementOverlay` + singleton `elementOverlayPool` (acquire/release без destroy/create) + `FrogOverlayManager` (sync `cosmicSlice.carriers`, hard cap 4 visible by camera distance, viewport culling каждые 6 кадров). 16 dormant idle-presets через Phase 9 primitives с минимальной интенсивностью. ELEMENT_TINTS (16) + ARCHETYPE_TO_ELEMENT (12) + MAIN_RACE_TO_ELEMENT (4 exclusives). Bundle delta gzip = **+2.53 KB** (cap +20 KB ✓). 11 ✓ full REQ-IDs + 3 ◑ partial (ELEMENT-04 awakened deferred to Phase 13 by design; ELEMENT-08 throttle hook ready, full wiring к Phase 20 INFRA-05; PERF-09 full real-device benchmark deferred to Phase 13 после awakened). 48 i18n строк (16 × 3, все ≤12 chars). `window.__addDevCarrier` + `__listFrogIds` для smoke (DEV-only, tree-shaken в prod). См. `.planning/phases/12-frog-element-overlay-dormant/12-01-SUMMARY.md`.
 
 ---
 

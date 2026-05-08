@@ -2,22 +2,22 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: cosmic-frogs-system
-current_phase: 12
+current_phase: 13
 status: in-progress
 last_updated: "2026-05-08"
 progress:
   total_phases: 11
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
-  percent: 18
+  completed_phases: 3
+  total_plans: 5
+  completed_plans: 5
+  percent: 27
 ---
 
 # Project State
 
 **Milestone:** Cosmic Frogs System (v2.0)
-**Status:** In-progress — Phase 11 complete (CosmicSlice + Cosmic Hub shell shipped), next: Phase 12 (FrogElementOverlay)
-**Current Phase:** 12 (next planned)
+**Status:** In-progress — Phase 12 complete (FrogElementOverlay dormant + pool + cap), next: Phase 13 (Element awakened tiers)
+**Current Phase:** 13 (next planned)
 **Last Updated:** 2026-05-08
 
 ## Phase Progress
@@ -28,7 +28,7 @@ progress:
 | 9 | Refactor anim primitives (BLOCKING) | **complete** (2026-05-08) — 18 primitives extracted, bundle delta -2 bytes, 1000/984/1000 verifiers green |
 | 10 | Performance HUD (mini) | **skipped** — отложено по решению пользователя; добавим ad-hoc если потребуется |
 | 11 | CosmicSlice store + Cosmic Hub shell | **complete** (2026-05-08) — 3 waves, bundle delta +3.05 KB gzip, CosmicHubModal отдельный chunk, все 9 REQ-IDs покрыты |
-| 12 | FrogElementOverlay (dormant + pool + cap) | pending |
+| 12 | FrogElementOverlay (dormant + pool + cap) | **complete** (2026-05-08) — Phaser-native overlay + pool + manager, bundle delta +2.53 KB gzip, 11 ✓ + 3 ◑ partial REQ-IDs (ELEMENT-04 awakened/Phase 13, ELEMENT-08 throttle hook/Phase 20, PERF-09 full bench/Phase 13) |
 | 13 | Element awakened tiers | pending |
 | 14 | Сыворотки tab + tap-to-select DnD | pending |
 | 15 | Boxes: cascade + slot-machine + skip | pending |
@@ -62,3 +62,10 @@ progress:
 | 2 | 11-02 | 3 | 7 (BottomBar, App.tsx, CosmicHub/* × 5) | +0.17 KB main + 0.98 KB chunk |
 | 3 | 11-03 | 2 | 5 (BottomBar, App.tsx, i18n × 3) | +1.10 KB |
 | **Total** | — | **8** | **16** | **+3.05 KB gzip** (cap: 15 KB ✓) |
+
+## Phase 12 (closed) — Performance Metrics
+
+| Wave | Plan | Tasks | Files | Bundle Delta gzip |
+|------|------|-------|-------|-------------------|
+| 1 | 12-01 | 3 (+1 auto-approved checkpoint) | 8 created + 5 modified | +2.53 KB |
+| **Total** | — | **3** | **13** | **+2.53 KB gzip** (cap: 20 KB ✓) |
