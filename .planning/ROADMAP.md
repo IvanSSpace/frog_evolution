@@ -1,199 +1,480 @@
-# Roadmap — Frog Evolution: Локализация + Настройки + Редкие боксы + Уникальные планеты
+# Roadmap — Frog Evolution v2.0: Cosmic Frogs System
 
-**8 phases** | **25 requirements mapped** | All v1 + Phase 8 requirements covered ✓
+**11 phases** | **135 requirements mapped** | All v2.0 requirements covered ✓
 
-| # | Phase | Goal | Requirements | Files |
-|---|-------|------|--------------|-------|
-| 1 | i18n Setup | Инфраструктура переводов и все строки в JSON | I18N-01–04, LANG-01–02 | `src/i18n/`, `src/i18n/index.ts`, `main.tsx` |
-| 2 | Settings Modal | Полноэкранный модал с двумя вкладками и вкладка Настройки | UI-01–07 | `SettingsModal.tsx`, `BottomBar.tsx`, `gameStore.ts` |
-| 3 | Bestiary | Вкладка с карточками лягушек (открытые/силуэты) | BEST-01–04 | `BestiaryTab.tsx` внутри SettingsModal |
-| 4 | Number Format | Переключатель формата денег применяется везде | FMT-01–03 | `formatting.ts`, `gameStore.ts`, `Header.tsx` |
-| 5 | Rare Crate | 3/3 | Complete    | 2026-05-06 |
-| 6 | Rare Box Rework | 5/5 | Complete    | 2026-05-07 |
-| 7 | Unique Planet Animations | Гарантированно уникальные анимации для всех 450 планет | ANIM-01–05, TEX-01–05 | `StarMapScene.ts` | Complete | 2026-05-07 |
-| 8 | Full Planet Uniqueness | 1000/1000/1000 unique anim/texture/sound для всех 1000 планет | SPEC-01–06 | `StarMapScene.ts`, `planetVoice.ts`, `client/scripts/verify_*.cjs` | Complete | 2026-05-08 |
+**Phase numbering:** continues from v1.0 (which ended at Phase 8). New phases = 9..19.
+
+> v1.0 ROADMAP archived in `MILESTONES.md` (Phases 1-8 complete). This file replaces v1.0 ROADMAP for the active milestone.
+
+**Blocking constraints:**
+- Phase 9 (REFACTOR) blocks all subsequent phases — extract anim primitives FIRST.
+- Phase 10 (INFRA) blocks all subsequent feature phases — migrations + perf HUD + throttle = safety net.
+- Each phase is independently shippable: stopping after Phase X leaves the game in a usable state, not half-broken.
 
 ---
 
-## Phase 1: i18n Setup
+## Phase Index
 
-**Goal:** Установить react-i18next, создать переводы RU/EN/ES для всего UI и придумать имена лягушек на EN/ES.
-
-**Requirements:** I18N-01, I18N-02, I18N-03, I18N-04, LANG-01, LANG-02
-
-**Plans:**
-1. Установить `react-i18next` и `i18next`, настроить `src/i18n/index.ts`
-2. Создать `ru.json`, `en.json`, `es.json` — все UI строки + 24 имени лягушек
-3. Подключить провайдер в `main.tsx`, добавить `useLang` hook с localStorage
-
-**Success Criteria:**
-1. `npm run build` проходит без ошибок после установки i18n
-2. В `ru.json` есть все 24 имени лягушек
-3. В `en.json` и `es.json` имена лягушек — осмысленные переводы, не транслитерация
-4. `localStorage.getItem('frog_lang')` возвращает `'ru'` при первом запуске
-
-**Status:** complete
+| #  | Phase                                                | Goal (one-line)                                                                                       | Requirements                                                                 | Files (key paths)                                                              |
+|----|------------------------------------------------------|-------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------|--------------------------------------------------------------------------------|
+| 9  | Refactor anim primitives (BLOCKING)                  | Extract 18 shared anim primitives from `StarMapScene.ts` into reusable modules.                       | REFACTOR-01..05                                                              | `client/src/game/effects/anim/shared/*`                                        |
+| 10 | INFRA: storage migrations + performance net          | Replace wipe-on-mismatch with incremental migrations; add perf HUD + adaptive throttle.              | INFRA-01..06, PERF-04                                                        | `client/src/store/migrations/*`, `client/src/debug/PerfHUD.tsx`                |
+| 11 | CosmicSlice store + Cosmic Hub shell                 | Wire data layer (`cosmicSlice`) and lazy-loaded modal with 4 stub tabs + bottom-bar 🧬 icon.         | COSMIC-HUB-01..07, SERUM-01, PERF-07                                         | `client/src/store/cosmicSlice.ts`, `client/src/components/CosmicHub/*`         |
+| 12 | FrogElementOverlay (dormant tier + pool + hard cap)  | Phaser-native element overlay with pool, off-screen culling, dormant idle tier on carriers.          | ELEMENT-01..08, ELEMENT-12, PERF-02, PERF-03, PERF-06, PERF-09, I18N-01      | `client/src/game/effects/FrogElementOverlay.ts`, `client/src/game/effects/elementPool.ts` |
+| 13 | Element awakened tiers (common/rare/epic/legendary)  | 64 awakened animations (4 tiers × 16 elements) + tap-burst + same-element merge anim.                | ELEMENT-09, ELEMENT-10, ELEMENT-11                                            | `client/src/game/effects/elementTiers/*`                                       |
+| 14 | Сыворотки tab + tap-to-select DnD apply              | Inventory UI + tap-to-select primary apply flow with auto-pause magnet/merge + undo.                 | SERUM-02..11, UX-07                                                           | `client/src/components/CosmicHub/SerumsTab/*`, `client/src/dnd/*`              |
+| 15 | Boxes: cascade reveal + slot-machine + skip + bulk   | Box inventory, cascade reveal, slot-machine with rarity-signaling timing, skip-MVP, bulk-open.       | BOX-01..07, SLOT-01..08, UX-06, PERF-08                                       | `client/src/components/CascadeRevealModal/*`, `client/src/components/SerumSlotMachine/*` |
+| 16 | Ship + Travel + Mission (1-ship navigation model)    | 1 корабль с navigation (dock/transit/redirect) + crew daily limit (4/day) + mini-clicker missions.   | SHIP-01..10, CREW-01..08, MISSION-01..08, UX-09                              | `client/src/game/effects/ShipSprite.ts`, `client/src/components/CosmicHub/ShipTab/*`, `client/src/components/MissionOverlay/*` |
+| 17 | Carrier evolution: feed + hidden ceiling + merge     | Feed rolls, progressive ceiling reveal, streak protection, stabilization drama, dispose, merge.      | CARRIER-01..12, BALANCE-06, BALANCE-09, UX-10, UX-11                          | `client/src/store/carrierLogic.ts`, `client/src/components/StabilizationModal/*` |
+| 18 | Бестиарий 2.0 (1536 cells, virtualized, sub-rewards) | 4-tab bestiary (384 cells/loc), TanStack Virtual, Uint8Array bitset, sub-completion rewards.         | BESTIARY-01..09                                                               | `client/src/components/CosmicHub/BestiaryTab/*`                                |
+| 19 | Balance + tutorial + toggles + i18n polish           | Pity tuning, sim script, progressive tutorials, calm/reduced/instant toggles, full RU/EN/ES.        | BALANCE-01..05, BALANCE-07, BALANCE-08, UX-01..06, UX-08, PERF-01, PERF-05, PERF-07, I18N-02, I18N-03 | `client/scripts/simulate_balance.cjs`, `client/src/locales/*`, `client/src/components/Settings/*` |
 
 ---
 
-## Phase 2: Settings Modal
+## Phase 9: Refactor anim primitives (BLOCKING)
 
-**Goal:** Кнопка 📖 открывает полноэкранный модал, вкладка "Настройки" работает полностью.
+**Goal:** Extract 18 shared anim primitives from `StarMapScene.ts` (6430 lines) into `client/src/game/effects/anim/shared/` so subsequent phases can reuse them without duplication.
 
-**Requirements:** UI-01, UI-02, UI-03, UI-04, UI-05, UI-06, UI-07
+**Requirements:** REFACTOR-01, REFACTOR-02, REFACTOR-03, REFACTOR-04, REFACTOR-05
 
 **Plans:**
-1. Создать `SettingsModal.tsx` — полноэкранный, две вкладки (Бестиарий / Настройки)
-2. Подключить 📖 в `BottomBar.tsx` и пробросить через `App.tsx`
-3. Реализовать вкладку "Настройки": язык, музыка (заглушка), звуки (заглушка), формат денег, баг репорт
+1. Extract 18 primitives one-by-one (compRing, compSparkle, compFlash, compFlameTongues, compIceWisps, compPlasmaArc, compStarBurst, compHaloFlash, compConfetti, compCrystalShatter, compBloomPetals, compToxicCloud, compSandSwirl, compRipple, compEchoWave, compChimeRing, compBubbleStream, compChromaShift) — each as standalone file with signature `(scene, container, opts) => void`.
+2. Refactor `StarMapScene.ts` `runAnimComponent` switch to import from `shared/*`.
+3. TypeScript clean + verify-uniqueness scripts (1000/1000) still pass; bundle delta ≤ +5 KB.
+4. Smoke-test demo scene that runs each primitive standalone (proves they work outside StarMapScene).
 
 **Success Criteria:**
-1. Клик по 📖 открывает модал
-2. Переключение языка мгновенно меняет весь UI текст
-3. Выбранный язык сохраняется после перезагрузки страницы
-4. Кнопка баг репорт открывает Telegram в новой вкладке
+1. `client/src/game/effects/anim/shared/` contains ≥18 primitive files; each importable independently.
+2. `StarMapScene.ts` uses imports (no inlined primitive bodies); existing 88-anim catalog still produces visually identical clicks.
+3. `npm run check` passes; `verify-uniqueness` reports 1000/1000 unique animations.
+4. Bundle delta from main ≤ +5 KB gzipped.
+5. Smoke-test demo renders each primitive in an isolated scene without errors.
 
-**Status:** complete
+**Depends on:** none (this is the foundation for all subsequent phases).
+
+**Status:** **complete** (2026-05-08)
+
+**Outcome:** 18/18 primitives extracted в `client/src/game/effects/anim/shared/`. StarMapScene.ts: 6430 → 5859 строк. Bundle delta `-2 bytes` gzipped (well within +5 KB budget). All verifiers green: 1000/984/1000 unique signatures. See `.planning/phases/09-refactor-anim-primitives-blocking/09-01-SUMMARY.md`.
 
 ---
 
-## Phase 3: Bestiary
+## Phase 10: INFRA — storage migrations + performance net
 
-**Goal:** Вкладка "Бестиарий" показывает коллекцию лягушек с правильными силуэтами для неоткрытых.
+**Goal:** Replace `STORAGE_VERSION` wipe-on-mismatch with incremental migration table, add backup snapshots, install Performance HUD + adaptive throttle so future phases never crash mid-tier devices and never wipe player saves.
 
-**Requirements:** BEST-01, BEST-02, BEST-03, BEST-04
-
-**Plans:**
-1. Создать `BestiaryTab.tsx` — сетка карточек всех 24 лягушек
-2. Открытые лягушки (`discoveredLevels`): имя (i18n), локация, доход/сек, размер
-3. Неоткрытые: CSS `grayscale(1) blur(2px)` + "???" вместо имени, заблокированные данные
-
-**Success Criteria:**
-1. Все 24 лягушки отображаются в бестиарии
-2. Неоткрытые — серые силуэты без имени
-3. Имена лягушек меняются при смене языка
-4. Данные (доход/сек) берутся из `TARGET_INCOME_PER_SEC` в `frogs.ts`
-
-**Status:** complete
-
-### Phase 8: Full Planet Uniqueness
-
-**Goal:** Финализация уникальности всех 1000 планет (16 main + 984 BG) по трём axes — анимации (recipe + strict signature по quantized params), текстуры (984/984 unique), звук (per-planet модуляции pitch/voicing/detune/cutoff с 4032 комбинаций per archetype). Сохранить тематическую стилистику архетипов. ≥96 animation components, каждый theme pool ≥14.
-
-**Requirements:** SPEC-01..SPEC-06 (см. `.planning/phases/08-full-planet-uniqueness/08-SPEC.md`)
-
-**Depends on:** Phase 7
-
-**Plans:** 7 plans
-
-Plans:
-**Wave 1**
-- [x] 08-01-PLAN.md — Pool expansion + 8 новых animation components (D-14, D-16) ✓ 2026-05-08
-
-**Wave 2** *(blocked on Wave 1 completion)*
-- [x] 08-02-PLAN.md — Strict animation signature с quantized params + 10 refine attempts (D-01..D-04) ✓ 2026-05-08
-
-**Wave 3** *(blocked on Wave 2 completion)*
-- [x] 08-03-PLAN.md — Texture uniqueness fix (resolve 1 collision) + 10 refine attempts (SPEC #2) ✓ 2026-05-08
-
-**Wave 4** *(blocked on Wave 3 completion)*
-- [x] 08-04-PLAN.md — Per-planet sound modulation system + THEME_SCALES + eventBus seed (D-05..D-10, D-13) ✓ 2026-05-08
-
-**Wave 5** *(blocked on Wave 4 completion)*
-- [x] 08-05-PLAN.md — Sound signature pipeline + refineSoundSeeds (D-11..D-12) ✓ 2026-05-08
-
-**Wave 6** *(blocked on Wave 5 completion)*
-- [x] 08-06-PLAN.md — Verify scripts в client/scripts/ + npm run verify-uniqueness (D-15, D-17) ✓ 2026-05-08
-
-**Wave 7** *(blocked on Wave 6 completion)*
-- [x] 08-07-PLAN.md — Smoke test + final build size + STATE.md закрытие (SPEC #6, #10) ✓ 2026-05-08
-
-**Status:** Complete (2026-05-08)
-
-**Achieved:**
-- 1000/1000 unique strict animation signatures (`verify_anim_uniqueness_strict.cjs`)
-- 984/984 unique texture signatures (`verify_texture_uniqueness.cjs`, cascade-stable)
-- 1000/1000 unique sound signatures (`verify_sound_uniqueness.cjs`)
-- 96 animation components (88 → +8 Phase 8: bouncingBall, digitalGlitch, ringPulsar, swarmParticles, prismRefract, lifeBloom, windRibbons, wreckageOrbit)
-- All 28 theme pools ≥ 14 (target ≥ 12, min=15 max=22)
-- Per-planet sound modulation: 4032 combos per archetype (pitchStep×14 × rotationIdx×6 × inversionIdx×3 × detuneBin×4 × cutoffBin×4)
-- 28 archetype/type → MIDI scale mapping в `THEME_SCALES`
-- 3-pass refine pipeline в `StarMapScene.create()`: texture → anim → sound → texture stabilize
-- `npm run verify-uniqueness` — sequential gate (anim → texture → sound), exit 1 на первой коллизии
-- TypeScript clean, build passes
-- Bundle delta: **+7.21 kB gzipped** (≤ +50 kB cap, 6.9× headroom)
-
----
-
-## Phase 4: Number Format
-
-**Goal:** Настройка формата денег применяется во всём приложении.
-
-**Requirements:** FMT-01, FMT-02, FMT-03
+**Requirements:** INFRA-01, INFRA-02, INFRA-03, INFRA-04, INFRA-05, INFRA-06, PERF-04
 
 **Plans:**
-1. Добавить `numberFormat: 'short' | 'full'` в gameStore + localStorage
-2. Обновить `formatting.ts` — поддержать оба формата
-3. Убедиться что Header, магазин, бестиарий используют store-формат
+1. Implement `migrations: Record<number, (data) => data>` in `gameStore` and prune old wipe-logic; load runs all migrations 15 → 16 → 17 → ... in order.
+2. Backup snapshot on migration: write `frog_evolution_backup_v{version}` to localStorage with TTL 7 days; expose dev-mode "restore" button.
+3. Performance HUD (dev-mode only): overlay showing FPS, active tween count, active overlay count; toggle via existing dev-mode flag.
+4. Adaptive throttle: monitor FPS rolling avg over 5s; FPS<45 → ×2 throttle on idle particles; FPS<30 → ×4 + reduce overlay cap.
+5. Refactor `MainScene.shutdown()` and `StarMapScene.shutdown()` to call `killAllTweens`, drain pools, unsubscribe listeners.
 
 **Success Criteria:**
-1. Переключение в настройках мгновенно меняет формат везде
-2. "Короткий": `1.5K`, `2.3M`, `1.1B`
-3. "Полный": `1,500`, `2,300,000`, `1,100,000,000`
-4. Формат сохраняется после перезагрузки
+1. Saving in v15, loading in v17 runs migrations sequentially and produces a structurally valid state (no wipe, no error toast).
+2. Backup snapshot exists in localStorage after each migration with the version-stamped key.
+3. Performance HUD visible in dev-mode shows live FPS, tween count, overlay count.
+4. Forced FPS drop (manual stress test) triggers ×2 then ×4 throttle, observable via HUD counters.
+5. Closing/re-opening MainScene 10 times does not increase tween count baseline (no leak).
 
-**Status:** complete
-
-## Phase 5: Rare Crate
-
-**Goal:** Редкий золотой бокс падает реже обычного. При нажатии — React-модалка со слот-машиной: лягушки крутятся и останавливаются на случайной. Лягушка спавнится в игру.
-
-**Requirements:** RARE-01, RARE-02, RARE-03
-
-**Plans:**
-1. В `MainScene.ts` добавить спавн редкого бокса (золотой спрайт, отдельный таймер/вероятность)
-2. При тапе на редкий бокс — эмитить событие `rareCrateOpened` через eventBus с level-диапазоном
-3. Создать `RareCrateModal.tsx` — слот-машина с анимацией вращения и остановки, кнопка "Забрать"
-4. При закрытии модалки — спавнить выигранную лягушку через `gameStore.spawnFrog(level)`
-
-**Success Criteria:**
-1. Золотой бокс появляется реже обычного (визуально отличим)
-2. Тап на золотой бокс открывает слот-машину
-3. Слот показывает вращение лягушек → остановку на финальной
-4. Лягушка появляется на поле после закрытия модалки
+**Depends on:** Phase 9.
 
 **Status:** pending
 
-## Phase 7: Unique Planet Animations & Textures
+---
 
-**Goal:** Гарантировать визуально уникальную **анимацию при клике И уникальную текстуру** (внешний вид) для каждой из 450 планет (16 main + 434 BG). Игрок не должен видеть повторов — ни в анимациях, ни в самой планете, особенно среди одного archetype/type.
+## Phase 11: CosmicSlice store + Cosmic Hub shell
 
-**Requirements:** ANIM-01–05, TEX-01–05
+**Goal:** Establish the data layer (`cosmicSlice` in gameStore) and lazy-loaded Cosmic Hub modal with 4 empty tabs (Скауты / Боксы / Сыворотки / Бестиарий), plus the new 🧬 bottom-bar icon. After this phase the game has all the rails for v2.0 features but no features yet.
+
+**Requirements:** COSMIC-HUB-01, COSMIC-HUB-02, COSMIC-HUB-03, COSMIC-HUB-04, COSMIC-HUB-05, COSMIC-HUB-06, COSMIC-HUB-07, SERUM-01, PERF-07
 
 **Plans:**
-1. Анимации: глобальный uniqueness-check + минимум 2 компонента recipe + 10 новых компонентов
-2. Анимации: композитные модификаторы (rotation/scale/HSL) + per-planet hue shift
-3. Текстуры: 2-3 sub-variant'а в каждом archetype (gas_giant — banded/spotted/storm; ice — patchy/crystalline/glacial; etc.)
-4. Текстуры: расширить universal modifiers (rings stacks, surface lines, gradient bands, multi-color spots, asymmetric atmospheres)
-5. Текстуры: uniqueness signature + seed refinement аналогично анимациям
+1. Add `cosmicSlice` to `gameStore` with shapes: `serums: Record<element, Record<rarity, count>>`, `boxes: BoxData[]`, `scouts: ScoutData[]`, `carriers: CarrierData[]`, `bestiaryBitset: Uint8Array(192)`, `pityCounters`, `lastActiveTab`. Add migration entry.
+2. Replace 🛍️ with 🧬 in BottomBar; clicking opens `CosmicHubModal` (lazy via `React.lazy(() => import(...))` + `Suspense` skeleton).
+3. Build modal shell: 4 tab strip + 4 stub panels with placeholder copy; `lastActiveTab` persisted via sessionStorage.
+4. Badge logic: 🧬 shows count of unopened ready boxes; multi-toast grouping helper for ≥2 simultaneous returns; "Открыть бокс" quick action stub on toast.
+5. RU/EN/ES strings for tab names + modal chrome.
 
 **Success Criteria:**
-1. ≥99% планет имеют уникальную recipe-signature анимации
-2. ≥99% планет имеют уникальную texture-signature
-3. Каждый animation pool ≥10 компонентов; каждый archetype имеет ≥2 sub-variant'а текстуры
-4. Total animation components ≥65 (сейчас 54)
-5. Visual smoke: 5 случайных планет одного archetype показывают разные текстуры И разные анимации
-6. TypeScript компиляция чистая, build проходит
+1. Tapping 🧬 in bottom-bar opens fullscreen modal with 4 tabs visible; closing and reopening restores last active tab from sessionStorage.
+2. CosmicHubModal bundle is code-split — appears as separate chunk in `vite build` output, not in main entry.
+3. Inventory shape exists in `gameStore.cosmicSlice` (verifiable in devtools); reading from it returns empty/zero values cleanly.
+4. Badge on 🧬 reflects `boxes.filter(b => !b.opened).length` (test with 0, 1, 5).
+5. Triggering 2 simultaneous mock-scout-returns produces ONE grouped toast, not two.
 
-**Status:** Complete (2026-05-07)
+**Depends on:** Phase 10.
 
-**Achieved:**
-- 100% уникальных recipe-signatures для 450 планет (verify_anim_uniqueness.cjs)
-- 100% уникальных texture-signatures для 434 BG-планет (verify_texture_uniqueness.cjs)
-- 64 компонента анимаций (54 → +10 новых: atomShells, supernova, accretionDisk, flickerStars, lightDance, dimensionRift, frostExplode, timeWave, glyphFlash, prismShift)
-- 9 архетипов получили 3 sub-variant'а текстур каждый (27 уникальных стилей рендера)
-- 6 новых universal modifiers: surface lines, gradient bands, multi-color spots, stacked rings, asymmetric atmosphere, color speckle
-- Per-planet HSL hue shift ±25° для unique tint в общих палитрах
-- Recipe-level rotation/scale modifiers (25% chance)
-- Все pools ≥10 компонентов
-- TypeScript clean, build passes
+**Status:** pending
+
+---
+
+## Phase 12: FrogElementOverlay (dormant tier + pool + hard cap)
+
+**Goal:** Phaser-native `FrogElementOverlay` with object pool, off-screen culling, hard cap of 4 visible overlays, and the **dormant tier idle effect** (1 Graphics + 1 idle particle/3s) for every carrier on the farm. Establishes the visual feedback foundation but no awakened tiers yet.
+
+**Requirements:** ELEMENT-01, ELEMENT-02, ELEMENT-03, ELEMENT-04 (infrastructure for 80, dormant subset implemented), ELEMENT-05, ELEMENT-06, ELEMENT-07, ELEMENT-08, ELEMENT-12, PERF-02, PERF-03, PERF-06, PERF-09, I18N-01
+
+**Plans:**
+1. Define 16-element TINT TABLE constants + element→archetype mapping (REQ ELEMENT-02); 4 main-race exclusives gated behind exclusive-mission flag.
+2. Implement `FrogElementOverlay extends Phaser.GameObjects.Container` with `acquire(element, rarity)` / `release()` pool API.
+3. Hard-cap manager: max 4 visible overlays at once; when 5+ carriers exist, prioritize on-screen + most-recent-tap; off-screen culling check every 6 frames.
+4. Adaptive throttle integration (consumes Phase 10 throttle factor).
+5. Implement dormant tier visuals (1 tinted Graphics circle + 1 idle particle/3s × 16 elements).
+6. RU/EN/ES translations for 16 element names per I18N-01 table.
+7. Performance benchmark harness: 16 frogs × overlay on real Android device — record FPS in HUD, store baseline.
+
+**Success Criteria:**
+1. With 8 dormant carriers on farm, only 4 are visibly animated at any moment; the rest cull cleanly when off-screen.
+2. Pool stats (acquire/release) visible in dev HUD show ≥reuse — no `destroy/create` per frame.
+3. Forced FPS drop in throttle factor reduces idle-particle frequency observable via HUD count.
+4. Real-device test: 16 frogs × dormant overlay sustains ≥45 FPS on mid-tier Android (recorded in benchmark report).
+5. Tapping a carrier shows correct element name in RU/EN/ES depending on locale.
+
+**Depends on:** Phase 11.
+
+**Status:** pending
+
+---
+
+## Phase 13: Element awakened tiers (common / rare / epic / legendary)
+
+**Goal:** Add the 64 awakened animations (4 tiers × 16 elements) to `FrogElementOverlay`, plus tap-burst on carrier and same-element merge anim. After this phase a stabilized carrier looks tier-appropriate with full storm at legendary.
+
+**Requirements:** ELEMENT-09, ELEMENT-10, ELEMENT-11
+
+**Plans:**
+1. Build `elementTiers/{element}/{tier}.ts` factories (16 × 4 = 64 files), each composing primitives from `effects/anim/shared/` (Phase 9 output).
+2. Tier complexity ladder per ELEMENT-09: common = 2-3 components; rare = 4-5 + slight aura; epic = full aura + 5-6 + ground ember; legendary = full storm + ground glow.
+3. Tap-burst handler on carrier sprite — element-burst spawn at tap point, reuses primitives.
+4. Same-element merge anim: when two same-element same-level carriers merge, play special element-merge composite (consumed by Phase 17 merge logic, but anim ready here).
+5. Visual QA pass: each (element, tier) combo distinct from neighbours; no two tiers look identical.
+
+**Success Criteria:**
+1. Switching a carrier from dormant → common → rare → epic → legendary in dev panel produces visibly escalating effects (more particles, brighter aura, ground glow at legendary).
+2. Tapping any tinted carrier triggers an element-burst at tap location.
+3. Triggering a same-element merge in dev panel plays the element-merge anim distinct from the standard merge effect.
+4. With 4 legendary carriers visible, FPS stays ≥45 on mid-tier Android (hard cap + throttle from Phase 12 still effective).
+5. Bundle delta from Phase 12 baseline ≤ +20 KB gzip (within +50 KB total budget).
+
+**Depends on:** Phase 12.
+
+**Status:** pending
+
+---
+
+## Phase 14: Сыворотки tab + tap-to-select DnD apply
+
+**Goal:** Functional Сыворотки tab with inventory grid + tap-to-select primary flow that applies a serum to an eligible frog with auto-pause of magnet/merge, snap radius, haptic feedback, undo toast, and desktop pointer-event DnD as secondary mode. After this phase the player can use serums (boxes still come from dev-panel; real boxes arrive in Phase 15).
+
+**Requirements:** SERUM-02, SERUM-03, SERUM-04, SERUM-05, SERUM-06, SERUM-07, SERUM-08, SERUM-09, SERUM-10, SERUM-11, UX-07
+
+**Plans:**
+1. SerumsTab UI: 4 sections by rarity (common/rare/epic/legendary), 16-element grid per section, count badges from `cosmicSlice.serums`.
+2. Tap-to-select state: `serumDragActive` flag in store, eligibility highlight on farm frogs (L1/L7/L13/L19, not already carrier), snap radius 80px.
+3. Drop zone visuals: green glow + medium haptic on valid hover; red outline + error haptic on invalid; mis-tap returns serum + tooltip toast.
+4. Auto-pause integration: while `serumDragActive`, magnet stops, merge stops; flag clears on apply/cancel.
+5. Apply tween 2s (no modal) → carrier created → undo toast 4s → optional revert.
+6. Desktop DnD secondary: custom Pointer Events with ghost element (no react-dnd).
+
+**Success Criteria:**
+1. Tapping a serum highlights only eligible frogs (e.g. common only highlights L1 swamp starters); tapping eligible frog applies in 2s tween.
+2. While in select-mode, magnet visibly stops moving frogs together and merges are suspended; clearing selection resumes them.
+3. Tapping a non-eligible frog within snap radius shows red outline + error haptic + tooltip explaining why.
+4. Within 4s after apply, undo toast appears; tapping it reverts (frog back to non-carrier, serum back to inventory).
+5. Desktop drag with mouse pointer events shows ghost serum follow cursor and drops on eligible frog.
+
+**Depends on:** Phase 13 (overlay must show dormant tier on newly-created carriers).
+
+**Status:** pending
+
+---
+
+## Phase 15: Boxes — cascade reveal + slot-machine + skip + bulk
+
+**Goal:** Box inventory + cascade reveal modal (coins → resources → pause → slot-machine on serum) with rarity-signaling slot timing (1.2s common → 9-10s legendary cap), Skip-MVP (tap-after-0.6s + button at 1s + Settings toggle), and bulk-open with summary. After this phase boxes from dev-panel produce real serums via the full drama pipeline.
+
+**Requirements:** BOX-01, BOX-02, BOX-03, BOX-04, BOX-05, BOX-06, BOX-07, SLOT-01, SLOT-02, SLOT-03, SLOT-04, SLOT-05, SLOT-06, SLOT-07, SLOT-08, UX-06, PERF-08
+
+**Plans:**
+1. Box inventory in `cosmicSlice.boxes`; planet-archetype → element mapping for guaranteed serum (BOX-07).
+2. CascadeRevealModal component (code-split): timeline [200ms coins] → [200ms resources] → [PAUSE 400ms] → [slot-machine]; bonus drops Equal → Equal → BIG.
+3. SerumSlotMachine component (code-split): durations by rarity; checkpoint flashes at 1.5/3.5/5.5/8s (gray/blue/purple/gold); element-fingerprint particle from frame 1; build-up phase 0-50% drone+crescendo via sound-style labels; reveal phase drop + element-flash + text.
+4. Skip MVP: tap-anywhere after 0.6s, Skip button visible at 1s, Settings toggle "Open boxes instantly" minimizes drama to 1s.
+5. Bulk-open for 5+ boxes: "Открыть все" auto-applies skip; final summary modal with totals per rarity/element.
+6. Hook into serum inventory from Phase 14 — opened box adds to `cosmicSlice.serums[element][rarity]`.
+
+**Success Criteria:**
+1. Opening a box plays cascade in correct order (coins, resources, pause, slot) with timings within ±50ms; final serum lands in inventory.
+2. Slot-machine duration visibly correlates with rarity: legendary roll completes in 9-10s, common in ≤2s.
+3. Tapping anywhere after 0.6s ends the animation early and reveals the result; Skip button appears at exactly 1s.
+4. With "Open boxes instantly" enabled in Settings, all rarities resolve in ≤1s without checkpoint flashes.
+5. Opening 5 boxes via "Открыть все" produces 5 serums in inventory + a single summary modal listing all 5; CascadeRevealModal/SerumSlotMachine appear as separate chunks in `vite build`.
+
+**Depends on:** Phase 14 (serum inventory).
+
+**Status:** pending
+
+---
+
+## Phase 16: Ship + Travel + Mission (1-ship navigation model)
+
+**Goal:** 1 корабль на StarMap с navigation-механикой (dock/transit/redirect), crew daily limit (4 миссии/день, midnight reset), mini-clicker миссии при «Изучении» планеты, выдача бокса с element от архетипа планеты. После этой фазы основной loop замыкается: ship → mission → box → serum → carrier.
+
+**Requirements:** SHIP-01..10, CREW-01..08, MISSION-01..08, UX-09
+
+**Plans:**
+1. **Ship state model + visual.** Добавить `cosmicSlice.ship: { state: 'docked'|'transit', planetId?, transit?: {from,to,started_at,arrives_at} }`. Создать `ShipSprite.ts` (Phaser Sprite/Graphics ракетка с ParticleEmitter trail). Linear interpolation позиции в transit, ротация по вектору. Initial position: orbit HOME planet.
+2. **Travel formula.** `time_ms = (distance / WORLD_DIAGONAL) × 120000`. WORLD_DIAGONAL = sqrt(2) × WORLD_SIZE × 2 ≈ 19800 (DPR=1). Минимум 1500ms floor. Macca близких полётов 1.5-3 sec, дальних до 2 минут.
+3. **Tab «Корабль» в Cosmic Hub.** Показывает текущее состояние ship (docked planet info / transit timer), CREW indicator `2/4 миссий ⏱ до утра 14:32`, кнопки: «Открыть карту», «Изучить» (если docked + есть credit), «Перенаправить» (отдельная кнопка не нужна — просто тапаешь planet на StarMap).
+4. **StarMap planet-pick mode.** При открытии StarMap из Cosmic Hub (или просто если игрок на StarMap) — тап на любой planet → confirm dialog «Лететь сюда (~Xs)?» с info о планете и travel time. Confirm → старт transit (или redirect если уже летит). Cancel — без эффектов.
+5. **Crew daily reset.** `cosmicSlice.crew: { missionsToday, lastResetDay }`. На каждый load: если `lastResetDay !== today` — обнулить. `missionsToday >= 4` → кнопка «Изучить» disabled с tooltip + countdown до 00:00 локального времени. Корабль может летать неограниченно (только consume на «Изучить»).
+6. **Mini-clicker mission overlay.** Fullscreen UI на ship+planet фоне. 3 типа random per mission: rhythm-tap (15-30 кликов за 30с), defend (тайминг по 3 вспышкам за 15с), hot-spot (5 точек за 20с). Skip button с 1с (auto-complete без bonus). Score → bonus к rarity (perfect +15%, good +5%).
+7. **Box generation.** Mission complete → создать box в `cosmicSlice.boxes[]` с `element` из archetype planet, `bonusRarity` от mission score. Toast «Получен ящик KEPLER → [Открыть]» (открывает Cosmic Hub на табе Боксы).
+8. **Progressive disclosure (UX-09).** На первый v2.0 login unlock'ed только табы Сыворотки + Бестиарий. Корабль unlock'ed после первого feed (CARRIER-03). Боксы tab unlock'ed после первой completed mission. Tutorial nudges при unlock.
+
+**Success Criteria:**
+1. Открытие Cosmic Hub → таб «Корабль» показывает позицию ship (название планеты или «В пути»), timer до arrival если transit, indicator `N/4 миссий` корректно отражает состояние.
+2. Тап на planet на StarMap (когда Hub открыт) → confirm dialog с travel time. Confirm → ship стартует transit. Visual: ракетка движется linear от source к target, particle-trail активен.
+3. Redirect (тап на новую planet во время transit) → ship меняет цель без штрафа, новый таймер от текущей позиции.
+4. На arrival — toast «Прибыли на NAME». Кнопка «Изучить» в табе «Корабль» становится active (если есть credit).
+5. «Изучить» → mini-clicker overlay; complete → box добавлен в инвентарь с element от archetype, mission credit consumed.
+6. После 4-й mission → «Изучить» disabled, tooltip показывает время до 00:00 локального. На следующий день credits восстановлены до 4/4.
+7. Fresh v2.0 install: только Сыворотки + Бестиарий tabs unlocked. После первого feed — Корабль unlock. После первой mission — Боксы unlock (verifiable в dev panel).
+
+**Depends on:** Phase 15.
+
+**Status:** pending
+
+---
+
+## Phase 17: Carrier evolution — feed + hidden ceiling + merge + dispose
+
+**Goal:** Full carrier progression: feed rolls (success/fail/stabilize), hidden ceiling pre-determined and progressively revealed (??? → color hint → exact number), streak protection (3 low-ceiling → S guarantee), stabilization drama modal, dispose for 30% serum recovery, same-element same-level merge → S-roll next level. The most logic-heavy phase — covers the "late progression" loop end-to-end.
+
+**Requirements:** CARRIER-01, CARRIER-02, CARRIER-03, CARRIER-04, CARRIER-05, CARRIER-06, CARRIER-07, CARRIER-08, CARRIER-09, CARRIER-10, CARRIER-11, CARRIER-12, BALANCE-06, BALANCE-09, UX-10, UX-11
+
+**Plans:**
+1. Carrier data model: `{ id, frogId, element, rarity, level, ceiling, feedCount, rollHistory, stabilized }`. Pre-determine ceiling on first feed (BALANCE-09) using sub-distribution 5/15/30/50.
+2. Feed action: tap a regular same-level frog while carrier selected → roll using rarity-weighted weights → outcome success (level+1)/fail/stabilize. Update state, play element-tier overlay if rarity changes.
+3. Hidden ceiling reveal in CarrierInfoCard: 0-2 feeds = "???"; 3-4 = color hint (green/yellow/red); 5+ = exact "L13/L19".
+4. Streak protection (BALANCE-06): track 3 consecutive low-ceiling carriers per locale; on 3rd, force next ceiling roll to S-tier.
+5. Stabilization modal 3-4s with tier-specific copy ("Стабилизировалась на L11 — топовая редкая!"); permanent visual lock to final rarity tier (Phase 13 anim).
+6. Dispose: confirm modal → carrier removed → 30% × serum_count returned to inventory.
+7. Merge logic: detect same-element same-level carrier collision → consume both → produce one carrier next level with S-roll guarantee + element-merge anim from Phase 13.
+8. Bestiary write-through (CARRIER-12): every new (element, finalRarity, finalLevel) combo flips bit in `cosmicSlice.bestiaryBitset` (read by Phase 18).
+
+**Success Criteria:**
+1. Feeding a freshly-created carrier 5 times produces visible ceiling reveal progression: ??? (feeds 1-2) → color (3-4) → exact L (5+).
+2. Forcing 3 low-ceiling rolls in dev panel guarantees 4th carrier rolls S-tier (verifiable across 10 forced sequences).
+3. Stabilization triggers a 3-4s modal with correct copy and locks the carrier's visual to the awakened-tier anim from Phase 13.
+4. Dispose action returns exactly `floor(0.30 * serumsConsumed)` serums to inventory after confirm.
+5. Two same-element same-level carriers merging produce one carrier at level+1 with S-tier rarity, plays element-merge anim, and writes a bestiary bit.
+
+**Depends on:** Phase 16 (scouts produce boxes; players need carriers to feed).
+
+**Status:** pending
+
+---
+
+## Phase 18: Бестиарий 2.0 — 1536 cells, virtualized, sub-completion rewards
+
+**Goal:** Fully functional Бестиарий tab with 4 location tabs × 384 cells (24 levels × 16 elements), TanStack Virtual rendering, `Uint8Array(192)` bitset state, filter pills + search, sort, cell modal with details, sub-completion rewards (10/24/96/576). After this phase the collection meta-loop is complete.
+
+**Requirements:** BESTIARY-01, BESTIARY-02, BESTIARY-03, BESTIARY-04, BESTIARY-05, BESTIARY-06, BESTIARY-07, BESTIARY-08, BESTIARY-09
+
+**Plans:**
+1. BestiaryTab structure: 4 tabs (Болото/Лес/Континент/Планета) × 24×16 grid per tab; reads from `cosmicSlice.bestiaryBitset` (192 bytes).
+2. TanStack Virtual integration for virtualized scrolling — only visible cells mount; benchmark scroll-perf on real device.
+3. Cell rendering: discovered → tint + rarity border + mini-icon; locked → gray silhouette + "???" tooltip.
+4. Filter pills: All / Common / Rare / Epic / Legendary + element search; default "Discovered only" when bitset has any 1-bits; sort: Level↑ / Level↓ / Element / Rarity.
+5. Cell tap → CellDetailModal: visual preview (reuses Phase 13 anim), sound-style label, lore text.
+6. Sub-completion rewards: 10 cells → 1000 coins; 24 cells (one level row) → epic serum any element; 96 cells (one location) → legendary serum; 576 cells → exclusive frog visual unlock. Trigger inline toast + grant via gameStore action.
+
+**Success Criteria:**
+1. Opening Бестиарий with 50 discovered combos shows them rendered correctly (tinted, bordered, icon); rest gray; scroll smooth at ≥50 FPS on mid-tier Android.
+2. Filter "Epic" hides all non-epic cells across all 4 location tabs in <100ms.
+3. Crossing 10/24/96/576 thresholds in dev panel triggers correct reward toast + inventory grant (verify count delta).
+4. Cell modal shows live preview using Phase 13 element-tier animation (e.g. tap legendary fire cell → see legendary fire awakened anim).
+5. Bitset bytes match exactly 192 (`bestiaryBitset.byteLength === 192`); save/load round-trip preserves bits.
+
+**Depends on:** Phase 17 (carriers write bestiary entries).
+
+**Status:** pending
+
+---
+
+## Phase 19: Balance + tutorial + toggles + i18n polish
+
+**Goal:** Final polish before v2.0 ship: lock pity numbers + Monte Carlo simulation script, progressive tutorial overlays for first-time players, all Settings toggles (Calm farm / Reduced effects / Open boxes instantly), full RU/EN/ES coverage, performance budget verification, lazy-load checks. After this phase v2.0 is shippable.
+
+**Requirements:** BALANCE-01, BALANCE-02, BALANCE-03, BALANCE-04, BALANCE-05, BALANCE-07, BALANCE-08, UX-01, UX-02, UX-03, UX-04, UX-05, UX-06, UX-08, PERF-01, PERF-05, PERF-07, I18N-02, I18N-03
+
+**Plans:**
+1. Pity counter implementation: rare guarantee 3 common→rare+, epic guarantee 10→epic+, legendary soft 15→+3% / 20→+7% / hard 25; counters stored locally in `cosmicSlice.pityCounters`.
+2. Visible pity counter UI (UX-01): hidden first 3 missions; "Удача растёт ●●○" after 3rd failed; exact numbers after 5th.
+3. Monte Carlo script `client/scripts/simulate_balance.cjs`: 10K boxes simulation, output avg legendary count, time-to-first-legendary, distribution table; commit baseline numbers in script.
+4. Two-axis visualization audit (UX-02): rarity = shape/glow/border, element = hue; ensure consistent across SerumsTab, CarrierInfoCard, SlotMachine, Bestiary.
+5. Colorblind-safe palette (UX-03): apply Okabe-Ito + Krzywinski tints + verify in simulator.
+6. Tutorial overlays (UX-08): first box → slot-machine tooltip; first serum → eligibility tooltip; first feed → hidden ceiling tooltip; first stabilization → merge-above-ceiling tooltip. Persist "seen" flags in store.
+7. Settings toggles: Calm farm mode (UX-04), Reduced effects (UX-05, default OFF), Open boxes instantly (UX-06).
+8. I18N-02/03: full RU/EN/ES coverage of all v2.0 UI strings, tooltips, error toasts, success messages — `npm run check-translations` reports 100%.
+9. Performance audit: bundle delta from v1.0 baseline ≤ +50 KB gzip; confirm CosmicHubModal + SerumSlotMachine + BestiaryV2Tab + CascadeRevealModal are separate chunks; verify FPS targets (60 desktop / 50 mid-tier mobile / 30 minimum) on real devices.
+
+**Success Criteria:**
+1. Monte Carlo script run produces avg legendary 3.0 ± 0.3 per 100 boxes; pity hard-25 verified (no run exceeds 25 boxes without legendary).
+2. Pity counter UI hidden for first 3 missions, then shows dot indicator at 3, then exact "До rare через 2" at 5+.
+3. All 4 toggles in Settings (Calm farm / Reduced effects / Open boxes instantly + existing v1.0 toggles) function correctly: calm hides farm aura, reduced effects clamps overlays to dormant tier, instant boxes resolves slot in ≤1s.
+4. `check-translations` script reports 100% coverage RU/EN/ES; no missing-key warnings in console for any v2.0 UI flow.
+5. Production `vite build` shows total bundle delta ≤ +50 KB gzip vs v1.0 baseline; lighthouse-style perf check on real Android shows ≥50 FPS during typical 30s farm session with 4 carriers.
+
+**Depends on:** Phase 18 (full feature surface needed for tutorial flow + i18n string discovery).
+
+**Status:** pending
+
+---
+
+## Coverage Matrix
+
+Every v2.0 REQ-ID is mapped to exactly one phase.
+
+| REQ-ID         | Phase | REQ-ID          | Phase | REQ-ID          | Phase |
+|----------------|-------|-----------------|-------|-----------------|-------|
+| REFACTOR-01    | 9     | SERUM-01        | 11    | CARRIER-01      | 17    |
+| REFACTOR-02    | 9     | SERUM-02        | 14    | CARRIER-02      | 17    |
+| REFACTOR-03    | 9     | SERUM-03        | 14    | CARRIER-03      | 17    |
+| REFACTOR-04    | 9     | SERUM-04        | 14    | CARRIER-04      | 17    |
+| REFACTOR-05    | 9     | SERUM-05        | 14    | CARRIER-05      | 17    |
+| INFRA-01       | 10    | SERUM-06        | 14    | CARRIER-06      | 17    |
+| INFRA-02       | 10    | SERUM-07        | 14    | CARRIER-07      | 17    |
+| INFRA-03       | 10    | SERUM-08        | 14    | CARRIER-08      | 17    |
+| INFRA-04       | 10    | SERUM-09        | 14    | CARRIER-09      | 17    |
+| INFRA-05       | 10    | SERUM-10        | 14    | CARRIER-10      | 17    |
+| INFRA-06       | 10    | SERUM-11        | 14    | CARRIER-11      | 17    |
+| COSMIC-HUB-01  | 11    | BOX-01          | 15    | CARRIER-12      | 17    |
+| COSMIC-HUB-02  | 11    | BOX-02          | 15    | BESTIARY-01     | 18    |
+| COSMIC-HUB-03  | 11    | BOX-03          | 15    | BESTIARY-02     | 18    |
+| COSMIC-HUB-04  | 11    | BOX-04          | 15    | BESTIARY-03     | 18    |
+| COSMIC-HUB-05  | 11    | BOX-05          | 15    | BESTIARY-04     | 18    |
+| COSMIC-HUB-06  | 11    | BOX-06          | 15    | BESTIARY-05     | 18    |
+| COSMIC-HUB-07  | 11    | BOX-07          | 15    | BESTIARY-06     | 18    |
+| ELEMENT-01     | 12    | SLOT-01         | 15    | BESTIARY-07     | 18    |
+| ELEMENT-02     | 12    | SLOT-02         | 15    | BESTIARY-08     | 18    |
+| ELEMENT-03     | 12    | SLOT-03         | 15    | BESTIARY-09     | 18    |
+| ELEMENT-04     | 12    | SLOT-04         | 15    | BALANCE-01      | 19    |
+| ELEMENT-05     | 12    | SLOT-05         | 15    | BALANCE-02      | 19    |
+| ELEMENT-06     | 12    | SLOT-06         | 15    | BALANCE-03      | 19    |
+| ELEMENT-07     | 12    | SLOT-07         | 15    | BALANCE-04      | 19    |
+| ELEMENT-08     | 12    | SLOT-08         | 15    | BALANCE-05      | 19    |
+| ELEMENT-09     | 13    | SHIP-01         | 16    | BALANCE-06      | 17    |
+| ELEMENT-10     | 13    | SHIP-02         | 16    | BALANCE-07      | 19    |
+| ELEMENT-11     | 13    | SHIP-03         | 16    | BALANCE-08      | 19    |
+| ELEMENT-12     | 12    | SHIP-04         | 16    | BALANCE-09      | 17    |
+| UX-01          | 19    | SHIP-05         | 16    | PERF-01         | 19    |
+| UX-02          | 19    | SHIP-06         | 16    | PERF-02         | 12    |
+| UX-03          | 19    | SHIP-07         | 16    | PERF-03         | 12    |
+| UX-04          | 19    | SHIP-08         | 16    | PERF-04         | 10    |
+| UX-05          | 19    | SHIP-09         | 16    | PERF-05         | 19    |
+| UX-06          | 19    | SHIP-10         | 16    | PERF-06         | 12    |
+| UX-07          | 14    | CREW-01         | 16    | PERF-07         | 19    |
+| UX-08          | 19    | CREW-02         | 16    | PERF-08         | 15    |
+| UX-09          | 16    | CREW-03         | 16    | PERF-09         | 12    |
+| UX-10          | 17    | CREW-04         | 16    |                 |       |
+| UX-11          | 17    | CREW-05         | 16    |                 |       |
+| I18N-01        | 12    | CREW-06         | 16    |                 |       |
+| I18N-02        | 19    | CREW-07         | 16    |                 |       |
+| I18N-03        | 19    | CREW-08         | 16    |                 |       |
+|                |       | MISSION-01      | 16    |                 |       |
+|                |       | MISSION-02      | 16    |                 |       |
+|                |       | MISSION-03      | 16    |                 |       |
+|                |       | MISSION-04      | 16    |                 |       |
+|                |       | MISSION-05      | 16    |                 |       |
+|                |       | MISSION-06      | 16    |                 |       |
+|                |       | MISSION-07      | 16    |                 |       |
+|                |       | MISSION-08      | 16    |                 |       |
+
+**Total mapped:** 135/135 ✓
+**Orphans:** 0
+**Duplicates:** 0
+
+### Per-phase counts
+
+| Phase | REQ count |
+|-------|-----------|
+| 9     | 5         |
+| 10    | 7         |
+| 11    | 9         |
+| 12    | 14        |
+| 13    | 3         |
+| 14    | 11        |
+| 15    | 17        |
+| 16    | 27        |
+| 17    | 16        |
+| 18    | 9         |
+| 19    | 17        |
+| **Total** | **135** |
+
+---
+
+## Independent shippability check
+
+| After phase | Game state if dev stops here |
+|---|---|
+| 9  | Same as v1.0 + cleaner internals. No regression. |
+| 10 | Same as v1.0 + safe migrations + dev-mode HUD. No regression. |
+| 11 | v1.0 + 🧬 button opens empty modal with 4 stub tabs. Player sees roadmap teaser, no broken features. |
+| 12 | Above + invisible foundation for overlays (no feature). Game looks identical to player. |
+| 13 | Above + dev-only overlays visible if forced. No player-facing feature. |
+| 14 | Player can apply dev-given serums to frogs → carriers exist visually. Limited but coherent. |
+| 15 | Player can open dev-given boxes → get serums → apply. Box→serum loop closed. |
+| 16 | Full loop: scout → mission → box → serum → carrier. **First fully-playable v2.0 milestone.** |
+| 17 | Above + feed evolution + ceiling reveal + merge. Late-progression complete. |
+| 18 | Above + bestiary collection meta-loop. Full feature surface. |
+| 19 | v2.0 SHIP-READY. Polish + balance + i18n + tutorial. |
+
+---
+
+## Dependencies graph (linear, single chain)
+
+```
+9 (REFACTOR)
+  ↓
+10 (INFRA)
+  ↓
+11 (CosmicSlice + Hub shell)
+  ↓
+12 (Overlay infra + dormant)
+  ↓
+13 (Awakened tiers)
+  ↓
+14 (Сыворотки tab + DnD)
+  ↓
+15 (Boxes + slot-machine)
+  ↓
+16 (Scouts + missions)
+  ↓
+17 (Carrier feed + ceiling + merge)
+  ↓
+18 (Бестиарий 2.0)
+  ↓
+19 (Balance + tutorial + polish)
+```
+
+No parallel branches in v2.0 — each phase strictly consumes the previous. This is intentional: tight chain forces "independently shippable but cumulatively required" discipline.
+
+---
+
+## Risk-based research flags (from research synthesis)
+
+| Phase | Flag | What to verify during phase |
+|-------|------|----------------------------|
+| 12    | Real-device perf | 16 frogs × dormant overlay on mid-tier Android ≥45 FPS |
+| 13    | Bundle budget    | Cumulative bundle delta ≤ +30 KB after 64 awakened-tier files |
+| 15    | Skip A/B         | Tap-anywhere 0.6s vs Skip-button 1s — measure user satisfaction in playtest |
+| 17    | Ceiling drama    | Hidden-ceiling reveal cadence (5 feeds) feels right or needs to drop to 3 / rise to 7 |
+| 19    | Balance tuning   | Monte Carlo numbers vs playtest feel — are pity floors too tight/loose? |
+
+---
+
+**Last updated:** 2026-05-08 — initial ROADMAP for milestone v2.0
