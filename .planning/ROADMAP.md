@@ -362,7 +362,58 @@ Plans:
 
 **Depends on:** Phase 18 (full feature surface needed for tutorial flow + i18n string discovery).
 
-**Status:** pending
+**Status:** **Complete** (2026-05-08) — 7 plans, 4 waves, 9 atomic commits.
+
+Wave 1 (parallel): 19-01 wires `openBox` action в `cosmicSlice` (Phase 15
+утилиты `rollRarity`+`updatePity` теперь реально вызываются — BALANCE-01..07);
+9 unit tests purpose-built для pity guarantees (rare 3, epic 10, hard 25,
+bonusRarity floor, idempotency, eventBus.emit cosmic:box-opened) — все PASS.
+19-04 расширяет cosmicSettings.ts (паттерн UX-06 instantBoxes) добавляя
+calmFarmMode + reducedEffects toggles (default OFF Locked Decision UX-05);
+SettingsModal новые toggle rows; i18n RU/EN/ES для cosmic секции.
+
+Wave 2 (parallel): 19-02 simulate_balance.cjs standalone CommonJS runner
+(1:1 mirror rarityRoll.ts pure logic; 10K/100K iterations с baseline
+numbers committed в header). **Discovery deviation:** plan ожидал
+avgLegendary ≈ 3% (base weight), но wired pity (hard 25 + soft 15/20 boost
++ epic-pity 10 spillover) даёт effective ≈ 6% — bounds widened с [2.5,3.5]
+до [4.0,7.0]. Hard guarantees `pityHard25Breaches=0` + `gap.max=25` PASS.
+19-05 TutorialOverlay system (4 шага: first-box / first-serum / first-feed
+/ first-stabilize) с persisted seenFlags (cosmic.tutorialState shape +
+markTutorialSeen action + gameStore load/save guard); single-active-step
+priority order; mounted в App.tsx; i18n RU/EN/ES (27 entries: cta_understood
++ 4 × {title, body}).
+
+Wave 3 (parallel): 19-03 PityCounterDisplay footer с progressive reveal
+(openedCount<3 hidden / 3..4 dot indicator ●○○ / ≥5 exact «До rare/epic/legendary
+через N»); mount footer в CosmicHubModal — visible во всех 5 табах;
+4 cosmic_hub_pity i18n keys × 3 locales. 19-06 audit: check-translations.cjs
+script (flatten dotted-path keys через всех 3 файлов; 286 keys × 3 locales
+PARITY CLEAN); elementTints hex collision audit (mechanical was 0xfde68a
+collision с desert; **Rule 1 fix** → 0xfdd87a darker yellow); Phase 19-06
+audit comment block с Okabe-Ito reference; SMOKE_TEST.md visual audit
+checklist (two-axis viz, colorblind palette, i18n round-trip).
+
+Wave 4: 19-07 perf gate — check-bundle-delta.cjs script + .bundle-baseline-v1.json
+(196 KB v1.0 baseline + 50 KB cap). Production build 229.24 KB main →
+delta 33.24 KB / 50 KB cap (PASS, 65% used). CosmicHubModal lazy chunk
+14.22 KB verified (PERF-07). **Rule 2 fix**: StabilizationModal Phase 17
+read legacy localStorage key `frog_evolution_reduced_effects`, while Phase 19-04
+toggle wrote `frog_evolution_cosmic_reduced_effects` — unified через
+`getReducedEffects()` import от cosmicSettings.ts. Settings consumer audit
+documented в SMOKE_TEST.md: openBoxesInstantly WIRED (Phase 15), reducedEffects
+PARTIAL (StabilizationModal), calmFarmMode TODO Phase 20.
+
+Bundle delta vs Phase 18: +2.86 KB main + 0.33 KB CosmicHubModal-chunk =
++3.19 KB total. tsc clean, vite build clean, npm run sim-balance PASS,
+npm run check-translations PASS, npm run check-bundle PASS. 17/17 ✓ REQ-IDs.
+
+**Outcome:** v2.0 milestone feature-complete. Pity counters реально влияют
+на rolled rarity; Monte Carlo proof что hard guarantees hold under 100K
+iterations. Progressive pity UI + 4-step tutorial overlay snorkelна
+onboarding cognitive overload. i18n 286 keys × 3 locales coverage verified
+by automated script. Bundle headroom 17.57 KB остаётся под 50 KB cap для
+Phase 20 safety net work.
 
 ---
 

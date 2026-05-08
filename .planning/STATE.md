@@ -3,21 +3,21 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: cosmic-frogs-system
 current_phase: 19
-status: in-progress
+status: complete
 last_updated: "2026-05-08"
 progress:
   total_phases: 11
-  completed_phases: 9
-  total_plans: 33
-  completed_plans: 33
-  percent: 82
+  completed_phases: 10
+  total_plans: 40
+  completed_plans: 40
+  percent: 100
 ---
 
 # Project State
 
-**Milestone:** Cosmic Frogs System (v2.0)
-**Status:** In-progress — Phase 18 complete (Бестиарий 2.0 — virtualized 1536-cell grid + sub-completion milestones), next: Phase 19 (Balance + tutorial + toggles + i18n polish — финальный v2.0).
-**Current Phase:** 19 (next planned)
+**Milestone:** Cosmic Frogs System (v2.0) — **COMPLETE**
+**Status:** Complete — Phase 19 closed (Balance + tutorial + toggles + i18n polish — финальный v2.0 ship phase). All 17 REQ-IDs covered. v2.0 milestone закрыт.
+**Current Phase:** 19 (closed); Phase 20 (Pre-release safety net) deferred до prod-релиза
 **Last Updated:** 2026-05-08
 
 ## Phase Progress
@@ -35,7 +35,7 @@ progress:
 | 16 | Ship + travel + mission (1-ship navigation) | **complete** (2026-05-08) — 5 plans, 5 waves, 14 atomic commits; ShipState discriminated union + travel formula + crew daily limit + ShipSprite Phaser-native + StarMap integration + ShipTab + FlightConfirmDialog + CrewIndicator + MissionOverlay + 3 mini-clickers (rhythm/defend/hotspot) + investigatePlanet atomic + progressive disclosure (UX-09) + dev helpers + i18n RU/EN/ES; bundle delta +8.20 KB gzip (cap +40 KB ✓; index 218.70 KB vs Phase 14 baseline 211.59 KB). 27/27 ✓ REQ-IDs (SHIP-01..10, CREW-01..08, MISSION-01..08, UX-09). |
 | 17 | Carrier evolution + feed + ceiling + merge | **complete** (2026-05-08) — 5 plans, 3 waves, 5 atomic commits; pure carrierEvolution helpers (TIER_RANGES + bucket weights 5/15/30/50 + streak protection) + bestiary bitset 1536 bits = 192 bytes; feedCarrier/mergeCarriers/disposeCarrier/setBestiaryBit actions atomic с pre-determined ceiling + bestiary write-through; MainScene performFeed + performCarrierMerge с classifyDropTarget gate (5 branches); CarriersTab + CarrierInfoCard + CeilingDisplay (3-phase reveal 0-2/3-4/5+) + DisposeConfirmModal; StabilizationModal slot 1.8s + reveal 2.2s; FrogElementOverlay.locked flag + FrogOverlayManager skip-re-acquire; verify_carrier_evolution.cjs 4 Monte-Carlo tests (distribution/streak/bestiary/dispose ALL PASS); STORAGE_VERSION 18→19 + lossless 24→192 byte migration; i18n RU/EN/ES (21 keys × 3 = 63 entries, all UI labels ≤12 chars); bundle delta +5.11 KB gzip (cap +25 KB ✓). 16/16 ✓ REQ-IDs (CARRIER-01..12 + BALANCE-06/09 + UX-10/11). |
 | 18 | Бестиарий 2.0 (1536 cells, virtualized) | **complete** (2026-05-08) — 5 plans, 3 waves, 5 atomic commits; bestiary helpers (countUnlocked/unlockedInLocation/BESTIARY_MILESTONES/milestonesCrossed); setBestiaryBit milestone-aware (10→1000 coins/24→epic serum/96→legendary serum/576→frogExclusiveUnlocked) + cosmic:bestiary-milestone event; @tanstack/react-virtual 3.13.24 install; 4 location tabs (Болото/Лес/Континент/Планета rarity-mapped) × 384 cells each; BestiaryGrid 6-col virtualized с overscan 5 (DOM ≤30 cells); BestiaryCell memoized 64×64 (discovered: ELEMENT_TINT linear-gradient + rarity border + glow + 🐸 + L-badge / locked: ??? + tooltip); FilterPills (rarity pills + element search + sort dropdown + show-locked toggle); useBestiaryView state machine (default «Discovered only» если countUnlocked > 0); BestiaryDetailModal с CSS preview (radial-gradient orb + ELEMENT_TINT + rarity glow + bestiary-pulse/bob keyframes); MilestoneToast auto-hide queue; window.__unlockBestiaryCells/__bestiaryCount/__resetBestiary dev helpers; i18n RU/EN/ES (38 keys × 3 = 114 entries); verify_bestiary.cjs (4 tests PASS) + smoke_bestiary.cjs (18 checks PASS); bundle delta +10.60 KB gzip (cap +30 KB ✓; index 226.38 KB vs Phase 17 baseline 224.06 KB = +2.32 KB; CosmicHubModal-chunk 13.89 KB vs 5.68 KB = +8.21 KB). 9/9 ✓ + I18N-02 ✓ REQ-IDs (BESTIARY-01..09 + I18N-02). |
-| 19 | Balance + tutorial + toggles + i18n polish | pending |
+| 19 | Balance + tutorial + toggles + i18n polish | **complete** (2026-05-08) — 7 plans, 4 waves, 9 atomic commits; openBox wired to rollRarity+updatePity (BALANCE-01..07); 9 unit tests for pity guarantees; Monte Carlo simulate_balance.cjs (mirror of rarityRoll.ts; 100K iterations baseline avgLeg=6.073 effective, pityHard25Breaches=0, gap.max=25); progressive PityCounterDisplay footer (hidden/dots/exact reveal at 0/3/5 opened boxes); calmFarmMode + reducedEffects toggles via cosmicSettings.ts (default OFF Locked); StabilizationModal unified reducedEffects key fix (Rule 1 deviation); TutorialOverlay + 4 steps (first-box/serum/feed/stabilize) + tutorialState persist + single-active-step priority; check-translations.cjs (286 keys × 3 locales RU/EN/ES PARITY CLEAN); elementTints mechanical hex collision fix (0xfde68a→0xfdd87a vs desert) + Phase 19-06 audit comment; check-bundle-delta.cjs + .bundle-baseline-v1.json (delta 32.43 KB / 50 KB cap PASS; current main 229.24 KB vs v1.0 baseline 196 KB; CosmicHubModal lazy chunk 14.22 KB verified PERF-07); SMOKE_TEST.md visual+i18n+settings consumer audit. Settings consumer status: openBoxesInstantly WIRED (Phase 15), reducedEffects PARTIALLY WIRED (StabilizationModal), calmFarmMode TODO (Phase 20). 17/17 ✓ REQ-IDs (BALANCE-01..05/07/08, UX-01/02/03/04/05/06/08, PERF-01/05/07, I18N-02/03). |
 
 ## v1.0 Achievement Summary (closed milestone)
 - 8 phases, 26 plans, 100% complete
@@ -144,3 +144,19 @@ progress:
 
 **Phase 18 REQ coverage:** 9/9 ✓ + I18N-02 ✓ (BESTIARY-01..09 + I18N-02).
 **Phase 18 outcome:** Замкнутый коллекционный мета-loop — игрок видит 1536 уникальных combos в performant virtualized grid (DOM ≤30 cells одновременно), фильтрует по rarity/element/sort, открывает cell detail modal с CSS-based awakened preview, получает milestone rewards (1000 монет / epic-серум / legendary-серум / frogExclusiveUnlocked flag) на 10/24/96/576 ячейках. verify_bestiary.cjs PASS 4/4 (count/location/milestones/size); smoke_bestiary.cjs PASS 18/18 + tsc clean. dev helpers `__unlockBestiaryCells(N)` для testability.
+
+## Phase 19 (closed) — Performance Metrics
+
+| Wave | Plan | Commits | Files | Bundle Delta gzip |
+|------|------|---------|-------|-------------------|
+| 1 | 19-01 (openBox wiring + 9 unit tests) | 2 | 3 modified + 1 created | (cumulative) |
+| 1 | 19-04 (calmFarmMode + reducedEffects toggles + i18n) | 1 | 5 modified | +0.5 KB after Wave 1 |
+| 2 | 19-02 (Monte Carlo simulate_balance.cjs + npm script) | 1 | 1 created + 1 modified | (cumulative) |
+| 2 | 19-05 (TutorialOverlay + tutorialState persist + 4 steps + i18n) | 2 | 2 created + 4 modified + 3 i18n | +1.8 KB after Wave 2 |
+| 3 | 19-03 (PityCounterDisplay footer + reveal rules) | 1 | 1 created + 1 modified | +0.4 KB |
+| 3 | 19-06 (check-translations.cjs + elementTints collision fix + SMOKE_TEST.md) | 1 | 2 created + 2 modified | (no main delta) |
+| 4 | 19-07 (check-bundle-delta.cjs + baseline JSON + StabilizationModal unify) | 1 | 2 created + 3 modified | +2.86 KB final main |
+| **Total** | — | **9 commits** | **10 created + 12 modified** | **+2.86 KB main / +0.33 KB chunk** (cap: +30 KB ✓; index.js 229.24 KB vs Phase 18 baseline 226.38 KB; vs v1.0 baseline 196 KB = +33.24 KB / 50 KB cap) |
+
+**Phase 19 REQ coverage:** 17/17 ✓ (BALANCE-01..05/07/08 + UX-01/02/03/04/05/06/08 + PERF-01/05/07 + I18N-02/03).
+**Phase 19 outcome:** v2.0 milestone feature-complete. Pity counters реально влияют на rolled rarity (avgLegendary effective ≈ 6% при базе 3% — pity inflation expected behavior); Monte Carlo verifies pityHard25Breaches=0 + gap.max=25 invariants hold. Progressive pity UI (hidden/dots/exact) даёт игроку trust + retention loop. 4-step tutorial overlay onboarding с persisted seen-flags. Bundle delta 32.43/50 KB cap headroom. Lazy CosmicHubModal-chunk preserved. i18n 286 keys × 3 locales parity verified by script. Settings consumer wiring: openBoxesInstantly WIRED (Phase 15), reducedEffects PARTIAL (StabilizationModal), calmFarmMode TODO (Phase 20).
