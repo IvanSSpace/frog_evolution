@@ -370,6 +370,13 @@ function loadCosmicSlice(): CosmicPersist {
       hasOpenedAnyBox: typeof parsed.hasOpenedAnyBox === 'boolean' ? parsed.hasOpenedAnyBox : defaults.hasOpenedAnyBox,
       // Phase 18 (REQ BESTIARY-07): 576-cells visual unlock placeholder.
       frogExclusiveUnlocked: typeof parsed.frogExclusiveUnlocked === 'boolean' ? parsed.frogExclusiveUnlocked : defaults.frogExclusiveUnlocked,
+      // Phase 19-05 (UX-08): tutorial seen-flags. Each field optional → fallback на default false.
+      tutorialState: {
+        seenFirstBox: typeof parsed.tutorialState?.seenFirstBox === 'boolean' ? parsed.tutorialState.seenFirstBox : false,
+        seenFirstSerum: typeof parsed.tutorialState?.seenFirstSerum === 'boolean' ? parsed.tutorialState.seenFirstSerum : false,
+        seenFirstFeed: typeof parsed.tutorialState?.seenFirstFeed === 'boolean' ? parsed.tutorialState.seenFirstFeed : false,
+        seenFirstStabilize: typeof parsed.tutorialState?.seenFirstStabilize === 'boolean' ? parsed.tutorialState.seenFirstStabilize : false,
+      },
       // Phase 16: latestShipPos НЕ persisted — всегда null на load.
       latestShipPos: null,
     }
@@ -626,7 +633,8 @@ useGameStore.subscribe((state, prev) => {
     state.hasFirstFeed !== prev.hasFirstFeed ||
     state.hasFirstMission !== prev.hasFirstMission ||
     state.hasOpenedAnyBox !== prev.hasOpenedAnyBox ||
-    state.frogExclusiveUnlocked !== prev.frogExclusiveUnlocked
+    state.frogExclusiveUnlocked !== prev.frogExclusiveUnlocked ||
+    state.tutorialState !== prev.tutorialState
   ) {
     saveCosmicSlice({
       serums: state.serums,
@@ -648,6 +656,8 @@ useGameStore.subscribe((state, prev) => {
       hasOpenedAnyBox: state.hasOpenedAnyBox,
       // Phase 18 (REQ BESTIARY-07): 576-cells unlock flag.
       frogExclusiveUnlocked: state.frogExclusiveUnlocked,
+      // Phase 19-05 (UX-08): tutorial seen-flags persisted.
+      tutorialState: state.tutorialState,
       // Phase 16: latestShipPos НЕ persisted (transient) — saved as null shape
       latestShipPos: null,
     })

@@ -93,6 +93,21 @@ export interface PityCounters {
 // Phase 17: добавлен carriers tab.
 export type CosmicTab = 'scouts' | 'boxes' | 'serums' | 'bestiary' | 'carriers'
 
+// Phase 19-05 (UX-08): tutorial overlay step IDs.
+export type TutorialStepId =
+  | 'first-box'
+  | 'first-serum'
+  | 'first-feed'
+  | 'first-stabilize'
+
+// Phase 19-05 (UX-08): persisted seen-flags для tutorial overlays.
+export interface TutorialState {
+  seenFirstBox: boolean
+  seenFirstSerum: boolean
+  seenFirstFeed: boolean
+  seenFirstStabilize: boolean
+}
+
 export interface CosmicSlice {
   // Инвентарь сывороток: Record<Element, Record<Rarity, count>>
   serums: Record<Element, Record<Rarity, number>>
@@ -142,6 +157,9 @@ export interface CosmicSlice {
   // Persisted в localStorage; placeholder для exclusive frog visual (final visual TBD).
   frogExclusiveUnlocked: boolean
 
+  // Phase 19-05 (UX-08): tutorial overlay seen-flags (persisted).
+  tutorialState: TutorialState
+
   // Phase 16: transient cached ship world position для redirect calc.
   // НЕ persisted в localStorage (init на null после load → re-derived из planetCoords).
   latestShipPos: { x: number; y: number } | null
@@ -188,6 +206,13 @@ export function makeInitialCosmicSlice(): CosmicSlice {
     hasOpenedAnyBox: false,
     // Phase 18 (REQ BESTIARY-07): 576-cells milestone unlock placeholder.
     frogExclusiveUnlocked: false,
+    // Phase 19-05 (UX-08): tutorial seen-flags initial — все false.
+    tutorialState: {
+      seenFirstBox: false,
+      seenFirstSerum: false,
+      seenFirstFeed: false,
+      seenFirstStabilize: false,
+    },
     // Phase 16: transient ship position cache (used for redirect calc)
     latestShipPos: null,
   }

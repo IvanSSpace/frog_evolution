@@ -4,6 +4,7 @@
 import {
   type CosmicSlice, type CosmicTab, type Element, type Rarity,
   type BoxData, type ScoutData, type CarrierData, type RollResult,
+  type TutorialStepId,
   ELEMENTS,
   makeInitialCosmicSlice,
 } from './types'
@@ -150,6 +151,13 @@ export interface CosmicSliceActions {
   // Phase 16-04: atomic investigate transaction
   // returns true если успешно, false если guard не прошёл
   investigatePlanet: (planetId: string, result: MissionResult) => boolean
+
+  /**
+   * Phase 19-05 (UX-08): mark tutorial step seen.
+   * Idempotent: re-call с already-seen step → no harm.
+   * Persisted via existing cosmic auto-persist (gameStore subscribe).
+   */
+  markTutorialSeen: (step: TutorialStepId) => void
 }
 
 export type CosmicState = CosmicSlice & CosmicSliceActions
@@ -658,6 +666,18 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
     setHasFirstFeed: (v) => set({ hasFirstFeed: v }),
     setHasFirstMission: (v) => set({ hasFirstMission: v }),
     setHasOpenedAnyBox: (v) => set({ hasOpenedAnyBox: v }),
+
+    // Phase 19-05 (UX-08): tutorial overlay seen-flags.
+    markTutorialSeen: (step) => {
+      const s = get()
+      const ts = s.tutorialState
+      const next = { ...ts }
+      if (step === 'first-box') next.seenFirstBox = true
+      else if (step === 'first-serum') next.seenFirstSerum = true
+      else if (step === 'first-feed') next.seenFirstFeed = true
+      else if (step === 'first-stabilize') next.seenFirstStabilize = true
+      set({ tutorialState: next })
+    },
 
     // Phase 16-04: atomic investigate transaction (REQ MISSION-05/06/07, CREW-04/08).
     // - guard: ship.state !== 'docked' OR ship.planetId !== planetId → no-op (false)
