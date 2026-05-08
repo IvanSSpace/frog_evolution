@@ -1,8 +1,12 @@
 import Phaser from 'phaser'
 import { eventBus } from '../../store/eventBus'
+import { useGameStore } from '../../store/gameStore'
 import { attachNebulaBackground, type NebulaBackgroundHandle } from '../effects/NebulaBackground'
+import { ShipSprite } from '../effects/ShipSprite'
 import { violetRing } from '../effects/presets'
 import planetMap from '../data/planetMap.json'
+import { findPlanetById } from '../data/missionConfig'
+import type { ShipState } from '../../store/cosmic/types'
 import { deriveModulations } from '../../audio/planetVoice'
 import {
   pickColor as sharedPickColor,
@@ -235,6 +239,12 @@ export class StarMapScene extends Phaser.Scene {
   // Используется глобальным pointerup'ом для определения «тап в пустое место».
   tapHandledThisFrame = false
 
+  // Phase 16: Ship singleton — Phaser-native ракетка с trail.
+  // Auto-spawn в create() через ensureShipExists. Subscribed на cosmicSlice.ship.
+  private shipSprite: ShipSprite | null = null
+  private shipUnsubscribe: (() => void) | null = null
+  private lastShipStateSig = ''
+
   constructor() { super({ key: 'StarMapScene' }) }
 
   create() {
@@ -375,6 +385,90 @@ export class StarMapScene extends Phaser.Scene {
         this.popover.setScale(1 / this.cameras.main.zoom)
       }
     })
+
+    // Phase 16: Ship singleton (REQ SHIP-02..06).
+    this.setupShipSprite()
+
+    // Phase 16: cleanup на shutdown — destroy ship + unsubscribe store.
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardownShipSprite())
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.teardownShipSprite())
+  }
+
+  /** Phase 16: Auto-spawn ship и подписка на cosmicSlice.ship. */
+  private setupShipSprite() {
+    // Гарантируем что ship существует (auto-spawn at home при первом open).
+    useGameStore.getState().ensureShipExists()
+    const initialShip = useGameStore.getState().ship
+    const homeId = initialShip?.state === 'docked' ? initialShip.planetId : 'home'
+    const homePlanet = findPlanetById(homeId) ?? findPlanetById('home')
+    if (!homePlanet) return
+
+    // planetMap.json — DPR=1 base, scene умножает на DPR. Применяем тот же multiplier.
+    this.shipSprite = new ShipSprite({
+      scene: this,
+      parent: null,  // scene root; нет worldContainer в этой scene
+      initialPosition: { x: homePlanet.x * DPR, y: homePlanet.y * DPR },
+      depth: 1500,
+      onPositionUpdate: (x, y) => {
+        // throttled выше; здесь — простой proxy в store для redirect calc.
+        // Позиция нормализуется обратно в DPR=1 base (для slice + sendShipTo math).
+        useGameStore.getState().setShipPosition(x / DPR, y / DPR)
+      },
+    })
+
+    // Sync initial state
+    this.applyShipState(useGameStore.getState().ship)
+
+    // Subscribe — реагируем на изменения ship через JSON-сигнатуру dedup.
+    this.shipUnsubscribe = useGameStore.subscribe((state) => {
+      this.applyShipState(state.ship)
+    })
+  }
+
+  private teardownShipSprite() {
+    if (this.shipUnsubscribe) {
+      this.shipUnsubscribe()
+      this.shipUnsubscribe = null
+    }
+    if (this.shipSprite) {
+      this.shipSprite.destroy()
+      this.shipSprite = null
+    }
+    this.lastShipStateSig = ''
+  }
+
+  /** Phase 16: применить ShipState из store к ShipSprite. JSON-dedup чтобы не reapply identical state. */
+  private applyShipState(ship: ShipState | null): void {
+    if (!this.shipSprite || ship === null) return
+
+    const sig = JSON.stringify(ship)
+    if (sig === this.lastShipStateSig) return
+    this.lastShipStateSig = sig
+
+    if (ship.state === 'docked') {
+      const p = findPlanetById(ship.planetId)
+      if (!p) return
+      this.shipSprite.setDocked(
+        { x: p.x * DPR, y: p.y * DPR },
+        (p.size ?? 60) * DPR,
+      )
+    } else {
+      const fp = findPlanetById(ship.fromPlanetId)
+      const tp = findPlanetById(ship.toPlanetId)
+      if (!fp || !tp) return
+      const onArrive = () => {
+        useGameStore.getState().arriveShipAt(ship.toPlanetId)
+      }
+      this.shipSprite.syncFromState(
+        {
+          from: { x: fp.x * DPR, y: fp.y * DPR },
+          to: { x: tp.x * DPR, y: tp.y * DPR },
+          startedAt: ship.startedAt,
+          arrivesAt: ship.arrivesAt,
+        },
+        onArrive,
+      )
+    }
   }
 
   // Адаптивный hit-area для главных планет — чем сильнее zoom-out,
@@ -828,6 +922,9 @@ export class StarMapScene extends Phaser.Scene {
         durationMs,
         seed: this.effectiveSeed(sys),
       })
+      // Phase 16 (REQ SHIP-07): parallel emit для Cosmic Hub flight flow.
+      // App-side subscriber решает, открыт ли Hub, и показывает confirm dialog.
+      eventBus.emit('cosmic:request-flight', { planetId: sys.id })
       this.playUniqueAnimation(sys)
       st.count = 0
       st.threshold = 2 + Math.floor(Math.random() * 5) // 2-6
