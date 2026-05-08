@@ -9,8 +9,10 @@ import {
 import { eventBus } from '../eventBus'
 import {
   travelTimeMs, planetDistance, findPlanetById, getLocalDateString,
-  DAILY_CAP,
+  DAILY_CAP, bonusRarityForResult, planetElementInputs,
+  type MissionResult,
 } from '../../game/data/missionConfig'
+import { elementFromPlanet } from '../../game/effects/elements/elementMapping'
 
 // Actions — то, что наполняется в Phase 14-19. Здесь — placeholder stubs.
 export interface CosmicSliceActions {
@@ -56,6 +58,10 @@ export interface CosmicSliceActions {
   setHasFirstFeed: (v: boolean) => void
   setHasFirstMission: (v: boolean) => void
   setHasOpenedAnyBox: (v: boolean) => void
+
+  // Phase 16-04: atomic investigate transaction
+  // returns true если успешно, false если guard не прошёл
+  investigatePlanet: (planetId: string, result: MissionResult) => boolean
 }
 
 export type CosmicState = CosmicSlice & CosmicSliceActions
@@ -262,5 +268,63 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
     setHasFirstFeed: (v) => set({ hasFirstFeed: v }),
     setHasFirstMission: (v) => set({ hasFirstMission: v }),
     setHasOpenedAnyBox: (v) => set({ hasOpenedAnyBox: v }),
+
+    // Phase 16-04: atomic investigate transaction (REQ MISSION-05/06/07, CREW-04/08).
+    // - guard: ship.state !== 'docked' OR ship.planetId !== planetId → no-op (false)
+    // - guard: missionsToday >= DAILY_CAP → no-op (false)
+    // - atomic: missionsToday++, addBox с element=elementFromPlanet, bonusRarity, hasFirstMission=true
+    // - emit 'cosmic:toast' с открытием Боксы
+    investigatePlanet: (planetId, result) => {
+      const s = get()
+      // Guard 1: ship docked at this planet?
+      if (!s.ship || s.ship.state !== 'docked' || s.ship.planetId !== planetId) {
+        return false
+      }
+      // Guard 2: cap reached? (CREW-04 — pity растёт ТОЛЬКО при consume)
+      if (s.crew.missionsToday >= DAILY_CAP) {
+        return false
+      }
+      const planet = findPlanetById(planetId)
+      if (!planet) return false
+
+      // Resolve element (MISSION-06)
+      const { archetype, mainRaceType } = planetElementInputs(planet)
+      const element = elementFromPlanet(archetype, mainRaceType) ?? 'fire'  // fallback
+
+      const bonus = bonusRarityForResult(result)
+
+      // Atomic transaction: один set()
+      const newBoxId = `box_${Date.now()}_${Math.floor(Math.random() * 1e6)}`
+      set({
+        crew: { ...s.crew, missionsToday: s.crew.missionsToday + 1 },
+        boxes: [
+          ...s.boxes,
+          {
+            id: newBoxId,
+            element,
+            opened: false,
+            sourceArchetype: archetype ?? mainRaceType,
+            bonusRarity: bonus,
+          },
+        ],
+        hasFirstMission: true,  // unlock Боксы tab (REQ UX-09)
+      })
+
+      // Side-effect: toast (вне set, в том же tick).
+      // hardcoded RU «Получен ящик» — Phase 19 polish может перенести в App-side i18n.
+      eventBus.emit('cosmic:toast', {
+        type: 'box-received',
+        msg: `Получен ящик ${planet.name}`,
+        action: {
+          label: 'Открыть',
+          onClick: () => {
+            // Open Боксы tab (Phase 16-05 + Phase 15 wiring).
+            get().setLastActiveTab('boxes')
+          },
+        },
+      })
+
+      return true
+    },
   }
 }
