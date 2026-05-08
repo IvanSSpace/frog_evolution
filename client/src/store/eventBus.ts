@@ -1,6 +1,7 @@
 import mitt from 'mitt'
 import type { CosmicToastPayload, Element, Rarity } from './cosmic/types'
 import type { MissionResult } from '../game/data/missionConfig'
+import type { Bucket } from '../utils/carrierEvolution'
 
 type Events = {
   'poop:collected': { value: number }
@@ -38,6 +39,14 @@ type Events = {
   'cosmic:start-mission': { planetId: string }
   'cosmic:mission-complete': { planetId: string; result: MissionResult }
   'cosmic:mission-cancel': void
+  // Phase 17 — carrier evolution
+  'cosmic:carrier-stabilized': {
+    frogId: string
+    element: Element
+    rarity: Rarity
+    ceiling: number
+    bucket: Bucket
+  }
 }
 
 export const eventBus = mitt<Events>()

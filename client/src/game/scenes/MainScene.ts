@@ -8,6 +8,7 @@ import { burstEffect } from '../effects/elements/burstEffect'
 import { mergeEffect } from '../effects/elements/mergeEffect'
 import { SerumSelectionLayer } from '../effects/SerumSelectionLayer'
 import { isEligible, getEligibilityHint } from '../../utils/serumEligibility'
+import { classifyDropTarget } from '../../utils/carrierFeed'
 import i18next from 'i18next'
 import type { Element, Rarity } from '../../store/cosmic/types'
 
@@ -1291,6 +1292,49 @@ export class MainScene extends Phaser.Scene {
   }
 
   private performMerge(a: FrogData, b: FrogData, cx: number, cy: number) {
+    // Phase 17 (CARRIER-03/10): classify drop target before vortex.
+    const carriers = useGameStore.getState().carriers
+    const cls = classifyDropTarget(
+      { aId: a.id, aLevel: a.level, bId: b.id, bLevel: b.level },
+      carriers,
+    )
+
+    if (cls.kind === 'blocked-unstabilized') {
+      eventBus.emit('cosmic:toast', {
+        type: 'generic',
+        msg: i18next.t('cosmic_hub.carrier.merge_blocked_unstabilized'),
+      })
+      hapticNotification('error')
+      return
+    }
+
+    if (cls.kind === 'blocked-mismatch') {
+      eventBus.emit('cosmic:toast', {
+        type: 'generic',
+        msg: i18next.t('cosmic_hub.carrier.merge_blocked_mismatch'),
+      })
+      hapticNotification('error')
+      return
+    }
+
+    if (cls.kind === 'no-match') {
+      console.warn('[performMerge] no-match unexpected', { a: a.id, b: b.id })
+      return
+    }
+
+    if (cls.kind === 'feed' && cls.carrierFrogId) {
+      const carrierFrog = a.id === cls.carrierFrogId ? a : b
+      const sacrificeFrog = a.id === cls.carrierFrogId ? b : a
+      this.performFeed(carrierFrog, sacrificeFrog, cx, cy)
+      return
+    }
+
+    if (cls.kind === 'carrier-merge') {
+      this.performCarrierMerge(a, b, cx, cy)
+      return
+    }
+
+    // === Existing standard-merge logic ===
     // Заморозка: убрать лягушек из активных, отключить инпут, прервать твины
     a.isMerging = true
     b.isMerging = true
@@ -1377,6 +1421,230 @@ export class MainScene extends Phaser.Scene {
         }
 
         // Discovery (всегда)
+        const wasNew = store.markDiscovered(newLevel)
+        if (wasNew) eventBus.emit('frog:discovered', { level: newLevel })
+      })
+    })
+  }
+
+  /**
+   * Phase 17 (CARRIER-03/04): feed carrier — sacrifice regular same-level frog → roll outcome.
+   * Vortex anim + delayed apply через store.feedCarrier action.
+   *
+   * После outcome:
+   *   - 'success': carrier replaced spawned upgraded frog (transfer carrier.frogId)
+   *   - 'fail': sacrifice consumed; carrier resumes idle на месте
+   *   - 'stabilize': StabilizationModal triggered через eventBus (Plan 17-04)
+   */
+  private performFeed(carrier: FrogData, sacrifice: FrogData, cx: number, cy: number) {
+    carrier.isMerging = true
+    sacrifice.isMerging = true
+    carrier.isMoving = true
+    sacrifice.isMoving = true
+    this.tweens.killTweensOf(carrier.container)
+    this.tweens.killTweensOf(carrier.body)
+    this.tweens.killTweensOf(sacrifice.container)
+    this.tweens.killTweensOf(sacrifice.body)
+    carrier.body.disableInteractive()
+    sacrifice.body.disableInteractive()
+    carrier.poopTimer?.remove()
+    carrier.poopTimer = null
+    sacrifice.poopTimer?.remove()
+    sacrifice.poopTimer = null
+
+    hapticImpact('medium')
+
+    const VORTEX_DURATION = 350
+    carrier.container.setDepth(99997)
+    sacrifice.container.setDepth(99997)
+    this.spiralFrogTo(carrier, cx, cy, VORTEX_DURATION)
+    this.spiralFrogTo(sacrifice, cx, cy, VORTEX_DURATION)
+    this.spawnVortexParticles(cx, cy, VORTEX_DURATION)
+
+    this.time.delayedCall(VORTEX_DURATION, () => {
+      const oldLevel = sacrifice.level
+      this.removeFrog(sacrifice)
+      const store0 = useGameStore.getState()
+      store0.removeFrogFromLocation(store0.currentLocation, oldLevel)
+
+      this.flashAt(cx, cy)
+
+      // Atomic feed — store mutates carrier + maybe emits stabilization event.
+      const outcome = useGameStore.getState().feedCarrier(carrier.id)
+
+      if (!outcome) {
+        // Defensive: carrier disappeared between drag-end and apply.
+        carrier.isMerging = false
+        carrier.isMoving = false
+        carrier.container.setDepth(carrier.container.y)
+        this.startIdleAnim(carrier)
+        return
+      }
+
+      if (outcome.result === 'success') {
+        // Replace carrier visual: remove old, spawn new at +1 level.
+        const newLevel = outcome.newLevel
+        const oldCarrierLevel = carrier.level
+        this.removeFrog(carrier)
+        const storeS = useGameStore.getState()
+        storeS.removeFrogFromLocation(storeS.currentLocation, oldCarrierLevel)
+
+        const newCfg = FROG_LEVELS[newLevel - 1]
+        storeS.addFrogToLocation(newCfg.location, newLevel)
+        const isCrossLocation = newCfg.location !== storeS.currentLocation
+        if (isCrossLocation) {
+          this.playCrossLocationFlyAway(cx, cy, newLevel)
+        } else {
+          const newFrog = this.spawnFrog(cx, cy, newLevel)
+          // Transfer carrier.frogId на newFrog.id.
+          const carriersNow = useGameStore.getState().carriers.slice()
+          const idx = carriersNow.findIndex((c) => c.frogId === carrier.id)
+          if (idx >= 0) {
+            carriersNow[idx] = { ...carriersNow[idx], frogId: newFrog.id }
+            useGameStore.setState({ carriers: carriersNow })
+          }
+          newFrog.container.setScale(0)
+          this.tweens.add({
+            targets: newFrog.container,
+            scale: BASE_SCALE * 1.2,
+            duration: 160, ease: 'Back.easeOut',
+            onComplete: () => {
+              this.tweens.add({
+                targets: newFrog.container,
+                scale: BASE_SCALE,
+                duration: 100, ease: 'Power2.easeOut',
+              })
+            },
+          })
+        }
+        hapticNotification('success')
+
+        const wasNew = storeS.markDiscovered(newLevel)
+        if (wasNew) eventBus.emit('frog:discovered', { level: newLevel })
+      } else if (outcome.result === 'fail') {
+        // Carrier stays at (cx, cy). Unlock + resume idle.
+        carrier.isMerging = false
+        carrier.isMoving = false
+        carrier.container.setRotation(0)
+        carrier.container.setScale(BASE_SCALE)
+        carrier.container.x = cx
+        carrier.container.y = cy
+        carrier.body.setInteractive({ useHandCursor: true })
+        this.input.setDraggable(carrier.body)
+        this.startIdleAnim(carrier)
+        hapticNotification('error')
+        eventBus.emit('cosmic:toast', {
+          type: 'generic',
+          msg: i18next.t('cosmic_hub.carrier.feed_fail'),
+          duration: 1500,
+        })
+      } else {
+        // 'stabilize' — carrier остаётся, modal triggered через eventBus.
+        carrier.isMerging = false
+        carrier.isMoving = false
+        carrier.container.setRotation(0)
+        carrier.container.setScale(BASE_SCALE)
+        carrier.container.x = cx
+        carrier.container.y = cy
+        carrier.body.setInteractive({ useHandCursor: true })
+        this.input.setDraggable(carrier.body)
+        this.startIdleAnim(carrier)
+        hapticImpact('heavy')
+      }
+
+      // Force overlay re-sync — level / stabilized changed.
+      this.overlayManager?.markDirty()
+    })
+  }
+
+  /**
+   * Phase 17 (CARRIER-10): merge two stabilized same-element same-level carriers
+   * → 1 new carrier на level+1 с S-bucket guaranteed ceiling. Plays mergeEffect.
+   */
+  private performCarrierMerge(a: FrogData, b: FrogData, cx: number, cy: number) {
+    a.isMerging = true
+    b.isMerging = true
+    a.isMoving = true
+    b.isMoving = true
+    this.tweens.killTweensOf(a.container)
+    this.tweens.killTweensOf(a.body)
+    this.tweens.killTweensOf(b.container)
+    this.tweens.killTweensOf(b.body)
+    a.body.disableInteractive()
+    b.body.disableInteractive()
+    a.poopTimer?.remove()
+    a.poopTimer = null
+    b.poopTimer?.remove()
+    b.poopTimer = null
+
+    eventBus.emit('merge:happened', { level: a.level })
+    hapticImpact('medium')
+
+    const VORTEX_DURATION = 350
+    a.container.setDepth(99997)
+    b.container.setDepth(99997)
+    this.spiralFrogTo(a, cx, cy, VORTEX_DURATION)
+    this.spiralFrogTo(b, cx, cy, VORTEX_DURATION)
+    this.spawnVortexParticles(cx, cy, VORTEX_DURATION)
+
+    // Pre-capture carrier element для mergeEffect.
+    const carriersSnap = useGameStore.getState().carriers
+    const carrierA = carriersSnap.find((c) => c.frogId === a.id)
+    const element = carrierA?.element
+
+    this.time.delayedCall(VORTEX_DURATION, () => {
+      const oldLevel = a.level
+      const store = useGameStore.getState()
+
+      this.removeFrog(a)
+      this.removeFrog(b)
+      store.removeFrogFromLocation(store.currentLocation, oldLevel)
+      store.removeFrogFromLocation(store.currentLocation, oldLevel)
+
+      this.flashAt(cx, cy)
+      if (element) mergeEffect(this, cx, cy, element)
+
+      const newLevel = Math.min(oldLevel + 1, MAX_LEVEL)
+      const newCfg = FROG_LEVELS[newLevel - 1]
+      store.addFrogToLocation(newCfg.location, newLevel)
+
+      const isCrossLocation = newCfg.location !== store.currentLocation
+
+      this.time.delayedCall(60, () => {
+        if (isCrossLocation) {
+          this.playCrossLocationFlyAway(cx, cy, newLevel)
+          eventBus.emit('cosmic:toast', {
+            type: 'generic',
+            msg: i18next.t('cosmic_hub.carrier.merge_cross_location_warn'),
+            duration: 3000,
+          })
+          return
+        }
+        const newFrog = this.spawnFrog(cx, cy, newLevel)
+        newFrog.container.setScale(0)
+        this.tweens.add({
+          targets: newFrog.container,
+          scale: BASE_SCALE * 1.2,
+          duration: 160, ease: 'Back.easeOut',
+          onComplete: () => {
+            this.tweens.add({
+              targets: newFrog.container,
+              scale: BASE_SCALE,
+              duration: 100, ease: 'Power2.easeOut',
+            })
+          },
+        })
+
+        // Atomic store merge — removes both old carriers, adds new with S-bucket
+        // ceiling, sets bestiary bit.
+        const merged = useGameStore.getState().mergeCarriers(a.id, b.id, newFrog.id)
+        if (!merged) {
+          console.warn('[performCarrierMerge] mergeCarriers returned null — defensive')
+        }
+
+        this.overlayManager?.markDirty()
+        hapticNotification('success')
+
         const wasNew = store.markDiscovered(newLevel)
         if (wasNew) eventBus.emit('frog:discovered', { level: newLevel })
       })
