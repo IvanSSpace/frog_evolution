@@ -294,14 +294,16 @@ Plans:
 **Depends on:** Phase 16 (scouts produce boxes; players need carriers to feed).
 **Plan files:** 5 plans in 3 waves
 
-- [ ] 17-01-PLAN.md — Foundation: types + carrierEvolution.ts (TIER_RANGES, buckets, rollCeilingForCarrier, rollFeedOutcome, shouldForceS) + bestiary.ts (1536-bit indexing) + verify_carrier_evolution.cjs (Monte-Carlo + streak)
-- [ ] 17-02-PLAN.md — feedCarrier action + MainScene drag-feed wiring (performFeed) + carrier-merge guard + cosmic:carrier-stabilized eventBus
-- [ ] 17-03-PLAN.md — CarriersTab (5-th Cosmic Hub tab) + CarrierInfoCard + CeilingDisplay (progressive reveal) + i18n RU/EN/ES
-- [ ] 17-04-PLAN.md — StabilizationModal (slot-machine 3-4s) + visual lock в FrogElementOverlay/FrogOverlayManager
-- [ ] 17-05-PLAN.md — performCarrierMerge + DisposeConfirmModal + mergeCarriers/disposeCarrier/setBestiaryBit actions + gameStore migration 16→17 + verify --dispose
+- [x] 17-01-PLAN.md — Foundation: types + carrierEvolution.ts (TIER_RANGES, buckets, rollCeilingForCarrier, rollFeedOutcome, shouldForceS) + bestiary.ts (1536-bit indexing) + verify_carrier_evolution.cjs (Monte-Carlo + streak)
+- [x] 17-02-PLAN.md — feedCarrier action + MainScene drag-feed wiring (performFeed) + carrier-merge guard + cosmic:carrier-stabilized eventBus
+- [x] 17-03-PLAN.md — CarriersTab (5-th Cosmic Hub tab) + CarrierInfoCard + CeilingDisplay (progressive reveal) + i18n RU/EN/ES
+- [x] 17-04-PLAN.md — StabilizationModal (slot-machine 3-4s) + visual lock в FrogElementOverlay/FrogOverlayManager
+- [x] 17-05-PLAN.md — performCarrierMerge + DisposeConfirmModal + mergeCarriers/disposeCarrier/setBestiaryBit actions + gameStore migration 18→19 + verify --dispose + dev helpers
 
 
-**Status:** pending
+**Status:** **Complete** (2026-05-08) — 5 plans, 3 waves, 5 atomic commits. Foundation pure helpers (TIER_RANGES + 5/15/30/50 bucket weights + streak protection 3 forced-C → S guarantee + 1536-bit bestiary indexing); 4 atomic store actions (feedCarrier с pre-determined ceiling + bestiary write-through + hasFirstFeed sentinel; mergeCarriers с 5-guard validation + S-bucket guaranteed; disposeCarrier 30% recovery; setBestiaryBit idempotent); MainScene `classifyDropTarget` gate + performFeed (success transfer carrier.frogId → newFrog / fail restore-in-place / stabilize → eventBus emit) + performCarrierMerge (vortex + mergeEffect + S-bucket carrier); CarriersTab + CarrierInfoCard (progress bar UX-10) + CeilingDisplay (3 phases: ???/color hint/exact L) + DisposeConfirmModal; StabilizationModal slot-machine 1.8s + reveal 2.2s + bucket-specific копи (S-top/A-high/B-mid/C-stable) + reduced-effects bypass + always-mounted в App.tsx; FrogElementOverlay.locked + FrogOverlayManager skip-re-acquire branch; STORAGE_VERSION 18→19 + lossless 24→192-byte bitset migration; verify_carrier_evolution.cjs 4 Monte-Carlo tests (distribution ±5% / streak 1000/1000 / bestiary collision-free / dispose ≈30%) ALL PASS; i18n RU/EN/ES (21 keys × 3 = 63 entries, all UI labels ≤12 chars); dev helpers __forceFeed/__forceStabilize/__bestiaryBitsSet. Bundle delta +5.11 KB gzip (cap 25 KB ✓; index.js 224.06 KB vs Phase 15 baseline 220.23 + CosmicHubModal-chunk 5.67 vs 4.39). 16/16 ✓ REQ-IDs (CARRIER-01..12, BALANCE-06/09, UX-10/11).
+
+**Outcome:** Carrier loop end-to-end функционален: apply (Phase 14) → feed → ceiling reveal → stabilize → merge / dispose → bestiary collects. Phase 18 (Бестиарий 2.0 read-side) и Phase 19 (balance + tutorial) — финальные.
 
 ---
 

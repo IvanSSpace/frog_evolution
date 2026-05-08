@@ -2,22 +2,22 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: cosmic-frogs-system
-current_phase: 17
+current_phase: 18
 status: in-progress
 last_updated: "2026-05-08"
 progress:
   total_phases: 11
-  completed_phases: 7
-  total_plans: 23
-  completed_plans: 23
-  percent: 64
+  completed_phases: 8
+  total_plans: 28
+  completed_plans: 28
+  percent: 73
 ---
 
 # Project State
 
 **Milestone:** Cosmic Frogs System (v2.0)
-**Status:** In-progress — Phase 16 complete (Ship+Travel+Mission), next: Phase 17 (Carrier evolution + feed + ceiling + merge). Phase 15 may run in parallel.
-**Current Phase:** 17 (next planned); Phase 15 parallelizable
+**Status:** In-progress — Phase 17 complete (Carrier evolution end-to-end), next: Phase 18 (Бестиарий 2.0 — virtualized 1536-cell grid).
+**Current Phase:** 18 (next planned)
 **Last Updated:** 2026-05-08
 
 ## Phase Progress
@@ -33,7 +33,7 @@ progress:
 | 14 | Сыворотки tab + tap-to-select DnD | **complete** (2026-05-08) — 4 plans, 3 waves, 5 atomic commits; SerumsTab 4 секции + ElementGrid + SerumSelectionLayer (halo+flashRed) + MainScene selection mode (auto-pause magnet/merge) + 2-сек pulse apply + burst + undo toast + desktop Pointer Events DnD secondary + i18n RU/EN/ES + dev helpers; bundle delta +2.14 KB gzip (cap +20 KB ✓). 11/11 ✓ REQ-IDs (SERUM-02..11 + UX-07). |
 | 15 | Boxes: cascade + slot-machine + skip | **complete** (2026-05-08) — 5 plans, 4 waves, 5 atomic commits; BoxData shape v2 (8 fields) + rollRarity utility (locked 50/35/12/3 + pity 3/10/15/20/25) + 4 store actions (addBox/rollBoxRarity/commitOpenedBox/removeBox) + STORAGE_VERSION 17→18; BoxesTab inventory cards + lazy CascadeRevealModal + bulk-open «Открыть все»; CascadeRevealModal cascade timeline (200/200/200/400ms) + state machine + instantMode bypass; SerumSlotMachine rarity-locked durations (1.2-9.5s legendary cap) + 4 checkpoints (1.5/3.5/5.5/8s gray/blue/purple/gold) + element fingerprint particles + Skip MVP (tap-anywhere 0.6s + button 1s); BulkOpenSummary grouped results + legendary glow; cosmicSettings (instantBoxes localStorage + window event subscribe) + SettingsModal toggle «Боксы мгновенно»; 27/27 unit tests passing (rarityRoll 11 + slice 11 + cosmicSettings 5); bundle delta +7.66 KB gzip (cap +35 KB ✓; index.js 220.23 KB vs Phase 16 baseline 218.70 KB) + 3 lazy chunks confirmed; dev tree-shake verified; 17/17 ✓ REQ-IDs (BOX-01..07, SLOT-01..08, UX-06, PERF-08). |
 | 16 | Ship + travel + mission (1-ship navigation) | **complete** (2026-05-08) — 5 plans, 5 waves, 14 atomic commits; ShipState discriminated union + travel formula + crew daily limit + ShipSprite Phaser-native + StarMap integration + ShipTab + FlightConfirmDialog + CrewIndicator + MissionOverlay + 3 mini-clickers (rhythm/defend/hotspot) + investigatePlanet atomic + progressive disclosure (UX-09) + dev helpers + i18n RU/EN/ES; bundle delta +8.20 KB gzip (cap +40 KB ✓; index 218.70 KB vs Phase 14 baseline 211.59 KB). 27/27 ✓ REQ-IDs (SHIP-01..10, CREW-01..08, MISSION-01..08, UX-09). |
-| 17 | Carrier evolution + feed + ceiling + merge | pending |
+| 17 | Carrier evolution + feed + ceiling + merge | **complete** (2026-05-08) — 5 plans, 3 waves, 5 atomic commits; pure carrierEvolution helpers (TIER_RANGES + bucket weights 5/15/30/50 + streak protection) + bestiary bitset 1536 bits = 192 bytes; feedCarrier/mergeCarriers/disposeCarrier/setBestiaryBit actions atomic с pre-determined ceiling + bestiary write-through; MainScene performFeed + performCarrierMerge с classifyDropTarget gate (5 branches); CarriersTab + CarrierInfoCard + CeilingDisplay (3-phase reveal 0-2/3-4/5+) + DisposeConfirmModal; StabilizationModal slot 1.8s + reveal 2.2s; FrogElementOverlay.locked flag + FrogOverlayManager skip-re-acquire; verify_carrier_evolution.cjs 4 Monte-Carlo tests (distribution/streak/bestiary/dispose ALL PASS); STORAGE_VERSION 18→19 + lossless 24→192 byte migration; i18n RU/EN/ES (21 keys × 3 = 63 entries, all UI labels ≤12 chars); bundle delta +5.11 KB gzip (cap +25 KB ✓). 16/16 ✓ REQ-IDs (CARRIER-01..12 + BALANCE-06/09 + UX-10/11). |
 | 18 | Бестиарий 2.0 (1536 cells, virtualized) | pending |
 | 19 | Balance + tutorial + toggles + i18n polish | pending |
 
@@ -116,3 +116,17 @@ progress:
 
 **Phase 15 REQ coverage:** 17/17 ✓ (BOX-01..07, SLOT-01..08, UX-06, PERF-08).
 **Phase 15 outcome:** Полный box → slot-machine → serum drama-flow с lazy chunks. Связка Phase 14 + 15 + 16 даёт полный loop ship→mission→box→slot-machine→serum→apply→carrier. Все 27 unit тестов проходят (rarityRoll + slice + cosmicSettings).
+
+## Phase 17 (closed) — Performance Metrics
+
+| Wave | Plan | Tasks/Commits | Files | Bundle Delta gzip |
+|------|------|---------------|-------|-------------------|
+| 1 | 17-01 (foundation: types + carrierEvolution + bestiary + verify) | 1 commit | 4 created + 2 modified | (cumulative) |
+| 2 | 17-02 (feedCarrier + mergeCarriers + disposeCarrier + setBestiaryBit + MainScene drag-feed wiring) | 1 commit | 1 created + 3 modified | +0.50 KB after Wave 2/Plan 17-02 |
+| 2 | 17-03 (CarriersTab + CarrierInfoCard + CeilingDisplay + DisposeConfirmModal + 5-th tab + i18n RU/EN/ES) | 1 commit | 4 created + 4 modified | (cumulative) |
+| 3 | 17-04 (StabilizationModal + visual lock locked flag + App.tsx mount) | 1 commit | 1 created + 3 modified | +5.11 KB after Wave 3/Plan 17-04 |
+| 3 | 17-05 (dev helpers __forceFeed/__forceStabilize/__bestiaryBitsSet) | 1 commit | 1 modified | +5.11 KB final |
+| **Total** | — | **5 commits** | **10 created + 13 modified** | **+5.11 KB gzip** (cap: +25 KB ✓; index.js 224.06 KB vs Phase 15 baseline 220.23 KB = +3.83 KB; CosmicHubModal-chunk 5.67 KB vs 4.39 KB = +1.28 KB) |
+
+**Phase 17 REQ coverage:** 16/16 ✓ (CARRIER-01..12, BALANCE-06/09, UX-10/11).
+**Phase 17 outcome:** Полный carrier evolution loop end-to-end функционален — apply → feed (success/fail/stabilize) → progressive ceiling reveal (0-2/3-4/5+) → stabilization modal slot-machine → visual lock → merge above ceiling (S-bucket guaranteed) → dispose с 30% serum recovery → bestiary bit write-through (1536 unique bits / 192 bytes). Verify-script Monte Carlo all 4 tests pass (distribution ±5%, streak 1000/1000, bestiary collision-free, dispose ≈30%). STORAGE_VERSION bump 18→19 + lossless 24→192 byte migration.
