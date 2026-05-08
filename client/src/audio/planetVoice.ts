@@ -185,6 +185,9 @@ interface VoiceProfile {
   scaleNotes?: number[]
   detuneRange?: number
   cutoffRange?: [number, number]
+  // Per-profile gain boost in dB. 0 = default, 6 ≈ ×2 громкость, -6 ≈ ×0.5.
+  // Применяется к velocity всех trigger calls (clamped 0..1).
+  gain?: number
 }
 
 // MIDI: 60=C4, 65=F4, 67=G4, 72=C5
@@ -199,7 +202,7 @@ const PROFILES: Record<string, VoiceProfile> = {
   mystic:      { notes: [Fs, A, Cs(), Fs + 12], synths: ['drone', 'bell'], detune: 12 },
   organic:     { notes: [F, A, C + 12], synths: ['drone', 'noise'], noiseType: 'pink' },
   forge:       { notes: [C, Eb, G], synths: ['membrane', 'noise', 'fm'], noiseType: 'white' },
-  military:    { notes: [C, C - 12, G - 12], synths: ['membrane', 'fm'] },
+  military:    { notes: [C, C - 12, G - 12], synths: ['membrane', 'fm', 'pluck'], gain: 8 },
   destroyed:   { notes: [Eb - 12, Bb - 12], synths: ['noise', 'drone'], noiseType: 'brown' },
   crystal_bio: { notes: [F + 12, A + 12, C + 24], synths: ['bell', 'drone', 'pluck'] },
   mechano:     { notes: [C, G, C + 12], synths: ['fm', 'pluck'] },
@@ -391,32 +394,36 @@ class PlanetVoice {
       ? detuneCents(mod.detuneBin, profile.detuneRange ?? 15)
       : (profile.detune ?? 0)
 
+    // Per-profile velocity multiplier (linear from gain dB), clamped to safe range.
+    const gainLin = Math.pow(10, (profile.gain ?? 0) / 20)
+    const v = (base: number): number => Math.max(0, Math.min(1, base * gainLin))
+
     for (const synth of profile.synths) {
       try {
         if (synth === 'bell') {
           k.bell.set({ detune: detuneOverride })
-          k.bell.triggerAttackRelease(notes, sustainDur, now, 0.5)
+          k.bell.triggerAttackRelease(notes, sustainDur, now, v(0.5))
         } else if (synth === 'drone') {
           k.drone.set({ detune: detuneOverride / 2 })
-          k.drone.triggerAttackRelease(notes, sustainDur, now, 0.55)
+          k.drone.triggerAttackRelease(notes, sustainDur, now, v(0.55))
         } else if (synth === 'pluck') {
           k.pluck.detune.value = detuneOverride
           notes.forEach((n, i) => {
-            k.pluck.triggerAttackRelease(n, sustainDur * 0.5, now + i * 0.06, 0.5)
+            k.pluck.triggerAttackRelease(n, sustainDur * 0.5, now + i * 0.06, v(0.5))
           })
         } else if (synth === 'noise') {
           if (profile.noiseType) (k.noise.noise as { type: string }).type = profile.noiseType
-          k.noise.triggerAttackRelease(sustainDur, now, 0.45)
+          k.noise.triggerAttackRelease(sustainDur, now, v(0.45))
         } else if (synth === 'fm') {
           k.fm.detune.value = detuneOverride
           // FM играет первую ноту аккорда + квинту
           const root = notes[0]
-          k.fm.triggerAttackRelease(root, sustainDur, now, 0.5)
+          k.fm.triggerAttackRelease(root, sustainDur, now, v(0.5))
           if (notes.length >= 3) {
-            k.fm.triggerAttackRelease(notes[2], sustainDur * 0.7, now + 0.05, 0.4)
+            k.fm.triggerAttackRelease(notes[2], sustainDur * 0.7, now + 0.05, v(0.4))
           }
         } else if (synth === 'membrane') {
-          k.membrane.triggerAttackRelease(notes[0], Math.min(sustainDur, 0.6), now, 0.7)
+          k.membrane.triggerAttackRelease(notes[0], Math.min(sustainDur, 0.6), now, v(0.7))
         }
       } catch { /* noop */ }
     }
