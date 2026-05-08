@@ -13,6 +13,10 @@ import {
   compSparkle,
   compFlash,
   compStarBurst,
+  compHaloFlash,
+  compConfetti,
+  compRipple,
+  compEchoWave,
 } from '../effects/anim/shared'
 
 // Phaser-сцена Звёздной карты. Запускается рядом с MainScene через scene-manager.
@@ -1038,16 +1042,16 @@ export class StarMapScene extends Phaser.Scene {
       case 4:  this.compLightning(sprite, sys, rng); break
       case 5:  this.compOrbit(sprite, sys, rng); break
       case 6:  this.compSpiral(sprite, sys, rng); break
-      case 7:  this.compConfetti(sprite, sys, rng); break
+      case 7:  compConfetti(this, sprite, sys, rng); break
       case 8:  this.compWave(sprite, sys, rng); break
       case 9:  this.compComet(sprite, sys, rng); break
       case 10: compStarBurst(this, sprite, sys, rng); break
-      case 11: this.compHaloFlash(sprite, sys, rng); break
+      case 11: compHaloFlash(this, sprite, sys, rng); break
       case 12: this.compVortex(sprite, sys, rng); break
       case 13: this.compStormSwirl(sprite, sys, rng); break
       case 14: this.compRingDance(sprite, sys, rng); break
       case 15: this.compCrystalShatter(sprite, sys, rng); break
-      case 16: this.compRipple(sprite, sys, rng); break
+      case 16: compRipple(this, sprite, sys, rng); break
       case 17: this.compSandSwirl(sprite, sys, rng); break
       case 18: this.compLavaErupt(sprite, sys, rng); break
       case 19: this.compBloomPetals(sprite, sys, rng); break
@@ -1056,7 +1060,7 @@ export class StarMapScene extends Phaser.Scene {
       case 22: this.compBeam(sprite, sys, rng); break
       case 23: this.compTwinPulse(sprite, sys, rng); break
       case 24: this.compSingularity(sprite, sys, rng); break
-      case 25: this.compEchoWave(sprite, sys, rng); break
+      case 25: compEchoWave(this, sprite, sys, rng); break
       case 26: this.compGravityWell(sprite, sys, rng); break
       case 27: this.compSolarFlare(sprite, sys, rng); break
       case 28: this.compAuroraRibbon(sprite, sys, rng); break
@@ -1367,31 +1371,7 @@ export class StarMapScene extends Phaser.Scene {
     }
   }
 
-  // 7. Confetti — N квадратов вылетают, поворачиваются и падают (rng: count, colors, gravity)
-  private compConfetti(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
-    const N = 6 + Math.floor(rng() * 9) // 6-14
-    const speedRange = sys.size * (1.5 + rng() * 0.6)
-    const gravity = (rng() - 0.5) * 0.4 // -0.2..+0.2 (вниз/вверх предпочтение)
-    const dur = 600 + rng() * 300
-    const sizeBase = (2 + rng() * 2) * DPR
-    for (let i = 0; i < N; i++) {
-      const ang = rng() * Math.PI * 2
-      const color = this.pickColor(rng, sys)
-      const sz = sizeBase * (0.7 + rng() * 0.6)
-      const rect = this.add.rectangle(0, 0, sz, sz, color, 1)
-      rect.setRotation(rng() * Math.PI * 2)
-      sprite.add(rect)
-      const dx = Math.cos(ang) * speedRange * (0.6 + rng() * 0.4)
-      const dy = Math.sin(ang) * speedRange * (0.6 + rng() * 0.4) + gravity * speedRange
-      this.tweens.add({
-        targets: rect,
-        x: dx, y: dy, alpha: 0,
-        rotation: rect.rotation + (rng() - 0.5) * Math.PI * 4,
-        duration: dur + rng() * 200, ease: this.pickEase(rng),
-        onComplete: () => rect.destroy(),
-      })
-    }
-  }
+  // 7. compConfetti — extracted в effects/anim/shared/compConfetti.ts (Phase 9).
 
   // 8. Wave — ассимметричное эллиптическое расширение (rng: aspect, color, scale)
   private compWave(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
@@ -1458,45 +1438,7 @@ export class StarMapScene extends Phaser.Scene {
 
   // 10. compStarBurst — extracted в effects/anim/shared/compStarBurst.ts (Phase 9).
 
-  // 11. Halo flash — большое свечение вокруг планеты (rng: цвет, размер, alpha)
-  // Phase 7: расширены layers (2-6); subVariant — пульсирующий halo (40%).
-  private compHaloFlash(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
-    const halo = this.add.graphics()
-    const color = this.pickColor(rng, sys)
-    const startR = sys.size * 1.2
-    const layers = 2 + Math.floor(rng() * 5) // 2-6 слоёв
-    for (let i = 0; i < layers; i++) {
-      const r = startR * (1 + i * 0.25)
-      halo.fillStyle(color, (0.4 - i * 0.07) * (0.6 + rng() * 0.4))
-      halo.fillCircle(0, 0, r)
-    }
-    sprite.add(halo)
-    const pulsing = rng() < 0.4
-    if (pulsing) {
-      // 2-3 пульсации scale 1↔1.4, потом fade out
-      const pulses = 2 + Math.floor(rng() * 2)
-      const pulseDur = 180 + rng() * 100
-      this.tweens.add({
-        targets: halo, scaleX: 1.4, scaleY: 1.4,
-        yoyo: true, repeat: pulses - 1, duration: pulseDur,
-        ease: 'Sine.easeInOut',
-        onComplete: () => {
-          this.tweens.add({
-            targets: halo, alpha: 0, scaleX: 1.6, scaleY: 1.6,
-            duration: 250, ease: 'Cubic.easeOut',
-            onComplete: () => halo.destroy(),
-          })
-        },
-      })
-    } else {
-      this.tweens.add({
-        targets: halo,
-        scaleX: 1.6 + rng() * 0.6, scaleY: 1.6 + rng() * 0.6, alpha: 0,
-        duration: 450 + rng() * 350, ease: this.pickEase(rng),
-        onComplete: () => halo.destroy(),
-      })
-    }
-  }
+  // 11. compHaloFlash — extracted в effects/anim/shared/compHaloFlash.ts (Phase 9).
 
   // === ТЕМАТИЧЕСКИЕ КОМПОНЕНТЫ 12-23 ===
 
@@ -1596,26 +1538,7 @@ export class StarMapScene extends Phaser.Scene {
     }
   }
 
-  // 16. Ripple — N расширяющихся колец последовательно (для ocean, aquatic)
-  private compRipple(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
-    const count = 2 + Math.floor(rng() * 3) // 2-4
-    const stepDelay = 130 + rng() * 100
-    for (let i = 0; i < count; i++) {
-      this.time.delayedCall(i * stepDelay, () => {
-        if (!sprite.active) return
-        const ring = this.add.graphics()
-        const color = this.pickColor(rng, sys)
-        ring.lineStyle((1 + rng()) * DPR, color, 0.7 + rng() * 0.3)
-        ring.strokeCircle(0, 0, sys.size * 1.0)
-        sprite.add(ring)
-        this.tweens.add({
-          targets: ring, scaleX: 2.0 + rng() * 0.7, scaleY: 2.0 + rng() * 0.7, alpha: 0,
-          duration: 600 + rng() * 200, ease: 'Sine.easeOut',
-          onComplete: () => ring.destroy(),
-        })
-      })
-    }
-  }
+  // 16. compRipple — extracted в effects/anim/shared/compRipple.ts (Phase 9).
 
   // 17. Sand swirl — мелкие точки кружатся как песок (для desert)
   private compSandSwirl(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
@@ -1822,26 +1745,7 @@ export class StarMapScene extends Phaser.Scene {
     }
   }
 
-  // 25. Echo wave — 5-8 быстрых волн друг за другом
-  private compEchoWave(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
-    const count = 5 + Math.floor(rng() * 4)
-    const stepDelay = 60 + rng() * 50
-    const baseColor = this.pickColor(rng, sys)
-    for (let i = 0; i < count; i++) {
-      this.time.delayedCall(i * stepDelay, () => {
-        if (!sprite.active) return
-        const ring = this.add.graphics()
-        ring.lineStyle((1 + rng()) * DPR, baseColor, 0.7 - i * 0.07)
-        ring.strokeCircle(0, 0, sys.size * 1.05)
-        sprite.add(ring)
-        this.tweens.add({
-          targets: ring, scaleX: 2.5 + rng() * 0.5, scaleY: 2.5 + rng() * 0.5, alpha: 0,
-          duration: 700, ease: 'Sine.easeOut',
-          onComplete: () => ring.destroy(),
-        })
-      })
-    }
-  }
+  // 25. compEchoWave — extracted в effects/anim/shared/compEchoWave.ts (Phase 9).
 
   // 26. Gravity well — тёмная воронка-деформация вокруг
   private compGravityWell(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {

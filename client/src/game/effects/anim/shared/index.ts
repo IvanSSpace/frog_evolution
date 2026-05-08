@@ -8,3 +8,8 @@ export { compRing } from './compRing'
 export { compSparkle } from './compSparkle'
 export { compFlash } from './compFlash'
 export { compStarBurst } from './compStarBurst'
+// Group B — Task 3
+export { compHaloFlash } from './compHaloFlash'
+export { compConfetti } from './compConfetti'
+export { compRipple } from './compRipple'
+export { compEchoWave } from './compEchoWave'
