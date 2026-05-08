@@ -2904,14 +2904,15 @@ export class StarMapScene extends Phaser.Scene {
 
   // После создания allSystems — refine seeds для уникальности recipe.
   // Если signature уже встречалась → детерминированно мутируем seed и пересчитываем.
-  // До 5 попыток на планету. Логирует unique/total + unresolved conflicts в консоль.
+  // Phase 8: после strict signature — 10 attempts на mutate seed (Phase 7 был 5).
+  // Mutation: seed XOR ((attempt+1) * 0x9e3779b9) — golden ratio константа для distribution.
   private refineAnimSeeds(): void {
     const sigs = new Map<string, string>()
     let conflicts = 0
     for (const sys of this.allSystems) {
       let attempt = 0
       let sig = this.buildAnimSignature(sys)
-      while (sigs.has(sig) && attempt < 5) {
+      while (sigs.has(sig) && attempt < 10) {
         const isBg = 'rngSeed' in sys && typeof (sys as BgSystem).rngSeed === 'number'
         const cur = isBg ? (sys as BgSystem).rngSeed : (this.mainSeedOverride.get(sys.id) ?? this.hashId(sys.id))
         const newSeed = (cur ^ ((attempt + 1) * 0x9e3779b9)) >>> 0
@@ -2922,12 +2923,12 @@ export class StarMapScene extends Phaser.Scene {
         }
         sig = this.buildAnimSignature(sys)
         attempt++
-        if (attempt === 5 && sigs.has(sig)) conflicts++
+        if (attempt === 10 && sigs.has(sig)) conflicts++
       }
       sigs.set(sig, sys.id)
     }
     // eslint-disable-next-line no-console
-    console.log(`[StarMap] anim signatures: ${sigs.size}/${this.allSystems.length} unique, ${conflicts} unresolved conflicts`)
+    console.log(`[StarMap] anim signatures (strict): ${sigs.size}/${this.allSystems.length} unique, ${conflicts} unresolved conflicts (max 10 attempts)`)
   }
 
   // Helper: hash id → seed (используется в refineAnimSeeds для main races без rngSeed)
