@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { eventBus } from './eventBus'
 import { getFrogPrice, MAX_LEVEL, FROG_LEVELS } from '../game/config/frogs'
 import { setGlobalFormat, type NumberFormat } from '../utils/formatting'
-import { makeInitialCosmicSlice } from './cosmic/types'
+import { makeInitialCosmicSlice, type BoxData } from './cosmic/types'
 import { createCosmicSlice, type CosmicState } from './cosmic/slice'
 
 // ============== АПГРЕЙДЫ ==============
@@ -152,7 +152,9 @@ const COSMIC_KEY = 'frog_evolution_cosmic'
 // Бампается когда меняются конфиги — старые сейвы сбрасываются
 // 16 (Phase 11): добавлен COSMIC_KEY для CosmicSlice (Cosmic Frogs System)
 // 17 (Phase 16): ShipState discriminated union + sentinel flags + bonusRarity
-const STORAGE_VERSION = 17
+// 18 (Phase 15): BoxData shape extended (planetId/planetName/archetype/createdAt);
+//                bonusRarity changed number → 'rare'|'epic'|'legendary' enum.
+const STORAGE_VERSION = 18
 
 function loadUpgrades(): Upgrades {
   const defaults: Upgrades = { dropSpeed: 0, tractor: 0, magnet: 0, crateQuality: 0, rareBoxSpeed: 0 }
@@ -308,9 +310,37 @@ function loadCosmicSlice(): CosmicPersist {
       // else: legacy Phase 11 shape (dockedAt/from/to) → ship = null (re-init)
     }
 
+    // Phase 15 (T-15-01 mitigation): validate BoxData shape on load.
+    // Drop entries with invalid id/element/opened. Older Phase 11/16 entries
+    // missing planetId/planetName/archetype/createdAt: backfill defaults для
+    // soft migration (хотя STORAGE_VERSION bump 17→18 already wipes COSMIC_KEY).
+    const boxesRaw = Array.isArray(parsed.boxes) ? parsed.boxes : []
+    const boxes = boxesRaw
+      .filter((b: unknown): b is Record<string, unknown> =>
+        typeof b === 'object' && b !== null
+        && typeof (b as Record<string, unknown>).id === 'string'
+        && typeof (b as Record<string, unknown>).element === 'string'
+        && typeof (b as Record<string, unknown>).opened === 'boolean')
+      .map((b: Record<string, unknown>) => ({
+        id: b.id as string,
+        planetId: typeof b.planetId === 'string' ? (b.planetId as string) : '',
+        planetName: typeof b.planetName === 'string' ? (b.planetName as string) : '',
+        archetype: typeof b.archetype === 'string'
+          ? (b.archetype as string)
+          : (typeof b.sourceArchetype === 'string' ? (b.sourceArchetype as string) : ''),
+        // Trust persisted element string — Element type is a union of 16 lowercase keys.
+        // Invalid values cleaned by STORAGE_VERSION wipe; runtime fallback в UI (ELEMENT_TINT default).
+        element: b.element as BoxData['element'],
+        opened: b.opened as boolean,
+        createdAt: typeof b.createdAt === 'number' ? (b.createdAt as number) : Date.now(),
+        bonusRarity: (b.bonusRarity === 'rare' || b.bonusRarity === 'epic' || b.bonusRarity === 'legendary')
+          ? (b.bonusRarity as 'rare' | 'epic' | 'legendary')
+          : undefined,
+      })) as CosmicPersist['boxes']
+
     return {
       serums: parsed.serums ?? defaults.serums,
-      boxes: Array.isArray(parsed.boxes) ? parsed.boxes : [],
+      boxes,
       scouts: Array.isArray(parsed.scouts) ? parsed.scouts : [],
       ship,
       carriers: Array.isArray(parsed.carriers) ? parsed.carriers : [],

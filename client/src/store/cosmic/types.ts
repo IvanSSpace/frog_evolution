@@ -16,16 +16,21 @@ export const ELEMENTS: readonly Element[] = [
 
 export const RARITIES: readonly Rarity[] = ['common', 'rare', 'epic', 'legendary']
 
-// Placeholder структуры — наполняются в Phase 14/15/16/17
+// Phase 15 (REQ BOX-01): полный shape для inventory + cascade reveal flow.
+// Phase 11 stub имел { id, element, opened, sourceArchetype? } — расширено
+// до 8 полей (planetId/planetName/archetype/createdAt/bonusRarity).
+// STORAGE_VERSION 17 wipes Phase 11 boxes на load (clean migration).
 export interface BoxData {
   id: string
-  element: Element
-  opened: boolean
-  sourceArchetype?: string  // планета-источник (Phase 16)
-  // Phase 16: bonus rarity (additive к base rarity roll), 0..0.15. Optional —
-  // старые saved boxes без поля рассматриваются как 0. Phase 15 cascade
-  // читает это поле в slot-machine roll.
-  bonusRarity?: number
+  planetId: string                              // origin planet (Phase 16 source)
+  planetName: string                            // отображается в BoxesTab («С KEPLER»)
+  archetype: string                             // BG archetype или main race key
+  element: Element                              // computed at addBox via elementFromPlanet
+  opened: boolean                               // marked true при slot-machine reveal start
+  createdAt: number                             // unix ms — sortable «недавно полученные»
+  bonusRarity?: 'rare' | 'epic' | 'legendary'   // optional mission perfect-bonus floor (REQ MISSION-03)
+  // Legacy Phase 11 поле — оставлено для backward compat parsing; deprecated.
+  sourceArchetype?: string
 }
 
 export interface ScoutData {

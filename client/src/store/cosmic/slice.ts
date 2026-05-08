@@ -13,6 +13,7 @@ import {
   type MissionResult,
 } from '../../game/data/missionConfig'
 import { elementFromPlanet } from '../../game/effects/elements/elementMapping'
+import { rollRarity, updatePity, type PityState } from '../../utils/rarityRoll'
 
 // Actions — то, что наполняется в Phase 14-19. Здесь — placeholder stubs.
 export interface CosmicSliceActions {
@@ -30,8 +31,16 @@ export interface CosmicSliceActions {
   applySerum: (frogId: string, element: Element, rarity: Rarity, level: number) => void
 
   // Box actions (Phase 15)
-  addBox: (box: BoxData) => void
-  openBox: (id: string) => void
+  addBox: (params: {
+    planetId: string
+    planetName: string
+    archetype: string
+    element: Element
+    bonusRarity?: 'rare' | 'epic' | 'legendary'
+  }) => BoxData
+  rollBoxRarity: (id: string) => { rarity: Rarity; element: Element } | null
+  commitOpenedBox: (id: string, rarity: Rarity) => void
+  removeBox: (id: string) => void
 
   // Scout actions (Phase 16)
   addScout: (scout: ScoutData) => void
@@ -143,14 +152,74 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
       })
     },
 
-    addBox: (box) => {
+    // Phase 15 (REQ BOX-01/02): create box с auto-generated id, push в inventory.
+    addBox: (params) => {
+      const id = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+        ? crypto.randomUUID()
+        : `box-${Date.now()}-${Math.floor(Math.random() * 1e9)}`
+      const box: BoxData = {
+        id,
+        planetId: params.planetId,
+        planetName: params.planetName,
+        archetype: params.archetype,
+        element: params.element,
+        opened: false,
+        createdAt: Date.now(),
+        bonusRarity: params.bonusRarity,
+      }
       const s = get()
       set({ boxes: [...s.boxes, box] })
+      return box
     },
 
-    openBox: (id) => {
+    // Phase 15: pure read — RNG roll БЕЗ commit. CascadeRevealModal вызывает на mount,
+    // SerumSlotMachine использует rolled rarity для duration. commitOpenedBox финализирует.
+    rollBoxRarity: (id) => {
       const s = get()
-      set({ boxes: s.boxes.map((b) => b.id === id ? { ...b, opened: true } : b) })
+      const box = s.boxes.find((b) => b.id === id)
+      if (!box || box.opened) return null
+      const pity: PityState = {
+        rare: s.pityCounters.rare,
+        epic: s.pityCounters.epic,
+        legendary: s.pityCounters.legendary,
+      }
+      const rarity = rollRarity(pity, box.bonusRarity)
+      return { rarity, element: box.element }
+    },
+
+    // Phase 15: atomic commit — addSerum + remove box + updatePity в одном set().
+    commitOpenedBox: (id, rarity) => {
+      const s = get()
+      const box = s.boxes.find((b) => b.id === id)
+      if (!box) return
+      const cur = s.serums[box.element][rarity]
+      const nextSerums = {
+        ...s.serums,
+        [box.element]: { ...s.serums[box.element], [rarity]: cur + 1 },
+      }
+      const nextBoxes = s.boxes.filter((b) => b.id !== id)
+      const nextPity = updatePity(
+        { rare: s.pityCounters.rare, epic: s.pityCounters.epic, legendary: s.pityCounters.legendary },
+        rarity,
+      )
+      set({
+        serums: nextSerums,
+        boxes: nextBoxes,
+        pityCounters: {
+          common: s.pityCounters.common,  // unchanged placeholder
+          rare: nextPity.rare,
+          epic: nextPity.epic,
+          legendary: nextPity.legendary,
+        },
+        // Phase 16 sentinel: первое opened box → unlock Bestiary visual elements (REQ UX-09).
+        hasOpenedAnyBox: true,
+      })
+    },
+
+    // Phase 15: removeBox для cleanup tests + bulk-open edge cases.
+    removeBox: (id) => {
+      const s = get()
+      set({ boxes: s.boxes.filter((b) => b.id !== id) })
     },
 
     addScout: (scout) => {
@@ -291,20 +360,30 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
       const { archetype, mainRaceType } = planetElementInputs(planet)
       const element = elementFromPlanet(archetype, mainRaceType) ?? 'fire'  // fallback
 
-      const bonus = bonusRarityForResult(result)
+      // Phase 15 update: bonusRarity now enum 'rare'|'epic'|'legendary'|undefined
+      // (was number 0..0.15). Map: perfect → 'epic', good → 'rare', fail → undefined.
+      const bonusNum = bonusRarityForResult(result)
+      let bonusRarityEnum: 'rare' | 'epic' | 'legendary' | undefined
+      if (bonusNum >= 0.15) bonusRarityEnum = 'epic'
+      else if (bonusNum >= 0.05) bonusRarityEnum = 'rare'
+      else bonusRarityEnum = undefined
 
       // Atomic transaction: один set()
       const newBoxId = `box_${Date.now()}_${Math.floor(Math.random() * 1e6)}`
+      const archetypeKey = archetype ?? mainRaceType ?? ''
       set({
         crew: { ...s.crew, missionsToday: s.crew.missionsToday + 1 },
         boxes: [
           ...s.boxes,
           {
             id: newBoxId,
+            planetId,
+            planetName: planet.name,
+            archetype: archetypeKey,
             element,
             opened: false,
-            sourceArchetype: archetype ?? mainRaceType,
-            bonusRarity: bonus,
+            createdAt: Date.now(),
+            bonusRarity: bonusRarityEnum,
           },
         ],
         hasFirstMission: true,  // unlock Боксы tab (REQ UX-09)
