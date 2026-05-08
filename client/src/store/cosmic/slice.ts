@@ -53,6 +53,23 @@ export interface CosmicSliceActions {
   commitOpenedBox: (id: string, rarity: Rarity) => void
   removeBox: (id: string) => void
 
+  /**
+   * Phase 19-01 (BALANCE-01..07): unified box-open action.
+   * Atomic transaction:
+   *   1. find box; idempotent guard (opened/missing → no-op)
+   *   2. rollRarity(pityCounters, bonusRarity) → rolled rarity
+   *   3. updatePity(pityCounters, rolled) → newPity
+   *   4. award serums[box.element][rolled] += 1
+   *   5. mark box opened, set hasOpenedAnyBox sentinel (REQ UX-09 / tutorial first-box)
+   *   6. eventBus.emit('cosmic:box-opened', { boxId, rarity, element })
+   *
+   * Используется для quick-open / debug. Cascade reveal flow (Phase 15)
+   * по-прежнему использует rollBoxRarity → SerumSlotMachine → commitOpenedBox.
+   * NOTE: openBox() *removes* box opened-flag pattern (sets opened=true, retains
+   * box record), unlike commitOpenedBox() which removes box from inventory.
+   */
+  openBox: (id: string) => void
+
   // Scout actions (Phase 16)
   addScout: (scout: ScoutData) => void
   removeScout: (id: string) => void
@@ -282,6 +299,47 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
     removeBox: (id) => {
       const s = get()
       set({ boxes: s.boxes.filter((b) => b.id !== id) })
+    },
+
+    // Phase 19-01 (BALANCE-01..07): unified atomic box-open.
+    // Wires Phase 15 utility (rollRarity+updatePity) в реальный flow.
+    // Cascade reveal по-прежнему использует rollBoxRarity → commitOpenedBox.
+    openBox: (id) => {
+      const s = get()
+      const box = s.boxes.find((b) => b.id === id)
+      if (!box || box.opened) return  // idempotent guard
+
+      const pity: PityState = {
+        rare: s.pityCounters.rare,
+        epic: s.pityCounters.epic,
+        legendary: s.pityCounters.legendary,
+      }
+      const rolled = rollRarity(pity, box.bonusRarity)
+      const newPity = updatePity(pity, rolled)
+
+      const nextSerums = {
+        ...s.serums,
+        [box.element]: {
+          ...s.serums[box.element],
+          [rolled]: s.serums[box.element][rolled] + 1,
+        },
+      }
+
+      set({
+        boxes: s.boxes.map((b) => (b.id === id ? { ...b, opened: true } : b)),
+        serums: nextSerums,
+        pityCounters: {
+          common: 0,  // placeholder (always 0)
+          rare: newPity.rare,
+          epic: newPity.epic,
+          legendary: newPity.legendary,
+        },
+        hasOpenedAnyBox: true,  // REQ UX-09 + tutorial first-box trigger
+      })
+
+      eventBus.emit('cosmic:box-opened', {
+        boxId: id, rarity: rolled, element: box.element,
+      })
     },
 
     addScout: (scout) => {

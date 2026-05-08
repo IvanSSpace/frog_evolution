@@ -1,7 +1,9 @@
 // Phase 15: rarity roll utility для box-open flow.
 // Locked weights 50/35/12/3 (REQ BALANCE-01..05).
 // Pity guarantees: rare 3, epic 10, legendary hard 25 + soft 15/20.
-// Phase 19 wire visible UI counter; здесь — invisible but functional.
+// Phase 19-01: WIRED into cosmic/slice.openBox (BALANCE-01..07).
+//              PityState shape синхронизирован с PityCounters (без common поля).
+//              При изменении shape — синхронизировать оба места + simulate_balance.cjs.
 
 import type { Rarity } from '../store/cosmic/types'
 
