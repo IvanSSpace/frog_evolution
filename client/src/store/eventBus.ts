@@ -1,5 +1,5 @@
 import mitt from 'mitt'
-import type { CosmicToastPayload } from './cosmic/types'
+import type { CosmicToastPayload, Element, Rarity } from './cosmic/types'
 
 type Events = {
   'poop:collected': { value: number }
@@ -24,6 +24,11 @@ type Events = {
   'dev:clearAllFrogs': void
   // Cosmic Frogs System (Phase 11+)
   'cosmic:toast': CosmicToastPayload
+  // Phase 14 — serum tap-to-select / drag-DnD
+  'cosmic:select-serum': { element: Element; rarity: Rarity }
+  'cosmic:cancel-serum': void
+  'cosmic:serum-pointer-move': { x: number; y: number }
+  'cosmic:serum-pointer-up': { x: number; y: number }
 }
 
 export const eventBus = mitt<Events>()

@@ -177,6 +177,23 @@
       "mechanical": "Mech",
       "war": "War",
       "void": "Void"
+    },
+    "serums_empty": "Serums will appear after opening boxes",
+    "serums": {
+      "section_common": "Common",
+      "section_rare": "Rare",
+      "section_epic": "Epic",
+      "section_legendary": "Legendary",
+      "section_count": "{{kinds}} types · {{count}} qty",
+      "section_empty": "—",
+      "applied": "Serum applied",
+      "undo_label": "Undo",
+      "undo_hint": "Revert last apply",
+      "mis_tap_msg": "This serum works only on a level {{level}} frog ({{location}})",
+      "location_swamp": "Swamp",
+      "location_forest": "Forest",
+      "location_continent": "Continent",
+      "location_planet": "Planet"
     }
   }
 }

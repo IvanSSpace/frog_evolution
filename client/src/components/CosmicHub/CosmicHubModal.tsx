@@ -63,7 +63,9 @@ export default function CosmicHubModal({ onClose }: Props) {
     switch (activeTab) {
       case 'scouts':   return <ScoutsTab />
       case 'boxes':    return <BoxesTab />
-      case 'serums':   return <SerumsTab />
+      // Phase 14: SerumsTab закрывает modal на select / drag-start, чтобы юзер
+      // мог видеть ферму с halos.
+      case 'serums':   return <SerumsTab onClose={onClose} />
       case 'bestiary': return <BestiaryTab />
     }
   }

@@ -177,6 +177,23 @@
       "mechanical": "Mecánico",
       "war": "Guerra",
       "void": "Vacío"
+    },
+    "serums_empty": "Los sueros aparecerán después de abrir cajas",
+    "serums": {
+      "section_common": "Comunes",
+      "section_rare": "Raras",
+      "section_epic": "Épicas",
+      "section_legendary": "Legendarias",
+      "section_count": "{{kinds}} tipos · {{count}} u.",
+      "section_empty": "—",
+      "applied": "Suero aplicado",
+      "undo_label": "Deshacer",
+      "undo_hint": "Revertir último uso",
+      "mis_tap_msg": "Este suero solo funciona en una rana de nivel {{level}} ({{location}})",
+      "location_swamp": "Pantano",
+      "location_forest": "Bosque",
+      "location_continent": "Continente",
+      "location_planet": "Planeta"
     }
   }
 }

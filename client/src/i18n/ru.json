@@ -177,6 +177,23 @@
       "mechanical": "Меха",
       "war": "Война",
       "void": "Пустота"
+    },
+    "serums_empty": "Сыворотки появятся после открытия боксов",
+    "serums": {
+      "section_common": "Обычные",
+      "section_rare": "Редкие",
+      "section_epic": "Эпические",
+      "section_legendary": "Легендарные",
+      "section_count": "{{kinds}} видов · {{count}} шт",
+      "section_empty": "—",
+      "applied": "Сыворотка применена",
+      "undo_label": "Откатить",
+      "undo_hint": "Отменить последнее применение",
+      "mis_tap_msg": "Эта сыворотка работает только на L{{level}} лягушку ({{location}})",
+      "location_swamp": "Болото",
+      "location_forest": "Лес",
+      "location_continent": "Континент",
+      "location_planet": "Планета"
     }
   }
 }
