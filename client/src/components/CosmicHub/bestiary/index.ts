@@ -5,6 +5,7 @@ export { BestiaryGrid } from './BestiaryGrid'
 export { FilterPills } from './FilterPills'
 export { BestiaryDetailModal } from './BestiaryDetailModal'
 export { AwakenedPreviewCanvas } from './AwakenedPreviewCanvas'
+export { MilestoneToast } from './MilestoneToast'
 export {
   RARITY_BORDER,
   RARITY_GLOW,

@@ -28,6 +28,8 @@ import { findPlanetById, DAILY_CAP, type MissionResult } from './game/data/missi
 import { FlightConfirmDialog } from './components/CosmicHub/FlightConfirmDialog'
 import { MissionOverlay } from './components/MissionOverlay/MissionOverlay'
 import { StabilizationModal } from './components/CosmicHub/StabilizationModal'
+import { MilestoneToast } from './components/CosmicHub/bestiary/MilestoneToast'
+import { installBestiaryDevHelpers } from './utils/devHelpers'
 
 const queryClient = new QueryClient()
 
@@ -298,12 +300,18 @@ function App() {
       useGameStore.getState().arriveShipAt(planetId)
     }
 
+    // Phase 18: bestiary dev helpers (window.__unlockBestiaryCells / __bestiaryCount / __resetBestiary).
+    installBestiaryDevHelpers()
+
     return () => {
       delete w.__forceMissionType
       delete w.__resetCrewToday
       delete w.__unlockAllTabs
       delete w.__lockAllTabs
       delete w.__shipTo
+      delete w.__unlockBestiaryCells
+      delete w.__bestiaryCount
+      delete w.__resetBestiary
     }
   }, [])
 
@@ -344,6 +352,9 @@ function App() {
       {/* Phase 17 (CARRIER-08): stabilization modal — top-level always-mounted,
           listens cosmic:carrier-stabilized event independent of Cosmic Hub state. */}
       <StabilizationModal />
+      {/* Phase 18 (REQ BESTIARY-07): milestone toast — listens cosmic:bestiary-milestone
+          event from cosmicSlice.setBestiaryBit; visible regardless of Cosmic Hub state. */}
+      <MilestoneToast />
       {pendingFlightPlanetId && (
         <FlightConfirmDialog
           toPlanetId={pendingFlightPlanetId}
