@@ -46,6 +46,10 @@ declare global {
     __setCarrierTier?: (frogId: string, tier: Rarity) => void
     __testBurstEffect?: (frogId?: string, element?: Element) => void
     __testMergeEffect?: (element?: Element, x?: number, y?: number) => void
+    // Phase 17 NEW:
+    __forceFeed?: (frogId: string, count?: number) => void
+    __forceStabilize?: (frogId: string) => void
+    __bestiaryBitsSet?: () => number
   }
 }
 
@@ -151,9 +155,63 @@ if (import.meta.env.DEV) {
     console.log('[dev] mergeEffect fired:', { element: el, cx, cy })
   }
 
+  // ============== Phase 17 helpers ==============
+
+  /**
+   * Прогнать N feeds последовательно (через store.feedCarrier). Останавливается
+   * на 'stabilize'. Используется для smoke-test'а ceiling reveal + StabilizationModal.
+   */
+  window.__forceFeed = (frogId: string, count = 8) => {
+    for (let i = 0; i < count; i++) {
+      const result = useGameStore.getState().feedCarrier(frogId)
+      console.log(`[dev] forceFeed ${i + 1}/${count}:`, result)
+      if (!result || result.result === 'stabilize') {
+        console.log('[dev] feed stopped (stabilize or null)')
+        break
+      }
+    }
+  }
+
+  /**
+   * Принудительно стабилизировать carrier на текущем уровне (или ceiling если задан).
+   * НЕ эмитит cosmic:carrier-stabilized event — просто mutates state.
+   */
+  window.__forceStabilize = (frogId: string) => {
+    const state = useGameStore.getState()
+    const idx = state.carriers.findIndex((c) => c.frogId === frogId)
+    if (idx === -1) {
+      console.warn('[dev] carrier not found:', frogId)
+      return
+    }
+    const carrier = state.carriers[idx]
+    const ceiling = carrier.ceiling ?? carrier.level ?? 1
+    const updated = state.carriers.map((c, i) =>
+      i === idx ? { ...c, stabilized: true, ceiling, level: ceiling } : c,
+    )
+    useGameStore.setState({ carriers: updated })
+    console.log('[dev] carrier force-stabilized:', frogId, 'at L', ceiling)
+  }
+
+  /**
+   * Подсчитать число установленных бит в bestiaryBitset (для верификации
+   * Bestiary write-through через feedCarrier/mergeCarriers).
+   */
+  window.__bestiaryBitsSet = (): number => {
+    const bitset = useGameStore.getState().bestiaryBitset
+    let count = 0
+    for (const byte of bitset) {
+      let b = byte | 0
+      while (b) { count += b & 1; b >>>= 1 }
+    }
+    console.log('[dev] bestiary bits set:',
+      count, '/ 1536 (', (count / 1536 * 100).toFixed(2), '%)')
+    return count
+  }
+
   console.log(
-    '[dev Phase 12+13] helpers: __addDevCarrier, __setCarrierTier(frogId, tier), ' +
+    '[dev Phase 12+13+17] helpers: __addDevCarrier, __setCarrierTier(frogId, tier), ' +
     '__testBurstEffect(frogId?, element?), __testMergeEffect(element?, x?, y?), ' +
-    '__clearDevCarriers, __listDevCarriers, __listFrogIds',
+    '__clearDevCarriers, __listDevCarriers, __listFrogIds, ' +
+    '__forceFeed(frogId, count?), __forceStabilize(frogId), __bestiaryBitsSet',
   )
 }
