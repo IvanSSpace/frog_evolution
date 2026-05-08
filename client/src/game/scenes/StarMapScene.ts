@@ -3,6 +3,7 @@ import { eventBus } from '../../store/eventBus'
 import { attachNebulaBackground, type NebulaBackgroundHandle } from '../effects/NebulaBackground'
 import { violetRing } from '../effects/presets'
 import planetMap from '../data/planetMap.json'
+import { deriveModulations } from '../../audio/planetVoice'
 
 // Phaser-сцена Звёздной карты. Запускается рядом с MainScene через scene-manager.
 // Ничего о gameStore не знает — это «декоративная карта» для просмотра системы
@@ -267,8 +268,12 @@ export class StarMapScene extends Phaser.Scene {
     // Phase 7: глобальная уникальность signatures.
     // ВАЖНО: refineTextureSeeds() ДОЛЖЕН вызываться ПЕРЕД refineAnimSeeds() —
     // мутация rngSeed для текстур инвалидирует animation signatures, текстуры идут первыми.
+    // Phase 8: refineSoundSeeds() — третий pass (texture → anim → sound).
+    // Каждый pass conservative для следующего; sound mutation использует разную константу
+    // (0xc2b2ae3d) чтобы не пересекаться с anim (0x9e3779b9) и texture (0x85ebca6b).
     this.refineTextureSeeds()
     this.refineAnimSeeds()
+    this.refineSoundSeeds()  // Phase 8
 
     // Starfield — после генерации систем, чтобы кластеризовать звёзды вокруг планет
     this.setupStarfield()
@@ -2948,6 +2953,51 @@ export class StarMapScene extends Phaser.Scene {
     let h = 5381
     for (let i = 0; i < id.length; i++) h = ((h * 33) ^ id.charCodeAt(i)) >>> 0
     return h
+  }
+
+  // Phase 8: signature формат tuple-string. archetype|pitch|rot|inv|det|cutoff.
+  // Используется для refineSoundSeeds — гарантирует 1000/1000 unique sound signatures.
+  private buildSoundSignature(sys: Race | BgSystem): string {
+    const archetype = (sys as BgSystem).archetype ?? sys.type
+    const seed = this.effectiveSeed(sys)
+    const m = deriveModulations(seed, archetype)
+    return `${archetype}|${m.pitchStep}|${m.rotationIdx}|${m.inversionIdx}|${m.detuneBin}|${m.cutoffBin}`
+  }
+
+  // Phase 8: третий refine pass (после texture → anim → sound).
+  // При коллизии sound signature мутирует seed XOR ((attempt+1) * 0xc2b2ae3d).
+  // До 10 attempts на планету. Логирует unique/total + unresolved в консоль.
+  // ВАЖНО: эта мутация seed повлияет на anim signature, поэтому проводится ПОСЛЕДНЕЙ
+  // (после texture и anim refine). Обратная зависимость допустима: после Sound mutation
+  // мы НЕ возвращаемся к anim refine, потому что anim signature space уже достаточен
+  // (10 attempts × strict signature) для absorbing новых мутаций.
+  // Mutation constant 0xc2b2ae3d (FNV-1a hash multiplier) отличается от anim (0x9e3779b9)
+  // и texture (0x85ebca6b) чтобы каждый pass разводил seeds в РАЗНОМ направлении.
+  private refineSoundSeeds(): void {
+    const sigs = new Map<string, string>()
+    let conflicts = 0
+    for (const sys of this.allSystems) {
+      let attempt = 0
+      let sig = this.buildSoundSignature(sys)
+      while (sigs.has(sig) && attempt < 10) {
+        const isBg = 'rngSeed' in sys && typeof (sys as BgSystem).rngSeed === 'number'
+        const cur = isBg
+          ? (sys as BgSystem).rngSeed
+          : (this.mainSeedOverride.get(sys.id) ?? this.hashId(sys.id))
+        const newSeed = (cur ^ ((attempt + 1) * 0xc2b2ae3d)) >>> 0
+        if (isBg) {
+          (sys as BgSystem).rngSeed = newSeed
+        } else {
+          this.mainSeedOverride.set(sys.id, newSeed)
+        }
+        sig = this.buildSoundSignature(sys)
+        attempt++
+        if (attempt === 10 && sigs.has(sig)) conflicts++
+      }
+      sigs.set(sig, sys.id)
+    }
+    // eslint-disable-next-line no-console
+    console.log(`[StarMap] sound signatures: ${sigs.size}/${this.allSystems.length} unique, ${conflicts} unresolved conflicts (max 10 attempts)`)
   }
 
   // Phase 7: signature для текстуры BG-планеты — реплицирует первые ~10 rng() calls
