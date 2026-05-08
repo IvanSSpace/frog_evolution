@@ -2971,15 +2971,22 @@ export class StarMapScene extends Phaser.Scene {
     // 6-7) первые 2 counts (зависит от archetype, но возьмём как general 0-4)
     const c1 = Math.floor(rng() * 5)
     const c2 = Math.floor(rng() * 5)
+    // Phase 8: third count для расширения signature space (особенно важно для dead variant 2 — bare)
+    const c3 = Math.floor(rng() * 5)
     // 8) modifier flags (universal modifiers)
     const surfaceLines = rng() < 0.15 ? 1 : 0
     const gradientBands = rng() < 0.12 ? 1 : 0
     const multiSpots = rng() < 0.15 ? 1 : 0
     const stackedRings = rng() < 0.08 ? 1 : 0
-    return `${bg.archetype}:v${variant}:c${c1}-${c2}:m${surfaceLines}${gradientBands}${multiSpots}${stackedRings}`
+    // Phase 8: asymmetric atmosphere + color speckle modifiers (последние 2 universal modifiers)
+    const asym = rng() < 0.2 ? 1 : 0
+    const speckle = rng() < 0.25 ? 1 : 0
+    return `${bg.archetype}:v${variant}:c${c1}-${c2}-${c3}:m${surfaceLines}${gradientBands}${multiSpots}${stackedRings}${asym}${speckle}`
   }
 
   // Phase 7: refine seed для текстур. Вызывается ДО refineAnimSeeds() в create().
+  // Phase 8: 10 attempts (вместо 5) — consistent с refineAnimSeeds; используется
+  // расширенный signature space (c3, asym, speckle).
   private refineTextureSeeds(): void {
     const sigs = new Map<string, string>()
     let conflicts = 0
@@ -2990,12 +2997,12 @@ export class StarMapScene extends Phaser.Scene {
       const bg = sys as BgSystem
       let attempt = 0
       let sig = this.buildTextureSignature(bg)
-      while (sigs.has(sig) && attempt < 5) {
+      while (sigs.has(sig) && attempt < 10) {
         const cur = bg.rngSeed
         bg.rngSeed = (cur ^ ((attempt + 1) * 0x85ebca6b)) >>> 0
         sig = this.buildTextureSignature(bg)
         attempt++
-        if (attempt === 5 && sigs.has(sig)) conflicts++
+        if (attempt === 10 && sigs.has(sig)) conflicts++
       }
       sigs.set(sig, sys.id)
     }
