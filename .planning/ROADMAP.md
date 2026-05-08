@@ -77,13 +77,35 @@
 
 ### Phase 8: Full Planet Uniqueness
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Финализация уникальности всех 1000 планет (16 main + 984 BG) по трём axes — анимации (recipe + strict signature по quantized params), текстуры (984/984 unique), звук (per-planet модуляции pitch/voicing/detune/cutoff с 4032 комбинаций per archetype). Сохранить тематическую стилистику архетипов. ≥96 animation components, каждый theme pool ≥14.
+
+**Requirements:** SPEC-01..SPEC-06 (см. `.planning/phases/08-full-planet-uniqueness/08-SPEC.md`)
+
 **Depends on:** Phase 7
-**Plans:** 0 plans
+
+**Plans:** 7 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 8 to break down)
+**Wave 1**
+- [ ] 08-01-PLAN.md — Pool expansion + 8 новых animation components (D-14, D-16)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 08-02-PLAN.md — Strict animation signature с quantized params + 10 refine attempts (D-01..D-04)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 08-03-PLAN.md — Texture uniqueness fix (resolve 1 collision) + 10 refine attempts (SPEC #2)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 08-04-PLAN.md — Per-planet sound modulation system + THEME_SCALES + eventBus seed (D-05..D-10, D-13)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 08-05-PLAN.md — Sound signature pipeline + refineSoundSeeds (D-11..D-12)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 08-06-PLAN.md — Verify scripts в client/scripts/ + npm run verify-uniqueness (D-15, D-17)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 08-07-PLAN.md — Smoke test + final build size + STATE.md закрытие (SPEC #6, #10)
 
 ---
 
