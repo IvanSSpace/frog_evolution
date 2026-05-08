@@ -2,22 +2,22 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: cosmic-frogs-system
-current_phase: 18
+current_phase: 19
 status: in-progress
 last_updated: "2026-05-08"
 progress:
   total_phases: 11
-  completed_phases: 8
-  total_plans: 28
-  completed_plans: 28
-  percent: 73
+  completed_phases: 9
+  total_plans: 33
+  completed_plans: 33
+  percent: 82
 ---
 
 # Project State
 
 **Milestone:** Cosmic Frogs System (v2.0)
-**Status:** In-progress — Phase 17 complete (Carrier evolution end-to-end), next: Phase 18 (Бестиарий 2.0 — virtualized 1536-cell grid).
-**Current Phase:** 18 (next planned)
+**Status:** In-progress — Phase 18 complete (Бестиарий 2.0 — virtualized 1536-cell grid + sub-completion milestones), next: Phase 19 (Balance + tutorial + toggles + i18n polish — финальный v2.0).
+**Current Phase:** 19 (next planned)
 **Last Updated:** 2026-05-08
 
 ## Phase Progress
@@ -34,7 +34,7 @@ progress:
 | 15 | Boxes: cascade + slot-machine + skip | **complete** (2026-05-08) — 5 plans, 4 waves, 5 atomic commits; BoxData shape v2 (8 fields) + rollRarity utility (locked 50/35/12/3 + pity 3/10/15/20/25) + 4 store actions (addBox/rollBoxRarity/commitOpenedBox/removeBox) + STORAGE_VERSION 17→18; BoxesTab inventory cards + lazy CascadeRevealModal + bulk-open «Открыть все»; CascadeRevealModal cascade timeline (200/200/200/400ms) + state machine + instantMode bypass; SerumSlotMachine rarity-locked durations (1.2-9.5s legendary cap) + 4 checkpoints (1.5/3.5/5.5/8s gray/blue/purple/gold) + element fingerprint particles + Skip MVP (tap-anywhere 0.6s + button 1s); BulkOpenSummary grouped results + legendary glow; cosmicSettings (instantBoxes localStorage + window event subscribe) + SettingsModal toggle «Боксы мгновенно»; 27/27 unit tests passing (rarityRoll 11 + slice 11 + cosmicSettings 5); bundle delta +7.66 KB gzip (cap +35 KB ✓; index.js 220.23 KB vs Phase 16 baseline 218.70 KB) + 3 lazy chunks confirmed; dev tree-shake verified; 17/17 ✓ REQ-IDs (BOX-01..07, SLOT-01..08, UX-06, PERF-08). |
 | 16 | Ship + travel + mission (1-ship navigation) | **complete** (2026-05-08) — 5 plans, 5 waves, 14 atomic commits; ShipState discriminated union + travel formula + crew daily limit + ShipSprite Phaser-native + StarMap integration + ShipTab + FlightConfirmDialog + CrewIndicator + MissionOverlay + 3 mini-clickers (rhythm/defend/hotspot) + investigatePlanet atomic + progressive disclosure (UX-09) + dev helpers + i18n RU/EN/ES; bundle delta +8.20 KB gzip (cap +40 KB ✓; index 218.70 KB vs Phase 14 baseline 211.59 KB). 27/27 ✓ REQ-IDs (SHIP-01..10, CREW-01..08, MISSION-01..08, UX-09). |
 | 17 | Carrier evolution + feed + ceiling + merge | **complete** (2026-05-08) — 5 plans, 3 waves, 5 atomic commits; pure carrierEvolution helpers (TIER_RANGES + bucket weights 5/15/30/50 + streak protection) + bestiary bitset 1536 bits = 192 bytes; feedCarrier/mergeCarriers/disposeCarrier/setBestiaryBit actions atomic с pre-determined ceiling + bestiary write-through; MainScene performFeed + performCarrierMerge с classifyDropTarget gate (5 branches); CarriersTab + CarrierInfoCard + CeilingDisplay (3-phase reveal 0-2/3-4/5+) + DisposeConfirmModal; StabilizationModal slot 1.8s + reveal 2.2s; FrogElementOverlay.locked flag + FrogOverlayManager skip-re-acquire; verify_carrier_evolution.cjs 4 Monte-Carlo tests (distribution/streak/bestiary/dispose ALL PASS); STORAGE_VERSION 18→19 + lossless 24→192 byte migration; i18n RU/EN/ES (21 keys × 3 = 63 entries, all UI labels ≤12 chars); bundle delta +5.11 KB gzip (cap +25 KB ✓). 16/16 ✓ REQ-IDs (CARRIER-01..12 + BALANCE-06/09 + UX-10/11). |
-| 18 | Бестиарий 2.0 (1536 cells, virtualized) | pending |
+| 18 | Бестиарий 2.0 (1536 cells, virtualized) | **complete** (2026-05-08) — 5 plans, 3 waves, 5 atomic commits; bestiary helpers (countUnlocked/unlockedInLocation/BESTIARY_MILESTONES/milestonesCrossed); setBestiaryBit milestone-aware (10→1000 coins/24→epic serum/96→legendary serum/576→frogExclusiveUnlocked) + cosmic:bestiary-milestone event; @tanstack/react-virtual 3.13.24 install; 4 location tabs (Болото/Лес/Континент/Планета rarity-mapped) × 384 cells each; BestiaryGrid 6-col virtualized с overscan 5 (DOM ≤30 cells); BestiaryCell memoized 64×64 (discovered: ELEMENT_TINT linear-gradient + rarity border + glow + 🐸 + L-badge / locked: ??? + tooltip); FilterPills (rarity pills + element search + sort dropdown + show-locked toggle); useBestiaryView state machine (default «Discovered only» если countUnlocked > 0); BestiaryDetailModal с CSS preview (radial-gradient orb + ELEMENT_TINT + rarity glow + bestiary-pulse/bob keyframes); MilestoneToast auto-hide queue; window.__unlockBestiaryCells/__bestiaryCount/__resetBestiary dev helpers; i18n RU/EN/ES (38 keys × 3 = 114 entries); verify_bestiary.cjs (4 tests PASS) + smoke_bestiary.cjs (18 checks PASS); bundle delta +10.60 KB gzip (cap +30 KB ✓; index 226.38 KB vs Phase 17 baseline 224.06 KB = +2.32 KB; CosmicHubModal-chunk 13.89 KB vs 5.68 KB = +8.21 KB). 9/9 ✓ + I18N-02 ✓ REQ-IDs (BESTIARY-01..09 + I18N-02). |
 | 19 | Balance + tutorial + toggles + i18n polish | pending |
 
 ## v1.0 Achievement Summary (closed milestone)
@@ -130,3 +130,17 @@ progress:
 
 **Phase 17 REQ coverage:** 16/16 ✓ (CARRIER-01..12, BALANCE-06/09, UX-10/11).
 **Phase 17 outcome:** Полный carrier evolution loop end-to-end функционален — apply → feed (success/fail/stabilize) → progressive ceiling reveal (0-2/3-4/5+) → stabilization modal slot-machine → visual lock → merge above ceiling (S-bucket guaranteed) → dispose с 30% serum recovery → bestiary bit write-through (1536 unique bits / 192 bytes). Verify-script Monte Carlo all 4 tests pass (distribution ±5%, streak 1000/1000, bestiary collision-free, dispose ≈30%). STORAGE_VERSION bump 18→19 + lossless 24→192 byte migration.
+
+## Phase 18 (closed) — Performance Metrics
+
+| Wave | Plan | Tasks/Commits | Files | Bundle Delta gzip |
+|------|------|---------------|-------|-------------------|
+| 1 | 18-01 (bestiary helpers + setBestiaryBit milestone trigger + verify_bestiary) | 1 commit | 1 created + 5 modified | (cumulative) |
+| 1 | 18-02 (@tanstack/react-virtual install + BestiaryCell + rarityStyles) | 1 commit | 4 created + 1 modified | (cumulative) |
+| 2 | 18-03 (BestiaryTab full rewrite + BestiaryGrid + FilterPills + useBestiaryView + Modal stub) | 1 commit | 5 created + 1 modified | +7.56 KB after Wave 2 |
+| 3 | 18-04 (BestiaryDetailModal full + AwakenedPreviewCanvas) | 1 commit | 1 created + 2 modified | (cumulative) |
+| 3 | 18-05 (i18n RU/EN/ES + MilestoneToast + dev helpers + smoke_bestiary) | 1 commit | 3 created + 5 modified | +10.60 KB final |
+| **Total** | — | **5 commits** | **14 created + 14 modified** | **+10.60 KB gzip** (cap: +30 KB ✓; index.js 226.38 KB vs Phase 17 baseline 224.06 KB = +2.32 KB; CosmicHubModal-chunk 13.89 KB vs 5.68 KB = +8.21 KB) |
+
+**Phase 18 REQ coverage:** 9/9 ✓ + I18N-02 ✓ (BESTIARY-01..09 + I18N-02).
+**Phase 18 outcome:** Замкнутый коллекционный мета-loop — игрок видит 1536 уникальных combos в performant virtualized grid (DOM ≤30 cells одновременно), фильтрует по rarity/element/sort, открывает cell detail modal с CSS-based awakened preview, получает milestone rewards (1000 монет / epic-серум / legendary-серум / frogExclusiveUnlocked flag) на 10/24/96/576 ячейках. verify_bestiary.cjs PASS 4/4 (count/location/milestones/size); smoke_bestiary.cjs PASS 18/18 + tsc clean. dev helpers `__unlockBestiaryCells(N)` для testability.

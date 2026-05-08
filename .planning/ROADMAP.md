@@ -315,11 +315,11 @@ Plans:
 
 **Plan files:** 5 plans in 3 waves
 
-- [ ] 18-01-PLAN.md — Bestiary helpers (countUnlocked, unlockedInLocation, BESTIARY_MILESTONES) + setBestiaryBit slice action with milestone trigger + verify_bestiary.cjs
-- [ ] 18-02-PLAN.md — Install @tanstack/react-virtual + BestiaryCell component (Discovered/Locked variants) + rarityStyles
-- [ ] 18-03-PLAN.md — BestiaryTab full rewrite (4 location tabs Болото/Лес/Континент/Планета) + BestiaryGrid (TanStack Virtual 6 cols) + FilterPills (rarity / search / sort / show-locked) + useBestiaryView hook
-- [ ] 18-04-PLAN.md — BestiaryDetailModal (CSS-based AwakenedPreviewCanvas + sound-style label + lore placeholder) + locked variant
-- [ ] 18-05-PLAN.md — i18n RU/EN/ES (cosmic_hub.bestiary.*) + MilestoneToast (cosmic:bestiary-milestone listener) + dev helper window.__unlockBestiaryCells + smoke_bestiary.cjs
+- [x] 18-01-PLAN.md — Bestiary helpers (countUnlocked, unlockedInLocation, BESTIARY_MILESTONES) + setBestiaryBit slice action with milestone trigger + verify_bestiary.cjs
+- [x] 18-02-PLAN.md — Install @tanstack/react-virtual + BestiaryCell component (Discovered/Locked variants) + rarityStyles
+- [x] 18-03-PLAN.md — BestiaryTab full rewrite (4 location tabs Болото/Лес/Континент/Планета) + BestiaryGrid (TanStack Virtual 6 cols) + FilterPills (rarity / search / sort / show-locked) + useBestiaryView hook
+- [x] 18-04-PLAN.md — BestiaryDetailModal (CSS-based AwakenedPreviewCanvas + sound-style label + lore placeholder) + locked variant
+- [x] 18-05-PLAN.md — i18n RU/EN/ES (cosmic_hub.bestiary.*) + MilestoneToast (cosmic:bestiary-milestone listener) + dev helper window.__unlockBestiaryCells + smoke_bestiary.cjs
 
 **Success Criteria:**
 1. Opening Бестиарий with 50 discovered combos shows them rendered correctly (tinted, bordered, icon); rest gray; scroll smooth at ≥50 FPS on mid-tier Android.
@@ -330,7 +330,9 @@ Plans:
 
 **Depends on:** Phase 17 (carriers write bestiary entries).
 
-**Status:** pending
+**Status:** **Complete** (2026-05-08) — 5 plans, 3 waves, 5 atomic commits. Bestiary helpers (countUnlocked O(192) popcount + unlockedInLocation per-rarity + BESTIARY_MILESTONES const + milestonesCrossed pure fn + isBitSet helper); setBestiaryBit milestone-aware atomic action (10→addGold(1000) / 24→epic random-element serum / 96→legendary random-element serum / 576→frogExclusiveUnlocked flag) + cosmic:bestiary-milestone eventBus event; @tanstack/react-virtual 3.13.24 install; BestiaryCell memoized 64×64 (Discovered: ELEMENT_TINT linear-gradient + RARITY_BORDER + RARITY_GLOW + 🐸 emoji + L-badge / Locked: «???» + tooltip + tabular-aria); rarityStyles RARITY_BORDER/GLOW/LABEL_KEY + tintToCss; useBestiaryView (filter/search/sort state machine + memoized cells list, default showLocked=false если есть прогресс); BestiaryGrid TanStack useVirtualizer 6 cols × ROW_HEIGHT 72 + overscan 5 + contain:strict (DOM ≤30 cells одновременно) + empty-state UI; FilterPills rarity-pills All/4 + element search input + sort dropdown 4 keys + show-locked checkbox; BestiaryTab full rewrite 4 LOCATION_TABS (Болото common / Лес rare / Континент epic / Планета legendary) + per-tab badges X/384 + global counter Discovered N/1536 + percentage; BestiaryDetailModal full impl (CSS preview + element/rarity/level header + sound_style label + lore placeholder / locked variant ??? orb + locked_hint / Escape close + body scroll lock); AwakenedPreviewCanvas CSS-only (radial-gradient orb с ELEMENT_TINT 35%/30% lightspot + outer glow ring rarity-scaled + bestiary-pulse + bestiary-bob keyframes durations 0.9-2s rarity-scaled); MilestoneToast подписка cosmic:bestiary-milestone + auto-hide 4s queue + aria-live polite; i18n RU/EN/ES — 38 keys × 3 = 114 переводов (locations, filters, sort, search, cell aria/tooltip, detail modal, sound styles common/rare/epic/legendary, lore placeholder, locked hint, 4 milestone rewards); window.__unlockBestiaryCells(N) / __bestiaryCount() / __resetBestiary() dev helpers DEV-gated в App.tsx; verify_bestiary.cjs 4 tests PASS (countUnlocked / unlockedInLocation / milestones boundary+multi-cross / bitset size+legacy 24-byte pad); smoke_bestiary.cjs 18 file/grep checks + tsc PASS. Bundle delta +10.60 KB gzip (cap +30 KB ✓; index 226.38 KB vs Phase 17 baseline 224.06 = +2.32 KB; CosmicHubModal-chunk 13.89 KB vs 5.68 KB = +8.21 KB; CSS +0.07 KB negligible). 9/9 ✓ + I18N-02 ✓ REQ-IDs.
+
+**Outcome:** Коллекционный мета-loop замкнут — игрок видит 1536 уникальных combos в performant virtualized grid (DOM ≤30 cells), фильтрует/ищет/сортирует, открывает cell detail modal с CSS-based awakened preview, получает milestone rewards на 10/24/96/576 ячейках. Phase 19 (balance + tutorial + i18n polish) — финальный v2.0 milestone.
 
 ---
 
