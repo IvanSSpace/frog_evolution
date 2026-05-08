@@ -4,6 +4,9 @@ import { eventBus } from '../../store/eventBus'
 import { FROG_LEVELS, MAX_LEVEL, textureKeyForLevel, rollPoopType, POOP_INTERVAL_MS, getTargetIncomePerSec, getPoopValueExact, stochasticRound, type PoopType } from '../config/frogs'
 import { hapticImpact } from '../../utils/telegram'
 import { FrogOverlayManager } from '../effects/FrogOverlayManager'
+import { burstEffect } from '../effects/elements/burstEffect'
+import { mergeEffect } from '../effects/elements/mergeEffect'
+import type { Element } from '../../store/cosmic/types'
 
 const mapKeyForLocation = (locId: number): string => {
   if (locId === 2) return 'map2'
@@ -840,6 +843,16 @@ export class MainScene extends Phaser.Scene {
     useGameStore.getState().addGold(1)
     this.spawnFloatingText(frog.container.x, frog.container.y - 20 * DPR, '+1', 'regular')
 
+    // ELEMENT-10: element-burst при тапе на carrier-лягушку.
+    // Читаем из store — не зависим от overlayManager internals.
+    {
+      const carriers = useGameStore.getState().carriers
+      const carrier = carriers.find((c) => c.frogId === frog.id)
+      if (carrier) {
+        burstEffect(this, frog.container, carrier.element as Element)
+      }
+    }
+
     this.tweens.killTweensOf(frog.body)
     this.tweens.add({
       targets: frog.body,
@@ -1009,11 +1022,24 @@ export class MainScene extends Phaser.Scene {
     this.spiralFrogTo(b, cx, cy, VORTEX_DURATION)
     this.spawnVortexParticles(cx, cy, VORTEX_DURATION)
 
+    // ELEMENT-11: pre-capture carrier info ДО delayedCall — к моменту срабатывания
+    // callback'а removeFrog(a)/(b) могут уже отработать и убрать carrier из store.
+    const carriersSnap = useGameStore.getState().carriers
+    const cA = carriersSnap.find((c) => c.frogId === a.id)
+    const cB = carriersSnap.find((c) => c.frogId === b.id)
+    const sameElementMerge: Element | null =
+      cA && cB && cA.element === cB.element ? (cA.element as Element) : null
+
     this.time.delayedCall(VORTEX_DURATION, () => {
       const oldLevel = a.level
       this.removeFrog(a)
       this.removeFrog(b)
       this.flashAt(cx, cy)
+
+      // ELEMENT-11: same-element merge anim — поверх обычной flashAt.
+      if (sameElementMerge) {
+        mergeEffect(this, cx, cy, sameElementMerge)
+      }
 
       const newLevel = Math.min(a.level + 1, MAX_LEVEL)
       const newCfg = FROG_LEVELS[newLevel - 1]
