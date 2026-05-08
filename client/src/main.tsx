@@ -9,6 +9,8 @@ import './index.css'
 import './utils/devCarriers'
 // Phase 14 dev-only: window.__addSerum / __listSerums / __clearSerums.
 import './utils/devSerums'
+// Phase 15 dev-only: window.__addBox / __listBoxes / __clearBoxes.
+import './utils/devBoxes'
 
 // Telegram SDK инициализируем до Phaser — чтобы expand/ready отработали
 // до первой отрисовки канваса
