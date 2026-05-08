@@ -108,7 +108,9 @@ export default function CosmicHubModal({ onClose }: Props) {
     switch (activeTab) {
       // Phase 16: ShipTab заменил ScoutsTab. Pass onClose чтобы «Открыть карту» / «Изучить» закрывали Hub.
       case 'scouts':   return <ShipTab onClose={onClose} />
-      case 'boxes':    return <BoxesTab />
+      // Phase 15: BoxesTab закрывает Hub при tap на box / open-all чтобы
+       // CascadeRevealModal / BulkOpenSummary показывались на full screen.
+      case 'boxes':    return <BoxesTab onClose={onClose} />
       // Phase 14: SerumsTab закрывает modal на select / drag-start, чтобы юзер
       // мог видеть ферму с halos.
       case 'serums':   return <SerumsTab onClose={onClose} />

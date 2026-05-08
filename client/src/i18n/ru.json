@@ -106,7 +106,15 @@
     "format_short": "Короткий (1.5К)",
     "format_full": "Полный (1 500)",
     "bug_report": "Баг репорт 🐛",
-    "sounds_stub": "Скоро будет"
+    "sounds_stub": "Скоро будет",
+    "cosmic": "🧬 Космос",
+    "instant_boxes": "Боксы мгновенно"
+  },
+  "rarity": {
+    "common": "обычная",
+    "rare": "редкая",
+    "epic": "эпик",
+    "legendary": "легендарная"
   },
   "player": {
     "no_track": "Трек не выбран",
@@ -220,6 +228,33 @@
       "mechanical": "Меха",
       "war": "Война",
       "void": "Пустота"
+    },
+    "boxes": {
+      "empty_placeholder": "Боксов пока нет. Получи через миссию скаута.",
+      "from_planet": "С {{planet}}",
+      "tap_to_open": "Открыть",
+      "open_all": "Открыть все ({{count}})"
+    },
+    "cascade": {
+      "coins": "+{{count}} монет",
+      "resources": "+{{count}} ресурсов",
+      "serum_incoming": "Сыворотка…"
+    },
+    "slot": {
+      "spinning": "Бросаем…",
+      "skip": "Пропустить",
+      "tap_to_skip": "Тапни чтобы пропустить",
+      "checkpoint_common": "обычная",
+      "checkpoint_rare": "редкая",
+      "checkpoint_epic": "эпик",
+      "checkpoint_legendary": "легендарка",
+      "reveal_serum": "{{element}} {{rarity}}!",
+      "claim": "Забрать"
+    },
+    "bulk": {
+      "summary_title": "Получено сывороток",
+      "summary_row": "{{element}} {{rarity}} ×{{count}}",
+      "summary_close": "Забрать всё"
     },
     "serums_empty": "Сыворотки появятся после открытия боксов",
     "serums": {

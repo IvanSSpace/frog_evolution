@@ -106,7 +106,15 @@
     "format_short": "Corto (1.5K)",
     "format_full": "Completo (1.500)",
     "bug_report": "Reportar error 🐛",
-    "sounds_stub": "Próximamente"
+    "sounds_stub": "Próximamente",
+    "cosmic": "🧬 Cósmico",
+    "instant_boxes": "Cajas instantáneas"
+  },
+  "rarity": {
+    "common": "Común",
+    "rare": "Raro",
+    "epic": "Épico",
+    "legendary": "Legendario"
   },
   "player": {
     "no_track": "Sin pista seleccionada",
@@ -220,6 +228,33 @@
       "mechanical": "Mecánico",
       "war": "Guerra",
       "void": "Vacío"
+    },
+    "boxes": {
+      "empty_placeholder": "Sin cajas aún. Consíguelas en misión de explorador.",
+      "from_planet": "De {{planet}}",
+      "tap_to_open": "Abrir",
+      "open_all": "Abrir todas ({{count}})"
+    },
+    "cascade": {
+      "coins": "+{{count}} monedas",
+      "resources": "+{{count}} recursos",
+      "serum_incoming": "Suero…"
+    },
+    "slot": {
+      "spinning": "Tirando…",
+      "skip": "Saltar",
+      "tap_to_skip": "Toca para saltar",
+      "checkpoint_common": "común",
+      "checkpoint_rare": "raro",
+      "checkpoint_epic": "épico",
+      "checkpoint_legendary": "legendario",
+      "reveal_serum": "¡{{element}} {{rarity}}!",
+      "claim": "Recoger"
+    },
+    "bulk": {
+      "summary_title": "Sueros obtenidos",
+      "summary_row": "{{element}} {{rarity}} ×{{count}}",
+      "summary_close": "Recoger todo"
     },
     "serums_empty": "Los sueros aparecerán después de abrir cajas",
     "serums": {

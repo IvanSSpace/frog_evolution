@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, useSyncExternalStore, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TintedFrog } from './TintedFrog'
 import { setLang, type Lang } from '../../i18n/index'
@@ -6,8 +6,13 @@ import { useGameStore } from '../../store/gameStore'
 import { FROG_LEVELS, getTargetIncomePerSec } from '../../game/config/frogs'
 import { getTelegramWebApp, isDevMode } from '../../utils/telegram'
 import { fmtRate } from '../../utils/formatting'
+import { PlayerPanel } from '../../audio/components/PlayerPanel'
+import { sfx } from '../../audio/sfx'
+import {
+  getInstantBoxes, setInstantBoxes, subscribeInstantBoxes,
+} from '../../utils/cosmicSettings'
 
-type Tab = 'bestiary' | 'settings'
+type Tab = 'bestiary' | 'settings' | 'player'
 type Props = { onClose: () => void }
 
 export function SettingsModal({ onClose }: Props) {
@@ -26,18 +31,24 @@ export function SettingsModal({ onClose }: Props) {
     >
       {/* Tab header */}
       <div
-        className="ff-bar flex items-center gap-2 px-3 w-full"
+        className="ff-bar flex items-center gap-1.5 px-2 w-full"
         style={{ height: '13%', flexShrink: 0 }}
       >
         <button
           onClick={() => setTab('bestiary')}
-          className={`ff-btn flex-1 text-sm py-2 ${tab === 'bestiary' ? 'ff-btn-green' : 'ff-btn-grey'}`}
+          className={`ff-btn flex-1 text-xs py-2 ${tab === 'bestiary' ? 'ff-btn-green' : 'ff-btn-grey'}`}
         >
           {t('settings_modal.tab_bestiary')}
         </button>
         <button
+          onClick={() => setTab('player')}
+          className={`ff-btn flex-1 text-xs py-2 ${tab === 'player' ? 'ff-btn-green' : 'ff-btn-grey'}`}
+        >
+          {t('settings_modal.tab_player')}
+        </button>
+        <button
           onClick={() => setTab('settings')}
-          className={`ff-btn flex-1 text-sm py-2 ${tab === 'settings' ? 'ff-btn-green' : 'ff-btn-grey'}`}
+          className={`ff-btn flex-1 text-xs py-2 ${tab === 'settings' ? 'ff-btn-green' : 'ff-btn-grey'}`}
         >
           {t('settings_modal.tab_settings')}
         </button>
@@ -57,7 +68,9 @@ export function SettingsModal({ onClose }: Props) {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-3">
-        {tab === 'bestiary' ? <BestiaryTab /> : <SettingsTab />}
+        {tab === 'bestiary' && <BestiaryTab />}
+        {tab === 'player' && <PlayerPanel />}
+        {tab === 'settings' && <SettingsTab />}
       </div>
     </div>
   )
@@ -167,13 +180,24 @@ function BestiaryCard({ level, isUnlocked }: { level: number; isUnlocked: boolea
 
 // ────────────────────────── SETTINGS TAB ──────────────────────────
 
+const sfxSubscribe = (cb: () => void): (() => void) => sfx.subscribe(cb)
+const getSfxMuted = (): boolean => sfx.isMuted()
+
 function SettingsTab() {
   const { t, i18n } = useTranslation()
   const numberFormat = useGameStore((s) => s.numberFormat)
   const setNumberFormat = useGameStore((s) => s.setNumberFormat)
   const addGold = useGameStore((s) => s.addGold)
   const devResetUpgrades = useGameStore((s) => s.devResetUpgrades)
+  const devClearAllFrogs = useGameStore((s) => s.devClearAllFrogs)
   const currentLang = i18n.language as Lang
+  const sfxMuted = useSyncExternalStore(sfxSubscribe, getSfxMuted, getSfxMuted)
+  // Phase 15 (UX-06): instant-boxes toggle reactive через cosmicSettings.
+  const instantBoxes = useSyncExternalStore(
+    subscribeInstantBoxes,
+    getInstantBoxes,
+    getInstantBoxes,
+  )
 
   const handleBugReport = () => {
     // TODO: replace with actual Telegram username
@@ -223,18 +247,32 @@ function SettingsTab() {
         </div>
       </SettingsRow>
 
-      {/* Music (stub) */}
-      <SettingsRow label={t('settings.music')}>
-        <span className="ff-body text-xs font-bold" style={{ color: '#6b7280' }}>
-          {t('settings.music_stub')}
-        </span>
+      {/* Sound effects */}
+      <SettingsRow label={t('settings.sounds')}>
+        <button
+          onClick={() => sfx.setMuted(!sfxMuted)}
+          className={`ff-btn text-xs px-3 py-1.5 ${!sfxMuted ? 'ff-btn-green' : 'ff-btn-grey'}`}
+        >
+          {!sfxMuted ? t('player.on') : t('player.off')}
+        </button>
       </SettingsRow>
 
-      {/* Sound effects (stub) */}
-      <SettingsRow label={t('settings.sounds')}>
-        <span className="ff-body text-xs font-bold" style={{ color: '#6b7280' }}>
-          {t('settings.sounds_stub')}
-        </span>
+      {/* Phase 15 (UX-06): Cosmic section header */}
+      <div
+        className="ff-body text-xs font-bold text-center py-1 rounded mt-2"
+        style={{ background: '#1e3a8a', color: '#dbeafe', letterSpacing: '0.05em' }}
+      >
+        {t('settings.cosmic')}
+      </div>
+
+      {/* Instant boxes toggle */}
+      <SettingsRow label={t('settings.instant_boxes')}>
+        <button
+          onClick={() => setInstantBoxes(!instantBoxes)}
+          className={`ff-btn text-xs px-3 py-1.5 ${instantBoxes ? 'ff-btn-green' : 'ff-btn-grey'}`}
+        >
+          {instantBoxes ? t('player.on') : t('player.off')}
+        </button>
       </SettingsRow>
 
       {/* Bug report */}
@@ -259,6 +297,12 @@ function SettingsTab() {
             className="ff-btn ff-btn-red text-sm w-full"
           >
             Сбросить апгрейды
+          </button>
+          <button
+            onClick={devClearAllFrogs}
+            className="ff-btn ff-btn-red text-sm w-full"
+          >
+            Удалить всех лягушат
           </button>
           <button
             onClick={() => addGold(500_000_000)}

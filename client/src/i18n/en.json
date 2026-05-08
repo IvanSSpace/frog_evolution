@@ -106,7 +106,15 @@
     "format_short": "Short (1.5K)",
     "format_full": "Full (1,500)",
     "bug_report": "Bug Report 🐛",
-    "sounds_stub": "Coming soon"
+    "sounds_stub": "Coming soon",
+    "cosmic": "🧬 Cosmic",
+    "instant_boxes": "Instant boxes"
+  },
+  "rarity": {
+    "common": "Common",
+    "rare": "Rare",
+    "epic": "Epic",
+    "legendary": "Legendary"
   },
   "player": {
     "no_track": "No track selected",
@@ -220,6 +228,33 @@
       "mechanical": "Mech",
       "war": "War",
       "void": "Void"
+    },
+    "boxes": {
+      "empty_placeholder": "No boxes yet. Earn one via scout mission.",
+      "from_planet": "From {{planet}}",
+      "tap_to_open": "Open",
+      "open_all": "Open all ({{count}})"
+    },
+    "cascade": {
+      "coins": "+{{count}} coins",
+      "resources": "+{{count}} resources",
+      "serum_incoming": "Serum…"
+    },
+    "slot": {
+      "spinning": "Rolling…",
+      "skip": "Skip",
+      "tap_to_skip": "Tap to skip",
+      "checkpoint_common": "common",
+      "checkpoint_rare": "rare",
+      "checkpoint_epic": "epic",
+      "checkpoint_legendary": "legendary",
+      "reveal_serum": "{{element}} {{rarity}}!",
+      "claim": "Claim"
+    },
+    "bulk": {
+      "summary_title": "Serums obtained",
+      "summary_row": "{{element}} {{rarity}} ×{{count}}",
+      "summary_close": "Claim all"
     },
     "serums_empty": "Serums will appear after opening boxes",
     "serums": {
