@@ -145,12 +145,55 @@
       }
     }
   },
+  "ship": {
+    "empty_state": "Корабль пока не построен.",
+    "section_state": "Состояние",
+    "state_docked": "Пристыкован у {{name}}",
+    "state_transit": "В пути → {{name}}",
+    "transit_eta": "Прибытие через {{mins}}:{{secs}}",
+    "open_map": "Открыть карту",
+    "investigate": "Изучить",
+    "investigate_tooltip_capped": "Экипаж устал. Возвращайтесь завтра.",
+    "investigate_tooltip_transit": "Сначала прилетите на планету.",
+    "arrived_toast": "Прибыли на {{name}}"
+  },
+  "crew": {
+    "indicator_label": "Сегодня: {{used}}/{{cap}} миссий",
+    "until_reset": "До утра {{hh}}:{{mm}}",
+    "tap_for_info": "Нажмите для деталей",
+    "explanation": "Экипаж выполняет до {{cap}} миссий в день. Сброс в полночь по локальному времени."
+  },
+  "flight_confirm": {
+    "title": "Лететь на {{name}}?",
+    "duration": "Время в пути: ~{{secs}}с",
+    "current_planet": "Сейчас: {{name}}",
+    "in_transit": "Вы редиректнёте курс с {{from}} на {{to}}",
+    "confirm": "Лететь",
+    "cancel": "Отмена"
+  },
+  "mission": {
+    "title_rhythm": "Кликни планету",
+    "title_defend": "Защити корабль",
+    "title_hotspot": "Найди скрытое",
+    "intro_warmup": "Приготовьтесь...",
+    "skip": "Пропустить",
+    "rhythm_label": "{{taps}} / {{target}}",
+    "rhythm_tap_button": "Тап",
+    "defend_label": "Отбито: {{hits}} / 3",
+    "defend_flash": "Вспышка",
+    "hotspot_label": "Найдено: {{found}} / {{total}}",
+    "time_left": "{{secs}}с",
+    "box_received_toast": "Получен ящик {{name}}"
+  },
   "cosmic_hub": {
     "title": "Космический центр",
     "tab_scouts": "Скауты",
+    "tab_ship": "Корабль",
     "tab_boxes": "Боксы",
     "tab_serums": "Сыворотки",
     "tab_bestiary": "Бестиарий",
+    "lock_first_feed": "Откроется после первого кормления",
+    "lock_first_mission": "Откроется после первой миссии",
     "scouts_placeholder": "Скауты появятся в следующем обновлении",
     "boxes_placeholder": "Боксы появятся в следующем обновлении",
     "serums_placeholder": "Сыворотки появятся в следующем обновлении",

@@ -145,12 +145,55 @@
       }
     }
   },
+  "ship": {
+    "empty_state": "Nave aún no construida.",
+    "section_state": "Estado",
+    "state_docked": "Atracada en {{name}}",
+    "state_transit": "En ruta → {{name}}",
+    "transit_eta": "Llegada en {{mins}}:{{secs}}",
+    "open_map": "Abrir mapa",
+    "investigate": "Investigar",
+    "investigate_tooltip_capped": "Tripulación cansada. Vuelve mañana.",
+    "investigate_tooltip_transit": "Llega al planeta primero.",
+    "arrived_toast": "Llegada a {{name}}"
+  },
+  "crew": {
+    "indicator_label": "Hoy: {{used}}/{{cap}} misiones",
+    "until_reset": "Hasta {{hh}}:{{mm}}",
+    "tap_for_info": "Toca para detalles",
+    "explanation": "La tripulación realiza hasta {{cap}} misiones por día. Reinicio a medianoche local."
+  },
+  "flight_confirm": {
+    "title": "¿Volar a {{name}}?",
+    "duration": "Duración: ~{{secs}}s",
+    "current_planet": "Actualmente: {{name}}",
+    "in_transit": "Redirigirás de {{from}} a {{to}}",
+    "confirm": "Volar",
+    "cancel": "Cancelar"
+  },
+  "mission": {
+    "title_rhythm": "Toca el planeta",
+    "title_defend": "Defiende la nave",
+    "title_hotspot": "Encuentra oculto",
+    "intro_warmup": "Prepárate...",
+    "skip": "Saltar",
+    "rhythm_label": "{{taps}} / {{target}}",
+    "rhythm_tap_button": "Toca",
+    "defend_label": "Aciertos: {{hits}} / 3",
+    "defend_flash": "Destello",
+    "hotspot_label": "Encontrado: {{found}} / {{total}}",
+    "time_left": "{{secs}}s",
+    "box_received_toast": "Caja recibida: {{name}}"
+  },
   "cosmic_hub": {
     "title": "Centro Cósmico",
     "tab_scouts": "Exploradores",
+    "tab_ship": "Nave",
     "tab_boxes": "Cajas",
     "tab_serums": "Sueros",
     "tab_bestiary": "Bestiario",
+    "lock_first_feed": "Se desbloquea tras la primera alimentación",
+    "lock_first_mission": "Se desbloquea tras la primera misión",
     "scouts_placeholder": "Exploradores llegando próximamente",
     "boxes_placeholder": "Cajas llegando próximamente",
     "serums_placeholder": "Sueros llegando próximamente",

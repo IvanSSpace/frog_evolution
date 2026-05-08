@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { CosmicTab } from '../../store/cosmic/types'
-import { ScoutsTab } from './ScoutsTab'
+import { ShipTab } from './ShipTab'
 import { BoxesTab } from './BoxesTab'
 import { SerumsTab } from './SerumsTab'
 import { BestiaryTab } from './BestiaryTab'
@@ -40,8 +40,10 @@ export default function CosmicHubModal({ onClose }: Props) {
   const [activeTab, setActiveTab] = useState<CosmicTab>(getInitialTab)
 
   // Локализованные labels — внутри компонента, чтобы пере-рендерить при смене языка.
+  // Phase 16: tab id остаётся 'scouts' (sessionStorage backward compat),
+  // но UI label теперь cosmic_hub.tab_ship («Корабль» / «Ship» / «Nave»).
   const TABS: Tab[] = [
-    { id: 'scouts',   label: t('cosmic_hub.tab_scouts'),   icon: '🚀' },
+    { id: 'scouts',   label: t('cosmic_hub.tab_ship'),     icon: '🚀' },
     { id: 'boxes',    label: t('cosmic_hub.tab_boxes'),    icon: '🎁' },
     { id: 'serums',   label: t('cosmic_hub.tab_serums'),   icon: '🧪' },
     { id: 'bestiary', label: t('cosmic_hub.tab_bestiary'), icon: '📖' },
@@ -61,7 +63,8 @@ export default function CosmicHubModal({ onClose }: Props) {
 
   const renderTab = () => {
     switch (activeTab) {
-      case 'scouts':   return <ScoutsTab />
+      // Phase 16: ShipTab заменил ScoutsTab. Pass onClose чтобы «Открыть карту» / «Изучить» закрывали Hub.
+      case 'scouts':   return <ShipTab onClose={onClose} />
       case 'boxes':    return <BoxesTab />
       // Phase 14: SerumsTab закрывает modal на select / drag-start, чтобы юзер
       // мог видеть ферму с halos.

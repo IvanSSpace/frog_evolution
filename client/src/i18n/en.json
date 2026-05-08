@@ -145,12 +145,55 @@
       }
     }
   },
+  "ship": {
+    "empty_state": "Ship not built yet.",
+    "section_state": "Status",
+    "state_docked": "Docked at {{name}}",
+    "state_transit": "En route → {{name}}",
+    "transit_eta": "Arrival in {{mins}}:{{secs}}",
+    "open_map": "Open map",
+    "investigate": "Investigate",
+    "investigate_tooltip_capped": "Crew is tired. Come back tomorrow.",
+    "investigate_tooltip_transit": "Arrive at the planet first.",
+    "arrived_toast": "Arrived at {{name}}"
+  },
+  "crew": {
+    "indicator_label": "Today: {{used}}/{{cap}} missions",
+    "until_reset": "Until {{hh}}:{{mm}}",
+    "tap_for_info": "Tap for details",
+    "explanation": "Crew runs up to {{cap}} missions per day. Reset at local midnight."
+  },
+  "flight_confirm": {
+    "title": "Fly to {{name}}?",
+    "duration": "Travel time: ~{{secs}}s",
+    "current_planet": "Currently: {{name}}",
+    "in_transit": "You will redirect course from {{from}} to {{to}}",
+    "confirm": "Fly",
+    "cancel": "Cancel"
+  },
+  "mission": {
+    "title_rhythm": "Tap the planet",
+    "title_defend": "Defend ship",
+    "title_hotspot": "Find hidden",
+    "intro_warmup": "Get ready...",
+    "skip": "Skip",
+    "rhythm_label": "{{taps}} / {{target}}",
+    "rhythm_tap_button": "Tap",
+    "defend_label": "Hits: {{hits}} / 3",
+    "defend_flash": "Flash",
+    "hotspot_label": "Found: {{found}} / {{total}}",
+    "time_left": "{{secs}}s",
+    "box_received_toast": "Box received: {{name}}"
+  },
   "cosmic_hub": {
     "title": "Cosmic Hub",
     "tab_scouts": "Scouts",
+    "tab_ship": "Ship",
     "tab_boxes": "Boxes",
     "tab_serums": "Serums",
     "tab_bestiary": "Bestiary",
+    "lock_first_feed": "Unlocks after first feed",
+    "lock_first_mission": "Unlocks after first mission",
     "scouts_placeholder": "Scouts coming in next update",
     "boxes_placeholder": "Boxes coming in next update",
     "serums_placeholder": "Serums coming in next update",
