@@ -8,9 +8,10 @@
 
 import type Phaser from 'phaser'
 import { useGameStore } from '../../store/gameStore'
-import { ELEMENTS, type CarrierData, type Element } from '../../store/cosmic/types'
+import { ELEMENTS, RARITIES, type CarrierData, type Element } from '../../store/cosmic/types'
 import { elementOverlayPool } from './elementOverlayPool'
 import type { FrogElementOverlay } from './FrogElementOverlay'
+import type { ElementTier } from './elements/types'
 
 // PERF-02: hard cap visible overlays.
 const HARD_CAP_VISIBLE = 4
@@ -20,6 +21,15 @@ const CULL_FRAME_INTERVAL = 6
 
 // T-12-01: validation set против tampered localStorage carriers.
 const VALID_ELEMENTS: ReadonlySet<string> = new Set<string>(ELEMENTS)
+// T-13-04: validation rarity → tier (Rarity ⊂ awakened ElementTier).
+const VALID_RARITIES: ReadonlySet<string> = new Set<string>(RARITIES)
+
+/** Resolve carrier.rarity → ElementTier с защитой от tampered store. */
+function tierFromCarrier(carrier: CarrierData): ElementTier {
+  if (VALID_RARITIES.has(carrier.rarity)) return carrier.rarity as ElementTier
+  console.warn('[FrogOverlayManager] invalid rarity in carrier (tampered?)', carrier)
+  return 'dormant'
+}
 
 export interface FrogLike {
   id: string
@@ -119,10 +129,15 @@ export class FrogOverlayManager {
 
     // Acquire overlays for top carriers that are not yet active.
     for (const { carrier, frog } of top) {
+      const tier = tierFromCarrier(carrier)
       const existing = this.active.get(carrier.frogId)
       if (existing) {
-        // Element changed на той же лягушке (теоретически) — re-attach.
-        if (existing.element !== carrier.element) {
+        // Element или tier (rarity) сменились → re-acquire через pool так чтобы
+        // overlay лёг в правильный bucket. Phase 13: setTier() мог бы переключить
+        // idle in-place, но пересборка через pool проще и сохраняет инвариант
+        // "active overlay.tier совпадает с overlay.element bucket key".
+        const tierChanged = existing.tier !== tier
+        if (existing.element !== carrier.element || tierChanged) {
           elementOverlayPool.release(existing)
           this.active.delete(carrier.frogId)
         } else {
@@ -130,8 +145,8 @@ export class FrogOverlayManager {
         }
       }
       const element = carrier.element as Element
-      const overlay = elementOverlayPool.acquire(this.scene, element)
-      overlay.attach(frog.container, frog.body, carrier.frogId, element)
+      const overlay = elementOverlayPool.acquire(this.scene, element, tier)
+      overlay.attach(frog.container, frog.body, carrier.frogId, element, tier)
       this.active.set(carrier.frogId, overlay)
     }
   }
