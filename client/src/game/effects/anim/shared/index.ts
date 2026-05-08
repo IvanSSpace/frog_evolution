@@ -23,3 +23,6 @@ export { compCrystalShatter } from './compCrystalShatter'
 export { compBloomPetals } from './compBloomPetals'
 export { compToxicCloud } from './compToxicCloud'
 export { compSandSwirl } from './compSandSwirl'
+// Group E — Task 7 (final 2)
+export { compChimeRing } from './compChimeRing'
+export { compBubbleStream } from './compBubbleStream'

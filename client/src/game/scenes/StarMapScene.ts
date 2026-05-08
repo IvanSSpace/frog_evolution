@@ -25,6 +25,8 @@ import {
   compBloomPetals,
   compToxicCloud,
   compSandSwirl,
+  compChimeRing,
+  compBubbleStream,
 } from '../effects/anim/shared'
 
 // Phaser-сцена Звёздной карты. Запускается рядом с MainScene через scene-manager.
@@ -1122,7 +1124,7 @@ export class StarMapScene extends Phaser.Scene {
       case 74: compIceWisps(this, sprite, sys, rng); break
       case 75: this.compRipBlade(sprite, sys, rng); break
       // Расширение 4 — компоненты 76-87 (с явными sound-style)
-      case 76: this.compChimeRing(sprite, sys, rng); break
+      case 76: compChimeRing(this, sprite, sys, rng); break
       case 77: this.compEarthquakeShake(sprite, sys, rng); break
       case 78: this.compKaleidoscope(sprite, sys, rng); break
       case 79: this.compDroneHum(sprite, sys, rng); break
@@ -1132,7 +1134,7 @@ export class StarMapScene extends Phaser.Scene {
       case 83: this.compCrystalBell(sprite, sys, rng); break
       case 84: this.compWindRustle(sprite, sys, rng); break
       case 85: this.compClockGears(sprite, sys, rng); break
-      case 86: this.compBubbleStream(sprite, sys, rng); break
+      case 86: compBubbleStream(this, sprite, sys, rng); break
       case 87: compPlasmaArc(this, sprite, sys, rng); break
       // Phase 8 — компоненты 88-95
       case 88: this.compBouncingBall(sprite, sys, rng); break
@@ -3311,27 +3313,7 @@ export class StarMapScene extends Phaser.Scene {
   // === РАСШИРЕНИЕ 4 (компоненты 76-87) ===
   // Каждый имеет sound-style ярлык — концептуальное «звучание» анимации.
 
-  // 76. Chime ring — sound-style: bell-tinkle (нежный звон колокольчика)
-  // Серия мелких звонящих колец расходится плавно
-  private compChimeRing(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
-    const count = 4 + Math.floor(rng() * 3)
-    const stepDelay = 90 + rng() * 50
-    for (let i = 0; i < count; i++) {
-      this.time.delayedCall(i * stepDelay, () => {
-        if (!sprite.active) return
-        const ring = this.add.graphics()
-        const color = this.pickColor(rng, sys)
-        ring.lineStyle((0.8 + rng() * 0.6) * DPR, color, 0.6 - i * 0.08)
-        ring.strokeCircle(0, 0, sys.size * (1.0 + i * 0.18))
-        sprite.add(ring)
-        this.tweens.add({
-          targets: ring, scale: 1.5, alpha: 0,
-          duration: 600, ease: 'Sine.easeOut',
-          onComplete: () => ring.destroy(),
-        })
-      })
-    }
-  }
+  // 76. compChimeRing — extracted в effects/anim/shared/compChimeRing.ts (Phase 9).
 
   // 77. Earthquake shake — sound-style: rumble-shake (тряска земли)
   // 6-10 точек в случайных местах резко дрожат
@@ -3541,38 +3523,7 @@ export class StarMapScene extends Phaser.Scene {
     }
   }
 
-  // 86. Bubble stream — sound-style: fizz-rise (поднимающаяся газировка)
-  // Поток мелких пузырей вверх
-  private compBubbleStream(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
-    const N = 12 + Math.floor(rng() * 6)
-    const upAng = -Math.PI / 2 + (rng() - 0.5) * 0.3
-    for (let i = 0; i < N; i++) {
-      this.time.delayedCall(i * 40, () => {
-        if (!sprite.active) return
-        const startX = (rng() - 0.5) * sys.size * 0.6
-        const startY = sys.size * 0.7
-        const r = (1 + rng() * 1.5) * DPR
-        const bubble = this.add.graphics()
-        const color = this.pickColor(rng, sys)
-        bubble.fillStyle(color, 0.5)
-        bubble.fillCircle(0, 0, r)
-        bubble.lineStyle(0.5 * DPR, 0xffffff, 0.7)
-        bubble.strokeCircle(0, 0, r)
-        bubble.x = startX; bubble.y = startY
-        sprite.add(bubble)
-        const dist = sys.size * (1.0 + rng() * 0.6)
-        this.tweens.add({
-          targets: bubble,
-          x: startX + Math.cos(upAng) * dist,
-          y: startY + Math.sin(upAng) * dist,
-          alpha: 0,
-          scale: 1.4,
-          duration: 600 + rng() * 200, ease: 'Sine.easeOut',
-          onComplete: () => bubble.destroy(),
-        })
-      })
-    }
-  }
+  // 86. compBubbleStream — extracted в effects/anim/shared/compBubbleStream.ts (Phase 9).
 
   // 87. compPlasmaArc — extracted в effects/anim/shared/compPlasmaArc.ts (Phase 9).
 
