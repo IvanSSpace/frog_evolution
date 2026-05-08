@@ -90,7 +90,7 @@ Plans:
 - [x] 08-01-PLAN.md — Pool expansion + 8 новых animation components (D-14, D-16) ✓ 2026-05-08
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 08-02-PLAN.md — Strict animation signature с quantized params + 10 refine attempts (D-01..D-04)
+- [x] 08-02-PLAN.md — Strict animation signature с quantized params + 10 refine attempts (D-01..D-04) ✓ 2026-05-08
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 08-03-PLAN.md — Texture uniqueness fix (resolve 1 collision) + 10 refine attempts (SPEC #2)
