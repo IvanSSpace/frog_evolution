@@ -321,8 +321,13 @@ class PlanetVoice {
    * Проигрывает голос планеты длительностью durationMs.
    * Реальная длина = max(durationMs, 250ms) — крайне короткие анимации
    * получают минимально слышимый звук.
+   *
+   * Phase 8: при наличии seed выводит 5 модуляций (deriveModulations),
+   * применяет per-archetype scale (THEME_SCALES) к pitch, voicing rotation/inversion,
+   * detune cents и filter cutoff. Без seed — поведение идентично Phase 7
+   * (graceful degradation для legacy callers).
    */
-  play(typeOrArchetype: string, durationMs: number, archetypeFallback?: string): void {
+  play(typeOrArchetype: string, durationMs: number, archetypeFallback?: string, seed?: number): void {
     if (this.muted) return
     if (!this.kit) {
       void this.ensureReady().catch(() => { /* noop */ })
@@ -337,18 +342,65 @@ class PlanetVoice {
     const now = Tone.now()
     const sustainDur = Math.max(0.1, dur - 0.15) // attack ~50ms + release ~100ms
 
+    // Phase 8: derive модуляций. archetypeKey — ключ который мы получили (предпочитаем
+    // его перед fallback'ом для scale lookup); без seed — модуляций нет (Phase 7 path).
+    const archetypeKey = typeOrArchetype
+    const scale = profile.scaleNotes
+      ?? THEME_SCALES[archetypeKey]
+      ?? (archetypeFallback ? THEME_SCALES[archetypeFallback] : undefined)
+      ?? null
+    const mod: PlanetModulations | null = (seed !== undefined && scale)
+      ? deriveModulations(seed, archetypeKey)
+      : null
+
     const octShift = profile.octaveOffset ?? 0
-    const notes = profile.notes.map(
+    let baseNotes: number[]
+    if (mod && scale) {
+      // Phase 8: pitch step из scale, octave wrap для pitchStep 7..13.
+      const stepInOctave = mod.pitchStep % 7
+      const octaveAdd = Math.floor(mod.pitchStep / 7) * 12
+      const root = scale[stepInOctave] + octaveAdd
+      // Аккорд: root + 3я + 5я (по scale, циклически).
+      const third = scale[(stepInOctave + 2) % 7] + octaveAdd
+      const fifth = scale[(stepInOctave + 4) % 7] + octaveAdd
+      baseNotes = [root, third, fifth]
+    } else {
+      baseNotes = profile.notes.slice()
+    }
+
+    // Apply rotation + inversion (Phase 8) если есть mod.
+    const voicedMidi = mod
+      ? applyVoicing(baseNotes, mod.rotationIdx, mod.inversionIdx)
+      : baseNotes
+
+    const notes = voicedMidi.map(
       (m) => Tone.Frequency(m + octShift, 'midi').toFrequency(),
     )
+
+    // Phase 8: применяем cutoff bin к droneFilter и noiseFilter (rampTo 50ms — без щелчков).
+    if (mod) {
+      const droneCutoff = cutoffHz(mod.cutoffBin, profile.cutoffRange ?? [400, 4000])
+      k.droneFilter.frequency.rampTo(droneCutoff, 0.05)
+      const noiseCutoff = cutoffHz(mod.cutoffBin, [600, 3000])
+      k.noiseFilter.frequency.rampTo(noiseCutoff, 0.05)
+    }
+
+    // Phase 8: detune cents — bell/pluck/fm получают полный, drone — половину
+    // (для атмосферности без размывания тоники).
+    const detuneOverride = mod
+      ? detuneCents(mod.detuneBin, profile.detuneRange ?? 15)
+      : (profile.detune ?? 0)
 
     for (const synth of profile.synths) {
       try {
         if (synth === 'bell') {
+          k.bell.set({ detune: detuneOverride })
           k.bell.triggerAttackRelease(notes, sustainDur, now, 0.5)
         } else if (synth === 'drone') {
+          k.drone.set({ detune: detuneOverride / 2 })
           k.drone.triggerAttackRelease(notes, sustainDur, now, 0.55)
         } else if (synth === 'pluck') {
+          k.pluck.detune.value = detuneOverride
           notes.forEach((n, i) => {
             k.pluck.triggerAttackRelease(n, sustainDur * 0.5, now + i * 0.06, 0.5)
           })
@@ -356,8 +408,7 @@ class PlanetVoice {
           if (profile.noiseType) (k.noise.noise as { type: string }).type = profile.noiseType
           k.noise.triggerAttackRelease(sustainDur, now, 0.45)
         } else if (synth === 'fm') {
-          if (profile.detune) k.fm.detune.value = profile.detune
-          else k.fm.detune.value = 0
+          k.fm.detune.value = detuneOverride
           // FM играет первую ноту аккорда + квинту
           const root = notes[0]
           k.fm.triggerAttackRelease(root, sustainDur, now, 0.5)
@@ -380,9 +431,9 @@ export function initPlanetVoice(): void {
   if (initialized) return
   initialized = true
 
-  eventBus.on('starmap:planet-tapped', ({ type, archetype, durationMs }) => {
+  eventBus.on('starmap:planet-tapped', ({ type, archetype, durationMs, seed }) => {
     // Для BG-планет приоритет архетипа, для main races — type
     const key = archetype ?? type
-    planetVoice.play(key, durationMs, type)
+    planetVoice.play(key, durationMs, type, seed)
   })
 }
