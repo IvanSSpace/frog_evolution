@@ -1,8 +1,8 @@
 # Roadmap — Frog Evolution v2.0: Cosmic Frogs System
 
-**11 phases** | **135 requirements mapped** | All v2.0 requirements covered ✓
+**12 phases** | **135 requirements mapped** | All v2.0 requirements covered ✓
 
-**Phase numbering:** continues from v1.0 (which ended at Phase 8). New phases = 9..19.
+**Phase numbering:** continues from v1.0 (which ended at Phase 8). New phases = 9..20.
 
 > v1.0 ROADMAP archived in `MILESTONES.md` (Phases 1-8 complete). This file replaces v1.0 ROADMAP for the active milestone.
 
@@ -18,7 +18,7 @@
 | #  | Phase                                                | Goal (one-line)                                                                                       | Requirements                                                                 | Files (key paths)                                                              |
 |----|------------------------------------------------------|-------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------|--------------------------------------------------------------------------------|
 | 9  | Refactor anim primitives (BLOCKING)                  | Extract 18 shared anim primitives from `StarMapScene.ts` into reusable modules.                       | REFACTOR-01..05                                                              | `client/src/game/effects/anim/shared/*`                                        |
-| 10 | INFRA: storage migrations + performance net          | Replace wipe-on-mismatch with incremental migrations; add perf HUD + adaptive throttle.              | INFRA-01..06, PERF-04                                                        | `client/src/store/migrations/*`, `client/src/debug/PerfHUD.tsx`                |
+| 10 | Performance HUD (mini)                               | Dev-mode Perf HUD (FPS/tween/overlay counters) для дебага. Остальные INFRA отложены в Phase 20.       | INFRA-04                                                                     | `client/src/debug/PerfHUD.tsx`                                                  |
 | 11 | CosmicSlice store + Cosmic Hub shell                 | Wire data layer (`cosmicSlice`) and lazy-loaded modal with 4 stub tabs + bottom-bar 🧬 icon.         | COSMIC-HUB-01..07, SERUM-01, PERF-07                                         | `client/src/store/cosmicSlice.ts`, `client/src/components/CosmicHub/*`         |
 | 12 | FrogElementOverlay (dormant tier + pool + hard cap)  | Phaser-native element overlay with pool, off-screen culling, dormant idle tier on carriers.          | ELEMENT-01..08, ELEMENT-12, PERF-02, PERF-03, PERF-06, PERF-09, I18N-01      | `client/src/game/effects/FrogElementOverlay.ts`, `client/src/game/effects/elementPool.ts` |
 | 13 | Element awakened tiers (common/rare/epic/legendary)  | 64 awakened animations (4 tiers × 16 elements) + tap-burst + same-element merge anim.                | ELEMENT-09, ELEMENT-10, ELEMENT-11                                            | `client/src/game/effects/elementTiers/*`                                       |
@@ -28,6 +28,7 @@
 | 17 | Carrier evolution: feed + hidden ceiling + merge     | Feed rolls, progressive ceiling reveal, streak protection, stabilization drama, dispose, merge.      | CARRIER-01..12, BALANCE-06, BALANCE-09, UX-10, UX-11                          | `client/src/store/carrierLogic.ts`, `client/src/components/StabilizationModal/*` |
 | 18 | Бестиарий 2.0 (1536 cells, virtualized, sub-rewards) | 4-tab bestiary (384 cells/loc), TanStack Virtual, Uint8Array bitset, sub-completion rewards.         | BESTIARY-01..09                                                               | `client/src/components/CosmicHub/BestiaryTab/*`                                |
 | 19 | Balance + tutorial + toggles + i18n polish           | Pity tuning, sim script, progressive tutorials, calm/reduced/instant toggles, full RU/EN/ES.        | BALANCE-01..05, BALANCE-07, BALANCE-08, UX-01..06, UX-08, PERF-01, PERF-05, PERF-07, I18N-02, I18N-03 | `client/scripts/simulate_balance.cjs`, `client/src/locales/*`, `client/src/components/Settings/*` |
+| 20 | Pre-release safety net                               | Incremental save migrations + backups + adaptive throttle + shutdown discipline. Запускается перед первым prod-релизом. | INFRA-01, INFRA-02, INFRA-03, INFRA-05, INFRA-06, PERF-04                    | `client/src/store/migrations/*`, MainScene.shutdown                            |
 
 ---
 
@@ -58,27 +59,31 @@
 
 ---
 
-## Phase 10: INFRA — storage migrations + performance net
+## Phase 10: Performance HUD (mini)
 
-**Goal:** Replace `STORAGE_VERSION` wipe-on-mismatch with incremental migration table, add backup snapshots, install Performance HUD + adaptive throttle so future phases never crash mid-tier devices and never wipe player saves.
+**Goal:** Установить dev-mode Performance HUD (FPS, tween count, active overlay count) для дебага производительности при добавлении element overlays в Phase 12-13. Минималистичная фаза — остальные INFRA-аспекты (миграции, adaptive throttle, shutdown discipline) отложены в Phase 20 (pre-release safety net) до момента когда реально нужны.
 
-**Requirements:** INFRA-01, INFRA-02, INFRA-03, INFRA-04, INFRA-05, INFRA-06, PERF-04
+**Requirements:** INFRA-04
 
 **Plans:**
-1. Implement `migrations: Record<number, (data) => data>` in `gameStore` and prune old wipe-logic; load runs all migrations 15 → 16 → 17 → ... in order.
-2. Backup snapshot on migration: write `frog_evolution_backup_v{version}` to localStorage with TTL 7 days; expose dev-mode "restore" button.
-3. Performance HUD (dev-mode only): overlay showing FPS, active tween count, active overlay count; toggle via existing dev-mode flag.
-4. Adaptive throttle: monitor FPS rolling avg over 5s; FPS<45 → ×2 throttle on idle particles; FPS<30 → ×4 + reduce overlay cap.
-5. Refactor `MainScene.shutdown()` and `StarMapScene.shutdown()` to call `killAllTweens`, drain pools, unsubscribe listeners.
+1. Создать `client/src/debug/PerfHUD.tsx` — небольшой overlay в правом верхнем углу, видим только в dev-mode (`import.meta.env.DEV`).
+2. Метрики: avg FPS (rolling 60 frames), `scene.tweens.getAllTweens().length` для main + StarMap, optional active update event listeners count.
+3. Toggle через keyboard shortcut (например `H`) или dev-флаг в localStorage.
+4. Стили: monospace font, semi-transparent dark background, small (~150×80px), фиксированный right-top.
+5. Подключение в App.tsx или main.tsx (только если DEV).
 
 **Success Criteria:**
-1. Saving in v15, loading in v17 runs migrations sequentially and produces a structurally valid state (no wipe, no error toast).
-2. Backup snapshot exists in localStorage after each migration with the version-stamped key.
-3. Performance HUD visible in dev-mode shows live FPS, tween count, overlay count.
-4. Forced FPS drop (manual stress test) triggers ×2 then ×4 throttle, observable via HUD counters.
-5. Closing/re-opening MainScene 10 times does not increase tween count baseline (no leak).
+1. В dev-mode (vite dev) HUD виден в правом верхнем углу с живыми FPS/tween count.
+2. В production build (vite build) HUD не включён в bundle (tree-shaken через `import.meta.env.DEV` guard).
+3. Toggle работает (показать/скрыть HUD).
+4. Bundle delta ≤ +1 KB gzipped (HUD не должен утяжелять prod).
 
 **Depends on:** Phase 9.
+
+**Out of scope (отложено в Phase 20):**
+- INFRA-01..03 (incremental migrations + backups) — нужно перед prod, не сейчас
+- INFRA-05 + PERF-04 (adaptive throttle) — preventive, добавим в Phase 12 если fps реально просядет
+- INFRA-06 (shutdown discipline) — convention, документируется в CLAUDE.md, не отдельная фаза
 
 **Status:** pending
 
@@ -106,7 +111,9 @@
 
 **Depends on:** Phase 10.
 
-**Status:** pending
+**Status:** **complete** (2026-05-08)
+
+**Outcome:** 3 waves shipped — Wave 1 (data layer: cosmic types/slice/gameStore + STORAGE_VERSION 16 + cosmic:toast event), Wave 2 (UI shell: 🧬 BottomBar + lazy CosmicHubModal с 4 stub tabs + sessionStorage), Wave 3 (reactive badge + multi-grouping toast subscriber + i18n RU/EN/ES). Bundle delta gzip = **+3.05 KB** (CosmicHubModal как отдельный chunk 0.98 KB + main +2.07 KB). All 9 REQ-IDs покрыты. См. `.planning/phases/11-cosmicslice-cosmic-hub-shell/SUMMARY.md`.
 
 ---
 
@@ -335,6 +342,32 @@
 
 ---
 
+## Phase 20: Pre-release safety net
+
+**Goal:** Установить прод-уровень safety nets перед первым публичным релизом v2.0: incremental save migrations (вместо wipe-on-mismatch), backup snapshots, adaptive performance throttle, scene shutdown discipline. Эта фаза запускается **последней**, когда уже есть тестеры с прогрессом который нельзя терять.
+
+**Requirements:** INFRA-01, INFRA-02, INFRA-03, INFRA-05, INFRA-06, PERF-04
+
+**Plans:**
+1. Incremental migration table: `migrations: Record<number, (data: any) => any>` в gameStore; на load прогон всех v_old → v_current по порядку. Удалить `wipe-on-mismatch` legacy logic.
+2. Backup snapshots: перед каждой миграцией записать `localStorage.frog_evolution_backup_v{from_version}` с TTL 7 дней. Dev-mode «Restore» button.
+3. Adaptive throttle: hooked в Performance HUD scene loop. FPS<45 в 5с → ×2 throttle на element overlay update interval; FPS<30 → ×4 + сократить hard cap visible overlays (4→2 temporary).
+4. Scene shutdown discipline: `MainScene.shutdown()` + `StarMapScene.shutdown()` обязаны `killAllTweens`, drain pools, `eventBus.off(...)`. Document pattern в CLAUDE.md.
+5. Tween-leak detection (dev-mode): после 10× scene transitions проверить `tweens.getAllTweens().length` не растёт.
+
+**Success Criteria:**
+1. Запись прогресса в v15, загрузка в v17 → миграции прогоняются по порядку, state структурно валидный, wipe не происходит.
+2. После каждой миграции в localStorage есть backup snapshot с правильным version-stamp ключом; через 7 дней snapshot auto-cleaned.
+3. Manual stress test (например spawn 50 frogs с overlay): FPS падает <45 → HUD показывает ×2 throttle применён; FPS<30 → ×4 + reduced overlay cap.
+4. 10 циклов open/close StarMapScene + MainScene → tween count baseline не растёт (verifiable через HUD).
+5. CLAUDE.md содержит секцию «Scene shutdown discipline» с правилами для будущих фаз.
+
+**Depends on:** Phase 19 (запускается последней перед prod).
+
+**Status:** pending (deferred — реализовать перед первым prod-релизом)
+
+---
+
 ## Coverage Matrix
 
 Every v2.0 REQ-ID is mapped to exactly one phase.
@@ -346,12 +379,12 @@ Every v2.0 REQ-ID is mapped to exactly one phase.
 | REFACTOR-03    | 9     | SERUM-03        | 14    | CARRIER-03      | 17    |
 | REFACTOR-04    | 9     | SERUM-04        | 14    | CARRIER-04      | 17    |
 | REFACTOR-05    | 9     | SERUM-05        | 14    | CARRIER-05      | 17    |
-| INFRA-01       | 10    | SERUM-06        | 14    | CARRIER-06      | 17    |
-| INFRA-02       | 10    | SERUM-07        | 14    | CARRIER-07      | 17    |
-| INFRA-03       | 10    | SERUM-08        | 14    | CARRIER-08      | 17    |
+| INFRA-01       | 20    | SERUM-06        | 14    | CARRIER-06      | 17    |
+| INFRA-02       | 20    | SERUM-07        | 14    | CARRIER-07      | 17    |
+| INFRA-03       | 20    | SERUM-08        | 14    | CARRIER-08      | 17    |
 | INFRA-04       | 10    | SERUM-09        | 14    | CARRIER-09      | 17    |
-| INFRA-05       | 10    | SERUM-10        | 14    | CARRIER-10      | 17    |
-| INFRA-06       | 10    | SERUM-11        | 14    | CARRIER-11      | 17    |
+| INFRA-05       | 20    | SERUM-10        | 14    | CARRIER-10      | 17    |
+| INFRA-06       | 20    | SERUM-11        | 14    | CARRIER-11      | 17    |
 | COSMIC-HUB-01  | 11    | BOX-01          | 15    | CARRIER-12      | 17    |
 | COSMIC-HUB-02  | 11    | BOX-02          | 15    | BESTIARY-01     | 18    |
 | COSMIC-HUB-03  | 11    | BOX-03          | 15    | BESTIARY-02     | 18    |
@@ -374,7 +407,7 @@ Every v2.0 REQ-ID is mapped to exactly one phase.
 | UX-01          | 19    | SHIP-05         | 16    | PERF-01         | 19    |
 | UX-02          | 19    | SHIP-06         | 16    | PERF-02         | 12    |
 | UX-03          | 19    | SHIP-07         | 16    | PERF-03         | 12    |
-| UX-04          | 19    | SHIP-08         | 16    | PERF-04         | 10    |
+| UX-04          | 19    | SHIP-08         | 16    | PERF-04         | 20    |
 | UX-05          | 19    | SHIP-09         | 16    | PERF-05         | 19    |
 | UX-06          | 19    | SHIP-10         | 16    | PERF-06         | 12    |
 | UX-07          | 14    | CREW-01         | 16    | PERF-07         | 19    |
@@ -403,7 +436,7 @@ Every v2.0 REQ-ID is mapped to exactly one phase.
 | Phase | REQ count |
 |-------|-----------|
 | 9     | 5         |
-| 10    | 7         |
+| 10    | 1         |
 | 11    | 9         |
 | 12    | 14        |
 | 13    | 3         |
@@ -413,6 +446,7 @@ Every v2.0 REQ-ID is mapped to exactly one phase.
 | 17    | 16        |
 | 18    | 9         |
 | 19    | 17        |
+| 20    | 6         |
 | **Total** | **135** |
 
 ---
