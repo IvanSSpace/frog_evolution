@@ -102,7 +102,7 @@ Plans:
 - [x] 08-05-PLAN.md — Sound signature pipeline + refineSoundSeeds (D-11..D-12) ✓ 2026-05-08
 
 **Wave 6** *(blocked on Wave 5 completion)*
-- [ ] 08-06-PLAN.md — Verify scripts в client/scripts/ + npm run verify-uniqueness (D-15, D-17)
+- [x] 08-06-PLAN.md — Verify scripts в client/scripts/ + npm run verify-uniqueness (D-15, D-17) ✓ 2026-05-08
 
 **Wave 7** *(blocked on Wave 6 completion)*
 - [ ] 08-07-PLAN.md — Smoke test + final build size + STATE.md закрытие (SPEC #6, #10)
