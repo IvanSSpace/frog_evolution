@@ -109,9 +109,10 @@ function App() {
 
   // Phase 11 (COSMIC-HUB-05/06): cosmic:toast subscriber + multi-grouping.
   // Несколько emit'ов за GROUPING_WINDOW_MS объединяются в один grouped toast.
+  // Phase 14 (SERUM-10): payload.duration override (default 4000ms).
   useEffect(() => {
     const GROUPING_WINDOW_MS = 1000
-    const AUTO_HIDE_MS = 4000
+    const DEFAULT_AUTO_HIDE_MS = 4000
 
     const handler = (payload: CosmicToastPayload) => {
       toastBufferRef.current.push(payload)
@@ -136,22 +137,29 @@ function App() {
           const firstLabel = buffer[0].action?.label
           const allSameAction = firstLabel != null &&
             buffer.every((t) => t.action?.label === firstLabel)
+          // duration: max между всеми payload'ами (защита от мерцающих undo toast'ов)
+          const maxDuration = buffer.reduce<number | undefined>((m, t) => {
+            if (t.duration == null) return m
+            return m == null ? t.duration : Math.max(m, t.duration)
+          }, undefined)
           next = {
             type: buffer[0].type,
             msg: `${totalCount} событий`,
             count: totalCount,
             action: allSameAction ? buffer[0].action : undefined,
+            duration: maxDuration,
           }
         }
 
         setCosmicToast(next)
 
-        // Автоскрытие через AUTO_HIDE_MS — отдельный таймер, который мы можем отменить
+        // Phase 14: payload.duration override (default 4000ms).
+        const hideMs = next.duration ?? DEFAULT_AUTO_HIDE_MS
         if (toastHideTimerRef.current) clearTimeout(toastHideTimerRef.current)
         toastHideTimerRef.current = setTimeout(() => {
           setCosmicToast(null)
           toastHideTimerRef.current = null
-        }, AUTO_HIDE_MS)
+        }, hideMs)
       }, GROUPING_WINDOW_MS)
     }
 

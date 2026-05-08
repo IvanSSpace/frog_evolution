@@ -7,6 +7,8 @@ import { initTelegram } from './utils/telegram'
 import './index.css'
 // Phase 12 dev-only: window.__addDevCarrier / __listFrogIds (tree-shaken in prod).
 import './utils/devCarriers'
+// Phase 14 dev-only: window.__addSerum / __listSerums / __clearSerums.
+import './utils/devSerums'
 
 // Telegram SDK инициализируем до Phaser — чтобы expand/ready отработали
 // до первой отрисовки канваса
