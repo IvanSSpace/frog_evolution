@@ -1,17 +1,20 @@
-// Phase 12: elementOverlayPool — singleton pool для FrogElementOverlay.
+// Phase 12/13: elementOverlayPool — singleton pool для FrogElementOverlay.
 // Реализует acquire/release semantics (REQ ELEMENT-06):
-//   - acquire(scene, element) → re-uses idle overlay из pool, или создаёт новый.
-//   - release(overlay)        → detach() + push в pool (НЕ destroy).
-//   - drainAll()              → dispose() всех (вызывает manager при scene shutdown).
+//   - acquire(scene, element, tier) → re-uses idle overlay из pool по ключу `${element}:${tier}`,
+//     или создаёт новый.
+//   - release(overlay)              → detach() + push в правильный bucket (НЕ destroy).
+//   - drainAll()                    → dispose() всех (вызывает manager при scene shutdown).
 //
-// Цель: zero destroy/create на каждый carrier-add/remove cycle.
+// Phase 13: pool разбит по составному ключу (element, tier) — overlays разных tier
+// не смешиваются, что минимизирует idle-restart при acquire.
 
 import type Phaser from 'phaser'
 import type { Element } from '../../store/cosmic/types'
+import type { ElementTier } from './elements/types'
 import { FrogElementOverlay } from './FrogElementOverlay'
 
 class ElementOverlayPool {
-  private pool: FrogElementOverlay[] = []
+  private pool: Map<string, FrogElementOverlay[]> = new Map()
   private active: Set<FrogElementOverlay> = new Set()
   private scene: Phaser.Scene | null = null
 
@@ -25,31 +28,45 @@ class ElementOverlayPool {
     this.scene = scene
   }
 
-  acquire(scene: Phaser.Scene, _element: Element): FrogElementOverlay {
+  acquire(scene: Phaser.Scene, element: Element, tier: ElementTier = 'dormant'): FrogElementOverlay {
     this.bindScene(scene)
-    let overlay = this.pool.pop()
-    if (!overlay) overlay = new FrogElementOverlay(scene)
+    const key = `${element}:${tier}`
+    const bucket = this.pool.get(key) ?? []
+    const overlay = bucket.pop() ?? new FrogElementOverlay(scene)
+    if (bucket.length === 0) this.pool.delete(key)
+    else this.pool.set(key, bucket)
     this.active.add(overlay)
     return overlay
   }
 
   release(overlay: FrogElementOverlay): void {
     if (!this.active.has(overlay)) return
+    // Считываем element/tier ДО detach — внутри detach() значения не сбрасываются,
+    // но порядок важен на случай будущего изменения семантики.
+    const key = `${overlay.element}:${overlay.tier}`
     overlay.detach()
     this.active.delete(overlay)
-    this.pool.push(overlay)
+    const bucket = this.pool.get(key) ?? []
+    bucket.push(overlay)
+    this.pool.set(key, bucket)
   }
 
   drainAll(): void {
     for (const o of this.active) o.dispose()
-    for (const o of this.pool) o.dispose()
+    for (const bucket of this.pool.values()) {
+      for (const o of bucket) o.dispose()
+    }
     this.active.clear()
-    this.pool = []
+    this.pool.clear()
     this.scene = null
   }
 
   get totalActive(): number { return this.active.size }
-  get totalPooled(): number { return this.pool.length }
+  get totalPooled(): number {
+    let n = 0
+    for (const b of this.pool.values()) n += b.length
+    return n
+  }
 }
 
 export const elementOverlayPool = new ElementOverlayPool()
