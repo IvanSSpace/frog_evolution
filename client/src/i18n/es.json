@@ -84,6 +84,7 @@
   },
   "settings_modal": {
     "tab_bestiary": "Bestiario",
+    "tab_player": "Música",
     "tab_settings": "Ajustes",
     "close": "✕"
   },
@@ -100,13 +101,64 @@
   },
   "settings": {
     "language": "Idioma",
-    "music": "Música",
     "sounds": "Efectos de sonido",
     "number_format": "Formato de números",
     "format_short": "Corto (1.5K)",
     "format_full": "Completo (1.500)",
     "bug_report": "Reportar error 🐛",
-    "music_stub": "Próximamente",
     "sounds_stub": "Próximamente"
+  },
+  "player": {
+    "no_track": "Sin pista seleccionada",
+    "play": "▶ Reproducir",
+    "pause": "⏸ Pausa",
+    "volume": "Volumen",
+    "visualizer": "Visualizador",
+    "auto_resume": "Reanudar automáticamente",
+    "tracks_label": "Pistas",
+    "on": "Activado",
+    "off": "Desactivado",
+    "tracks": {
+      "beyondHorizon": {
+        "name": "Beyond the Horizon",
+        "desc": "7 minutos · 7 secciones · épica cinematográfica"
+      },
+      "stellarTide": {
+        "name": "Stellar Tide",
+        "desc": "4 minutos · pulsaciones suaves"
+      },
+      "phylogenesis": {
+        "name": "Phylogenesis",
+        "desc": "4 minutos · minimalismo para reflexión"
+      },
+      "leviathanLullaby": {
+        "name": "Leviathan Lullaby",
+        "desc": "4 minutos · 4 movimientos · escenas lentas"
+      },
+      "frogTomorrow": {
+        "name": "Frog of Tomorrow",
+        "desc": "1 minuto · escenas oscuras, drone"
+      },
+      "cosmicBattle": {
+        "name": "Cosmic Battle",
+        "desc": "1 minuto · 4 actos · acción"
+      }
+    }
+  },
+  "cosmic_hub": {
+    "title": "Centro Cósmico",
+    "tab_scouts": "Exploradores",
+    "tab_boxes": "Cajas",
+    "tab_serums": "Sueros",
+    "tab_bestiary": "Bestiario",
+    "scouts_placeholder": "Exploradores llegando próximamente",
+    "boxes_placeholder": "Cajas llegando próximamente",
+    "serums_placeholder": "Sueros llegando próximamente",
+    "bestiary_placeholder": "Bestiario llegando próximamente",
+    "toast_scout_returned": "¡Explorador regresó! Caja recibida.",
+    "toast_scout_returned_plural": "¡{{count}} exploradores regresaron! {{count}} cajas recibidas.",
+    "toast_open_box": "Abrir caja",
+    "toast_grouped": "{{count}} eventos",
+    "crew_tired": "La tripulación está cansada. Vuelve mañana."
   }
 }

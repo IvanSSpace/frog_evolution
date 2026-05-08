@@ -1,4 +1,5 @@
 import React from 'react'
+import { useGameStore } from '../../store/gameStore'
 
 type BadgeProps = { children: React.ReactNode }
 
@@ -55,6 +56,12 @@ type BottomBarProps = {
 }
 
 export function BottomBar({ onOpenShop, onOpenFrogShop, onOpenSettings, onOpenCosmicHub }: BottomBarProps) {
+  // Phase 11 (COSMIC-HUB-04): badge на 🧬 = число неоткрытых боксов.
+  // Реактивен: при addBox/openBox селектор пере-рендерит компонент.
+  const readyBoxCount = useGameStore(
+    (s) => s.boxes.filter((b) => !b.opened).length,
+  )
+
   return (
     <div className="ff-bar bottom w-full h-full flex items-center justify-between px-3 py-2"
          style={{ pointerEvents: 'auto' }}>
@@ -66,8 +73,8 @@ export function BottomBar({ onOpenShop, onOpenFrogShop, onOpenSettings, onOpenCo
         <Tile emoji="⬆️"  skin="green"  onClick={onOpenShop} />
         <Tile emoji="🎨"  skin="purple" badge />
         <Tile emoji="🎁"  skin="red"    badge />
-        {/* 🧬 — Cosmic Hub (Phase 11). Badge число задаётся в Plan 03. */}
-        <Tile emoji="🧬"  skin="teal"   onClick={onOpenCosmicHub} />
+        {/* 🧬 — Cosmic Hub (Phase 11). Badge = число неоткрытых боксов. */}
+        <Tile emoji="🧬"  skin="teal"   onClick={onOpenCosmicHub} badge={readyBoxCount} />
       </div>
 
       {/* Справа — журнал */}

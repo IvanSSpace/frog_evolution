@@ -84,6 +84,7 @@
   },
   "settings_modal": {
     "tab_bestiary": "Bestiary",
+    "tab_player": "Music",
     "tab_settings": "Settings",
     "close": "✕"
   },
@@ -100,13 +101,64 @@
   },
   "settings": {
     "language": "Language",
-    "music": "Music",
     "sounds": "Sound Effects",
     "number_format": "Number Format",
     "format_short": "Short (1.5K)",
     "format_full": "Full (1,500)",
     "bug_report": "Bug Report 🐛",
-    "music_stub": "Coming soon",
     "sounds_stub": "Coming soon"
+  },
+  "player": {
+    "no_track": "No track selected",
+    "play": "▶ Play",
+    "pause": "⏸ Pause",
+    "volume": "Volume",
+    "visualizer": "Visualizer",
+    "auto_resume": "Auto-resume",
+    "tracks_label": "Tracks",
+    "on": "On",
+    "off": "Off",
+    "tracks": {
+      "beyondHorizon": {
+        "name": "Beyond the Horizon",
+        "desc": "7 minutes · 7 sections · cinematic epic"
+      },
+      "stellarTide": {
+        "name": "Stellar Tide",
+        "desc": "4 minutes · gentle pulses"
+      },
+      "phylogenesis": {
+        "name": "Phylogenesis",
+        "desc": "4 minutes · minimalism for reflection"
+      },
+      "leviathanLullaby": {
+        "name": "Leviathan Lullaby",
+        "desc": "4 minutes · 4 movements · slow scenes"
+      },
+      "frogTomorrow": {
+        "name": "Frog of Tomorrow",
+        "desc": "1 minute · dark scenes, drone"
+      },
+      "cosmicBattle": {
+        "name": "Cosmic Battle",
+        "desc": "1 minute · 4 acts · action"
+      }
+    }
+  },
+  "cosmic_hub": {
+    "title": "Cosmic Hub",
+    "tab_scouts": "Scouts",
+    "tab_boxes": "Boxes",
+    "tab_serums": "Serums",
+    "tab_bestiary": "Bestiary",
+    "scouts_placeholder": "Scouts coming in next update",
+    "boxes_placeholder": "Boxes coming in next update",
+    "serums_placeholder": "Serums coming in next update",
+    "bestiary_placeholder": "Bestiary coming in next update",
+    "toast_scout_returned": "Scout returned! Box received.",
+    "toast_scout_returned_plural": "{{count}} scouts returned! {{count}} boxes received.",
+    "toast_open_box": "Open box",
+    "toast_grouped": "{{count}} events",
+    "crew_tired": "Crew is tired. Come back tomorrow."
   }
 }

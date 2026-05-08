@@ -84,6 +84,7 @@
   },
   "settings_modal": {
     "tab_bestiary": "Бестиарий",
+    "tab_player": "Музыка",
     "tab_settings": "Настройки",
     "close": "✕"
   },
@@ -100,13 +101,64 @@
   },
   "settings": {
     "language": "Язык",
-    "music": "Музыка",
     "sounds": "Звуки",
     "number_format": "Формат чисел",
     "format_short": "Короткий (1.5К)",
     "format_full": "Полный (1 500)",
     "bug_report": "Баг репорт 🐛",
-    "music_stub": "Скоро будет",
     "sounds_stub": "Скоро будет"
+  },
+  "player": {
+    "no_track": "Трек не выбран",
+    "play": "▶ Играть",
+    "pause": "⏸ Пауза",
+    "volume": "Громкость",
+    "visualizer": "Визуализатор",
+    "auto_resume": "Авто-возобновление",
+    "tracks_label": "Треки",
+    "on": "Вкл",
+    "off": "Выкл",
+    "tracks": {
+      "beyondHorizon": {
+        "name": "Beyond the Horizon",
+        "desc": "7 минут · 7 секций · кинематографический эпик"
+      },
+      "stellarTide": {
+        "name": "Stellar Tide",
+        "desc": "4 минуты · спокойные пульсации"
+      },
+      "phylogenesis": {
+        "name": "Phylogenesis",
+        "desc": "4 минуты · минимализм для размышлений"
+      },
+      "leviathanLullaby": {
+        "name": "Leviathan Lullaby",
+        "desc": "4 минуты · 4 движения, медленные сцены"
+      },
+      "frogTomorrow": {
+        "name": "Frog of Tomorrow",
+        "desc": "1 минута · тёмные сцены, дроун"
+      },
+      "cosmicBattle": {
+        "name": "Cosmic Battle",
+        "desc": "1 минута · 4 акта, экшн"
+      }
+    }
+  },
+  "cosmic_hub": {
+    "title": "Космический центр",
+    "tab_scouts": "Скауты",
+    "tab_boxes": "Боксы",
+    "tab_serums": "Сыворотки",
+    "tab_bestiary": "Бестиарий",
+    "scouts_placeholder": "Скауты появятся в следующем обновлении",
+    "boxes_placeholder": "Боксы появятся в следующем обновлении",
+    "serums_placeholder": "Сыворотки появятся в следующем обновлении",
+    "bestiary_placeholder": "Бестиарий появится в следующем обновлении",
+    "toast_scout_returned": "Скаут вернулся! Получен бокс.",
+    "toast_scout_returned_plural": "{{count}} скаутов вернулись! {{count}} боксов получено.",
+    "toast_open_box": "Открыть бокс",
+    "toast_grouped": "{{count}} событий",
+    "crew_tired": "Экипаж устал. Возвращайтесь завтра."
   }
 }
