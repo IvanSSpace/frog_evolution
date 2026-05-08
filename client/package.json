@@ -11,7 +11,8 @@
     "format": "prettier --write .",
     "preview": "vite preview",
     "prepare": "husky || true",
-    "verify-uniqueness": "node scripts/verify_anim_uniqueness_strict.cjs && node scripts/verify_texture_uniqueness.cjs && node scripts/verify_sound_uniqueness.cjs"
+    "verify-uniqueness": "node scripts/verify_anim_uniqueness_strict.cjs && node scripts/verify_texture_uniqueness.cjs && node scripts/verify_sound_uniqueness.cjs",
+    "sim-balance": "node scripts/simulate_balance.cjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.60.6",
