@@ -24,6 +24,7 @@ import {
   getTractorIncomePerSec,
 } from './store/gameStore'
 import type { CosmicToastPayload } from './store/cosmic/types'
+import { findPlanetById } from './game/data/missionConfig'
 
 const queryClient = new QueryClient()
 
@@ -175,6 +176,29 @@ function App() {
         toastHideTimerRef.current = null
       }
     }
+  }, [])
+
+  // Phase 16 (REQ SHIP-10): подписка на arrival event → toast «Прибыли на NAME [Изучить]».
+  // Re-используем cosmic:toast pipeline для grouping consistency.
+  useEffect(() => {
+    const handleArrived = ({ planetId }: { planetId: string }) => {
+      const planet = findPlanetById(planetId)
+      const name = planet?.name ?? planetId.toUpperCase()
+      eventBus.emit('cosmic:toast', {
+        type: 'generic',
+        msg: `Прибыли на ${name}`,
+        action: {
+          label: 'Изучить',
+          onClick: () => {
+            // Open Cosmic Hub on Корабль tab + emit start-mission.
+            // Plan 16-04 wires up — Plan 16-02 emit'ит start-mission scaffold.
+            eventBus.emit('cosmic:start-mission', { planetId })
+          },
+        },
+      })
+    }
+    eventBus.on('cosmic:ship-arrived', handleArrived)
+    return () => { eventBus.off('cosmic:ship-arrived', handleArrived) }
   }, [])
 
   const handleRareCrateClaim = (wonLevel: number) => {
