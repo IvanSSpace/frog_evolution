@@ -1,18 +1,30 @@
 // Phase 12: FrogElementOverlay — Phaser-native overlay над лягушкой-carrier.
 // Содержит маленький Graphics-орб над головой + idle-particle через primitive
 // (Phase 9 effects/anim/shared) каждые 3 секунды (dormant tier).
-// Phase 13 расширит до awakened tiers (common/rare/epic/legendary).
+// Phase 13: расширили до 5-tier (dormant + 4 awakened). attach() принимает tier,
+// setTier() меняет idle на живом overlay без detach/re-attach.
 
 import type Phaser from 'phaser'
 import type { Element } from '../../store/cosmic/types'
 import type { ElementTier, OverlayLifecycle } from './elements/types'
 import { ELEMENT_TINTS } from './elements/elementTints'
 import { scheduleDormantIdle } from './elements/dormantPresets'
+import { scheduleAwakenedIdle } from './elements/awakenedPresets'
 
 // Высота "над головой" — 32px без DPR. DPR применяется снаружи через container scale.
 const ORB_OFFSET_Y = -32
-const ORB_RADIUS = 4
 const ORB_DEPTH = 50  // выше body, ниже UI overlay
+
+// Tier-specific orb radius (Phase 13).
+function orbRadiusForTier(tier: ElementTier): number {
+  switch (tier) {
+    case 'dormant': return 4
+    case 'common': return 5
+    case 'rare': return 6
+    case 'epic': return 7
+    case 'legendary': return 8
+  }
+}
 
 export class FrogElementOverlay {
   readonly container: Phaser.GameObjects.Container
@@ -31,9 +43,42 @@ export class FrogElementOverlay {
     this.container.setDepth(ORB_DEPTH)
 
     // Малый круг над головой — основная "значок-носитель" метка.
-    this.orb = scene.add.circle(0, ORB_OFFSET_Y, ORB_RADIUS, 0xffffff, 0.85)
+    // Default radius — dormant. attach() обновит размер по tier.
+    this.orb = scene.add.circle(0, ORB_OFFSET_Y, orbRadiusForTier('dormant'), 0xffffff, 0.85)
     this.orb.setStrokeStyle(1, 0xffffff, 0.4)
     this.container.add(this.orb)
+  }
+
+  /**
+   * Запускает idle-цикл для текущего (element, tier) поверх контейнера.
+   * Выкидывает предыдущий lifecycle если был.
+   */
+  private startIdleForTier(scene: Phaser.Scene, tier: ElementTier): void {
+    this.idleLifecycle?.dispose()
+    this.idleLifecycle = null
+    if (tier === 'dormant') {
+      this.idleLifecycle = scheduleDormantIdle(scene, this.container, this.element)
+    } else {
+      this.idleLifecycle = scheduleAwakenedIdle(scene, this.container, this.element, tier)
+    }
+  }
+
+  /**
+   * Поменять tier на живом overlay без detach/re-attach. Container и tint лягушки
+   * сохраняются; только idle переключается. Используется dev helper'ом и Phase 17
+   * (carrier evolution: dormant→awakened после стабилизации).
+   */
+  setTier(newTier: ElementTier): void {
+    if (this.tier === newTier) return
+    this.tier = newTier
+    // Обновить визуал орба под новый tier.
+    const radius = orbRadiusForTier(newTier)
+    // Phaser.GameObjects.Arc имеет .setRadius (с phaser 3.50+); используем напрямую через radius prop.
+    this.orb.setRadius(radius)
+    this.orb.setAlpha(newTier === 'dormant' ? 0.85 : 1.0)
+    const scene = this.container.scene as Phaser.Scene | null
+    if (!scene || !this.container.active) return
+    this.startIdleForTier(scene, newTier)
   }
 
   /**
@@ -47,13 +92,19 @@ export class FrogElementOverlay {
     body: Phaser.GameObjects.Image,
     frogId: string,
     element: Element,
+    tier: ElementTier = 'dormant',
   ): void {
     this.hostFrogId = frogId
     this.element = element
-    this.tier = 'dormant'
+    this.tier = tier
+
+    // Update orb size per tier (Phase 13).
+    const orbRadius = orbRadiusForTier(tier)
+    this.orb.setRadius(orbRadius)
 
     const tint = ELEMENT_TINTS[element]
-    this.orb.setFillStyle(tint, 0.85)
+    const orbAlpha = tier === 'dormant' ? 0.85 : 1.0
+    this.orb.setFillStyle(tint, orbAlpha)
     this.orb.setStrokeStyle(1, tint, 0.4)
 
     // Apply tint to frog body (preserve previous so detach can restore).
@@ -77,9 +128,9 @@ export class FrogElementOverlay {
     this.container.setVisible(true)
     this.container.setDepth(ORB_DEPTH)
 
-    // Start idle preset.
+    // Start idle preset for the requested tier.
     const sceneRef = host.scene as Phaser.Scene
-    this.idleLifecycle = scheduleDormantIdle(sceneRef, this.container, element)
+    this.startIdleForTier(sceneRef, tier)
   }
 
   /**
