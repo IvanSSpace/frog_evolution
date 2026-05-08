@@ -4,6 +4,10 @@ import { attachNebulaBackground, type NebulaBackgroundHandle } from '../effects/
 import { violetRing } from '../effects/presets'
 import planetMap from '../data/planetMap.json'
 import { deriveModulations } from '../../audio/planetVoice'
+import {
+  pickColor as sharedPickColor,
+  pickEase as sharedPickEase,
+} from '../effects/anim/shared/sharedHelpers'
 
 // Phaser-сцена Звёздной карты. Запускается рядом с MainScene через scene-manager.
 // Ничего о gameStore не знает — это «декоративная карта» для просмотра системы
@@ -713,11 +717,13 @@ export class StarMapScene extends Phaser.Scene {
     star.setDepth(-87)
     star.fillStyle(c, 1)
     star.fillPoints(points, true)
-    // Position: прямо НАД планетой (в world coords), с малым горизонтальным jitter
-    const offsetX = (rng() - 0.5) * planetSize * 0.5
-    const offsetY = -planetSize * (1.3 + rng() * 0.6)
-    star.x = planetX + offsetX
-    star.y = planetY + offsetY
+    // Position: случайная точка ВНУТРИ диска планеты (равномерное распределение по площади
+    // через sqrt(rng) для радиуса). Sparkle остаётся в world-coords — при LOD-скрытии
+    // планеты-контейнера она остаётся видна как звезда.
+    const ang = rng() * Math.PI * 2
+    const rad = Math.sqrt(rng()) * planetSize * 0.7
+    star.x = planetX + Math.cos(ang) * rad
+    star.y = planetY + Math.sin(ang) * rad
     star.setAlpha(0)
     this.zoomCompStars.push({ obj: star, baseScale: 1 })
 
@@ -870,40 +876,9 @@ export class StarMapScene extends Phaser.Scene {
     return Math.min(1500, maxFinish + 50)
   }
 
-  // Тематические палитры — каждый archetype/type имеет свою подпись.
-  // pickColor() с приоритетом этой палитры → анимация цветом совпадает с настроением планеты.
-  private readonly THEME_PALETTES: Record<string, number[]> = {
-    // BG archetypes
-    gas_giant:   [0xfde68a, 0xfb923c, 0xfdba74, 0xfacc15, 0xf59e0b, 0xfff7ed],
-    gas_ringed:  [0xc4b5fd, 0xa78bfa, 0xddd6fe, 0xfde68a, 0xfff7ed],
-    ice:         [0xa5f3fc, 0xbae6fd, 0xe0f2fe, 0xffffff, 0x67e8f9],
-    ocean:       [0x7dd3fc, 0x38bdf8, 0x0ea5e9, 0xa5f3fc, 0x67e8f9],
-    desert:      [0xfde68a, 0xfbbf24, 0xfdba74, 0xf59e0b, 0xfff7ed],
-    lava:        [0xfca5a5, 0xef4444, 0xb91c1c, 0xfb923c, 0xfde047, 0xfff7ed],
-    forest:      [0x86efac, 0x4ade80, 0x22c55e, 0xa3e635, 0xfde047],
-    mineral:     [0xc4b5fd, 0xddd6fe, 0xa5f3fc, 0xfde047, 0xffffff],
-    dead:        [0x9ca3af, 0xd1d5db, 0x6b7280, 0xfff7ed],
-    toxic:       [0x86efac, 0xa3e635, 0xfde047, 0xfde68a, 0xbef264],
-    plasma:      [0xfca5a5, 0xfde047, 0xfff7ed, 0xfb923c, 0xa78bfa, 0xffffff],
-    binary:      [0xa78bfa, 0x7dd3fc, 0xfde047, 0xfca5a5, 0xffffff],
-    // Main types
-    home:        [0x7dd3fc, 0xa5f3fc, 0x86efac, 0xffffff],
-    crystal:     [0xa5f3fc, 0x67e8f9, 0xddd6fe, 0xffffff],
-    rocky:       [0xfbbf24, 0xfde68a, 0xfff7ed],
-    ancient:     [0xc4b5fd, 0xa78bfa, 0xfde047, 0xfff7ed],
-    mystic:      [0xddd6fe, 0xc4b5fd, 0x6d28d9, 0xffffff],
-    organic:     [0x86efac, 0x4ade80, 0xfde047],
-    forge:       [0xfdba74, 0xfb923c, 0xef4444, 0xfde047, 0xffffff],
-    military:    [0xfca5a5, 0xef4444, 0x991b1b, 0xfff7ed],
-    destroyed:   [0x6b7280, 0xfff7ed, 0xef4444],
-    crystal_bio: [0x67e8f9, 0x86efac, 0xa5f3fc],
-    mechano:     [0xfde68a, 0xa78bfa, 0xfde047, 0xffffff],
-    energy:      [0xfef08a, 0xfde047, 0xfff7ed, 0xa5f3fc],
-    mist:        [0xddd6fe, 0xa78bfa, 0xc4b5fd, 0xffffff],
-    aquatic:     [0x7dd3fc, 0x67e8f9, 0xa5f3fc, 0xbae6fd],
-    shadow:      [0x6b7280, 0x111827, 0x4b5563, 0xa78bfa],
-    aerial:      [0xa5f3fc, 0xddd6fe, 0xffffff, 0x7dd3fc],
-  }
+  // Тематические палитры — extracted в effects/anim/shared/sharedHelpers.ts (Phase 9).
+  // Использовались только pickColor() который теперь thin-wrapper над sharedPickColor.
+  // Если в будущем потребуется доступ из StarMapScene напрямую — re-import THEME_PALETTES.
 
   // Тематический mapping: каждый тип получает пул из подходящих компонентов.
   // 0-11: универсальные (ring, multiRing, sparkle, flash, lightning, orbit, spiral, confetti, wave, comet, starBurst, halo)
@@ -949,9 +924,8 @@ export class StarMapScene extends Phaser.Scene {
     aerial:      [6, 8, 11, 2, 16, 28, 32, 35, 42, 51, 49, 60, 64, 72, 84, 94],
   }
 
-  private readonly ANIM_EASES = [
-    'Cubic.easeOut', 'Quad.easeOut', 'Sine.easeOut', 'Back.easeOut', 'Quart.easeOut', 'Expo.easeOut',
-  ]
+  // ANIM_EASES — extracted в effects/anim/shared/sharedHelpers.ts (Phase 9).
+  // pickEase wrapper делегирует туда; локальная константа больше не нужна.
 
   // Phase 7: override-карта для main races (которым нельзя мутировать rngSeed как BG).
   // Заполняется в refineAnimSeeds() при коллизиях signatures.
@@ -1249,60 +1223,13 @@ export class StarMapScene extends Phaser.Scene {
    * ════════════════════════════════════════════════════════════════════════ */
 
   // Helpers: pick цвета и easing.
-  // Цвет с приоритетом тематической палитры (архетипа), затем sys.color/accent, затем рандом.
-  // Phase 7: после выбора raw применяется per-planet HSL hue shift на ±25° по seed —
-  // каждая планета имеет свой подтон даже в одной палитре.
+  // Phase 9: extracted в effects/anim/shared/sharedHelpers.ts. Здесь — thin wrappers
+  // для backward-compat 78 не-целевых comp методов которые продолжают вызывать this.pickXxx.
   private pickColor(rng: () => number, sys: Race | BgSystem): number {
-    const theme = (sys as BgSystem).archetype ?? sys.type
-    const palette = this.THEME_PALETTES[theme]
-    const r = rng()
-    let raw: number
-    if (palette && r < 0.55) raw = palette[Math.floor(rng() * palette.length)]
-    else if (r < 0.78) raw = sys.color
-    else raw = sys.accent
-    return this.shiftColorByPlanet(raw, rng)
+    return sharedPickColor(rng, sys as any)
   }
   private pickEase(rng: () => number): string {
-    return this.ANIM_EASES[Math.floor(rng() * this.ANIM_EASES.length)]
-  }
-
-  // Phase 7: per-planet HSL hue shift на ±25° (детерминированно по rng).
-  // Преобразует RGB → HSL → сдвигает hue → возвращает RGB.
-  // Каждая планета получает свой подтон, даже если две имеют одинаковый recipe + raw color.
-  private shiftColorByPlanet(color: number, rng: () => number): number {
-    const r = (color >> 16) & 0xff
-    const g = (color >> 8) & 0xff
-    const b = color & 0xff
-    const rN = r / 255, gN = g / 255, bN = b / 255
-    const max = Math.max(rN, gN, bN)
-    const min = Math.min(rN, gN, bN)
-    const l = (max + min) / 2
-    const d = max - min
-    let h = 0, s = 0
-    if (d !== 0) {
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
-      if (max === rN) h = ((gN - bN) / d + (gN < bN ? 6 : 0)) * 60
-      else if (max === gN) h = ((bN - rN) / d + 2) * 60
-      else h = ((rN - gN) / d + 4) * 60
-    }
-    // shift hue ±25° (50° span)
-    const shift = (rng() - 0.5) * 50
-    h = (h + shift + 360) % 360
-    // HSL → RGB
-    const c = (1 - Math.abs(2 * l - 1)) * s
-    const x = c * (1 - Math.abs(((h / 60) % 2) - 1))
-    const m = l - c / 2
-    let r1 = 0, g1 = 0, b1 = 0
-    if (h < 60) { r1 = c; g1 = x }
-    else if (h < 120) { r1 = x; g1 = c }
-    else if (h < 180) { g1 = c; b1 = x }
-    else if (h < 240) { g1 = x; b1 = c }
-    else if (h < 300) { r1 = x; b1 = c }
-    else { r1 = c; b1 = x }
-    const ri = Math.max(0, Math.min(255, Math.round((r1 + m) * 255)))
-    const gi = Math.max(0, Math.min(255, Math.round((g1 + m) * 255)))
-    const bi = Math.max(0, Math.min(255, Math.round((b1 + m) * 255)))
-    return (ri << 16) | (gi << 8) | bi
+    return sharedPickEase(rng)
   }
 
   // === 12 АТОМАРНЫХ КОМПОНЕНТОВ ===
