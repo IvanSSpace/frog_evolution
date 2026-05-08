@@ -5,6 +5,8 @@ import App from './App'
 import { startGame } from './game/index'
 import { initTelegram } from './utils/telegram'
 import './index.css'
+// Phase 12 dev-only: window.__addDevCarrier / __listFrogIds (tree-shaken in prod).
+import './utils/devCarriers'
 
 // Telegram SDK инициализируем до Phaser — чтобы expand/ready отработали
 // до первой отрисовки канваса

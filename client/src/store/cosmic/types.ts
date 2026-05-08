@@ -37,6 +37,9 @@ export interface CarrierData {
   rarity: Rarity
   feedCount: number
   stabilized: boolean
+  // Phase 12+: опциональный уровень лягушки на момент привязки сыворотки.
+  // Phase 12 manager не использует это поле; добавлено для будущей логики (Phase 17 evolution).
+  level?: number
 }
 
 export interface ShipState {

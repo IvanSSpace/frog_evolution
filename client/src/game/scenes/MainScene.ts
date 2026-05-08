@@ -3,10 +3,12 @@ import { useGameStore, getDropIntervalMs, getMagnetSpawnInterval, getMagnetDurat
 import { eventBus } from '../../store/eventBus'
 import { FROG_LEVELS, MAX_LEVEL, textureKeyForLevel, rollPoopType, POOP_INTERVAL_MS, getTargetIncomePerSec, getPoopValueExact, stochasticRound, type PoopType } from '../config/frogs'
 import { hapticImpact } from '../../utils/telegram'
+import { FrogOverlayManager } from '../effects/FrogOverlayManager'
 
 const mapKeyForLocation = (locId: number): string => {
   if (locId === 2) return 'map2'
   if (locId === 3) return 'map3'
+  if (locId === 4) return 'map4'
   return 'map'
 }
 
@@ -22,6 +24,7 @@ const MERGE_RADIUS = 50 * DPR
 
 // Бокс-дропы
 const MAX_ENTITIES = 16            // суммарный лимит лягушки + коробки
+const MAX_PENDING_BOXES = 8        // cap «отложенных» коробок при отсутствии на болоте
 const BOX_FALL_DURATION = 380      // длительность падения (быстрее)
 const BOX_DISPLAY_SIZE = 56 * DPR  // размер коробки на экране
 const BOX_IDLE_INTERVAL = 5500     // период подпрыгивания
@@ -65,6 +68,8 @@ interface FrogData {
   isAttracted: boolean
   level: number
   poopTimer: Phaser.Time.TimerEvent | null
+  // Phase 12: stable cross-session id для match с CarrierData.frogId.
+  id: string
 }
 
 export class MainScene extends Phaser.Scene {
@@ -72,9 +77,13 @@ export class MainScene extends Phaser.Scene {
   private boxes: BoxData[] = []
   private boxProgressMs = 0
   private boxOpenCount = 0
+  private pendingBoxCount = 0
 
   private magnets: MagnetData[] = []
   private magnetSpawnMs = 0
+
+  // Живые какашки на сцене — трекаем чтобы переносить в oldContainer при переходе локации
+  private poops: Phaser.GameObjects.Image[] = []
 
   private prevLocation = 1
   private isLocationTransitioning = false
@@ -82,6 +91,9 @@ export class MainScene extends Phaser.Scene {
   // Аккумулятор для фонового дохода с лягушек неактивных локаций
   // (на текущей локации монеты приходят через настоящие какашки visible-лягушек)
   private bgIncomeAccum = 0
+
+  // Phase 12: overlay manager для carrier-лягушек.
+  private overlayManager: FrogOverlayManager | null = null
 
   // Camera всегда на зум 1.0 — без камерных трюков, чтобы canvas не «дёргался»
   // и не было чёрной рамки. Эффект «другого масштаба» полностью отрабатывают
@@ -107,9 +119,10 @@ export class MainScene extends Phaser.Scene {
     })
 
     this.load.svg('poop', '/poop.svg', { width: 18 * TEXTURE_QUALITY, height: 18 * TEXTURE_QUALITY })
-    this.load.image('map', '/map.webp')
+    this.load.image('map', '/map.png')
     this.load.image('map2', '/map2.webp')
     this.load.image('map3', '/map3.webp')
+    this.load.image('map4', '/map4.webp')
     this.load.image('box', '/box.webp')
   }
 
@@ -137,6 +150,8 @@ export class MainScene extends Phaser.Scene {
     eventBus.on('frog:purchased', this.onFrogPurchased)
     // Подписка на смену локации — очищаем поле и спавним лягушек новой локации
     eventBus.on('location:changed', this.onLocationChanged)
+    // DEV: удалить всех лягушат с текущего поля
+    eventBus.on('dev:clearAllFrogs', this.onDevClearAllFrogs)
 
     eventBus.on('rareCrate:claim', ({ level }) => {
       const store = useGameStore.getState()
@@ -173,6 +188,16 @@ export class MainScene extends Phaser.Scene {
     })
 
     this.spawnLocationFrogs()
+
+    // Phase 12: overlay manager — создаётся ПОСЛЕ spawnLocationFrogs так что
+    // первый sync видит уже живых лягушек, и для их frogId-match с CarrierData.
+    this.overlayManager = new FrogOverlayManager(this, () => this.frogs)
+
+    // Phase 12 dev: expose scene для smoke-helpers (window.__listFrogIds()).
+    if (import.meta.env.DEV) {
+      const w = window as unknown as { __mainScene?: MainScene }
+      w.__mainScene = this
+    }
   }
 
   // Случайная позиция в пределах игрового поля (с лёгким отступом от края)
@@ -198,6 +223,11 @@ export class MainScene extends Phaser.Scene {
 
   // Полная очистка поля при смене локации
   private clearField() {
+    // Phase 12: dispose overlay manager до уничтожения frog containers,
+    // иначе pool будет держать висячие references на destroyed overlays.
+    this.overlayManager?.dispose()
+    this.overlayManager = null
+
     // Лягушки
     for (const frog of [...this.frogs]) {
       frog.poopTimer?.remove()
@@ -222,6 +252,13 @@ export class MainScene extends Phaser.Scene {
     }
     this.magnets = []
 
+    // Какашки (если остались)
+    for (const p of [...this.poops]) {
+      this.tweens.killTweensOf(p)
+      p.destroy()
+    }
+    this.poops = []
+
     this.boxProgressMs = 0
     this.boxOpenCount = 0
     useGameStore.getState().setRareBoxProgress(0)
@@ -241,6 +278,16 @@ export class MainScene extends Phaser.Scene {
   // Going DOWN (Космос → ... → Болото):
   //   Старая (1.0 → 6.0 + alpha → 0) разлетается за пределы экрана.
   //   Новая (0.18 → 1.0) была маленькой картой в центре, разрастается на весь экран.
+  // DEV: удаление всех лягушек с активного поля. Стор уже занулил locationFrogs;
+  // здесь убираем оставшиеся спрайты (на других локациях лягушки и так не созданы).
+  private onDevClearAllFrogs = () => {
+    for (const frog of [...this.frogs]) {
+      this.tweens.killTweensOf(frog.container)
+      this.tweens.killTweensOf(frog.body)
+      this.removeFrog(frog)
+    }
+  }
+
   private onLocationChanged = ({ id }: { id: number }) => {
     const oldLoc = this.prevLocation
     const newLoc = id
@@ -253,6 +300,8 @@ export class MainScene extends Phaser.Scene {
       this.cameras.main.setZoom(1)
       this.clearField()
       this.spawnLocationFrogs()
+      // Phase 12: re-create manager после snap-cleanup и спавна новых frogs.
+      this.overlayManager = new FrogOverlayManager(this, () => this.frogs)
       this.isLocationTransitioning = false
       this.input.enabled = true
     }
@@ -266,19 +315,29 @@ export class MainScene extends Phaser.Scene {
     const cx = width / 2
     const cy = height / 2
 
-    // 1. Эфемерные сущности (коробки, магниты) убиваем сразу — не нужны в анимации
-    for (const b of [...this.boxes]) {
-      this.tweens.killTweensOf(b.img)
-      b.img.destroy()
-    }
-    this.boxes = []
+    // 1. Магниты эфемерны — убиваем сразу
     for (const m of [...this.magnets]) {
       this.tweens.killTweensOf(m.emoji)
       m.emoji.destroy()
     }
     this.magnets = []
 
-    // 2. Заворачиваем старых лягушек + фон в oldContainer (за центром экрана)
+    // Если уходим с болота — фиксируем в pending, чтобы при возврате восстановились.
+    // Сами img коробок улетают вместе с oldContainer (см. ниже), так что юзер видит
+    // их анимирующимися с локацией, а не пропадающими внезапно.
+    if (oldLoc === 1 && this.boxes.length > 0) {
+      this.pendingBoxCount = Math.min(this.pendingBoxCount + this.boxes.length, MAX_PENDING_BOXES)
+    }
+
+    // Phase 12: dispose overlay manager ДО reparent старых лягушек.
+    // oldContainer.destroy(true) в onComplete уничтожит всех потомков, включая
+    // overlay.container если он сидит внутри frog.container. Чтобы pool не
+    // держал висячих ссылок, drainAll сразу здесь, а после спавна новых лягушек
+    // создаём manager заново.
+    this.overlayManager?.dispose()
+    this.overlayManager = null
+
+    // 2. Заворачиваем старых лягушек + коробки + фон в oldContainer (за центром экрана)
     const oldContainer = this.add.container(cx, cy)
     // Фон — кладём первым (нижний по списку → нижний по depth внутри контейнера)
     const oldBg = this.bg
@@ -299,6 +358,32 @@ export class MainScene extends Phaser.Scene {
     }
     // Убираем из живого списка — старые лягушки больше не часть сцены
     this.frogs = []
+
+    // Коробки — туда же, чтобы плыли вместе с локацией.
+    // oldContainer.destroy(true) в onComplete уничтожит их img автоматически.
+    const oldBoxes = [...this.boxes]
+    for (const b of oldBoxes) {
+      this.tweens.killTweensOf(b.img)
+      const wx = b.img.x
+      const wy = b.img.y
+      oldContainer.add(b.img)
+      b.img.x = wx - cx
+      b.img.y = wy - cy
+    }
+    this.boxes = []
+
+    // Живые какашки — туда же. Их fade-tweens убиваются, onComplete не сработает,
+    // поэтому очищаем массив здесь; img уничтожатся через oldContainer.destroy(true).
+    const oldPoops = [...this.poops]
+    for (const p of oldPoops) {
+      this.tweens.killTweensOf(p)
+      const wx = p.x
+      const wy = p.y
+      oldContainer.add(p)
+      p.x = wx - cx
+      p.y = wy - cy
+    }
+    this.poops = []
 
     // 3. Спавним новых лягушек внутрь newContainer + добавляем СВОЙ фон
     const newContainer = this.add.container(cx, cy)
@@ -328,6 +413,22 @@ export class MainScene extends Phaser.Scene {
         frog.container.x = wx - cx
         frog.container.y = wy - cy
       })
+    }
+
+    // Если возвращаемся на болото с накопленными pending-коробками — спавним
+    // ДО анимации и переносим в newContainer, чтобы они плыли вместе с лягушками
+    // (а не появлялись внезапно после завершения transition).
+    if (newLoc === 1 && this.pendingBoxCount > 0) {
+      while (this.pendingBoxCount > 0 && this.canSpawnBox()) {
+        this.pendingBoxCount--
+        this.spawnBox(false, true)
+        const box = this.boxes[this.boxes.length - 1]
+        const wx = box.img.x
+        const wy = box.img.y
+        newContainer.add(box.img)
+        box.img.x = wx - cx
+        box.img.y = wy - cy
+      }
     }
 
     // 4. Слой-порядок: при подъёме старая остаётся ВПЕРЕДИ (мы видим как она
@@ -408,6 +509,10 @@ export class MainScene extends Phaser.Scene {
           this.startIdleAnim(f)
         }
 
+        // Phase 12: пересоздаём overlay manager ПОСЛЕ возврата лягушек в scene root
+        // (manager attach'ает overlay.container внутрь frog.container).
+        this.overlayManager = new FrogOverlayManager(this, () => this.frogs)
+
         this.input.enabled = true
         this.isLocationTransitioning = false
         this.boxProgressMs = 0
@@ -415,6 +520,11 @@ export class MainScene extends Phaser.Scene {
         useGameStore.getState().setRareBoxProgress(0)
         this.magnetSpawnMs = 0
         this.syncEntityCount()
+
+        // Pending-коробки уже спавнились ДО анимации внутри newContainer
+        // и сейчас вернулись в мир вместе с остальными детьми контейнера.
+        // Остаток pending выльется в update() по мере освобождения слотов.
+
         eventBus.emit('location:transitionEnd', { id: newLoc })
       },
     })
@@ -441,9 +551,13 @@ export class MainScene extends Phaser.Scene {
       isAttracted: false,
       level,
       poopTimer: null,
+      // Phase 12: stable id для match с CarrierData.frogId.
+      id: `frog-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
     }
     this.frogs.push(frog)
     this.syncEntityCount()
+    // Phase 12: новая лягушка может быть carrier — сообщаем manager пере-проверить.
+    this.overlayManager?.markDirty()
 
     // Лягушка какает по своему таймеру 1.7с — независимо от прыжка/драга
     // startAt со случайным смещением — чтобы лягушки какали вразнобой, а не синхронно
@@ -481,6 +595,8 @@ export class MainScene extends Phaser.Scene {
       frog.isMoving = true
       frog.isDragging = true
       frog.container.setDepth(99999)
+
+      eventBus.emit('frog:pickup', { level: frog.level })
 
       // Pickup: быстро 0.8 → вернуть на 1.0
       this.tweens.add({
@@ -529,6 +645,7 @@ export class MainScene extends Phaser.Scene {
       if (frog.level < MAX_LEVEL) {
         const target = this.findMergeTarget(pointer.x, pointer.y, frog.level, frog)
         if (target) {
+          eventBus.emit('frog:drop', { level: frog.level, merged: true })
           this.performMerge(frog, target, pointer.x, pointer.y)
           return
         }
@@ -538,6 +655,8 @@ export class MainScene extends Phaser.Scene {
         this.onFrogTapped(frog, pointer.x, pointer.y)
         return
       }
+
+      eventBus.emit('frog:drop', { level: frog.level, merged: false })
 
       // Если отпустил за полем — плавно тянем обратно к ближайшей валидной точке
       const margin = 20 * DPR
@@ -774,6 +893,7 @@ export class MainScene extends Phaser.Scene {
     img.setAlpha(0)
     img.setScale(0.4 * finalScale)
     img.setTint(tintByType[type])
+    this.poops.push(img)
 
     // Phase 1: какашка появляется сзади и приземляется на (landX, landY)
     const landX = behindX + (facingRight ? -horizDist : horizDist)
@@ -802,7 +922,10 @@ export class MainScene extends Phaser.Scene {
           alpha: 0,
           duration: 1100,
           ease: 'Sine.easeIn',
-          onComplete: () => img.destroy(),
+          onComplete: () => {
+            this.poops = this.poops.filter((p) => p !== img)
+            img.destroy()
+          },
         })
       },
     })
@@ -1054,13 +1177,14 @@ export class MainScene extends Phaser.Scene {
     return this.frogs.length + this.boxes.length < MAX_ENTITIES
   }
 
-  private spawnBox(isRare = false) {
+  private spawnBox(isRare = false, preLanded = false) {
     const { width, height } = this.scale
     const x = Phaser.Math.Between(FIELD_PAD_X + 40 * DPR, width - FIELD_PAD_X - 40 * DPR)
     const targetY = Phaser.Math.Between(FIELD_PAD_Y + 40 * DPR, height - FIELD_PAD_Y_BOTTOM - 40 * DPR)
 
-    // Стартуем выше канваса — коробка просто влетает в кадр без fade
-    const startY = -BOX_DISPLAY_SIZE
+    // Стартуем выше канваса — коробка просто влетает в кадр без fade.
+    // Если preLanded — стартуем сразу на целевой Y, без анимации падения.
+    const startY = preLanded ? targetY : -BOX_DISPLAY_SIZE
     const img = this.add.image(x, startY, 'box')
     img.setDisplaySize(BOX_DISPLAY_SIZE, BOX_DISPLAY_SIZE)
     img.setDepth(targetY) // сразу высокий depth чтобы не перекрывалось лягушками
@@ -1070,7 +1194,7 @@ export class MainScene extends Phaser.Scene {
     }
     const baseScale = img.scaleX
 
-    const box: BoxData = { img, isLanding: true, baseScale, baseY: targetY, idleTween: null, isRare }
+    const box: BoxData = { img, isLanding: !preLanded, baseScale, baseY: targetY, idleTween: null, isRare }
     this.boxes.push(box)
     this.syncEntityCount()
 
@@ -1090,6 +1214,11 @@ export class MainScene extends Phaser.Scene {
       }
       for (const t of targets) this.onBoxTapped(t)
     })
+
+    if (preLanded) {
+      this.startBoxIdleAnim(box)
+      return
+    }
 
     this.tweens.add({
       targets: img,
@@ -1525,26 +1654,42 @@ export class MainScene extends Phaser.Scene {
     const intervalMs = getDropIntervalMs(store.upgrades.dropSpeed)
     const isBoloto = currentLocId === 1
 
-    // Боксы падают ТОЛЬКО на Болоте (loc 1). На других локациях прогресс заморожен.
+    // На болоте, если в pending остались накопленные коробки — выливаем по мере
+    // освобождения слотов (после переноса с другой локации или мерджа лягушек).
     if (isBoloto) {
-      this.boxProgressMs = Math.min(this.boxProgressMs + delta, intervalMs)
-      if (this.boxProgressMs >= intervalMs && this.canSpawnBox()) {
-        this.spawnBox()
-        this.boxProgressMs = 0
+      while (this.pendingBoxCount > 0 && this.canSpawnBox()) {
+        this.pendingBoxCount--
+        this.spawnBox(false, true)
       }
-      const progress = Math.min(1, this.boxProgressMs / intervalMs)
-      const waiting = this.boxProgressMs >= intervalMs && !this.canSpawnBox()
-      if (Math.abs(store.boxProgress - progress) > 0.005) {
-        store.setBoxProgress(progress)
+    }
+
+    // Заполнен ли «выходной канал»: на болоте — лимит entity, иначе — cap pending
+    const outputBlocked = isBoloto ? !this.canSpawnBox() : this.pendingBoxCount >= MAX_PENDING_BOXES
+
+    // Таймер боксов тикает всегда, спавн только на локации 1
+    this.boxProgressMs = Math.min(this.boxProgressMs + delta, intervalMs)
+    if (this.boxProgressMs >= intervalMs) {
+      let produced = false
+      if (isBoloto) {
+        if (this.canSpawnBox()) {
+          this.spawnBox()
+          produced = true
+        }
+      } else if (this.pendingBoxCount < MAX_PENDING_BOXES) {
+        this.pendingBoxCount++
+        produced = true
       }
-      if (store.boxWaiting !== waiting) {
-        store.setBoxWaiting(waiting)
-      }
-    } else {
-      // На не-Болотных локациях прогресс держим на 0 и снимаем waiting
-      if (this.boxProgressMs !== 0) this.boxProgressMs = 0
-      if (store.boxProgress !== 0) store.setBoxProgress(0)
-      if (store.boxWaiting) store.setBoxWaiting(false)
+      // Сбрасываем только если реально что-то произвели; иначе залипаем на 100%
+      if (produced) this.boxProgressMs = 0
+      else this.boxProgressMs = intervalMs
+    }
+    const progress = Math.min(1, this.boxProgressMs / intervalMs)
+    const waiting = this.boxProgressMs >= intervalMs && outputBlocked
+    if (Math.abs(store.boxProgress - progress) > 0.005) {
+      store.setBoxProgress(progress)
+    }
+    if (store.boxWaiting !== waiting) {
+      store.setBoxWaiting(waiting)
     }
 
     // Магнит работает только на локации, где это разрешено (сейчас — только Болото L1)
@@ -1577,12 +1722,19 @@ export class MainScene extends Phaser.Scene {
       box.img.setDepth(box.baseY)
     }
 
+    // Phase 12: тикаем overlay manager (sync carriers + viewport culling).
+    this.overlayManager?.tick()
+
     // Какашки auto-collect через onComplete твинов — никакой ручной очистки не нужно
   }
 
   destroy() {
     eventBus.off('frog:purchased', this.onFrogPurchased)
     eventBus.off('location:changed', this.onLocationChanged)
+    eventBus.off('dev:clearAllFrogs', this.onDevClearAllFrogs)
     eventBus.off('rareCrate:claim')
+    // Phase 12: освобождаем все overlay'ы и dropAll pool.
+    this.overlayManager?.dispose()
+    this.overlayManager = null
   }
 }
