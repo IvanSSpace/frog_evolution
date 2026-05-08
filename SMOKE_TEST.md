@@ -68,14 +68,16 @@ Smoke: enable toggle → лягушки на ферме теряют ауру/id
 **Status:** TODO — toggle persists в localStorage, но FrogOverlayManager
 does not yet read it. Patch для post-release или Phase 20.
 
-### reducedEffects → awakened presets dispatcher (UX-05)
+### reducedEffects → awakened presets dispatcher / StabilizationModal (UX-05)
 
-`grep "reducedEffects\|getReducedEffects" client/src/game/effects/elements/*.ts`
-returns N lines. Smoke: enable toggle → carrier с epic+ rarity показывает
-только dormant tier.
+`grep "reducedEffects\|getReducedEffects" client/src/components/` returns ≥1
+line in `StabilizationModal.tsx` (phase 17 reveal слот skipped if reduced).
+Phase 19-04 unified the localStorage key через `getReducedEffects()` в
+cosmicSettings.
 
-**Status:** TODO — toggle persists в localStorage, но awakened presets
-dispatcher does not yet clamp tier. Patch для post-release или Phase 20.
+**Status:** PARTIALLY WIRED — StabilizationModal reads `getReducedEffects()`
+для skip slot anim. Awakened presets dispatcher (Phase 13) ещё не clamp'ит
+tier. Patch для post-release или Phase 20.
 
 ### openBoxesInstantly → SerumSlotMachine (UX-06)
 

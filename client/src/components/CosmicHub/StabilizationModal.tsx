@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next'
 import { eventBus } from '../../store/eventBus'
 import { TIER_RANGES, type Bucket } from '../../utils/carrierEvolution'
 import { ELEMENT_TINTS } from '../../game/effects/elements/elementTints'
+import { getReducedEffects } from '../../utils/cosmicSettings'
 import type { Element, Rarity } from '../../store/cosmic/types'
 
 interface StabilizationPayload {
@@ -41,13 +42,9 @@ const BUCKET_TO_COLOR: Record<Bucket, string> = {
   C: 'text-white/70',
 }
 
-function reducedEffectsEnabled(): boolean {
-  try {
-    return localStorage.getItem('frog_evolution_reduced_effects') === '1'
-  } catch {
-    return false
-  }
-}
+// Phase 19-04 (UX-05): use centralized getReducedEffects() from cosmicSettings.
+// Legacy local helper removed — single localStorage key now.
+const reducedEffectsEnabled = getReducedEffects
 
 export function StabilizationModal() {
   const { t } = useTranslation()

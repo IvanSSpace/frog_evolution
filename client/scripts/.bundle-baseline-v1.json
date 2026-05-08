@@ -1,0 +1,8 @@
+{
+  "indexJsGzip": 196000,
+  "version": "v1.0",
+  "savedAt": "2026-05-08",
+  "method": "estimated_from_phase_history",
+  "note": "v1.0 main bundle baseline. Phase 14 measured 211.59 KB gzip; subtracting Phase 9-14 cumulative deltas (~9.3 KB Phase 11-14 + ~6 KB Phase 9-10 phaser/tone refactor) gives ~196 KB. ROADMAP/MILESTONES.md cite ~196 KB as v1.0 reference. If actual v1.0 commit can be checked out — refresh с real measurement.",
+  "capDeltaBytes": 51200
+}
