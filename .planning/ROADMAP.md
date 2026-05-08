@@ -93,7 +93,7 @@ Plans:
 - [x] 08-02-PLAN.md — Strict animation signature с quantized params + 10 refine attempts (D-01..D-04) ✓ 2026-05-08
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 08-03-PLAN.md — Texture uniqueness fix (resolve 1 collision) + 10 refine attempts (SPEC #2)
+- [x] 08-03-PLAN.md — Texture uniqueness fix (resolve 1 collision) + 10 refine attempts (SPEC #2) ✓ 2026-05-08
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 08-04-PLAN.md — Per-planet sound modulation system + THEME_SCALES + eventBus seed (D-05..D-10, D-13)

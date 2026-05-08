@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 8
 status: executing
-last_updated: "2026-05-08T05:39:47Z"
+last_updated: "2026-05-08T05:49:50Z"
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 18
-  completed_plans: 5
-  percent: 28
+  completed_plans: 6
+  percent: 33
 ---
 
 # Project State
@@ -43,3 +43,4 @@ progress:
 - Phase 7 (2026-05-07): уникальность анимаций (100%, 450/450) и текстур (100%, 434/434 BG) для всех планет StarMap. 64 компонента анимаций (был 54), 9 архетипов получили sub-variants, 6 новых universal modifiers, refine-passes на загрузке.
 - Phase 8 plan 01 (2026-05-08): расширение animation pool с 88 до 96 компонентов (+8 новых: bouncingBall, digitalGlitch, ringPulsar, swarmParticles, prismRefract, lifeBloom, windRibbons, wreckageOrbit). Все 28 THEME_COMPONENTS pool'ов теперь ≥14 (минимум был 13).
 - Phase 8 plan 02 (2026-05-08): strict anim signature с quantized params (rotationBin×4, scaleBin×4, hueBin×8, delayBins×3 per non-first comp). Helper `quantize(value, thresholds)`. refineAnimSeeds attempts увеличены с 5 до 10. hueBin берётся из raw seed (не дёргает rng) для сохранения порядка recipe-replay. Console: `[StarMap] anim signatures (strict): N/1000 unique, K unresolved conflicts (max 10 attempts)`.
+- Phase 8 plan 03 (2026-05-08): texture uniqueness fix — buildTextureSignature расширен 3 новыми dimensions (c3 third count, asym flag, speckle flag), signature space ×20. refineTextureSeeds attempts с 5 до 10 (consistent с anim). Цель: резолюция collision `2x dead:v2:c1-2:m1100`, 984/984 unique. Финальная проверка в Plan 6 verifier.
