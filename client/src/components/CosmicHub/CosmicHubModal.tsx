@@ -13,6 +13,7 @@ import { BoxesTab } from './BoxesTab'
 import { SerumsTab } from './SerumsTab'
 import { BestiaryTab } from './BestiaryTab'
 import { CarriersTab } from './CarriersTab'
+import { PityCounterDisplay } from './PityCounterDisplay'
 
 const SESSION_KEY = 'cosmic_last_tab'
 
@@ -172,6 +173,9 @@ export default function CosmicHubModal({ onClose }: Props) {
       <div className="flex-1 overflow-y-auto">
         {renderTab()}
       </div>
+
+      {/* Phase 19-03 (UX-01): progressive pity counter footer */}
+      <PityCounterDisplay />
     </div>
   )
 }
