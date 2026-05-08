@@ -32,6 +32,10 @@ export function readBit(bitset: ReadonlyArray<number>, idx: number): boolean {
 /**
  * Returns NEW bitset с установленным бит. Никогда не мутирует input.
  * Auto-pads до BESTIARY_BYTE_COUNT (handles legacy Phase 11 placeholder Array(24)).
+ *
+ * Phase 18 NOTE: всегда returns number[] (для Phase 17 backward compat).
+ * Чтобы проверить «no change» — caller сам сравнивает byte values
+ * (через countUnlocked или direct readBit).
  */
 export function setBit(bitset: ReadonlyArray<number>, idx: number): number[] {
   if (idx < 0 || idx >= BESTIARY_BIT_COUNT) return bitset.slice()
@@ -41,4 +45,72 @@ export function setBit(bitset: ReadonlyArray<number>, idx: number): number[] {
   while (next.length < BESTIARY_BYTE_COUNT) next.push(0)
   next[byteIdx] = (next[byteIdx] ?? 0) | (1 << bitOffset)
   return next
+}
+
+/**
+ * Phase 18 helper: returns true if bit at idx is already set.
+ * Cheaper чем setBit когда нужно только проверить.
+ */
+export function isBitSet(bitset: ReadonlyArray<number>, idx: number): boolean {
+  return readBit(bitset, idx)
+}
+
+/**
+ * Phase 18: подсчёт unlocked cells в bitset.
+ * Использует popcount (Brian Kernighan) на каждом byte.
+ * O(BESTIARY_BYTE_COUNT) = O(192) worst case.
+ */
+export function countUnlocked(bitset: ReadonlyArray<number>): number {
+  let count = 0
+  const limit = Math.min(bitset.length, BESTIARY_BYTE_COUNT)
+  for (let i = 0; i < limit; i++) {
+    let b = bitset[i] ?? 0
+    while (b) {
+      b &= b - 1
+      count++
+    }
+  }
+  return count
+}
+
+/**
+ * Phase 18: подсчёт unlocked cells для одной rarity (= одной локации).
+ * 4 локации = 4 rarity tiers (BESTIARY-01 + REQUIREMENTS:109-111):
+ *   common = Болото, rare = Лес, epic = Континент, legendary = Планета.
+ * Каждая локация = 16 elements × 24 levels = 384 cells.
+ */
+export function unlockedInLocation(bitset: ReadonlyArray<number>, rarity: Rarity): number {
+  let count = 0
+  const r = RARITIES.indexOf(rarity)
+  if (r < 0) return 0
+  for (let level = 1; level <= 24; level++) {
+    for (let e = 0; e < ELEMENTS.length; e++) {
+      const idx = (level - 1) * 64 + e * 4 + r
+      if (readBit(bitset, idx)) count++
+    }
+  }
+  return count
+}
+
+/**
+ * Phase 18 sub-completion milestones (REQ BESTIARY-07).
+ * Triggered в cosmicSlice.setBestiaryBit когда cross threshold.
+ */
+export const BESTIARY_MILESTONES = [
+  { threshold: 10, reward: { type: 'coins', amount: 1000 } },
+  { threshold: 24, reward: { type: 'serum', rarity: 'epic' } },
+  { threshold: 96, reward: { type: 'serum', rarity: 'legendary' } },
+  { threshold: 576, reward: { type: 'frog-exclusive' } },
+] as const
+
+export type BestiaryMilestone = typeof BESTIARY_MILESTONES[number]
+export type BestiaryReward = BestiaryMilestone['reward']
+
+/**
+ * Возвращает milestones которые пересечены в transition prev → next, ascending.
+ * Empty array если no crossing.
+ */
+export function milestonesCrossed(prev: number, next: number): readonly BestiaryMilestone[] {
+  if (next <= prev) return []
+  return BESTIARY_MILESTONES.filter((m) => prev < m.threshold && next >= m.threshold)
 }

@@ -138,6 +138,10 @@ export interface CosmicSlice {
   // gates Бестиарий visualization; toggle при первом opened box (Phase 17/18).
   hasOpenedAnyBox: boolean
 
+  // Phase 18 (REQ BESTIARY-07): 576-cells milestone unlock flag.
+  // Persisted в localStorage; placeholder для exclusive frog visual (final visual TBD).
+  frogExclusiveUnlocked: boolean
+
   // Phase 16: transient cached ship world position для redirect calc.
   // НЕ persisted в localStorage (init на null после load → re-derived из planetCoords).
   latestShipPos: { x: number; y: number } | null
@@ -182,6 +186,8 @@ export function makeInitialCosmicSlice(): CosmicSlice {
     hasFirstFeed: false,
     hasFirstMission: false,
     hasOpenedAnyBox: false,
+    // Phase 18 (REQ BESTIARY-07): 576-cells milestone unlock placeholder.
+    frogExclusiveUnlocked: false,
     // Phase 16: transient ship position cache (used for redirect calc)
     latestShipPos: null,
   }

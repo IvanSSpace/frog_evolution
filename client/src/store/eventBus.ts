@@ -47,6 +47,14 @@ type Events = {
     ceiling: number
     bucket: Bucket
   }
+  // Phase 18 — bestiary milestone (REQ BESTIARY-07)
+  'cosmic:bestiary-milestone': {
+    threshold: 10 | 24 | 96 | 576
+    reward:
+      | { readonly type: 'coins'; readonly amount: number }
+      | { readonly type: 'serum'; readonly rarity: 'epic' | 'legendary' }
+      | { readonly type: 'frog-exclusive' }
+  }
 }
 
 export const eventBus = mitt<Events>()

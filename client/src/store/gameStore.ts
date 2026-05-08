@@ -368,6 +368,8 @@ function loadCosmicSlice(): CosmicPersist {
       hasFirstFeed: typeof parsed.hasFirstFeed === 'boolean' ? parsed.hasFirstFeed : defaults.hasFirstFeed,
       hasFirstMission: typeof parsed.hasFirstMission === 'boolean' ? parsed.hasFirstMission : defaults.hasFirstMission,
       hasOpenedAnyBox: typeof parsed.hasOpenedAnyBox === 'boolean' ? parsed.hasOpenedAnyBox : defaults.hasOpenedAnyBox,
+      // Phase 18 (REQ BESTIARY-07): 576-cells visual unlock placeholder.
+      frogExclusiveUnlocked: typeof parsed.frogExclusiveUnlocked === 'boolean' ? parsed.frogExclusiveUnlocked : defaults.frogExclusiveUnlocked,
       // Phase 16: latestShipPos НЕ persisted — всегда null на load.
       latestShipPos: null,
     }
@@ -623,7 +625,8 @@ useGameStore.subscribe((state, prev) => {
     state.crew !== prev.crew ||
     state.hasFirstFeed !== prev.hasFirstFeed ||
     state.hasFirstMission !== prev.hasFirstMission ||
-    state.hasOpenedAnyBox !== prev.hasOpenedAnyBox
+    state.hasOpenedAnyBox !== prev.hasOpenedAnyBox ||
+    state.frogExclusiveUnlocked !== prev.frogExclusiveUnlocked
   ) {
     saveCosmicSlice({
       serums: state.serums,
@@ -643,6 +646,8 @@ useGameStore.subscribe((state, prev) => {
       hasFirstFeed: state.hasFirstFeed,
       hasFirstMission: state.hasFirstMission,
       hasOpenedAnyBox: state.hasOpenedAnyBox,
+      // Phase 18 (REQ BESTIARY-07): 576-cells unlock flag.
+      frogExclusiveUnlocked: state.frogExclusiveUnlocked,
       // Phase 16: latestShipPos НЕ persisted (transient) — saved as null shape
       latestShipPos: null,
     })

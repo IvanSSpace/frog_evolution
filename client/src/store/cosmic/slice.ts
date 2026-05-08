@@ -4,6 +4,7 @@
 import {
   type CosmicSlice, type CosmicTab, type Element, type Rarity,
   type BoxData, type ScoutData, type CarrierData, type RollResult,
+  ELEMENTS,
   makeInitialCosmicSlice,
 } from './types'
 import { eventBus } from '../eventBus'
@@ -19,7 +20,10 @@ import {
   rollCeilingForCarrier, rollFeedOutcome, ceilingForBucket,
   bucketOfCeiling, type FeedOutcome, type Bucket,
 } from '../../utils/carrierEvolution'
-import { bestiaryIndex, setBit } from './bestiary'
+import {
+  bestiaryIndex, setBit, isBitSet,
+  countUnlocked, milestonesCrossed,
+} from './bestiary'
 import { MAX_LEVEL } from '../../game/config/frogs'
 
 // Actions — то, что наполняется в Phase 14-19. Здесь — placeholder stubs.
@@ -98,11 +102,15 @@ export interface CosmicSliceActions {
   disposeCarrier: (carrierFrogId: string) => { recovered: boolean }
 
   /**
-   * Phase 17 (CARRIER-12): set bestiary bit для (element, rarity, level).
-   * Internal helper, exposed для dev/testing. Обычно вызывается через feedCarrier
-   * /mergeCarriers automatically.
+   * Phase 17 (CARRIER-12) + Phase 18 (BESTIARY-07): set bestiary bit для (element, rarity, level).
+   * Idempotent: re-set unlocked bit → no state change → no event.
+   * Phase 18: проверяет milestonesCrossed (10/24/96/576) и эмитит
+   * 'cosmic:bestiary-milestone' event + grants reward (coins/serum/flag).
    */
   setBestiaryBit: (element: Element, rarity: Rarity, level: number) => void
+
+  /** Phase 18 (REQ BESTIARY-07): toggle 576-cells milestone visual flag. */
+  setFrogExclusiveUnlocked: (v: boolean) => void
 
   // Tab persistence (COSMIC-HUB-07) — UI хранит в sessionStorage; здесь mirror в store.
   setLastActiveTab: (tab: CosmicTab) => void
@@ -432,15 +440,70 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
       return { recovered }
     },
 
-    // Phase 17 (CARRIER-12): set bestiary bit (idempotent).
+    // Phase 17 (CARRIER-12) + Phase 18 (BESTIARY-07): set bestiary bit + milestone trigger.
+    // Idempotent: re-setting an already unlocked bit → no state change → no event.
+    // Atomic: один set() per call; eventBus.emit вне set() в том же tick.
     setBestiaryBit: (element, rarity, level) => {
       const s = get()
       const idx = bestiaryIndex(element, rarity, level)
       if (idx < 0) return
-      const next = setBit(s.bestiaryBitset, idx)
-      if (next === s.bestiaryBitset) return  // no change
-      set({ bestiaryBitset: next })
+      // Bail early если bit уже установлен.
+      if (isBitSet(s.bestiaryBitset, idx)) return
+
+      const nextBitset = setBit(s.bestiaryBitset, idx)
+      const prevCount = countUnlocked(s.bestiaryBitset)
+      const nextCount = countUnlocked(nextBitset)
+      const crossed = milestonesCrossed(prevCount, nextCount)
+
+      // Apply rewards inline — все в одну атомарную транзакцию.
+      let nextSerums = s.serums
+      let coinsToAdd = 0
+      let nextFrogExclusive = s.frogExclusiveUnlocked
+
+      for (const m of crossed) {
+        const reward = m.reward
+        if (reward.type === 'coins') {
+          coinsToAdd += reward.amount
+        } else if (reward.type === 'serum') {
+          // Random element для milestone-granted serum (REQ BESTIARY-07).
+          const randElem = ELEMENTS[Math.floor(Math.random() * ELEMENTS.length)] as Element
+          const cur = nextSerums[randElem][reward.rarity]
+          nextSerums = {
+            ...nextSerums,
+            [randElem]: { ...nextSerums[randElem], [reward.rarity]: cur + 1 },
+          }
+        } else if (reward.type === 'frog-exclusive') {
+          nextFrogExclusive = true
+        }
+      }
+
+      set({
+        bestiaryBitset: nextBitset,
+        serums: nextSerums,
+        frogExclusiveUnlocked: nextFrogExclusive,
+      })
+
+      // Coins grant via root slice (gameStore composit).
+      if (coinsToAdd > 0) {
+        const root = get() as unknown as { addGold?: (n: number) => void; addCoins?: (n: number) => void }
+        // gameStore использует addGold (Phase 1.0) — fallback на addCoins для совместимости.
+        if (typeof root.addGold === 'function') {
+          root.addGold(coinsToAdd)
+        } else if (typeof root.addCoins === 'function') {
+          root.addCoins(coinsToAdd)
+        }
+      }
+
+      // Emit milestone events (UI показывает toast).
+      for (const m of crossed) {
+        eventBus.emit('cosmic:bestiary-milestone', {
+          threshold: m.threshold as 10 | 24 | 96 | 576,
+          reward: m.reward,
+        })
+      }
     },
+
+    setFrogExclusiveUnlocked: (v) => set({ frogExclusiveUnlocked: v }),
 
     setLastActiveTab: (tab) => {
       set({ lastActiveTab: tab })
