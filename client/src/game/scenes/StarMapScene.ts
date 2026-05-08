@@ -13,14 +13,22 @@ const DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 3))
 const WORLD_SIZE = 7000 * DPR
 // Сколько всего обитаемых планет (16 главных + 51 фоновая обитаемая)
 const TOTAL_INHABITED = 67
-// Минимальный zoom, при котором спутники планет ещё видны.
-// На сильном отдалении (< 0.18) они превращаются в шум и грузят CPU.
-const MOON_MIN_ZOOM = 0.18
-// Минимальный zoom, при котором фоновые планеты (BgSystem) показываются.
-// При zoom < этого порога контейнеры BG-планет полностью скрыты, остаются
-// только sparkle-звёзды над их позициями. Это убирает FPS-spike в момент
-// возврата zoom (когда сразу 434 контейнера становились visible).
-const BG_PLANET_MIN_ZOOM = 0.18
+// Спутники появляются плавным fade-in между MOON_FADE_START и MOON_FADE_END.
+// Ниже START — alpha 0, выше END — alpha 1, между — линейный переход.
+// Цель: спутники видны только при близком zoom (>0.85), не грузят сцену при отдалении.
+const MOON_FADE_START = 0.70
+const MOON_FADE_END = 0.85
+// Минимальный zoom, при котором BG-контейнеры (с детальным рендером + interactivity)
+// показываются. Ниже — batch-точки (звёздное небо, 1 draw call). Не кликабельны.
+const BG_PLANET_MIN_ZOOM = 0.08
+// Минимальный zoom, при котором рисуется ДЕТАЛИЗАЦИЯ BG-планет
+// (archetype-specific узоры + universal modifiers).
+// 0.10 — детали видны почти всегда. Ниже порога вступает batch-рендер (звёздное небо).
+const BG_DETAIL_MIN_ZOOM = 0.10
+// Минимальный zoom, при котором планеты (BG + main) кликабельны.
+// Ниже — interactive отключён (планеты выглядят как точки, клики бессмысленны).
+// Это снимает hit-test overhead с pointer events во время drag/pinch.
+const BG_INTERACTIVE_MIN_ZOOM = 0.41
 
 interface Race {
   id: string
@@ -171,11 +179,29 @@ export class StarMapScene extends Phaser.Scene {
   // ID выбранной для popover расы (Phaser-popover в той же scene, в world-coords)
   private selectedMainRaceId: string | null = null
   private popover?: Phaser.GameObjects.Container
+  // Простая модалка с именем BG-планеты — появляется через 400ms после клика.
+  private bgNamePopup?: Phaser.GameObjects.Container
+  private bgNamePopupTimer?: Phaser.Time.TimerEvent
   private nebula?: NebulaBackgroundHandle
   // Звёзды-ромбы, которые компенсируют zoom (видны и при максимальном отдалении)
   private zoomCompStars: Array<{ obj: Phaser.GameObjects.Graphics; baseScale: number }> = []
   // Спутники планет — рендерятся только при zoom >= MOON_MIN_ZOOM, иначе скрыты.
   private moons: Array<{ obj: Phaser.GameObjects.Arc; angle: number; radius: number; speed: number }> = []
+  // Детализация BG-планет (archetype-specific графика + universal modifiers).
+  // При zoom < BG_DETAIL_MIN_ZOOM скрывается → видны только базовые шары.
+  // Это даёт ~80% сокращение draw calls на zoom-out → +20-30 FPS.
+  private bgArchetypeGfx: Phaser.GameObjects.Graphics[] = []
+  // Batch-рендер всех 434 BG как точек в одном Graphics — для экстремального zoom (<0.10).
+  // Заменяет 434 индивидуальных контейнера → 1 draw call. Не кликабелен (звёздное небо).
+  private bgBatchGfx: Phaser.GameObjects.Graphics | null = null
+  // Контейнеры BG-планет для быстрого toggle interactive по zoom.
+  // При zoom < BG_INTERACTIVE_MIN_ZOOM — input.enabled = false для всех (нет hit-test overhead).
+  private bgInteractiveContainers: Phaser.GameObjects.Container[] = []
+  private bgInteractiveEnabled = true
+  // Линии связи между главными расами + кэш edges для перерисовки при изменении zoom.
+  private mainLinesGfx: Phaser.GameObjects.Graphics | null = null
+  private mainLinesEdges: Array<{ ax: number; ay: number; bx: number; by: number }> = []
+  private mainLinesLastZoom = -1
   // Состояние счётчика тапов на каждую планету. Уникальная анимация срабатывает
   // на первом нажатии после смены/перерыва, потом раз в 2-6 нажатий.
   private planetPressState = new Map<string, { count: number; threshold: number }>()
@@ -251,6 +277,10 @@ export class StarMapScene extends Phaser.Scene {
 
     for (const sys of this.allSystems) this.renderSystem(sys)
 
+    // Batch-рендер всех BG-планет как точек (один Graphics, 1 draw call).
+    // Виден при zoom < BG_PLANET_MIN_ZOOM, заменяет 434 индивидуальных контейнера.
+    this.buildBgBatch()
+
     // Камера: ставим zoom 1.0 и центрируем на HOME (родной планете).
     // Координаты HOME — из planetMap.json, поэтому камера автоматически
     // подстраивается если HOME перемещён в JSON.
@@ -263,6 +293,32 @@ export class StarMapScene extends Phaser.Scene {
 
     // Сброс выбранной планеты при закрытии popover извне
     eventBus.on('starmap:popover-close', () => { this.selectedMainRaceId = null })
+
+    // Центрирование камеры на HOME с плавным tween (повторный клик по кнопке "Космос")
+    eventBus.on('starmap:centerHome', () => {
+      const homeRace = MAIN_RACES.find(r => r.id === 'home') ?? MAIN_RACES[0]
+      const cam = this.cameras.main
+      // Плавный zoom-back до 1.0 + центрирование на HOME
+      this.tweens.add({
+        targets: { z: cam.zoom, x: this.camCenterX, y: this.camCenterY },
+        z: 1.0,
+        x: homeRace.x,
+        y: homeRace.y,
+        duration: 700,
+        ease: 'Cubic.easeInOut',
+        onUpdate: (tw) => {
+          const t: any = tw.targets[0]
+          cam.setZoom(t.z)
+          this.setCameraCenter(t.x, t.y)
+          // Hit-areas зависят от zoom — обновляем по ходу tween, иначе после
+          // завершения hit-area остаётся гигантской (от прежнего малого zoom).
+          this.scheduleBoundsUpdate()
+        },
+        onComplete: () => {
+          this.updatePlanetHitAreas() // финальное обновление под точный zoom 1.0
+        },
+      })
+    })
 
     // Живые анимации
     // this.setupBlackHole() // удалено по запросу — туманность вместо
@@ -401,13 +457,49 @@ export class StarMapScene extends Phaser.Scene {
         if (s.obj.visible) s.obj.setScale(s.baseScale * zoomComp)
       }
 
-      // Спутники планет: видны и анимируются только при zoom >= MOON_MIN_ZOOM.
-      // На сильном отдалении они превращаются в шум — скрываем и пропускаем sin/cos.
-      const moonsVisible = zoom >= MOON_MIN_ZOOM
+      // Линии связи между главными расами: re-draw с новой толщиной если zoom
+      // изменился заметно (>2%). Плавный рост видимости при отдалении.
+      if (this.mainLinesGfx && Math.abs(zoom - this.mainLinesLastZoom) / Math.max(zoom, 0.001) > 0.02) {
+        this.redrawMainLines()
+      }
+
+      // LOD деталей BG-планет: при zoom < BG_DETAIL_MIN_ZOOM скрываем archetype-detail
+      // Graphics. Видны только базовые шары → ~80% меньше draw calls на zoom-out.
+      const detailVisible = zoom >= BG_DETAIL_MIN_ZOOM
+      // Update только если состояние изменилось (раз в zoom-переход, не каждый кадр)
+      if (this.bgArchetypeGfx.length > 0 && this.bgArchetypeGfx[0].visible !== detailVisible) {
+        for (const gd of this.bgArchetypeGfx) gd.setVisible(detailVisible)
+      }
+
+      // Batch BG: видим при zoom < BG_PLANET_MIN_ZOOM (звёздное небо вместо containers).
+      // Когда видим — индивидуальные containers скрыты через manual culling LOD-cut.
+      const batchVisible = zoom < BG_PLANET_MIN_ZOOM
+      if (this.bgBatchGfx && this.bgBatchGfx.visible !== batchVisible) {
+        this.bgBatchGfx.setVisible(batchVisible)
+      }
+
+      // Interactive toggle для BG: при zoom < BG_INTERACTIVE_MIN_ZOOM отключаем
+      // input.enabled у всех BG containers — снимает hit-test overhead.
+      const wantInteractive = zoom >= BG_INTERACTIVE_MIN_ZOOM
+      if (this.bgInteractiveEnabled !== wantInteractive) {
+        this.bgInteractiveEnabled = wantInteractive
+        for (const c of this.bgInteractiveContainers) {
+          if (c.input) c.input.enabled = wantInteractive
+        }
+      }
+
+      // Спутники планет: плавный fade-in между MOON_FADE_START и MOON_FADE_END.
+      // alpha 0 при zoom < 0.45, alpha 1 при zoom > 0.55 — плавный crossfade.
+      const moonAlpha = Phaser.Math.Clamp(
+        (zoom - MOON_FADE_START) / (MOON_FADE_END - MOON_FADE_START),
+        0, 1,
+      )
+      const moonsActive = moonAlpha > 0.001
       const dtSec = dt / 1000
       for (const m of this.moons) {
-        if (m.obj.visible !== moonsVisible) m.obj.setVisible(moonsVisible)
-        if (!moonsVisible) continue
+        if (m.obj.visible !== moonsActive) m.obj.setVisible(moonsActive)
+        if (!moonsActive) continue
+        m.obj.setAlpha(moonAlpha * 0.85) // 0.85 — базовая alpha спутника как было
         m.angle += dtSec * m.speed
         m.obj.x = Math.cos(m.angle) * m.radius
         m.obj.y = Math.sin(m.angle) * m.radius * 0.6 // эллиптическая орбита
@@ -472,6 +564,7 @@ export class StarMapScene extends Phaser.Scene {
         delay: bgRng() * 2500,
         ease: 'Sine.easeInOut',
       })
+      // Mid stars видны всегда — это звёздное небо. На сильном отдалении полезно.
       this.cullableData.push({ obj: star, x, y, r: 4 * DPR })
     }
 
@@ -514,12 +607,12 @@ export class StarMapScene extends Phaser.Scene {
   // ============== СВЯЗИ И СИСТЕМЫ ==============
 
   private drawLines() {
-    // Соединяем каждую расу с её K ближайшими соседями (без длинных линий через всю карту).
-    // Формирует «торговую сеть» — каждая планета связана только с реально близкими.
-    const lines = this.add.graphics()
-    lines.lineStyle(2 * DPR, 0x67e8f9, 0.55)
+    // Соединяем каждую расу с её K ближайшими соседями ИЗ MAIN_RACES.
+    // Толщина линий компенсирует zoom через redrawMainLines() в update-loop —
+    // при отдалении линии остаются видимыми (плавно растут).
     const K = 3
     const drawn = new Set<string>()
+    this.mainLinesEdges = []
     for (const race of MAIN_RACES) {
       const others = MAIN_RACES
         .filter(r => r.id !== race.id)
@@ -530,9 +623,47 @@ export class StarMapScene extends Phaser.Scene {
         const key = race.id < r.id ? `${race.id}|${r.id}` : `${r.id}|${race.id}`
         if (drawn.has(key)) continue
         drawn.add(key)
-        lines.lineBetween(race.x, race.y, r.x, r.y)
+        this.mainLinesEdges.push({ ax: race.x, ay: race.y, bx: r.x, by: r.y })
       }
     }
+    this.mainLinesGfx = this.add.graphics()
+    this.mainLinesGfx.setDepth(-50)
+    this.redrawMainLines() // initial draw
+  }
+
+  // Пере-рисовывает линии связи с толщиной, компенсирующей текущий zoom.
+  // Вызывается из update-loop когда zoom изменился (с throttling).
+  // Цель: линии плавно растут при отдалении камеры, остаются видимыми.
+  private redrawMainLines() {
+    if (!this.mainLinesGfx) return
+    const zoom = this.cameras.main.zoom
+    // Smooth zoom compensation. При zoom=1 → толщина 2*DPR. При zoom=0.05 → ~24*DPR.
+    // sqrt сглаживает рост — иначе линии бы стали гигантскими при сильном отдалении.
+    const zoomComp = 1 / Math.max(0.05, Math.sqrt(zoom))
+    const thickness = 2 * DPR * Math.max(1, zoomComp)
+    const alpha = 0.55
+    this.mainLinesGfx.clear()
+    this.mainLinesGfx.lineStyle(thickness, 0x67e8f9, alpha)
+    for (const e of this.mainLinesEdges) {
+      this.mainLinesGfx.lineBetween(e.ax, e.ay, e.bx, e.by)
+    }
+    this.mainLinesLastZoom = zoom
+  }
+
+  // Batch-рендер всех 434 BG как точек в одном Graphics.
+  // Используется на zoom < BG_PLANET_MIN_ZOOM (звёздное небо). Не кликабелен.
+  // 1 draw call вместо 434 — огромная экономия на сильном отдалении.
+  private buildBgBatch() {
+    const gfx = this.add.graphics()
+    gfx.setDepth(-80)
+    gfx.setVisible(false) // visible toggle через update
+    for (const sys of this.allSystems) {
+      if (!('archetype' in sys)) continue // только BG, не main
+      // Точка цветом sys.color, радиус ~ половине size (silhouette)
+      gfx.fillStyle(sys.color, 0.85)
+      gfx.fillCircle(sys.x, sys.y, sys.size * 0.6)
+    }
+    this.bgBatchGfx = gfx
   }
 
   private renderSystem(sys: Race | BgSystem) {
@@ -651,10 +782,79 @@ export class StarMapScene extends Phaser.Scene {
     }
     st.count++
     if (st.count >= st.threshold) {
+      const durationMs = this.getAnimationDurationMs(sys)
+      eventBus.emit('starmap:planet-tapped', {
+        id: sys.id,
+        type: sys.type,
+        archetype: 'archetype' in sys ? (sys as BgSystem).archetype : undefined,
+        durationMs,
+      })
       this.playUniqueAnimation(sys)
       st.count = 0
       st.threshold = 2 + Math.floor(Math.random() * 5) // 2-6
     }
+  }
+
+  // Типичная длительность каждого из 96 компонентов анимации (ms).
+  // Значения — приблизительный max каждой компоненты, выведенный из const dur
+  // внутри comp* функций. Cap=1500ms (wrapper destroy в playUniqueAnimation).
+  // Phase 8: добавлены entries 88-95 для новых компонентов.
+  private static readonly COMP_DURATIONS_MS: Record<number, number> = {
+    0: 800, 1: 800, 2: 600, 3: 250, 4: 500, 5: 1500, 6: 900, 7: 800,
+    8: 850, 9: 1200, 10: 700, 11: 800, 12: 1300, 13: 1100, 14: 1000, 15: 600,
+    16: 800, 17: 1000, 18: 1100, 19: 900, 20: 1000, 21: 1100, 22: 550, 23: 750,
+    24: 1000, 25: 700, 26: 1000, 27: 900, 28: 1200, 29: 1000, 30: 550, 31: 900,
+    32: 850, 33: 1200, 34: 1300, 35: 550, 36: 600, 37: 800, 38: 350, 39: 800,
+    40: 1500, 41: 700, 42: 1200, 43: 800, 44: 750, 45: 1500, 46: 750, 47: 550,
+    48: 1000, 49: 1100, 50: 600, 51: 1000, 52: 700, 53: 400, 54: 1500, 55: 1300,
+    56: 1500, 57: 800, 58: 900, 59: 1100, 60: 700, 61: 900, 62: 550, 63: 600,
+    64: 900, 65: 1500, 66: 700, 67: 800, 68: 800, 69: 1000, 70: 1200, 71: 1000,
+    72: 900, 73: 800, 74: 1100, 75: 550, 76: 700, 77: 800, 78: 1000, 79: 1500,
+    80: 400, 81: 900, 82: 600, 83: 700, 84: 1000, 85: 1100, 86: 900, 87: 1200,
+    // Phase 8 components
+    88: 900,  // bouncingBall
+    89: 600,  // digitalGlitch
+    90: 900,  // ringPulsar
+    91: 1000, // swarmParticles
+    92: 600,  // prismRefract
+    93: 1000, // lifeBloom
+    94: 1100, // windRibbons
+    95: 900,  // wreckageOrbit
+  }
+
+  // Прогоняет ту же логику recipe-сборки что и playUniqueAnimation, но без
+  // запуска tweens. Возвращает суммарную длительность анимации (delay + max comp).
+  // Cap=1500ms (wrapper destroy timeout в playUniqueAnimation:943).
+  private getAnimationDurationMs(sys: Race | BgSystem): number {
+    const rng = this.animRng(sys)
+    const theme = (sys as BgSystem).archetype ?? sys.type
+    const pool = this.THEME_COMPONENTS[theme] ?? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+
+    // Реплицируем порядок rng() из playUniqueAnimation
+    const r1 = rng()
+    const targetCount = r1 < 0.5 ? 2 : r1 < 0.85 ? 3 : 4
+    const compCount = Math.min(targetCount, pool.length)
+    const used = new Set<number>()
+    const components: number[] = []
+    while (components.length < compCount) {
+      const c = pool[Math.floor(rng() * pool.length)]
+      if (!used.has(c)) { used.add(c); components.push(c) }
+    }
+
+    // useModifier rng calls (для совпадения порядка, хотя нам они не нужны)
+    const useModifier = rng() < 0.25
+    if (useModifier) { rng(); rng() }
+
+    let maxFinish = 0
+    components.forEach((c, i) => {
+      const delay = i === 0 ? 0 : Math.floor(rng() * 250) + 50
+      const dur = StarMapScene.COMP_DURATIONS_MS[c] ?? 800
+      const finish = delay + dur
+      if (finish > maxFinish) maxFinish = finish
+    })
+
+    // +50ms tail на затухание звука; cap = 1500ms wrapper
+    return Math.min(1500, maxFinish + 50)
   }
 
   // Тематические палитры — каждый archetype/type имеет свою подпись.
@@ -698,37 +898,41 @@ export class StarMapScene extends Phaser.Scene {
   // 24-38: креативные (singularity, echoWave, gravityWell, solarFlare, auroraRibbon, dnaHelix, lensFlare, constellation, magneticField, phoenixBurst, wormhole, cosmicRay, quantumSplit, heartPulse, crackleDischarge)
   // 39-53: расширение (pixelGrid, spiralArms, crystalGrow, snowDrift, galaxySpawn, pulseHex, tornado, starPolygon, crossFlash, waveTrain, petalStorm, flameTongues, snakeTrail, bubblePop, chromaShift)
   // Phase 7: добавлены компоненты 54-63 в pools, каждый archetype/type ≥10 компонентов.
+  // Расширение 3: компоненты 64-75 (chargeBurst, infinityTrail, shieldRipple, fireworks,
+  // scanline, liquidPool, gravityKnot, cosmicWeb, particleFountain, echoSpawn, iceWisps, ripBlade)
+  // Расширение 4: компоненты 76-87 (chimeRing, earthquakeShake, kaleidoscope, droneHum,
+  // glitchStutter, dopplerWave, morseFlash, crystalBell, windRustle, clockGears, bubbleStream, plasmaArc)
   private readonly THEME_COMPONENTS: Record<string, number[]> = {
     // BG archetypes
-    gas_giant:   [12, 13, 6, 2, 8, 11, 27, 32, 33, 0, 1, 40, 45, 50, 49, 56],
-    gas_ringed:  [1, 5, 0, 8, 14, 28, 32, 30, 43, 49, 46, 56],
-    ice:         [15, 2, 4, 0, 11, 10, 36, 32, 25, 41, 42, 47, 60],
-    ocean:       [16, 8, 2, 6, 11, 25, 28, 37, 48, 52, 51],
-    desert:      [17, 7, 8, 6, 11, 35, 27, 42, 51, 0, 3],
-    lava:        [18, 4, 10, 7, 9, 11, 33, 27, 30, 38, 50, 53],
-    forest:      [19, 11, 2, 6, 14, 29, 28, 49, 41, 51],
-    mineral:     [15, 10, 4, 2, 0, 30, 31, 38, 41, 44, 46, 54],
-    dead:        [20, 3, 11, 8, 26, 24, 34, 53, 55, 35, 9],
-    toxic:       [21, 6, 2, 11, 7, 38, 26, 52, 53, 50],
-    plasma:      [4, 22, 10, 9, 11, 0, 27, 30, 35, 32, 47, 50, 53, 55, 58, 63],
-    binary:      [23, 5, 1, 7, 11, 14, 36, 29, 37, 53, 43],
+    gas_giant:   [12, 13, 6, 2, 8, 11, 27, 32, 33, 0, 1, 40, 45, 50, 49, 56, 67, 70, 79, 81],
+    gas_ringed:  [1, 5, 0, 8, 14, 28, 32, 30, 43, 49, 46, 56, 65, 71, 76, 83],
+    ice:         [15, 2, 4, 0, 11, 10, 36, 32, 25, 41, 42, 47, 60, 64, 74, 76, 83, 84],
+    ocean:       [16, 8, 2, 6, 11, 25, 28, 37, 48, 52, 51, 69, 72, 81, 86],
+    desert:      [17, 7, 8, 6, 11, 35, 27, 42, 51, 0, 3, 68, 75, 77, 84],
+    lava:        [18, 4, 10, 7, 9, 11, 33, 27, 30, 38, 50, 53, 67, 75, 72, 87, 77],
+    forest:      [19, 11, 2, 6, 14, 29, 28, 49, 41, 51, 69, 71, 84, 86],
+    mineral:     [15, 10, 4, 2, 0, 30, 31, 38, 41, 44, 46, 54, 66, 75, 78, 83],
+    dead:        [20, 3, 11, 8, 26, 24, 34, 53, 55, 35, 9, 73, 70, 79, 77],
+    toxic:       [21, 6, 2, 11, 7, 38, 26, 52, 53, 50, 69, 75, 80, 86],
+    plasma:      [4, 22, 10, 9, 11, 0, 27, 30, 35, 32, 47, 50, 53, 55, 58, 63, 64, 67, 75, 80, 87],
+    binary:      [23, 5, 1, 7, 11, 14, 36, 29, 37, 53, 43, 65, 73, 81],
     // Main types — заточены под лор каждой расы
-    home:        [11, 2, 0, 1, 5, 14, 19, 28, 37, 31, 49, 43],
-    crystal:     [15, 2, 10, 0, 4, 30, 36, 31, 38, 41, 44, 46, 60],
-    rocky:       [3, 20, 4, 7, 26, 35, 39, 47, 11, 0, 53],
-    ancient:     [11, 0, 6, 2, 22, 31, 29, 26, 44, 46, 43, 57, 61, 62],
-    mystic:      [11, 6, 22, 4, 12, 14, 26, 31, 34, 28, 43, 53, 57, 59, 61, 62],
-    organic:     [19, 11, 2, 6, 14, 29, 37, 49, 51, 41],
-    forge:       [7, 10, 4, 9, 22, 18, 33, 27, 38, 50, 47, 53],
-    military:    [10, 7, 4, 9, 22, 18, 27, 30, 35, 47, 39, 53],
-    destroyed:   [7, 3, 9, 20, 24, 34, 26, 39, 53, 55, 59],
-    crystal_bio: [15, 2, 11, 6, 19, 36, 29, 41, 49, 62, 63],
-    mechano:     [15, 4, 9, 1, 22, 10, 32, 38, 30, 39, 47, 54, 58],
-    energy:      [10, 22, 4, 11, 0, 30, 27, 35, 32, 53, 50, 54, 58, 63],
-    mist:        [11, 8, 6, 21, 20, 28, 26, 52, 51, 57],
-    aquatic:     [8, 16, 2, 11, 6, 25, 37, 28, 48, 52, 51],
-    shadow:      [3, 20, 11, 6, 12, 26, 34, 24, 53, 51, 59],
-    aerial:      [6, 8, 11, 2, 16, 28, 32, 35, 42, 51, 49, 60],
+    home:        [11, 2, 0, 1, 5, 14, 19, 28, 37, 31, 49, 43, 66, 71, 76, 83],
+    crystal:     [15, 2, 10, 0, 4, 30, 36, 31, 38, 41, 44, 46, 60, 66, 64, 78, 83],
+    rocky:       [3, 20, 4, 7, 26, 35, 39, 47, 11, 0, 53, 75, 77],
+    ancient:     [11, 0, 6, 2, 22, 31, 29, 26, 44, 46, 43, 57, 61, 62, 65, 71, 78, 85],
+    mystic:      [11, 6, 22, 4, 12, 14, 26, 31, 34, 28, 43, 53, 57, 59, 61, 62, 70, 73, 78, 82],
+    organic:     [19, 11, 2, 6, 14, 29, 37, 49, 51, 41, 69, 72, 86, 84],
+    forge:       [7, 10, 4, 9, 22, 18, 33, 27, 38, 50, 47, 53, 64, 67, 75, 87, 85],
+    military:    [10, 7, 4, 9, 22, 18, 27, 30, 35, 47, 39, 53, 66, 67, 75, 82, 87],
+    destroyed:   [7, 3, 9, 20, 24, 34, 26, 39, 53, 55, 59, 70, 75, 80],
+    crystal_bio: [15, 2, 11, 6, 19, 36, 29, 41, 49, 62, 63, 64, 78, 83],
+    mechano:     [15, 4, 9, 1, 22, 10, 32, 38, 30, 39, 47, 54, 58, 66, 71, 80, 82, 85],
+    energy:      [10, 22, 4, 11, 0, 30, 27, 35, 32, 53, 50, 54, 58, 63, 64, 67, 80, 87],
+    mist:        [11, 8, 6, 21, 20, 28, 26, 52, 51, 57, 73, 64, 79, 84],
+    aquatic:     [8, 16, 2, 11, 6, 25, 37, 28, 48, 52, 51, 69, 72, 81, 86],
+    shadow:      [3, 20, 11, 6, 12, 26, 34, 24, 53, 51, 59, 70, 73, 75, 79],
+    aerial:      [6, 8, 11, 2, 16, 28, 32, 35, 42, 51, 49, 60, 64, 72, 84],
   }
 
   private readonly ANIM_EASES = [
@@ -887,8 +1091,137 @@ export class StarMapScene extends Phaser.Scene {
       case 61: this.compTimeWave(sprite, sys, rng); break
       case 62: this.compGlyphFlash(sprite, sys, rng); break
       case 63: this.compPrismShift(sprite, sys, rng); break
+      // Расширение 3 (доп. оригинальные компоненты)
+      case 64: this.compChargeBurst(sprite, sys, rng); break
+      case 65: this.compInfinityTrail(sprite, sys, rng); break
+      case 66: this.compShieldRipple(sprite, sys, rng); break
+      case 67: this.compFireworks(sprite, sys, rng); break
+      case 68: this.compScanline(sprite, sys, rng); break
+      case 69: this.compLiquidPool(sprite, sys, rng); break
+      case 70: this.compGravityKnot(sprite, sys, rng); break
+      case 71: this.compCosmicWeb(sprite, sys, rng); break
+      case 72: this.compParticleFountain(sprite, sys, rng); break
+      case 73: this.compEchoSpawn(sprite, sys, rng); break
+      case 74: this.compIceWisps(sprite, sys, rng); break
+      case 75: this.compRipBlade(sprite, sys, rng); break
+      // Расширение 4 — компоненты 76-87 (с явными sound-style)
+      case 76: this.compChimeRing(sprite, sys, rng); break
+      case 77: this.compEarthquakeShake(sprite, sys, rng); break
+      case 78: this.compKaleidoscope(sprite, sys, rng); break
+      case 79: this.compDroneHum(sprite, sys, rng); break
+      case 80: this.compGlitchStutter(sprite, sys, rng); break
+      case 81: this.compDopplerWave(sprite, sys, rng); break
+      case 82: this.compMorseFlash(sprite, sys, rng); break
+      case 83: this.compCrystalBell(sprite, sys, rng); break
+      case 84: this.compWindRustle(sprite, sys, rng); break
+      case 85: this.compClockGears(sprite, sys, rng); break
+      case 86: this.compBubbleStream(sprite, sys, rng); break
+      case 87: this.compPlasmaArc(sprite, sys, rng); break
+      // Phase 8 — компоненты 88-95
+      case 88: this.compBouncingBall(sprite, sys, rng); break
+      case 89: this.compDigitalGlitch(sprite, sys, rng); break
+      case 90: this.compRingPulsar(sprite, sys, rng); break
+      case 91: this.compSwarmParticles(sprite, sys, rng); break
+      case 92: this.compPrismRefract(sprite, sys, rng); break
+      case 93: this.compLifeBloom(sprite, sys, rng); break
+      case 94: this.compWindRibbons(sprite, sys, rng); break
+      case 95: this.compWreckageOrbit(sprite, sys, rng); break
     }
   }
+
+  /* ════════════════════════════════════════════════════════════════════════
+   * SOUND-STYLE TABLE — каждый компонент имеет «звуковую подпись» (концептуально).
+   * Используется как mental model и для будущей привязки к sound effects.
+   *
+   * 0  ring             — whoosh-pulse        (мягкий выдох)
+   * 1  multiRing        — chime-cascade       (каскад звонов)
+   * 2  sparkle          — twinkle-pop         (искрящийся попкорн)
+   * 3  flash            — strobe-blink        (вспышка-моргание)
+   * 4  lightning        — zap-crack           (электрический треск)
+   * 5  orbit            — hum-orbit           (низкий гул орбиты)
+   * 6  spiral           — whir-spin           (закрученный whir)
+   * 7  confetti         — pop-shower          (хлопки разлетающиеся)
+   * 8  wave             — wash-swell          (мощная волна)
+   * 9  comet            — swoosh-trail        (стремительный свист)
+   * 10 starBurst        — boom-snipe          (резкий взрыв)
+   * 11 haloFlash        — bloom-glow          (свет распускается)
+   * 12 vortex           — suck-drone          (всасывающий гул)
+   * 13 stormSwirl       — thunder-rumble      (раскат грозы)
+   * 14 ringDance        — chime-twirl         (звон кружится)
+   * 15 crystalShatter   — shatter-clink       (звон осколков)
+   * 16 ripple           — water-bubble        (пузырьки на воде)
+   * 17 sandSwirl        — wind-rustle         (шорох песка)
+   * 18 lavaErupt        — boom-splatter       (взрыв с брызгами)
+   * 19 bloomPetals      — soft-bloom          (нежный расцвет)
+   * 20 dustPuff         — soft-puff           (мягкий пшик)
+   * 21 toxicCloud       — bubble-hiss         (шипящие пузыри)
+   * 22 beam             — laser-zap           (лазерный заряд)
+   * 23 twinPulse        — boom-boom           (двойной удар)
+   * 24 singularity      — crunch-snap         (хруст коллапса)
+   * 25 echoWave         — pulse-echo          (эхо в пещере)
+   * 26 gravityWell      — sub-rumble          (низкочастотный гул)
+   * 27 solarFlare       — fwoosh              (огненный fwoosh)
+   * 28 auroraRibbon     — chime-ribbon        (плавная мелодия)
+   * 29 dnaHelix         — twin-warble         (парная вибрация)
+   * 30 lensFlare        — flash-blaze         (яркий блик)
+   * 31 constellation    — spark-net           (искры на сетке)
+   * 32 magneticField    — pulse-arc           (импульс по дуге)
+   * 33 phoenixBurst     — fire-fountain       (огненный фонтан)
+   * 34 wormhole         — suck-warp           (затягивающее искажение)
+   * 35 cosmicRay        — zip-laser           (стремительный zip)
+   * 36 quantumSplit     — phase-blink         (фазовое мерцание)
+   * 37 heartPulse       — thump-beat          (сердечный удар)
+   * 38 crackleDischarge — crackle-spark       (треск разряда)
+   * 39 pixelGrid        — digital-tick        (цифровой щёлк)
+   * 40 spiralArms       — galaxy-whir         (вращение галактики)
+   * 41 crystalGrow      — clink-grow          (растущий звон)
+   * 42 snowDrift        — soft-fall           (мягкое падение)
+   * 43 galaxySpawn      — birth-shimmer       (рождающееся свечение)
+   * 44 pulseHex         — geo-pulse           (геометрический импульс)
+   * 45 tornado          — howl-spiral         (вой воронки)
+   * 46 starPolygon      — chime-star          (звон звезды)
+   * 47 crossFlash       — slash-snap          (резкий разрез)
+   * 48 waveTrain        — wave-rolling        (катящиеся волны)
+   * 49 petalStorm       — flutter-spin        (порхание лепестков)
+   * 50 flameTongues     — fire-lick           (языки пламени)
+   * 51 snakeTrail       — slither-hiss        (скользящее шипение)
+   * 52 bubblePop        — pop-pop-pop         (пузыри лопают)
+   * 53 chromaShift      — glitch-stab         (цветной глюк)
+   * 54 atomShells       — orbital-hum         (орбитальный гул)
+   * 55 supernova        — mega-boom           (огромный взрыв)
+   * 56 accretionDisk    — drone-orbit         (гул аккреции)
+   * 57 flickerStars     — twinkle-twinkle     (мерцание звёзд)
+   * 58 lightDance       — pulse-dance         (танцующий свет)
+   * 59 dimensionRift    — rip-tear            (разрыв ткани)
+   * 60 frostExplode     — frost-crack         (морозный треск)
+   * 61 timeWave         — warp-pulse          (искажение времени)
+   * 62 glyphFlash       — rune-snap           (вспышка руны)
+   * 63 prismShift       — rainbow-shimmer     (радужное мерцание)
+   * 64 chargeBurst      — charge-boom         (заряд → взрыв)
+   * 65 infinityTrail    — loop-hum            (бесконечный гул)
+   * 66 shieldRipple     — shield-ping         (звон щита)
+   * 67 fireworks        — boom-pop-pop        (фейерверк)
+   * 68 scanline         — scan-beep           (сканирующий бип)
+   * 69 liquidPool       — splash-spread       (растекание жидкости)
+   * 70 gravityKnot      — twist-warp          (скручивание)
+   * 71 cosmicWeb        — connect-hum         (соединение узлов)
+   * 72 particleFountain — fountain-spray      (фонтан брызг)
+   * 73 echoSpawn        — phase-echo          (эхо-копии)
+   * 74 iceWisps         — frost-whisper       (морозный шёпот)
+   * 75 ripBlade         — slash-tear          (рассекающий удар)
+   * 76 chimeRing        — bell-tinkle         (нежный звон колокольчика)
+   * 77 earthquakeShake  — rumble-shake        (тряска земли)
+   * 78 kaleidoscope     — symmetry-spin       (симметричное вращение)
+   * 79 droneHum         — bass-drone          (бас-дрон)
+   * 80 glitchStutter    — glitch-stutter      (цифровое заикание)
+   * 81 dopplerWave      — doppler-shift       (доплер-волна)
+   * 82 morseFlash       — dit-dah-dit         (азбука морзе)
+   * 83 crystalBell      — clink-resonate      (хрустальный звон)
+   * 84 windRustle       — wind-whisper        (шёпот ветра)
+   * 85 clockGears       — clockwork-tick      (часовой ход)
+   * 86 bubbleStream     — fizz-rise           (поднимающаяся газировка)
+   * 87 plasmaArc        — arc-buzz            (электрическая дуга)
+   * ════════════════════════════════════════════════════════════════════════ */
 
   // Helpers: pick цвета и easing.
   // Цвет с приоритетом тематической палитры (архетипа), затем sys.color/accent, затем рандом.
@@ -2985,6 +3318,977 @@ export class StarMapScene extends Phaser.Scene {
     }
   }
 
+  // === РАСШИРЕНИЕ 3 (компоненты 64-75) ===
+
+  // 64. Charge burst — точки сходятся к центру, потом explode наружу
+  private compChargeBurst(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const N = 8 + Math.floor(rng() * 6)
+    const startR = sys.size * (1.8 + rng() * 0.5)
+    const collapseDur = 250 + rng() * 100
+    const burstDur = 350 + rng() * 200
+    for (let i = 0; i < N; i++) {
+      const ang = (i / N) * Math.PI * 2
+      const color = this.pickColor(rng, sys)
+      const dot = this.add.circle(Math.cos(ang) * startR, Math.sin(ang) * startR, (1.5 + rng()) * DPR, color, 1)
+      sprite.add(dot)
+      this.tweens.add({
+        targets: dot, x: 0, y: 0, scale: 0.4,
+        duration: collapseDur, ease: 'Cubic.easeIn',
+        onComplete: () => {
+          const newAng = ang + Math.PI + (rng() - 0.5) * 0.5
+          this.tweens.add({
+            targets: dot,
+            x: Math.cos(newAng) * sys.size * (2.5 + rng() * 0.5),
+            y: Math.sin(newAng) * sys.size * (2.5 + rng() * 0.5),
+            alpha: 0, scale: 1.5,
+            duration: burstDur, ease: 'Cubic.easeOut',
+            onComplete: () => dot.destroy(),
+          })
+        },
+      })
+    }
+  }
+
+  // 65. Infinity trail — точка обходит ∞-форму с trail
+  private compInfinityTrail(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const dur = 700 + rng() * 250
+    const sz = sys.size * (1.4 + rng() * 0.4)
+    const angle = rng() * Math.PI * 2
+    const cosA = Math.cos(angle), sinA = Math.sin(angle)
+    const head = this.add.circle(0, 0, (2.5 + rng()) * DPR, this.pickColor(rng, sys), 1)
+    const trail: Phaser.GameObjects.Arc[] = []
+    sprite.add(head)
+    for (let i = 0; i < 5; i++) {
+      const t = this.add.circle(0, 0, (2 - i * 0.3) * DPR, this.pickColor(rng, sys), 0.6 - i * 0.1)
+      sprite.add(t); trail.push(t)
+    }
+    const startTime = this.time.now
+    const update = () => {
+      if (!head.active) { this.events.off('update', update); return }
+      const t = (this.time.now - startTime) / dur
+      if (t >= 1) {
+        head.destroy(); trail.forEach(d => d.destroy())
+        this.events.off('update', update)
+        return
+      }
+      const path = (off: number) => {
+        const tt = Math.max(0, t - off)
+        const θ = tt * Math.PI * 2
+        // ∞: x = sz * cos(θ), y = sz * sin(θ) * cos(θ)
+        const lx = sz * Math.cos(θ)
+        const ly = sz * Math.sin(θ) * Math.cos(θ)
+        return { x: lx * cosA - ly * sinA, y: lx * sinA + ly * cosA }
+      }
+      const h = path(0); head.x = h.x; head.y = h.y
+      trail.forEach((d, i) => {
+        const p = path((i + 1) * 0.04)
+        d.x = p.x; d.y = p.y
+      })
+    }
+    this.events.on('update', update)
+  }
+
+  // 66. Shield ripple — гексагональный shield с расходящимися волнами
+  private compShieldRipple(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const layers = 3
+    const baseR = sys.size * 1.2
+    const color = this.pickColor(rng, sys)
+    for (let i = 0; i < layers; i++) {
+      this.time.delayedCall(i * 100, () => {
+        if (!sprite.active) return
+        const hex = this.add.graphics()
+        hex.lineStyle((1.2 + rng()) * DPR, color, 0.85 - i * 0.15)
+        hex.beginPath()
+        for (let j = 0; j <= 6; j++) {
+          const a = (j / 6) * Math.PI * 2
+          const x = Math.cos(a) * baseR, y = Math.sin(a) * baseR
+          if (j === 0) hex.moveTo(x, y); else hex.lineTo(x, y)
+        }
+        hex.strokePath()
+        hex.rotation = i * Math.PI / 12
+        sprite.add(hex)
+        this.tweens.add({
+          targets: hex, scale: 1.8 + i * 0.2, alpha: 0,
+          rotation: hex.rotation + Math.PI / 6,
+          duration: 600, ease: 'Cubic.easeOut',
+          onComplete: () => hex.destroy(),
+        })
+      })
+    }
+  }
+
+  // 67. Fireworks — взрыв с точками которые дополнительно взрываются
+  private compFireworks(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const primary = 6 + Math.floor(rng() * 4)
+    const dur = 400 + rng() * 200
+    for (let i = 0; i < primary; i++) {
+      const ang = (i / primary) * Math.PI * 2 + rng() * 0.3
+      const dist = sys.size * (1.5 + rng() * 0.4)
+      const color = this.pickColor(rng, sys)
+      const dot = this.add.circle(0, 0, (2 + rng()) * DPR, color, 1)
+      sprite.add(dot)
+      const tx = Math.cos(ang) * dist, ty = Math.sin(ang) * dist
+      this.tweens.add({
+        targets: dot, x: tx, y: ty,
+        duration: dur, ease: 'Cubic.easeOut',
+        onComplete: () => {
+          // Sub-explosion: 3 мини-точки
+          for (let k = 0; k < 3; k++) {
+            const subAng = ang + (rng() - 0.5) * Math.PI / 2
+            const sub = this.add.circle(tx, ty, (1 + rng()) * DPR, this.pickColor(rng, sys), 0.9)
+            sprite.add(sub)
+            this.tweens.add({
+              targets: sub,
+              x: tx + Math.cos(subAng) * sys.size * 0.6,
+              y: ty + Math.sin(subAng) * sys.size * 0.6,
+              alpha: 0,
+              duration: 280 + rng() * 100, ease: 'Cubic.easeOut',
+              onComplete: () => sub.destroy(),
+            })
+          }
+          dot.destroy()
+        },
+      })
+    }
+  }
+
+  // 68. Scanline — горизонтальная полоса проходит сверху вниз через планету
+  private compScanline(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const line = this.add.graphics()
+    const color = this.pickColor(rng, sys)
+    const w = sys.size * 2.4
+    const h = (1.5 + rng()) * DPR
+    line.fillStyle(color, 0.7)
+    line.fillRect(-w/2, -h/2, w, h)
+    line.fillStyle(0xffffff, 0.5)
+    line.fillRect(-w/2, -h/4, w, h/2)
+    line.x = 0
+    line.y = -sys.size * 1.5
+    line.rotation = (rng() - 0.5) * 0.3 // лёгкий tilt
+    sprite.add(line)
+    this.tweens.add({
+      targets: line, y: sys.size * 1.5, alpha: { from: 1, to: 0 },
+      duration: 500 + rng() * 200, ease: 'Sine.easeInOut',
+      onComplete: () => line.destroy(),
+    })
+  }
+
+  // 69. Liquid pool — жидкая капля растекается из центра
+  private compLiquidPool(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const pool = this.add.graphics()
+    const color = this.pickColor(rng, sys)
+    const blobs = 4 + Math.floor(rng() * 3)
+    for (let i = 0; i < blobs; i++) {
+      const ang = (i / blobs) * Math.PI * 2 + rng() * 0.4
+      const r = sys.size * (0.4 + rng() * 0.4)
+      pool.fillStyle(color, 0.5 + rng() * 0.3)
+      pool.fillEllipse(Math.cos(ang) * r * 0.4, Math.sin(ang) * r * 0.4, r * 1.5, r * 0.8)
+    }
+    pool.scale = 0.2
+    sprite.add(pool)
+    this.tweens.add({
+      targets: pool, scale: 1.5 + rng() * 0.4, alpha: 0,
+      rotation: (rng() - 0.5) * Math.PI,
+      duration: 600 + rng() * 200, ease: 'Cubic.easeOut',
+      onComplete: () => pool.destroy(),
+    })
+  }
+
+  // 70. Gravity knot — точки скручиваются в спиральный узел и распадаются
+  private compGravityKnot(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const N = 10 + Math.floor(rng() * 6)
+    const dur = 700 + rng() * 200
+    const knotPhase = rng() * Math.PI * 2
+    for (let i = 0; i < N; i++) {
+      const phase = (i / N) * Math.PI * 2 + knotPhase
+      const color = this.pickColor(rng, sys)
+      const dot = this.add.circle(0, 0, (1.5 + rng()) * DPR, color, 1)
+      sprite.add(dot)
+      const startTime = this.time.now
+      const update = () => {
+        if (!dot.active) { this.events.off('update', update); return }
+        const t = (this.time.now - startTime) / dur
+        if (t >= 1) { dot.destroy(); this.events.off('update', update); return }
+        // r oscillates; angle grows
+        const r = sys.size * (1.0 + 0.5 * Math.sin(t * Math.PI * 3))
+        const a = phase + t * Math.PI * 4
+        dot.x = Math.cos(a) * r; dot.y = Math.sin(a) * r
+        dot.alpha = 1 - t * 0.7
+      }
+      this.events.on('update', update)
+    }
+  }
+
+  // 71. Cosmic web — паутина из точек соединённых линиями
+  private compCosmicWeb(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const N = 6 + Math.floor(rng() * 3)
+    const points: { x: number; y: number }[] = []
+    const dots: Phaser.GameObjects.Arc[] = []
+    const color = this.pickColor(rng, sys)
+    for (let i = 0; i < N; i++) {
+      const ang = rng() * Math.PI * 2
+      const r = sys.size * (1.2 + rng() * 0.6)
+      const x = Math.cos(ang) * r, y = Math.sin(ang) * r
+      points.push({ x, y })
+      const dot = this.add.circle(x, y, (1.5 + rng()) * DPR, this.pickColor(rng, sys), 1)
+      sprite.add(dot); dots.push(dot)
+    }
+    // линии из каждой точки к 2 ближайшим
+    const lines = this.add.graphics()
+    lines.lineStyle(0.7 * DPR, color, 0.5)
+    for (let i = 0; i < N; i++) {
+      const dists = points.map((p, j) => ({ j, d: i === j ? 9999 : Math.hypot(p.x - points[i].x, p.y - points[i].y) }))
+        .sort((a, b) => a.d - b.d).slice(0, 2)
+      for (const { j } of dists) {
+        lines.lineBetween(points[i].x, points[i].y, points[j].x, points[j].y)
+      }
+    }
+    sprite.add(lines)
+    this.tweens.add({
+      targets: [...dots, lines], alpha: 0,
+      scale: 1.2,
+      duration: 700 + rng() * 200, ease: 'Sine.easeOut',
+      delay: 200,
+      onComplete: () => { dots.forEach(d => d.destroy()); lines.destroy() },
+    })
+  }
+
+  // 72. Particle fountain — частицы вылетают вверх и падают обратно с гравитацией
+  private compParticleFountain(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const N = 12 + Math.floor(rng() * 8)
+    const dur = 800 + rng() * 250
+    const upDir = rng() * Math.PI * 2
+    const cosD = Math.cos(upDir), sinD = Math.sin(upDir)
+    for (let i = 0; i < N; i++) {
+      const speed = sys.size * (1.5 + rng() * 0.8)
+      const spread = (rng() - 0.5) * 1.0
+      const color = this.pickColor(rng, sys)
+      const dot = this.add.circle(0, 0, (1.5 + rng()) * DPR, color, 1)
+      sprite.add(dot)
+      // velocity по upDir + spread perp
+      const perpX = -sinD, perpY = cosD
+      const vx = cosD * speed + perpX * spread * speed * 0.5
+      const vy = sinD * speed + perpY * spread * speed * 0.5
+      const g = -sys.size * 4 // gravity отталкивает обратно (по противоположному направлению)
+      const startTime = this.time.now
+      const update = () => {
+        if (!dot.active) { this.events.off('update', update); return }
+        const t = (this.time.now - startTime) / dur
+        if (t >= 1) { dot.destroy(); this.events.off('update', update); return }
+        // motion: vx*t, vy*t + 0.5 * g * t² (g flipped sign vs upDir)
+        const fall = -0.5 * g * t * t
+        dot.x = vx * t + cosD * fall
+        dot.y = vy * t + sinD * fall
+        dot.alpha = 1 - t * 0.85
+      }
+      this.events.on('update', update)
+    }
+  }
+
+  // 73. Echo spawn — фантомные копии планеты появляются и исчезают вокруг
+  private compEchoSpawn(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const N = 4 + Math.floor(rng() * 3)
+    for (let i = 0; i < N; i++) {
+      this.time.delayedCall(i * 80, () => {
+        if (!sprite.active) return
+        const ang = (i / N) * Math.PI * 2 + rng() * 0.4
+        const dist = sys.size * (1.0 + rng() * 0.5)
+        const ghost = this.add.circle(Math.cos(ang) * dist, Math.sin(ang) * dist, sys.size * 0.55, sys.color, 0.5)
+        sprite.add(ghost)
+        this.tweens.add({
+          targets: ghost, alpha: 0, scale: 1.4,
+          duration: 400 + rng() * 200, ease: 'Cubic.easeOut',
+          onComplete: () => ghost.destroy(),
+        })
+      })
+    }
+  }
+
+  // 74. Ice wisps — ледяные завитки кружатся вокруг
+  private compIceWisps(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const N = 4 + Math.floor(rng() * 3)
+    const direction = rng() < 0.5 ? 1 : -1
+    const dur = 700 + rng() * 200
+    for (let i = 0; i < N; i++) {
+      const phase = (i / N) * Math.PI * 2
+      const wisp = this.add.graphics()
+      const color = this.pickColor(rng, sys)
+      // мелкая дуга как закрученный завиток
+      wisp.lineStyle((1 + rng()) * DPR, color, 0.85)
+      wisp.beginPath()
+      const segs = 8
+      for (let s = 0; s <= segs; s++) {
+        const t = s / segs
+        const r = sys.size * (1.2 + t * 0.4)
+        const a = phase + direction * t * Math.PI / 2
+        const x = Math.cos(a) * r, y = Math.sin(a) * r
+        if (s === 0) wisp.moveTo(x, y); else wisp.lineTo(x, y)
+      }
+      wisp.strokePath()
+      wisp.scale = 0.5
+      sprite.add(wisp)
+      this.tweens.add({
+        targets: wisp, scale: 1.2, alpha: 0,
+        rotation: direction * Math.PI / 4,
+        duration: dur + rng() * 150, ease: 'Sine.easeOut',
+        onComplete: () => wisp.destroy(),
+      })
+    }
+  }
+
+  // 75. Rip blade — острый «разрез» прорезает планету диагонально
+  private compRipBlade(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const blade = this.add.graphics()
+    const color = this.pickColor(rng, sys)
+    const len = sys.size * (3 + rng() * 0.6)
+    const w = (1.5 + rng()) * DPR
+    blade.fillStyle(color, 0.8)
+    blade.fillRect(-len / 2, -w * 1.5, len, w * 3)
+    blade.fillStyle(0xffffff, 0.95)
+    blade.fillRect(-len / 2, -w * 0.5, len, w)
+    blade.rotation = rng() * Math.PI * 2
+    blade.scale = 0.1
+    sprite.add(blade)
+    this.tweens.add({
+      targets: blade, scaleX: 1.2, scaleY: 1, alpha: 0,
+      duration: 350 + rng() * 200, ease: 'Cubic.easeOut',
+      onComplete: () => blade.destroy(),
+    })
+  }
+
+  // === РАСШИРЕНИЕ 4 (компоненты 76-87) ===
+  // Каждый имеет sound-style ярлык — концептуальное «звучание» анимации.
+
+  // 76. Chime ring — sound-style: bell-tinkle (нежный звон колокольчика)
+  // Серия мелких звонящих колец расходится плавно
+  private compChimeRing(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const count = 4 + Math.floor(rng() * 3)
+    const stepDelay = 90 + rng() * 50
+    for (let i = 0; i < count; i++) {
+      this.time.delayedCall(i * stepDelay, () => {
+        if (!sprite.active) return
+        const ring = this.add.graphics()
+        const color = this.pickColor(rng, sys)
+        ring.lineStyle((0.8 + rng() * 0.6) * DPR, color, 0.6 - i * 0.08)
+        ring.strokeCircle(0, 0, sys.size * (1.0 + i * 0.18))
+        sprite.add(ring)
+        this.tweens.add({
+          targets: ring, scale: 1.5, alpha: 0,
+          duration: 600, ease: 'Sine.easeOut',
+          onComplete: () => ring.destroy(),
+        })
+      })
+    }
+  }
+
+  // 77. Earthquake shake — sound-style: rumble-shake (тряска земли)
+  // 6-10 точек в случайных местах резко дрожат
+  private compEarthquakeShake(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const N = 6 + Math.floor(rng() * 5)
+    for (let i = 0; i < N; i++) {
+      const ang = rng() * Math.PI * 2
+      const r = sys.size * (0.7 + rng() * 0.4)
+      const x = Math.cos(ang) * r, y = Math.sin(ang) * r
+      const dot = this.add.circle(x, y, (1.5 + rng() * 1.5) * DPR, this.pickColor(rng, sys), 1)
+      sprite.add(dot)
+      this.tweens.add({
+        targets: dot, x: x + (rng() - 0.5) * sys.size * 0.5, y: y + (rng() - 0.5) * sys.size * 0.5,
+        yoyo: true, repeat: 3,
+        duration: 60 + rng() * 40, ease: 'Sine.easeInOut',
+        onComplete: () => {
+          this.tweens.add({ targets: dot, alpha: 0, duration: 200, onComplete: () => dot.destroy() })
+        },
+      })
+    }
+  }
+
+  // 78. Kaleidoscope — sound-style: symmetry-spin (симметричное вращение)
+  // 6/8-секторная симметричная картина с вращением
+  private compKaleidoscope(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const sectors = rng() < 0.5 ? 6 : 8
+    const kaleido = this.add.graphics()
+    const c1 = this.pickColor(rng, sys)
+    const c2 = this.pickColor(rng, sys)
+    for (let i = 0; i < sectors; i++) {
+      const ang = (i / sectors) * Math.PI * 2
+      kaleido.fillStyle(i % 2 === 0 ? c1 : c2, 0.6)
+      const r = sys.size * (1.3 + rng() * 0.3)
+      kaleido.fillTriangle(0, 0, Math.cos(ang) * r, Math.sin(ang) * r, Math.cos(ang + Math.PI / sectors) * r, Math.sin(ang + Math.PI / sectors) * r)
+    }
+    kaleido.scale = 0.3
+    sprite.add(kaleido)
+    this.tweens.add({
+      targets: kaleido, scale: 1.3 + rng() * 0.3, alpha: 0,
+      rotation: (rng() < 0.5 ? 1 : -1) * Math.PI / 2,
+      duration: 600 + rng() * 200, ease: 'Cubic.easeOut',
+      onComplete: () => kaleido.destroy(),
+    })
+  }
+
+  // 79. Drone hum — sound-style: bass-drone (низкий тяжелый дрон)
+  // Большой круг медленно пульсирует с низкой частотой
+  private compDroneHum(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const drone = this.add.circle(0, 0, sys.size * 1.4, this.pickColor(rng, sys), 0.4)
+    sprite.add(drone)
+    this.tweens.add({
+      targets: drone, scale: 1.3, alpha: 0,
+      duration: 800 + rng() * 200, ease: 'Sine.easeInOut',
+      onComplete: () => drone.destroy(),
+    })
+  }
+
+  // 80. Glitch stutter — sound-style: glitch-stutter (цифровое заикание)
+  // Повторяющиеся быстрые offset+colorshift
+  private compGlitchStutter(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const stutters = 4 + Math.floor(rng() * 3)
+    const colors = [0xff0066, 0x00ff66, 0x0066ff, 0xfde047]
+    for (let i = 0; i < stutters; i++) {
+      this.time.delayedCall(i * 60, () => {
+        if (!sprite.active) return
+        const shift = sys.size * (0.1 + rng() * 0.15)
+        const ang = rng() * Math.PI * 2
+        const ghost = this.add.circle(Math.cos(ang) * shift, Math.sin(ang) * shift, sys.size * 0.85, colors[i % colors.length], 0.55)
+        ghost.setBlendMode(Phaser.BlendModes.SCREEN)
+        sprite.add(ghost)
+        this.tweens.add({
+          targets: ghost, alpha: 0,
+          duration: 100, ease: 'Cubic.easeOut',
+          onComplete: () => ghost.destroy(),
+        })
+      })
+    }
+  }
+
+  // 81. Doppler wave — sound-style: doppler-shift (волна со сдвигом)
+  // Эллиптическая волна расширяется с asymmetric color tint
+  private compDopplerWave(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const wave = this.add.graphics()
+    const angle = rng() * Math.PI * 2
+    const c1 = this.pickColor(rng, sys)
+    const c2 = this.pickColor(rng, sys)
+    wave.lineStyle(2 * DPR, c1, 0.7)
+    wave.strokeEllipse(-sys.size * 0.2, 0, sys.size * 1.6, sys.size * 1.0)
+    wave.lineStyle(1.5 * DPR, c2, 0.5)
+    wave.strokeEllipse(sys.size * 0.2, 0, sys.size * 2.0, sys.size * 1.2)
+    wave.rotation = angle
+    sprite.add(wave)
+    this.tweens.add({
+      targets: wave, scale: 1.7 + rng() * 0.3, alpha: 0,
+      x: Math.cos(angle) * sys.size,
+      y: Math.sin(angle) * sys.size,
+      duration: 600 + rng() * 200, ease: 'Cubic.easeOut',
+      onComplete: () => wave.destroy(),
+    })
+  }
+
+  // 82. Morse flash — sound-style: dit-dah-dit (азбука морзе)
+  // Серия коротких + длинных вспышек, как сигнал
+  private compMorseFlash(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    // Pattern: dot-dot-dash-dot (каждый = blink с alpha)
+    const pattern = [80, 80, 200, 80] // ms
+    let totalDelay = 0
+    for (const dur of pattern) {
+      this.time.delayedCall(totalDelay, () => {
+        if (!sprite.active) return
+        const flash = this.add.circle(0, 0, sys.size * 1.05, this.pickColor(rng, sys), 0.7)
+        sprite.add(flash)
+        this.tweens.add({
+          targets: flash, alpha: 0,
+          duration: dur, ease: 'Sine.easeOut',
+          onComplete: () => flash.destroy(),
+        })
+      })
+      totalDelay += dur + 60
+    }
+  }
+
+  // 83. Crystal bell — sound-style: clink-resonate (хрустальный звон)
+  // Гексагон + расходящиеся круги-резонансы
+  private compCrystalBell(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const hex = this.add.graphics()
+    const color = this.pickColor(rng, sys)
+    hex.lineStyle(2 * DPR, color, 0.85)
+    hex.beginPath()
+    for (let i = 0; i <= 6; i++) {
+      const a = (i / 6) * Math.PI * 2 - Math.PI / 2
+      const x = Math.cos(a) * sys.size * 1.1
+      const y = Math.sin(a) * sys.size * 1.1
+      if (i === 0) hex.moveTo(x, y); else hex.lineTo(x, y)
+    }
+    hex.strokePath()
+    sprite.add(hex)
+    // Резонанс: 2 расходящихся круга
+    for (let i = 0; i < 2; i++) {
+      this.time.delayedCall(120 + i * 100, () => {
+        if (!sprite.active) return
+        const ring = this.add.graphics()
+        ring.lineStyle(0.8 * DPR, color, 0.5)
+        ring.strokeCircle(0, 0, sys.size * 1.1)
+        sprite.add(ring)
+        this.tweens.add({ targets: ring, scale: 2.2, alpha: 0, duration: 500, onComplete: () => ring.destroy() })
+      })
+    }
+    this.tweens.add({
+      targets: hex, scale: 1.2, alpha: 0, rotation: Math.PI / 6,
+      duration: 600, ease: 'Cubic.easeOut',
+      onComplete: () => hex.destroy(),
+    })
+  }
+
+  // 84. Wind rustle — sound-style: wind-whisper (шёпот ветра)
+  // Мелкие точки сдуваются в одну сторону
+  private compWindRustle(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const N = 14 + Math.floor(rng() * 8)
+    const windAng = rng() * Math.PI * 2
+    const cosW = Math.cos(windAng), sinW = Math.sin(windAng)
+    for (let i = 0; i < N; i++) {
+      const startAng = rng() * Math.PI * 2
+      const startR = sys.size * (0.7 + rng() * 0.5)
+      const sx = Math.cos(startAng) * startR
+      const sy = Math.sin(startAng) * startR
+      const dist = sys.size * (1.5 + rng() * 0.6)
+      const dot = this.add.circle(sx, sy, (0.8 + rng()) * DPR, this.pickColor(rng, sys), 0.85)
+      sprite.add(dot)
+      this.tweens.add({
+        targets: dot,
+        x: sx + cosW * dist + (rng() - 0.5) * sys.size * 0.3,
+        y: sy + sinW * dist + (rng() - 0.5) * sys.size * 0.3,
+        alpha: 0,
+        duration: 600 + rng() * 250, ease: 'Sine.easeOut',
+        delay: rng() * 200,
+        onComplete: () => dot.destroy(),
+      })
+    }
+  }
+
+  // 85. Clock gears — sound-style: clockwork-tick (часовой ход)
+  // 2 концентрические шестерни с зубцами вращаются
+  private compClockGears(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    for (let g = 0; g < 2; g++) {
+      const gear = this.add.graphics()
+      const color = g === 0 ? sys.color : sys.accent
+      const teeth = 8 + g * 4
+      const r = sys.size * (1.0 + g * 0.3)
+      gear.lineStyle(1.5 * DPR, color, 0.85)
+      gear.beginPath()
+      for (let i = 0; i <= teeth * 2; i++) {
+        const a = (i / (teeth * 2)) * Math.PI * 2
+        const rr = i % 2 === 0 ? r : r * 0.92
+        const x = Math.cos(a) * rr
+        const y = Math.sin(a) * rr
+        if (i === 0) gear.moveTo(x, y); else gear.lineTo(x, y)
+      }
+      gear.strokePath()
+      sprite.add(gear)
+      const direction = g === 0 ? 1 : -1
+      this.tweens.add({
+        targets: gear, rotation: direction * Math.PI / 4, alpha: 0, scale: 1.15,
+        duration: 700 + rng() * 200, ease: 'Cubic.easeOut',
+        onComplete: () => gear.destroy(),
+      })
+    }
+  }
+
+  // 86. Bubble stream — sound-style: fizz-rise (поднимающаяся газировка)
+  // Поток мелких пузырей вверх
+  private compBubbleStream(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const N = 12 + Math.floor(rng() * 6)
+    const upAng = -Math.PI / 2 + (rng() - 0.5) * 0.3
+    for (let i = 0; i < N; i++) {
+      this.time.delayedCall(i * 40, () => {
+        if (!sprite.active) return
+        const startX = (rng() - 0.5) * sys.size * 0.6
+        const startY = sys.size * 0.7
+        const r = (1 + rng() * 1.5) * DPR
+        const bubble = this.add.graphics()
+        const color = this.pickColor(rng, sys)
+        bubble.fillStyle(color, 0.5)
+        bubble.fillCircle(0, 0, r)
+        bubble.lineStyle(0.5 * DPR, 0xffffff, 0.7)
+        bubble.strokeCircle(0, 0, r)
+        bubble.x = startX; bubble.y = startY
+        sprite.add(bubble)
+        const dist = sys.size * (1.0 + rng() * 0.6)
+        this.tweens.add({
+          targets: bubble,
+          x: startX + Math.cos(upAng) * dist,
+          y: startY + Math.sin(upAng) * dist,
+          alpha: 0,
+          scale: 1.4,
+          duration: 600 + rng() * 200, ease: 'Sine.easeOut',
+          onComplete: () => bubble.destroy(),
+        })
+      })
+    }
+  }
+
+  // 87. Plasma arc — sound-style: arc-buzz (электрическая дуга)
+  // Изогнутая дуга-молния от точки к точке
+  private compPlasmaArc(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const arcs = 2 + Math.floor(rng() * 2)
+    for (let i = 0; i < arcs; i++) {
+      const ang1 = rng() * Math.PI * 2
+      const ang2 = ang1 + Math.PI + (rng() - 0.5) * 0.8
+      const r = sys.size * (1.3 + rng() * 0.3)
+      const arc = this.add.graphics()
+      const color = this.pickColor(rng, sys)
+      arc.lineStyle(1.5 * DPR, color, 0.9)
+      // Bezier-кривая через 2 узла
+      const x1 = Math.cos(ang1) * r, y1 = Math.sin(ang1) * r
+      const x2 = Math.cos(ang2) * r, y2 = Math.sin(ang2) * r
+      const cx = (x1 + x2) / 2 + (rng() - 0.5) * sys.size * 0.6
+      const cy = (y1 + y2) / 2 + (rng() - 0.5) * sys.size * 0.6
+      const segs = 12
+      let px = x1, py = y1
+      for (let s = 1; s <= segs; s++) {
+        const t = s / segs; const u = 1 - t
+        const x = u*u*x1 + 2*u*t*cx + t*t*x2
+        const y = u*u*y1 + 2*u*t*cy + t*t*y2
+        // jitter — молниевый эффект
+        const jx = x + (rng() - 0.5) * 1.5 * DPR
+        const jy = y + (rng() - 0.5) * 1.5 * DPR
+        arc.lineBetween(px, py, jx, jy)
+        px = jx; py = jy
+      }
+      sprite.add(arc)
+      this.tweens.add({
+        targets: arc, alpha: 0,
+        duration: 350 + rng() * 150, ease: 'Cubic.easeOut',
+        onComplete: () => arc.destroy(),
+      })
+    }
+  }
+
+  // === PHASE 8 (компоненты 88-95) ===
+  // Тематические дополнения: bouncingBall, digitalGlitch, ringPulsar, swarmParticles,
+  // prismRefract, lifeBloom, windRibbons, wreckageOrbit. Расширяют under-loaded pool'ы.
+
+  // 88. Bouncing ball — sound-style: rubber-thump (резиновый отскок)
+  // Мяч прыгает над планетой, отскоки с затуханием по высоте.
+  private compBouncingBall(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const ball = this.add.circle(0, 0, (3 + rng() * 2) * DPR, this.pickColor(rng, sys), 1)
+    sprite.add(ball)
+    const bounces = 3 + Math.floor(rng() * 3) // 3..5
+    const baseY = sys.size * 0.6
+    const startX = -sys.size * 0.9
+    const stepX = (sys.size * 1.8) / bounces
+    ball.x = startX
+    ball.y = baseY
+    let elapsed = 0
+    const bounceDur = 200
+    for (let i = 0; i < bounces; i++) {
+      const apexHeight = sys.size * (1.0 - i * 0.18)
+      const apexY = baseY - apexHeight
+      const xMid = startX + stepX * (i + 0.5)
+      const xEnd = startX + stepX * (i + 1)
+      // Подъём
+      this.tweens.add({
+        targets: ball,
+        x: xMid, y: apexY,
+        duration: bounceDur, ease: 'Quad.easeOut',
+        delay: elapsed,
+      })
+      // Падение
+      this.tweens.add({
+        targets: ball,
+        x: xEnd, y: baseY,
+        duration: bounceDur, ease: 'Quad.easeIn',
+        delay: elapsed + bounceDur,
+      })
+      elapsed += bounceDur * 2
+    }
+    // Финальный fade и destroy
+    this.tweens.add({
+      targets: ball, alpha: 0,
+      duration: 200, ease: 'Cubic.easeOut',
+      delay: elapsed,
+      onComplete: () => ball.destroy(),
+    })
+  }
+
+  // 89. Digital glitch — sound-style: glitch-tear (RGB-shift искажения)
+  // Пиксельные клоны разных RGB-цветов с stutter offset.
+  private compDigitalGlitch(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const channels = [0xff0066, 0x00ff66, 0x0066ff]
+    const stutters = 4 + Math.floor(rng() * 3) // 4..6
+    const stepDelay = 70 + rng() * 30
+    const ghosts: Phaser.GameObjects.Rectangle[] = []
+    for (let i = 0; i < stutters; i++) {
+      this.time.delayedCall(i * stepDelay, () => {
+        if (!sprite.active) return
+        for (let c = 0; c < 3; c++) {
+          const offX = (rng() - 0.5) * sys.size * 0.6
+          const offY = (rng() - 0.5) * sys.size * 0.3
+          const rect = this.add.rectangle(offX, offY, sys.size * 1.4, sys.size * 0.18, channels[c], 0.55)
+          rect.setBlendMode(Phaser.BlendModes.SCREEN)
+          sprite.add(rect)
+          ghosts.push(rect)
+          this.tweens.add({
+            targets: rect, alpha: 0,
+            duration: 100 + rng() * 50, ease: 'Cubic.easeOut',
+            onComplete: () => rect.destroy(),
+          })
+        }
+      })
+    }
+    // Сафети-cleanup на случай если что-то осталось
+    this.time.delayedCall(stutters * stepDelay + 300, () => {
+      for (const g of ghosts) {
+        if (g.active) g.destroy()
+      }
+    })
+  }
+
+  // 90. Ring pulsar — sound-style: heartbeat (lub-DUB пульсация)
+  // Двойной удар: короткая пульсация → сильная пульсация.
+  private compRingPulsar(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const ring = this.add.graphics()
+    const color = this.pickColor(rng, sys)
+    ring.lineStyle(2 * DPR, color, 0.85)
+    ring.strokeCircle(0, 0, sys.size * 1.3)
+    ring.scale = 0.85
+    sprite.add(ring)
+    // Lub: короткая пульсация
+    this.tweens.add({
+      targets: ring, scale: 1.15,
+      duration: 120, ease: 'Sine.easeOut',
+      yoyo: true,
+    })
+    // DUB: сильная пульсация (через delay)
+    this.tweens.add({
+      targets: ring, scale: 1.4, alpha: 0,
+      duration: 200, ease: 'Cubic.easeOut',
+      delay: 280,
+    })
+    // Финальное затухание + destroy
+    this.tweens.add({
+      targets: ring, alpha: 0,
+      duration: 350, ease: 'Cubic.easeOut',
+      delay: 480,
+      onComplete: () => ring.destroy(),
+    })
+  }
+
+  // 91. Swarm particles — sound-style: buzz-swarm (рой жучков)
+  // 12-20 точек огибают планету по орбите с разными угловыми скоростями.
+  private compSwarmParticles(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const N = 12 + Math.floor(rng() * 9) // 12..20
+    const dur = 1000
+    const particles: { obj: Phaser.GameObjects.Arc; r: number; ang: number; speed: number }[] = []
+    for (let i = 0; i < N; i++) {
+      const r = sys.size * (1.0 + rng() * 0.4)
+      const ang = (i / N) * Math.PI * 2 + rng() * 0.3
+      const speed = (rng() - 0.5) * 0.006 // ±0.003 рад/мс
+      const dot = this.add.circle(Math.cos(ang) * r, Math.sin(ang) * r, (1.2 + rng()) * DPR, this.pickColor(rng, sys), 0.85)
+      sprite.add(dot)
+      particles.push({ obj: dot, r, ang, speed })
+    }
+    let elapsed = 0
+    const update = (_t: number, dt: number) => {
+      elapsed += dt
+      for (const p of particles) {
+        p.ang += p.speed * dt
+        p.obj.x = Math.cos(p.ang) * p.r
+        p.obj.y = Math.sin(p.ang) * p.r
+        // Плавное fade в конце жизни
+        const t = elapsed / dur
+        if (t > 0.7) p.obj.alpha = Math.max(0, 0.85 * (1 - (t - 0.7) / 0.3))
+      }
+    }
+    this.events.on('update', update)
+    this.time.delayedCall(dur, () => {
+      this.events.off('update', update)
+      for (const p of particles) {
+        if (p.obj.active) p.obj.destroy()
+      }
+    })
+  }
+
+  // 92. Prism refract — sound-style: spectral-shimmer (преломление радуги)
+  // 7 разноцветных лучей расходятся из точки на краю планеты.
+  private compPrismRefract(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const rainbow = [0xff0000, 0xff7f00, 0xffff00, 0x00ff00, 0x0000ff, 0x4b0082, 0x9400d3]
+    const baseAng = rng() * Math.PI * 2
+    const ox = Math.cos(baseAng) * sys.size
+    const oy = Math.sin(baseAng) * sys.size
+    const rays: Phaser.GameObjects.Graphics[] = []
+    for (let i = 0; i < 7; i++) {
+      const offset = ((i - 3) / 3) * (Math.PI / 12) // ±15° spread
+      const rayAng = baseAng + offset
+      const len = sys.size * (1.5 + rng() * 0.5)
+      const ray = this.add.graphics()
+      ray.lineStyle(1.5 * DPR, rainbow[i], 0)
+      ray.lineBetween(ox, oy, ox + Math.cos(rayAng) * len, oy + Math.sin(rayAng) * len)
+      ray.alpha = 0
+      sprite.add(ray)
+      rays.push(ray)
+      // Fade-in
+      this.tweens.add({
+        targets: ray, alpha: 0.85,
+        duration: 100, ease: 'Sine.easeOut',
+        delay: i * 15,
+      })
+      // Fade-out + destroy
+      this.tweens.add({
+        targets: ray, alpha: 0,
+        duration: 400, ease: 'Cubic.easeOut',
+        delay: 200 + i * 15,
+        onComplete: () => ray.destroy(),
+      })
+    }
+  }
+
+  // 93. Life bloom — sound-style: organic-grow (растущие лозы)
+  // 4-6 vine-линий тянутся из центра наружу через сегменты, в конце — точка-цветок.
+  private compLifeBloom(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const vines = 4 + Math.floor(rng() * 3) // 4..6
+    const segs = 6
+    const segStep = 60
+    const flowers: Phaser.GameObjects.Arc[] = []
+    for (let v = 0; v < vines; v++) {
+      const baseAng = (v / vines) * Math.PI * 2 + (rng() - 0.5) * 0.4
+      const color = this.pickColor(rng, sys)
+      const vine = this.add.graphics()
+      vine.lineStyle(1.5 * DPR, color, 0.9)
+      sprite.add(vine)
+      // Узлы Bezier-like вдоль extending пути
+      const ctrlAng = baseAng + (rng() - 0.5) * 0.6
+      const endR = sys.size * 0.85
+      const ctrlR = sys.size * 0.55
+      const endX = Math.cos(baseAng) * endR
+      const endY = Math.sin(baseAng) * endR
+      const ctrlX = Math.cos(ctrlAng) * ctrlR
+      const ctrlY = Math.sin(ctrlAng) * ctrlR
+      let prevX = 0, prevY = 0
+      for (let s = 1; s <= segs; s++) {
+        const t = s / segs
+        const u = 1 - t
+        const nx = u * u * 0 + 2 * u * t * ctrlX + t * t * endX
+        const ny = u * u * 0 + 2 * u * t * ctrlY + t * t * endY
+        const px = prevX, py = prevY
+        const nxC = nx, nyC = ny
+        this.time.delayedCall(s * segStep + v * 30, () => {
+          if (!vine.active) return
+          vine.lineBetween(px, py, nxC, nyC)
+        })
+        prevX = nx; prevY = ny
+      }
+      // Цветок на конце
+      this.time.delayedCall(segs * segStep + v * 30 + 80, () => {
+        if (!sprite.active) return
+        const flower = this.add.circle(endX, endY, DPR * 1.5, color, 1)
+        sprite.add(flower)
+        flowers.push(flower)
+        this.tweens.add({
+          targets: flower, scale: 2, alpha: 0,
+          duration: 300, ease: 'Sine.easeOut',
+          onComplete: () => flower.destroy(),
+        })
+      })
+      // Финальный fade + destroy ветки
+      this.tweens.add({
+        targets: vine, alpha: 0,
+        duration: 300, ease: 'Cubic.easeOut',
+        delay: 800,
+        onComplete: () => vine.destroy(),
+      })
+    }
+  }
+
+  // 94. Wind ribbons — sound-style: airy-whoosh (ленты ветра)
+  // 2-3 ленты-sin-wave проносятся через планету слева направо.
+  private compWindRibbons(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const ribbonCount = 2 + Math.floor(rng() * 2) // 2..3
+    const dur = 1100
+    const ribbons: { gfx: Phaser.GameObjects.Graphics; color: number; phase: number; amp: number; yBase: number; startTime: number }[] = []
+    for (let i = 0; i < ribbonCount; i++) {
+      const gfx = this.add.graphics()
+      sprite.add(gfx)
+      ribbons.push({
+        gfx,
+        color: this.pickColor(rng, sys),
+        phase: rng() * Math.PI * 2,
+        amp: sys.size * (0.15 + rng() * 0.2),
+        yBase: (rng() - 0.5) * sys.size * 0.6,
+        startTime: i * 200,
+      })
+    }
+    let elapsed = 0
+    const totalLen = sys.size * 2.5
+    const segs = 12
+    const update = (_t: number, dt: number) => {
+      elapsed += dt
+      for (const r of ribbons) {
+        const localT = (elapsed - r.startTime) / dur
+        if (localT < 0) continue
+        const xCenter = -sys.size + (sys.size * 2) * localT
+        // Alpha: 0 → 0.6 → 0
+        const alpha = localT < 0.3 ? localT / 0.3 * 0.6 : (localT > 0.7 ? Math.max(0, (1 - localT) / 0.3 * 0.6) : 0.6)
+        r.gfx.clear()
+        r.gfx.lineStyle(1.5 * DPR, r.color, alpha)
+        for (let s = 0; s < segs; s++) {
+          const t1 = s / segs
+          const t2 = (s + 1) / segs
+          const x1 = xCenter - totalLen / 2 + totalLen * t1
+          const x2 = xCenter - totalLen / 2 + totalLen * t2
+          const y1 = r.yBase + Math.sin(t1 * Math.PI * 4 + r.phase + elapsed * 0.005) * r.amp
+          const y2 = r.yBase + Math.sin(t2 * Math.PI * 4 + r.phase + elapsed * 0.005) * r.amp
+          r.gfx.lineBetween(x1, y1, x2, y2)
+        }
+      }
+    }
+    this.events.on('update', update)
+    this.time.delayedCall(dur + 200, () => {
+      this.events.off('update', update)
+      for (const r of ribbons) {
+        if (r.gfx.active) r.gfx.destroy()
+      }
+    })
+  }
+
+  // 95. Wreckage orbit — sound-style: debris-creak (обломки на орбите)
+  // 6-10 крошечных треугольников вращаются вокруг планеты с разными скоростями.
+  private compWreckageOrbit(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+    const N = 6 + Math.floor(rng() * 5) // 6..10
+    const dur = 900
+    const debris: { gfx: Phaser.GameObjects.Graphics; r: number; ang: number; speed: number; spin: number }[] = []
+    for (let i = 0; i < N; i++) {
+      const gfx = this.add.graphics()
+      const color = this.pickColor(rng, sys)
+      const sz = (1.5 + rng() * 1.2) * DPR
+      gfx.fillStyle(color, 0.85)
+      gfx.fillTriangle(-sz, sz * 0.6, sz, sz * 0.3, 0, -sz)
+      sprite.add(gfx)
+      const r = sys.size * (1.1 + rng() * 0.3)
+      const ang = (i / N) * Math.PI * 2 + rng() * 0.4
+      const speed = (rng() < 0.5 ? 1 : -1) * (0.001 + rng() * 0.003)
+      const spin = (rng() - 0.5) * 0.008
+      gfx.x = Math.cos(ang) * r
+      gfx.y = Math.sin(ang) * r
+      debris.push({ gfx, r, ang, speed, spin })
+    }
+    let elapsed = 0
+    const update = (_t: number, dt: number) => {
+      elapsed += dt
+      for (const d of debris) {
+        d.ang += d.speed * dt
+        d.gfx.x = Math.cos(d.ang) * d.r
+        d.gfx.y = Math.sin(d.ang) * d.r
+        d.gfx.rotation += d.spin * dt
+        if (elapsed > dur * 0.6) {
+          d.gfx.alpha = Math.max(0, 1 - (elapsed - dur * 0.6) / (dur * 0.4))
+        }
+      }
+    }
+    this.events.on('update', update)
+    this.time.delayedCall(dur, () => {
+      this.events.off('update', update)
+      for (const d of debris) {
+        if (d.gfx.active) d.gfx.destroy()
+      }
+    })
+  }
+
   private renderMainPlanet(sys: Race) {
     // Sparkle над планетой — один на каждую главную расу.
     // Создаётся в world coords (НЕ child container), чтобы не зависеть от LOD-скрытия.
@@ -3342,6 +4646,8 @@ export class StarMapScene extends Phaser.Scene {
     this.cullableData.push({ obj: container, x: sys.x, y: sys.y, r: sys.size * 3 })
     // Регистрируем для адаптивного hit-area (увеличивается при zoom-out)
     this.mainPlanetHits.push({ container, baseR, circle: hitArea })
+    // Регистрируем для batch-toggle interactive по zoom (как BG)
+    this.bgInteractiveContainers.push(container)
   }
 
   private renderBgPoint(sys: BgSystem) {
@@ -3355,8 +4661,12 @@ export class StarMapScene extends Phaser.Scene {
       this.createSparkleAt(sys.x, sys.y, sys.size, mulberry32(sys.rngSeed + 17))
     }
 
-    const g = this.add.graphics()
-    container.add(g)
+    // ── Разделение на 2 Graphics для LOD ──
+    // gBase — aura + базовый шар + блик. ВСЕГДА видим (минимальный draw cost).
+    // g (gDetail ниже) — все archetype-specific детали + universal modifiers.
+    //   Скрывается при zoom < BG_DETAIL_MIN_ZOOM → ~80% меньше draw calls на zoom-out.
+    const gBase = this.add.graphics()
+    container.add(gBase)
 
     // Атмосфера (ореол) — общий для большинства архетипов, с вариативным размером
     const showAura =
@@ -3366,26 +4676,31 @@ export class StarMapScene extends Phaser.Scene {
     if (showAura) {
       const auraR = sys.size * (1.3 + rng() * 0.5) // 1.3-1.8
       const auraAlpha = (0.08 + rng() * 0.1) * sys.brightness
-      g.fillStyle(sys.color, auraAlpha)
-      g.fillCircle(0, 0, auraR)
+      gBase.fillStyle(sys.color, auraAlpha)
+      gBase.fillCircle(0, 0, auraR)
       // Иногда — двойной слой ауры
       if (rng() < 0.3) {
-        g.fillStyle(sys.accent, auraAlpha * 0.7)
-        g.fillCircle(0, 0, auraR * (0.85 + rng() * 0.1))
+        gBase.fillStyle(sys.accent, auraAlpha * 0.7)
+        gBase.fillCircle(0, 0, auraR * (0.85 + rng() * 0.1))
       }
     }
 
     // Базовый «шар» планеты — позиция блика и его смещение варьируются
-    g.fillStyle(sys.accent, 1)
-    g.fillCircle(0, 0, sys.size)
-    g.fillStyle(sys.color, 0.92 + rng() * 0.07)
+    gBase.fillStyle(sys.accent, 1)
+    gBase.fillCircle(0, 0, sys.size)
+    gBase.fillStyle(sys.color, 0.92 + rng() * 0.07)
     const ringOffsetAng = (1.0 + rng() * 0.6) * Math.PI // верхне-левый ±
     const ringOffsetMag = sys.size * (0.08 + rng() * 0.08)
-    g.fillCircle(
+    gBase.fillCircle(
       Math.cos(ringOffsetAng) * ringOffsetMag,
       Math.sin(ringOffsetAng) * ringOffsetMag,
       sys.size * (0.88 + rng() * 0.06),
     )
+
+    // Детальный Graphics — все остальные узоры. Регистрируется для LOD-toggle.
+    const g = this.add.graphics()
+    container.add(g)
+    this.bgArchetypeGfx.push(g)
 
     // Архетип-специфичная деталировка с большим количеством rng-вариаций.
     // Phase 7: для 9 hot archetypes — sub-variants (3 на каждый).
@@ -4168,6 +5483,21 @@ export class StarMapScene extends Phaser.Scene {
 
     // Idle-анимации у фоновых планет ОТКЛЮЧЕНЫ — было 454 активных tween (227 × 2),
     // что создавало просадки FPS при zoom. Только для главных рас оставлены анимации.
+    // Исключение: ~4% от 1000 фоновых планет (≈40) получают очень медленное вращение
+    // (60-120s/оборот). Отдельный rng от seed — не влияет на порядок rng() выше,
+    // на котором завязан texture signature.
+    const rotRng = mulberry32(((sys.rngSeed ^ 0xdeadbeef) >>> 0))
+    if (rotRng() < 0.04) {
+      const dir = rotRng() < 0.5 ? -1 : 1
+      const periodMs = 60000 + Math.floor(rotRng() * 60000)
+      this.tweens.add({
+        targets: container,
+        rotation: dir * Math.PI * 2,
+        duration: periodMs,
+        repeat: -1,
+        ease: 'Linear',
+      })
+    }
     void rng // подавить unused warning
 
     // Интерактивность для всех планет — тапы вызывают squish + эмоцию
@@ -4184,10 +5514,14 @@ export class StarMapScene extends Phaser.Scene {
         this.tapHandledThisFrame = true
         this.handlePlanetPress(sys)
         this.selectSystem(sys)
+        // BG: показать модалку с именем через 400ms
+        this.scheduleBgNamePopup(sys)
       }
     })
 
     this.systemSprites.set(sys.id, container)
+    // Регистрируем для batch-toggle interactive по zoom
+    this.bgInteractiveContainers.push(container)
     // BG-планеты получают LOD: при zoom < BG_PLANET_MIN_ZOOM скрываются полностью
     this.cullableData.push({ obj: container, x: sys.x, y: sys.y, r: sys.size * 2, lodMinZoom: BG_PLANET_MIN_ZOOM })
     // Адаптивный hit-area — растёт при zoom-out, чтобы было удобно тапать
@@ -4213,6 +5547,95 @@ export class StarMapScene extends Phaser.Scene {
       this.popover.destroy(true)
       this.popover = undefined
     }
+  }
+
+  // === BG NAME POPUP — простая модалка с именем планеты ===
+  private closeBgNamePopup() {
+    if (this.bgNamePopupTimer) {
+      this.bgNamePopupTimer.remove()
+      this.bgNamePopupTimer = undefined
+    }
+    if (this.bgNamePopup) {
+      this.bgNamePopup.destroy(true)
+      this.bgNamePopup = undefined
+    }
+  }
+
+  // Открывает popup с именем BG-планеты с задержкой (даём анимации сыграть).
+  private scheduleBgNamePopup(sys: BgSystem) {
+    this.closeBgNamePopup()
+    // Задержка ~400ms чтобы не наслаивать на анимацию клика
+    this.bgNamePopupTimer = this.time.delayedCall(400, () => {
+      this.openBgNamePopup(sys)
+    })
+  }
+
+  private openBgNamePopup(sys: BgSystem) {
+    const PADDING_X = 14 * DPR
+    const PADDING_Y = 8 * DPR
+    const offsetY = -(sys.size + 30 * DPR) // над планетой
+
+    const container = this.add.container(sys.x, sys.y + offsetY)
+    container.setDepth(1500)
+    this.bgNamePopup = container
+
+    // Текст имени
+    const nameText = this.add.text(0, 0, sys.name, {
+      fontFamily: 'Russo One, system-ui, sans-serif',
+      fontSize: `${13 * DPR}px`,
+      color: '#fef9d7',
+      stroke: '#1f2a14',
+      strokeThickness: 2 * DPR,
+    })
+    nameText.setOrigin(0.5, 0.5)
+
+    // Подпись типа (resource/hostile/empty + archetype)
+    const typeLabel = `${sys.type} · ${sys.archetype}`
+    const subText = this.add.text(0, 14 * DPR, typeLabel, {
+      fontFamily: 'Nunito, system-ui, sans-serif',
+      fontSize: `${9 * DPR}px`,
+      color: '#a3e635',
+    })
+    subText.setOrigin(0.5, 0.5)
+
+    // Фон-капсула
+    const w = Math.max(nameText.width, subText.width) + PADDING_X * 2
+    const h = nameText.height + subText.height + PADDING_Y * 2 + 4
+    const bg = this.add.graphics()
+    bg.fillStyle(0x1f2a14, 0.92)
+    bg.fillRoundedRect(-w / 2, -h / 2 + 4, w, h, 8 * DPR)
+    bg.lineStyle(1.5 * DPR, 0xa3e635, 0.6)
+    bg.strokeRoundedRect(-w / 2, -h / 2 + 4, w, h, 8 * DPR)
+
+    container.add(bg)
+    container.add(nameText)
+    container.add(subText)
+
+    // Compensation zoom — popup всегда фиксированного размера на экране
+    const cam = this.cameras.main
+    container.setScale(Math.max(0.3, 1 / cam.zoom))
+
+    // Appear-анимация: fade-in + slight slide вверх
+    container.setAlpha(0)
+    container.y += 6 * DPR
+    this.tweens.add({
+      targets: container,
+      alpha: 1,
+      y: container.y - 6 * DPR,
+      duration: 220,
+      ease: 'Cubic.easeOut',
+    })
+
+    // Auto-close через 3.5 сек
+    this.bgNamePopupTimer = this.time.delayedCall(3500, () => {
+      if (!this.bgNamePopup) return
+      this.tweens.add({
+        targets: this.bgNamePopup,
+        alpha: 0,
+        duration: 200,
+        onComplete: () => this.closeBgNamePopup(),
+      })
+    })
   }
 
   private openPhaserPopover(race: Race, placement: 'below' | 'above') {
@@ -4402,6 +5825,8 @@ export class StarMapScene extends Phaser.Scene {
         : spaceAbove >= POPOVER_HEIGHT ? 'above'
         : (spaceBelow >= spaceAbove ? 'below' : 'above')
       this.openPhaserPopover(sys as Race, placement)
+      // Если открыли main popover — закрываем BG name popup (не наслаиваем)
+      this.closeBgNamePopup()
     } else {
       this.selectedMainRaceId = null
       this.closePhaserPopover()
@@ -4522,7 +5947,7 @@ export class StarMapScene extends Phaser.Scene {
       const dt = Date.now() - tapDownTime
       const moved = Math.abs(p.x - tapDownX) + Math.abs(p.y - tapDownY)
       if (!this.tapHandledThisFrame && dt < 300 && moved < 8 * DPR) {
-        // Тап в пустое место карты — закрываем Phaser-popover.
+        // Тап в пустое место карты — закрываем popover'ы.
         // Сбрасываем счётчик нажатий → следующий тап на планету снова
         // запустит уникальную анимацию (как на первом нажатии).
         this.currentPressedPlanetId = null
@@ -4530,6 +5955,7 @@ export class StarMapScene extends Phaser.Scene {
           this.selectedMainRaceId = null
           this.closePhaserPopover()
         }
+        this.closeBgNamePopup()
       }
     })
 
