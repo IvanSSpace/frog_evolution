@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { eventBus } from './eventBus'
 import { getFrogPrice, MAX_LEVEL, FROG_LEVELS } from '../game/config/frogs'
 import { setGlobalFormat, type NumberFormat } from '../utils/formatting'
+import { makeInitialCosmicSlice } from './cosmic/types'
+import { createCosmicSlice, type CosmicState } from './cosmic/slice'
 
 // ============== АПГРЕЙДЫ ==============
 
@@ -146,8 +148,10 @@ const MAGNET_ENABLED_KEY = 'frog_evolution_magnet_enabled'
 const VERSION_KEY = 'frog_evolution_storage_version'
 const SESSION_KEY = 'frog_evolution_last_session'
 const FORMAT_KEY = 'frog_format'
+const COSMIC_KEY = 'frog_evolution_cosmic'
 // Бампается когда меняются конфиги — старые сейвы сбрасываются
-const STORAGE_VERSION = 14
+// 16 (Phase 11): добавлен COSMIC_KEY для CosmicSlice (Cosmic Frogs System)
+const STORAGE_VERSION = 16
 
 function loadUpgrades(): Upgrades {
   const defaults: Upgrades = { dropSpeed: 0, tractor: 0, magnet: 0, crateQuality: 0, rareBoxSpeed: 0 }
@@ -160,6 +164,7 @@ function loadUpgrades(): Upgrades {
       localStorage.removeItem(DISCOVERED_KEY)
       localStorage.removeItem(LOCATION_FROGS_KEY)
       localStorage.removeItem(LOCATION_KEY)
+      localStorage.removeItem(COSMIC_KEY)  // Phase 11: cosmic slice
       return defaults
     }
     const raw = localStorage.getItem(UPGRADES_KEY)
@@ -264,6 +269,49 @@ function saveMagnetEnabled(v: boolean) {
   try { localStorage.setItem(MAGNET_ENABLED_KEY, String(v)) } catch {/* ignore */}
 }
 
+// ============== COSMIC SLICE PERSIST ==============
+
+type CosmicPersist = ReturnType<typeof makeInitialCosmicSlice>
+
+function loadCosmicSlice(): CosmicPersist {
+  const defaults = makeInitialCosmicSlice()
+  try {
+    const raw = localStorage.getItem(COSMIC_KEY)
+    if (!raw) return defaults
+    const parsed = JSON.parse(raw)
+    // Graceful fallback: каждое поле проверяется отдельно — поломанные части
+    // заменяются дефолтами (T-11-01 mitigation).
+    return {
+      serums: parsed.serums ?? defaults.serums,
+      boxes: Array.isArray(parsed.boxes) ? parsed.boxes : [],
+      scouts: Array.isArray(parsed.scouts) ? parsed.scouts : [],
+      ship: parsed.ship ?? null,
+      carriers: Array.isArray(parsed.carriers) ? parsed.carriers : [],
+      bestiaryBitset: Array.isArray(parsed.bestiaryBitset) && parsed.bestiaryBitset.length === 24
+        ? parsed.bestiaryBitset
+        : defaults.bestiaryBitset,
+      pityCounters: parsed.pityCounters ?? defaults.pityCounters,
+      lastActiveTab: (
+        parsed.lastActiveTab === 'scouts' || parsed.lastActiveTab === 'boxes' ||
+        parsed.lastActiveTab === 'serums' || parsed.lastActiveTab === 'bestiary'
+      ) ? parsed.lastActiveTab : 'scouts',
+      crew: parsed.crew ?? defaults.crew,
+    }
+  } catch {
+    return defaults
+  }
+}
+
+function saveCosmicSlice(state: CosmicPersist) {
+  try {
+    // lastActiveTab — sessionStorage ответственность (UI), но всё же persist:
+    // храним для устойчивости к закрытию браузера. UI читает sessionStorage первым.
+    localStorage.setItem(COSMIC_KEY, JSON.stringify(state))
+  } catch {
+    // QuotaExceededError → silent ignore (T-11-03 mitigation)
+  }
+}
+
 function loadNumberFormat(): NumberFormat {
   try {
     const raw = localStorage.getItem(FORMAT_KEY)
@@ -297,7 +345,7 @@ export function getOfflineElapsedMs(): number {
 
 export type BuyFrogResult = { ok: true } | { ok: false; reason: 'noGold' | 'capFull' | 'invalid' }
 
-interface GameState {
+interface GameStateBase {
   gold: number
   addGold: (amount: number) => void
   spendGold: (amount: number) => boolean
@@ -305,6 +353,7 @@ interface GameState {
   upgrades: Upgrades
   buyUpgrade: (key: keyof Upgrades) => boolean
   devResetUpgrades: () => void
+  devClearAllFrogs: () => void
 
   // Лягушки на поле + коробки (real-time, обновляется из MainScene)
   entityCount: number
@@ -346,6 +395,10 @@ interface GameState {
   setRareBoxProgress: (v: number) => void
 }
 
+// Полный GameState = базовые поля + Cosmic Frogs System (Phase 11+)
+// CosmicState = CosmicSlice + CosmicSliceActions (см. cosmic/slice.ts)
+type GameState = GameStateBase & CosmicState
+
 export const useGameStore = create<GameState>((set, get) => ({
   gold: 0,
 
@@ -362,6 +415,12 @@ export const useGameStore = create<GameState>((set, get) => ({
     const defaults: Upgrades = { dropSpeed: 0, tractor: 0, magnet: 0, crateQuality: 0, rareBoxSpeed: 0 }
     saveUpgrades(defaults)
     set({ upgrades: defaults })
+  },
+  devClearAllFrogs: () => {
+    const empty: number[][] = LOCATIONS.map(() => [])
+    saveLocationFrogsArr(empty)
+    set({ locationFrogs: empty })
+    eventBus.emit('dev:clearAllFrogs')
   },
   buyUpgrade: (key) => {
     const state = get()
@@ -463,4 +522,42 @@ export const useGameStore = create<GameState>((set, get) => ({
   setBoxWaiting: (v) => set({ boxWaiting: v }),
   rareBoxProgress: 0,
   setRareBoxProgress: (v) => set({ rareBoxProgress: v }),
+
+  // ============== COSMIC FROGS SYSTEM (Phase 11+) ==============
+  // createCosmicSlice сначала кладёт actions + дефолтные данные,
+  // потом загруженные из localStorage значения переопределяют дефолты.
+  ...createCosmicSlice(
+    set as (partial: Partial<CosmicState>) => void,
+    get as () => CosmicState,
+  ),
+  ...loadCosmicSlice(),
 }))
+
+// ============== COSMIC AUTO-PERSIST ==============
+// Subscribe — автоматически сохраняет cosmic-данные при любых изменениях.
+// lastActiveTab также persist (UI читает sessionStorage первым, потом store).
+useGameStore.subscribe((state, prev) => {
+  if (
+    state.serums !== prev.serums ||
+    state.boxes !== prev.boxes ||
+    state.scouts !== prev.scouts ||
+    state.ship !== prev.ship ||
+    state.carriers !== prev.carriers ||
+    state.bestiaryBitset !== prev.bestiaryBitset ||
+    state.pityCounters !== prev.pityCounters ||
+    state.lastActiveTab !== prev.lastActiveTab ||
+    state.crew !== prev.crew
+  ) {
+    saveCosmicSlice({
+      serums: state.serums,
+      boxes: state.boxes,
+      scouts: state.scouts,
+      ship: state.ship,
+      carriers: state.carriers,
+      bestiaryBitset: state.bestiaryBitset,
+      pityCounters: state.pityCounters,
+      lastActiveTab: state.lastActiveTab,
+      crew: state.crew,
+    })
+  }
+})

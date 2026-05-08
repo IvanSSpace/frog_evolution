@@ -1,4 +1,5 @@
 import mitt from 'mitt'
+import type { CosmicToastPayload } from './cosmic/types'
 
 type Events = {
   'poop:collected': { value: number }
@@ -21,6 +22,8 @@ type Events = {
   'starmap:popover-close': void
   'starmap:centerHome': void
   'dev:clearAllFrogs': void
+  // Cosmic Frogs System (Phase 11+)
+  'cosmic:toast': CosmicToastPayload
 }
 
 export const eventBus = mitt<Events>()
