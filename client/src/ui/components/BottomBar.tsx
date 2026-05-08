@@ -12,7 +12,9 @@ type TileProps = {
   emoji: string
   skin: TileSkin
   size?: 'md' | 'lg'
-  badge?: boolean
+  // badge: number → показать число (если > 0); boolean → показать "!" если true.
+  // undefined / 0 / false → ничего не показывать.
+  badge?: number | boolean
   onClick?: () => void
 }
 
@@ -26,8 +28,13 @@ const SKIN_VARS: Record<TileSkin, React.CSSProperties> = {
   cream:  { ['--ff-tile-from' as never]: '#fef3c7', ['--ff-tile-to' as never]: '#fbbf24', ['--ff-tile-border' as never]: '#78350f' },
 }
 
-function Tile({ emoji, skin, size = 'md', badge = false, onClick }: TileProps) {
+function Tile({ emoji, skin, size = 'md', badge, onClick }: TileProps) {
   const dim = size === 'lg' ? 'w-16 h-16 text-3xl' : 'w-12 h-12 text-2xl'
+  const showBadge =
+    typeof badge === 'number' ? badge > 0 :
+    typeof badge === 'boolean' ? badge :
+    false
+  const badgeContent = typeof badge === 'number' ? badge : '!'
   return (
     <button
       onClick={onClick}
@@ -35,7 +42,7 @@ function Tile({ emoji, skin, size = 'md', badge = false, onClick }: TileProps) {
       className={`ff-tile flex-shrink-0 ${dim} active:scale-100`}
     >
       <span style={{ filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))' }}>{emoji}</span>
-      {badge && <NotifBadge>!</NotifBadge>}
+      {showBadge && <NotifBadge>{badgeContent}</NotifBadge>}
     </button>
   )
 }
@@ -44,9 +51,10 @@ type BottomBarProps = {
   onOpenShop?: () => void
   onOpenFrogShop?: () => void
   onOpenSettings?: () => void
+  onOpenCosmicHub?: () => void
 }
 
-export function BottomBar({ onOpenShop, onOpenFrogShop, onOpenSettings }: BottomBarProps) {
+export function BottomBar({ onOpenShop, onOpenFrogShop, onOpenSettings, onOpenCosmicHub }: BottomBarProps) {
   return (
     <div className="ff-bar bottom w-full h-full flex items-center justify-between px-3 py-2"
          style={{ pointerEvents: 'auto' }}>
@@ -58,7 +66,8 @@ export function BottomBar({ onOpenShop, onOpenFrogShop, onOpenSettings }: Bottom
         <Tile emoji="⬆️"  skin="green"  onClick={onOpenShop} />
         <Tile emoji="🎨"  skin="purple" badge />
         <Tile emoji="🎁"  skin="red"    badge />
-        <Tile emoji="🛍️" skin="teal" />
+        {/* 🧬 — Cosmic Hub (Phase 11). Badge число задаётся в Plan 03. */}
+        <Tile emoji="🧬"  skin="teal"   onClick={onOpenCosmicHub} />
       </div>
 
       {/* Справа — журнал */}
