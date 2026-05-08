@@ -199,7 +199,9 @@ Plans:
 
 **Depends on:** Phase 13 (overlay must show dormant tier on newly-created carriers).
 
-**Status:** pending
+**Status:** **complete** (2026-05-08)
+
+**Outcome:** 4 plans, 3 waves, **5 atomic commits**. Foundation layer (`cosmicSlice` extended с `serumDragActive` + `selectedSerum`, atomic `applySerum` single-set transaction, pure `serumEligibility` utility c locked SERUM-08 table 1/7/13/19). UI layer: `SerumsTab.tsx` rewrite в 4 секции (legendary→epic→rare→common) + переиспользуемый `ElementGrid.tsx` (4×4 с TINT TABLE + count badge + disabled state) + `cosmic:select-serum` event. MainScene integration: `SerumSelectionLayer` (standalone Phaser.Graphics с green halo pulse repeat:-1 + one-shot red flash 220ms) + реактивный `useGameStore.subscribe` пересчитывает eligible set; `handleSerumTap` → `applySerumToFrog` (2-сек pulse 1000ms × yoyo Sine.easeInOut + `burstEffect` at midpoint + atomic `applySerum` + success toast с undo callback); magnet/merge guard'ы (`!serumPaused` в update + drop-merge guard + `onFrogTapped` route); background `pointerdown` → cancel selection; spawnFrog re-show halos (race-mitigation T-14-03-01); cleanup в clearField/destroy/location-transition. Polish: App.tsx toast subscriber honors `payload.duration` + `payload.action.onClick` (CosmicToast UI рендерит зелёную action кнопку); desktop Pointer Events DnD secondary mode (DOM ghost 32px tinted circle через `cosmic:serum-pointer-move/up` events; mobile `pointerType==='touch'` → tap path); dev helpers `window.__addSerum/__clearSerums/__listSerums` (DEV-only, Vite tree-shake verified). i18n RU/EN/ES parity полный (mis_tap_msg + applied + undo_label + section_* + location_*). Bundle delta gzip = **+2.14 KB** (Phase 13 baseline 209.45 KB → 211.59 KB; cap +20 KB ✓ — used 11% of budget). **11/11 ✓ REQ-IDs** (SERUM-02..11 + UX-07). См. `.planning/phases/14-serums-tab-tap-to-select/14-{01,02,03,04}-SUMMARY.md`.
 
 ---
 
