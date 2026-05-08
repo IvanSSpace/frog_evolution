@@ -23,6 +23,7 @@ import {
   getTractorCapMs,
   getTractorIncomePerSec,
 } from './store/gameStore'
+import type { CosmicToastPayload } from './store/cosmic/types'
 
 const queryClient = new QueryClient()
 
@@ -37,6 +38,11 @@ function App() {
   const [welcomeBack, setWelcomeBack] = useState<{ earned: number; hours: number } | null>(null)
   const [discovered, setDiscovered] = useState<number | null>(null)
   const [rareCrate, setRareCrate] = useState<{ minLevel: number; maxLevel: number } | null>(null)
+  // Phase 11: cosmic toast (multi-grouping COSMIC-HUB-06)
+  const [cosmicToast, setCosmicToast] = useState<CosmicToastPayload | null>(null)
+  const toastBufferRef = useRef<CosmicToastPayload[]>([])
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const toastHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     initSfx()
@@ -101,6 +107,68 @@ function App() {
     }
   }, [])
 
+  // Phase 11 (COSMIC-HUB-05/06): cosmic:toast subscriber + multi-grouping.
+  // Несколько emit'ов за GROUPING_WINDOW_MS объединяются в один grouped toast.
+  useEffect(() => {
+    const GROUPING_WINDOW_MS = 1000
+    const AUTO_HIDE_MS = 4000
+
+    const handler = (payload: CosmicToastPayload) => {
+      toastBufferRef.current.push(payload)
+
+      // Сбросить старый окно-таймер, открыть новый — окно "плывёт"
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+
+      toastTimerRef.current = setTimeout(() => {
+        const buffer = toastBufferRef.current
+        toastBufferRef.current = []
+        toastTimerRef.current = null
+
+        if (buffer.length === 0) return
+
+        let next: CosmicToastPayload
+        if (buffer.length === 1) {
+          next = buffer[0]
+        } else {
+          // Grouped toast: суммируем count (если payload.count не задан → 1 за событие)
+          const totalCount = buffer.reduce((sum, t) => sum + (t.count ?? 1), 0)
+          // Action — только если все одинаковые (по label) — иначе ambiguity
+          const firstLabel = buffer[0].action?.label
+          const allSameAction = firstLabel != null &&
+            buffer.every((t) => t.action?.label === firstLabel)
+          next = {
+            type: buffer[0].type,
+            msg: `${totalCount} событий`,
+            count: totalCount,
+            action: allSameAction ? buffer[0].action : undefined,
+          }
+        }
+
+        setCosmicToast(next)
+
+        // Автоскрытие через AUTO_HIDE_MS — отдельный таймер, который мы можем отменить
+        if (toastHideTimerRef.current) clearTimeout(toastHideTimerRef.current)
+        toastHideTimerRef.current = setTimeout(() => {
+          setCosmicToast(null)
+          toastHideTimerRef.current = null
+        }, AUTO_HIDE_MS)
+      }, GROUPING_WINDOW_MS)
+    }
+
+    eventBus.on('cosmic:toast', handler)
+    return () => {
+      eventBus.off('cosmic:toast', handler)
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current)
+        toastTimerRef.current = null
+      }
+      if (toastHideTimerRef.current) {
+        clearTimeout(toastHideTimerRef.current)
+        toastHideTimerRef.current = null
+      }
+    }
+  }, [])
+
   const handleRareCrateClaim = (wonLevel: number) => {
     setRareCrate(null)
     eventBus.emit('rareCrate:claim', { level: wonLevel })
@@ -152,7 +220,79 @@ function App() {
           onClose={() => setWelcomeBack(null)}
         />
       )}
+      {cosmicToast && (
+        <CosmicToast
+          payload={cosmicToast}
+          onClose={() => setCosmicToast(null)}
+        />
+      )}
     </QueryClientProvider>
+  )
+}
+
+// Phase 11: cosmic toast UI (COSMIC-HUB-05/06).
+// Появляется внизу экрана (над BottomBar), автоматически скрывается через 4 сек.
+function CosmicToast({
+  payload,
+  onClose,
+}: {
+  payload: CosmicToastPayload
+  onClose: () => void
+}) {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        bottom: 'calc(13% + 16px)',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 60,
+        background: '#1f2937',
+        color: '#fff',
+        borderRadius: 12,
+        padding: '12px 16px',
+        boxShadow: '0 4px 14px rgba(0,0,0,0.4)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        maxWidth: 320,
+        width: 'calc(100% - 32px)',
+        pointerEvents: 'auto',
+      }}
+    >
+      <span style={{ fontSize: 14, flex: 1 }}>{payload.msg}</span>
+      {payload.action && (
+        <button
+          onClick={() => { payload.action!.onClick(); onClose() }}
+          style={{
+            color: '#34d399',
+            fontSize: 14,
+            fontWeight: 600,
+            whiteSpace: 'nowrap',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          {payload.action.label}
+        </button>
+      )}
+      <button
+        onClick={onClose}
+        style={{
+          color: 'rgba(255,255,255,0.4)',
+          fontSize: 18,
+          lineHeight: 1,
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          padding: 0,
+        }}
+        aria-label="Close"
+      >
+        ×
+      </button>
+    </div>
   )
 }
 
