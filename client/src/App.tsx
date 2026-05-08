@@ -27,6 +27,7 @@ import type { CosmicToastPayload } from './store/cosmic/types'
 import { findPlanetById, DAILY_CAP, type MissionResult } from './game/data/missionConfig'
 import { FlightConfirmDialog } from './components/CosmicHub/FlightConfirmDialog'
 import { MissionOverlay } from './components/MissionOverlay/MissionOverlay'
+import { StabilizationModal } from './components/CosmicHub/StabilizationModal'
 
 const queryClient = new QueryClient()
 
@@ -340,6 +341,9 @@ function App() {
           <CosmicHubModal onClose={() => setCosmicHubOpen(false)} />
         )}
       </Suspense>
+      {/* Phase 17 (CARRIER-08): stabilization modal — top-level always-mounted,
+          listens cosmic:carrier-stabilized event independent of Cosmic Hub state. */}
+      <StabilizationModal />
       {pendingFlightPlanetId && (
         <FlightConfirmDialog
           toPlanetId={pendingFlightPlanetId}

@@ -31,6 +31,9 @@ export class FrogElementOverlay {
   element: Element = 'fire'
   tier: ElementTier = 'dormant'
   hostFrogId: string | null = null
+  // Phase 17 (CARRIER-09): locked = stabilized carrier overlay фиксирован,
+  // syncCarriers не должен пересоздавать overlay когда tier равно carrier.rarity.
+  locked = false
 
   private orb: Phaser.GameObjects.Arc
   private idleLifecycle: OverlayLifecycle | null = null
@@ -68,6 +71,15 @@ export class FrogElementOverlay {
    * сохраняются; только idle переключается. Используется dev helper'ом и Phase 17
    * (carrier evolution: dormant→awakened после стабилизации).
    */
+  /**
+   * Phase 17 (CARRIER-09): lock/unlock visual tier.
+   * lock=true → FrogOverlayManager.syncCarriers НЕ будет пересчитывать tier
+   * (даже если carrier.rarity сменится — defensive).
+   */
+  setLocked(locked: boolean): void {
+    this.locked = locked
+  }
+
   setTier(newTier: ElementTier): void {
     if (this.tier === newTier) return
     this.tier = newTier
@@ -140,6 +152,8 @@ export class FrogElementOverlay {
   detach(): void {
     this.idleLifecycle?.dispose()
     this.idleLifecycle = null
+    // Phase 17 (CARRIER-09): reset on detach (pool cleanliness).
+    this.locked = false
 
     if (this.appliedTintToBody) {
       // Если body всё ещё активен — восстанавливаем tint. Если уже destroy'ен —

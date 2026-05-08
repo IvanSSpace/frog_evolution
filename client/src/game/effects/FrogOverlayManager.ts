@@ -137,6 +137,11 @@ export class FrogOverlayManager {
         // idle in-place, но пересборка через pool проще и сохраняет инвариант
         // "active overlay.tier совпадает с overlay.element bucket key".
         const tierChanged = existing.tier !== tier
+        // Phase 17 (CARRIER-09): если carrier.stabilized & overlay.locked — НЕ
+        // пересоздаём overlay. Tier и element считаются финализированными.
+        if (existing.locked && carrier.stabilized && existing.element === carrier.element) {
+          continue
+        }
         if (existing.element !== carrier.element || tierChanged) {
           elementOverlayPool.release(existing)
           this.active.delete(carrier.frogId)
@@ -147,6 +152,8 @@ export class FrogOverlayManager {
       const element = carrier.element as Element
       const overlay = elementOverlayPool.acquire(this.scene, element, tier)
       overlay.attach(frog.container, frog.body, carrier.frogId, element, tier)
+      // Phase 17 (CARRIER-09): lock visual если carrier стабилизировался.
+      if (carrier.stabilized) overlay.setLocked(true)
       this.active.set(carrier.frogId, overlay)
     }
   }
