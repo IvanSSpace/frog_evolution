@@ -18,3 +18,8 @@ export { compFlameTongues } from './compFlameTongues'
 export { compIceWisps } from './compIceWisps'
 export { compPlasmaArc } from './compPlasmaArc'
 export { compChromaShift } from './compChromaShift'
+// Group D — Task 6 (material)
+export { compCrystalShatter } from './compCrystalShatter'
+export { compBloomPetals } from './compBloomPetals'
+export { compToxicCloud } from './compToxicCloud'
+export { compSandSwirl } from './compSandSwirl'

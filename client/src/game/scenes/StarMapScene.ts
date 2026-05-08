@@ -21,6 +21,10 @@ import {
   compIceWisps,
   compPlasmaArc,
   compChromaShift,
+  compCrystalShatter,
+  compBloomPetals,
+  compToxicCloud,
+  compSandSwirl,
 } from '../effects/anim/shared'
 
 // Phaser-сцена Звёздной карты. Запускается рядом с MainScene через scene-manager.
@@ -1054,13 +1058,13 @@ export class StarMapScene extends Phaser.Scene {
       case 12: this.compVortex(sprite, sys, rng); break
       case 13: this.compStormSwirl(sprite, sys, rng); break
       case 14: this.compRingDance(sprite, sys, rng); break
-      case 15: this.compCrystalShatter(sprite, sys, rng); break
+      case 15: compCrystalShatter(this, sprite, sys, rng); break
       case 16: compRipple(this, sprite, sys, rng); break
-      case 17: this.compSandSwirl(sprite, sys, rng); break
+      case 17: compSandSwirl(this, sprite, sys, rng); break
       case 18: this.compLavaErupt(sprite, sys, rng); break
-      case 19: this.compBloomPetals(sprite, sys, rng); break
+      case 19: compBloomPetals(this, sprite, sys, rng); break
       case 20: this.compDustPuff(sprite, sys, rng); break
-      case 21: this.compToxicCloud(sprite, sys, rng); break
+      case 21: compToxicCloud(this, sprite, sys, rng); break
       case 22: this.compBeam(sprite, sys, rng); break
       case 23: this.compTwinPulse(sprite, sys, rng); break
       case 24: this.compSingularity(sprite, sys, rng); break
@@ -1514,63 +1518,9 @@ export class StarMapScene extends Phaser.Scene {
     })
   }
 
-  // 15. Crystal shatter — N остроугольных осколков разлетаются (для ice, mineral, crystal)
-  private compCrystalShatter(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
-    const N = 5 + Math.floor(rng() * 6)
-    const dur = 500 + rng() * 300
-    for (let i = 0; i < N; i++) {
-      const ang = (i / N) * Math.PI * 2 + (rng() - 0.5) * 0.3
-      const dist = sys.size * (1.5 + rng() * 0.7)
-      const color = this.pickColor(rng, sys)
-      // ромб через 4 точки
-      const shard = this.add.graphics()
-      const sw = (1.5 + rng() * 1.5) * DPR
-      const sh = (3.5 + rng() * 3) * DPR
-      shard.fillStyle(color, 0.95)
-      shard.fillTriangle(0, -sh, sw, 0, 0, sh)
-      shard.fillTriangle(0, -sh, -sw, 0, 0, sh)
-      shard.rotation = ang + Math.PI / 2
-      sprite.add(shard)
-      this.tweens.add({
-        targets: shard,
-        x: Math.cos(ang) * dist, y: Math.sin(ang) * dist,
-        rotation: shard.rotation + (rng() - 0.5) * Math.PI * 2,
-        alpha: 0, scaleX: 0.4, scaleY: 0.4,
-        duration: dur + rng() * 200, ease: this.pickEase(rng),
-        onComplete: () => shard.destroy(),
-      })
-    }
-  }
-
+  // 15. compCrystalShatter — extracted в effects/anim/shared/compCrystalShatter.ts (Phase 9).
   // 16. compRipple — extracted в effects/anim/shared/compRipple.ts (Phase 9).
-
-  // 17. Sand swirl — мелкие точки кружатся как песок (для desert)
-  private compSandSwirl(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
-    const N = 12 + Math.floor(rng() * 8)
-    const direction = rng() < 0.5 ? 1 : -1
-    const dur = 600 + rng() * 300
-    const baseR = sys.size * 1.2
-    const rVar = sys.size * 0.5
-    for (let i = 0; i < N; i++) {
-      const startAng = rng() * Math.PI * 2
-      const startR = baseR + (rng() - 0.5) * rVar
-      const color = this.pickColor(rng, sys)
-      const dot = this.add.circle(0, 0, (0.8 + rng()) * DPR, color, 0.8)
-      sprite.add(dot)
-      const startTime = this.time.now
-      const localDur = dur + rng() * 200
-      const update = () => {
-        if (!dot.active) { this.events.off('update', update); return }
-        const t = (this.time.now - startTime) / localDur
-        if (t >= 1) { dot.destroy(); this.events.off('update', update); return }
-        const r = startR * (1 + t * 0.5)
-        const a = startAng + direction * t * Math.PI * 1.5
-        dot.x = Math.cos(a) * r; dot.y = Math.sin(a) * r
-        dot.alpha = 0.8 * (1 - t)
-      }
-      this.events.on('update', update)
-    }
-  }
+  // 17. compSandSwirl — extracted в effects/anim/shared/compSandSwirl.ts (Phase 9).
 
   // 18. Lava erupt — точки извергаются вверх с trail и падают (для lava, forge)
   private compLavaErupt(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
@@ -1603,32 +1553,7 @@ export class StarMapScene extends Phaser.Scene {
     }
   }
 
-  // 19. Bloom petals — точки расходятся по форме цветка (для forest, organic, home)
-  private compBloomPetals(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
-    const petals = 5 + Math.floor(rng() * 4) // 5-8
-    const dur = 600 + rng() * 250
-    const maxDist = sys.size * (1.5 + rng() * 0.5)
-    for (let p = 0; p < petals; p++) {
-      const baseAng = (p / petals) * Math.PI * 2
-      // 2-3 точки на лепесток
-      const dotsPerPetal = 2 + Math.floor(rng() * 2)
-      for (let j = 0; j < dotsPerPetal; j++) {
-        const offset = (j - dotsPerPetal / 2 + 0.5) * 0.15
-        const ang = baseAng + offset
-        const dist = maxDist * (0.7 + j * 0.15)
-        const color = this.pickColor(rng, sys)
-        const dot = this.add.circle(0, 0, (1.5 + rng()) * DPR, color, 1)
-        sprite.add(dot)
-        this.tweens.add({
-          targets: dot,
-          x: Math.cos(ang) * dist, y: Math.sin(ang) * dist,
-          alpha: 0, scaleX: 1.5, scaleY: 1.5,
-          duration: dur + j * 50, ease: 'Sine.easeOut',
-          onComplete: () => dot.destroy(),
-        })
-      }
-    }
-  }
+  // 19. compBloomPetals — extracted в effects/anim/shared/compBloomPetals.ts (Phase 9).
 
   // 20. Dust puff — медленный low-alpha облачный пуф (для dead, rocky, shadow)
   private compDustPuff(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
@@ -1651,27 +1576,7 @@ export class StarMapScene extends Phaser.Scene {
     })
   }
 
-  // 21. Toxic cloud — зелёные пятна расширяются клубом (для toxic, mist)
-  private compToxicCloud(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
-    const cloud = this.add.graphics()
-    const blobs = 5 + Math.floor(rng() * 4)
-    for (let i = 0; i < blobs; i++) {
-      const ang = rng() * Math.PI * 2
-      const dist = sys.size * (0.4 + rng() * 0.7)
-      const r = sys.size * (0.25 + rng() * 0.3)
-      const color = this.pickColor(rng, sys)
-      cloud.fillStyle(color, 0.3 + rng() * 0.25)
-      cloud.fillEllipse(Math.cos(ang) * dist, Math.sin(ang) * dist, r * 1.5, r)
-    }
-    sprite.add(cloud)
-    this.tweens.add({
-      targets: cloud,
-      scaleX: 1.7 + rng() * 0.5, scaleY: 1.7 + rng() * 0.5,
-      angle: (rng() - 0.5) * 90, alpha: 0,
-      duration: 700 + rng() * 350, ease: this.pickEase(rng),
-      onComplete: () => cloud.destroy(),
-    })
-  }
+  // 21. compToxicCloud — extracted в effects/anim/shared/compToxicCloud.ts (Phase 9).
 
   // 22. Beam — прямой длинный луч в случайном направлении (для plasma, energy, mechano)
   private compBeam(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
