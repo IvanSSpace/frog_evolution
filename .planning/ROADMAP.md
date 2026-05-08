@@ -214,11 +214,11 @@ Plans:
 **Plans:** 5 plans in 4 waves
 
 Plans:
-- [ ] 15-01-PLAN.md — Foundation: BoxData type extension, rollRarity utility (50/35/12/3 + pity 3/10/15/20/25), store actions (addBox/rollBoxRarity/commitOpenedBox/removeBox), STORAGE_VERSION 16→17, dev-helper __addBox
-- [ ] 15-02-PLAN.md — BoxesTab UI rewrite: inventory cards с element-icon + planet-name, tap → lazy CascadeRevealModal mount, open-all placeholder
-- [ ] 15-03-PLAN.md — CascadeRevealModal: state machine (opening/coins/resources/pause/slot/reveal/closing), cascade timeline 200/200/200/400ms, instantMode bypass, lazy SerumSlotMachine import
-- [ ] 15-04-PLAN.md — SerumSlotMachine: rarity-dependent durations (1.2-9.5s), checkpoint flashes 1.5/3.5/5.5/8s gray/blue/purple/gold, skip MVP (tap-anywhere + button + instantMode), element fingerprint particles
-- [ ] 15-05-PLAN.md — BulkOpenSummary + cosmicSettings.ts + SettingsModal toggle «Боксы мгновенно» + lazy chunks verify + i18n RU/EN/ES + phase-level acceptance
+- [x] 15-01-PLAN.md — Foundation: BoxData type extension, rollRarity utility (50/35/12/3 + pity 3/10/15/20/25), store actions (addBox/rollBoxRarity/commitOpenedBox/removeBox), STORAGE_VERSION 17→18, dev-helper __addBox
+- [x] 15-02-PLAN.md — BoxesTab UI rewrite: inventory cards с element-icon + planet-name, tap → lazy CascadeRevealModal mount, open-all placeholder
+- [x] 15-03-PLAN.md — CascadeRevealModal: state machine (opening/coins/resources/pause/slot/reveal/closing), cascade timeline 200/200/200/400ms, instantMode bypass, lazy SerumSlotMachine import
+- [x] 15-04-PLAN.md — SerumSlotMachine: rarity-dependent durations (1.2-9.5s), checkpoint flashes 1.5/3.5/5.5/8s gray/blue/purple/gold, skip MVP (tap-anywhere + button + instantMode), element fingerprint particles
+- [x] 15-05-PLAN.md — BulkOpenSummary + cosmicSettings.ts + SettingsModal toggle «Боксы мгновенно» + lazy chunks verify + i18n RU/EN/ES + phase-level acceptance
 
 **Success Criteria:**
 1. Opening a box plays cascade in correct order (coins, resources, pause, slot) with timings within ±50ms; final serum lands in inventory.
@@ -229,7 +229,9 @@ Plans:
 
 **Depends on:** Phase 14 (serum inventory).
 
-**Status:** pending
+**Status:** **complete** (2026-05-08) — 5 plans, 4 waves, 5 atomic commits. BoxData v2 (8 fields) + rollRarity (locked 50/35/12/3 + pity 3/10/15/20/25) + 4 store actions (addBox/rollBoxRarity/commitOpenedBox/removeBox) + STORAGE_VERSION 17→18; BoxesTab inventory cards (element-tinted dot + planet name + bonus badge) + lazy CascadeRevealModal/BulkOpenSummary mount; CascadeRevealModal cascade state machine (opening/coins/resources/pause/slot/reveal) + 200/200/200/400ms timeline + instantMode bypass + tap-anywhere skip propagation; SerumSlotMachine rarity-locked DURATIONS table (common 1.2-1.8 / rare 2.5-3.8 / epic 5-7 / legendary 9-9.999s cap) + 4 CHECKPOINTS (gray/blue/purple/gold с honest fake-out filter) + element fingerprint particles co-старта + Skip button 1s + completedRef idempotency; BulkOpenSummary grouped rarity-sorted rows + legendary confetti glow; cosmicSettings (localStorage + CustomEvent dispatch) + SettingsModal «🧬 Космос» section + toggle «Боксы мгновенно» (useSyncExternalStore reactive); dev helpers `__addBox/__listBoxes/__clearBoxes` (DEV-only tree-shaken in prod); i18n RU/EN/ES parity (201 keys × 3 локали); 27/27 unit tests passing (rarityRoll 11 + slice 11 + cosmicSettings 5); bundle delta +7.66 KB gzip (cap +35 KB ✓; index.js 220.23 KB vs Phase 16 baseline 218.70 KB) + 3 lazy chunks confirmed (CascadeRevealModal 1.82 KB / SerumSlotMachine 2.05 KB / BulkOpenSummary 1.32 KB gzip). 17/17 ✓ REQ-IDs (BOX-01..07, SLOT-01..08, UX-06, PERF-08).
+
+**Outcome:** Полный box → slot-machine → serum drama-flow реализован. Связка Phase 14+15+16 даёт полный loop ship→mission→box→slot-machine→serum→apply→carrier (ждёт carrier evolution в Phase 17).
 
 ---
 
@@ -309,13 +311,13 @@ Plans:
 
 **Requirements:** BESTIARY-01, BESTIARY-02, BESTIARY-03, BESTIARY-04, BESTIARY-05, BESTIARY-06, BESTIARY-07, BESTIARY-08, BESTIARY-09
 
-**Plans:**
-1. BestiaryTab structure: 4 tabs (Болото/Лес/Континент/Планета) × 24×16 grid per tab; reads from `cosmicSlice.bestiaryBitset` (192 bytes).
-2. TanStack Virtual integration for virtualized scrolling — only visible cells mount; benchmark scroll-perf on real device.
-3. Cell rendering: discovered → tint + rarity border + mini-icon; locked → gray silhouette + "???" tooltip.
-4. Filter pills: All / Common / Rare / Epic / Legendary + element search; default "Discovered only" when bitset has any 1-bits; sort: Level↑ / Level↓ / Element / Rarity.
-5. Cell tap → CellDetailModal: visual preview (reuses Phase 13 anim), sound-style label, lore text.
-6. Sub-completion rewards: 10 cells → 1000 coins; 24 cells (one level row) → epic serum any element; 96 cells (one location) → legendary serum; 576 cells → exclusive frog visual unlock. Trigger inline toast + grant via gameStore action.
+**Plan files:** 5 plans in 3 waves
+
+- [ ] 18-01-PLAN.md — Bestiary helpers (countUnlocked, unlockedInLocation, BESTIARY_MILESTONES) + setBestiaryBit slice action with milestone trigger + verify_bestiary.cjs
+- [ ] 18-02-PLAN.md — Install @tanstack/react-virtual + BestiaryCell component (Discovered/Locked variants) + rarityStyles
+- [ ] 18-03-PLAN.md — BestiaryTab full rewrite (4 location tabs Болото/Лес/Континент/Планета) + BestiaryGrid (TanStack Virtual 6 cols) + FilterPills (rarity / search / sort / show-locked) + useBestiaryView hook
+- [ ] 18-04-PLAN.md — BestiaryDetailModal (CSS-based AwakenedPreviewCanvas + sound-style label + lore placeholder) + locked variant
+- [ ] 18-05-PLAN.md — i18n RU/EN/ES (cosmic_hub.bestiary.*) + MilestoneToast (cosmic:bestiary-milestone listener) + dev helper window.__unlockBestiaryCells + smoke_bestiary.cjs
 
 **Success Criteria:**
 1. Opening Бестиарий with 50 discovered combos shows them rendered correctly (tinted, bordered, icon); rest gray; scroll smooth at ≥50 FPS on mid-tier Android.

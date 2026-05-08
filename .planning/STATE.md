@@ -7,10 +7,10 @@ status: in-progress
 last_updated: "2026-05-08"
 progress:
   total_phases: 11
-  completed_phases: 6
-  total_plans: 18
-  completed_plans: 18
-  percent: 55
+  completed_phases: 7
+  total_plans: 23
+  completed_plans: 23
+  percent: 64
 ---
 
 # Project State
@@ -31,7 +31,7 @@ progress:
 | 12 | FrogElementOverlay (dormant + pool + cap) | **complete** (2026-05-08) — Phaser-native overlay + pool + manager, bundle delta +2.53 KB gzip, 11 ✓ + 3 ◑ partial REQ-IDs (ELEMENT-04 awakened/Phase 13, ELEMENT-08 throttle hook/Phase 20, PERF-09 full bench/Phase 13) |
 | 13 | Element awakened tiers | **complete** (2026-05-08) — 4 plans, 3 waves, 8 atomic commits; 64 awakened presets (rule-based assembly), 5-tier ElementTier, tier-keyed pool, burstEffect (ELEMENT-10) + mergeEffect (ELEMENT-11), bundle delta +1.58 KB gzip (cap +20 KB ✓). 3 ✓ REQ-IDs (ELEMENT-09/10/11). |
 | 14 | Сыворотки tab + tap-to-select DnD | **complete** (2026-05-08) — 4 plans, 3 waves, 5 atomic commits; SerumsTab 4 секции + ElementGrid + SerumSelectionLayer (halo+flashRed) + MainScene selection mode (auto-pause magnet/merge) + 2-сек pulse apply + burst + undo toast + desktop Pointer Events DnD secondary + i18n RU/EN/ES + dev helpers; bundle delta +2.14 KB gzip (cap +20 KB ✓). 11/11 ✓ REQ-IDs (SERUM-02..11 + UX-07). |
-| 15 | Boxes: cascade + slot-machine + skip | pending |
+| 15 | Boxes: cascade + slot-machine + skip | **complete** (2026-05-08) — 5 plans, 4 waves, 5 atomic commits; BoxData shape v2 (8 fields) + rollRarity utility (locked 50/35/12/3 + pity 3/10/15/20/25) + 4 store actions (addBox/rollBoxRarity/commitOpenedBox/removeBox) + STORAGE_VERSION 17→18; BoxesTab inventory cards + lazy CascadeRevealModal + bulk-open «Открыть все»; CascadeRevealModal cascade timeline (200/200/200/400ms) + state machine + instantMode bypass; SerumSlotMachine rarity-locked durations (1.2-9.5s legendary cap) + 4 checkpoints (1.5/3.5/5.5/8s gray/blue/purple/gold) + element fingerprint particles + Skip MVP (tap-anywhere 0.6s + button 1s); BulkOpenSummary grouped results + legendary glow; cosmicSettings (instantBoxes localStorage + window event subscribe) + SettingsModal toggle «Боксы мгновенно»; 27/27 unit tests passing (rarityRoll 11 + slice 11 + cosmicSettings 5); bundle delta +7.66 KB gzip (cap +35 KB ✓; index.js 220.23 KB vs Phase 16 baseline 218.70 KB) + 3 lazy chunks confirmed; dev tree-shake verified; 17/17 ✓ REQ-IDs (BOX-01..07, SLOT-01..08, UX-06, PERF-08). |
 | 16 | Ship + travel + mission (1-ship navigation) | **complete** (2026-05-08) — 5 plans, 5 waves, 14 atomic commits; ShipState discriminated union + travel formula + crew daily limit + ShipSprite Phaser-native + StarMap integration + ShipTab + FlightConfirmDialog + CrewIndicator + MissionOverlay + 3 mini-clickers (rhythm/defend/hotspot) + investigatePlanet atomic + progressive disclosure (UX-09) + dev helpers + i18n RU/EN/ES; bundle delta +8.20 KB gzip (cap +40 KB ✓; index 218.70 KB vs Phase 14 baseline 211.59 KB). 27/27 ✓ REQ-IDs (SHIP-01..10, CREW-01..08, MISSION-01..08, UX-09). |
 | 17 | Carrier evolution + feed + ceiling + merge | pending |
 | 18 | Бестиарий 2.0 (1536 cells, virtualized) | pending |
@@ -105,3 +105,14 @@ progress:
 
 **Phase 16 REQ coverage:** 27/27 ✓ (SHIP-01..10, CREW-01..08, MISSION-01..08, UX-09).
 **Phase 16 outcome:** v2.0 первый fully-playable milestone — ship→mission→box loop работает; Phase 15 cascade reveal будет integration слоем (`box.bonusRarity` готов).
+
+## Phase 15 (closed) — Performance Metrics
+
+| Wave | Plan | Tasks/Commits | Files | Bundle Delta gzip |
+|------|------|---------------|-------|-------------------|
+| 1 | 15-01 (foundation: types + rollRarity + slice + dev) | 3 commits | 5 created + 4 modified | (cumulative) |
+| 2-4 | 15-02..15-05 (BoxesTab + cascade + slot + bulk + Settings + i18n) | 2 commits (merged Wave 3+4) | 4 created + 7 modified | +7.66 KB final |
+| **Total** | — | **5 commits** | **9 created + 11 modified** | **+7.66 KB gzip** (cap: 35 KB ✓; index.js 220.23 KB vs Phase 16 baseline 218.70 KB; 3 lazy chunks: CascadeRevealModal 1.82 KB / SerumSlotMachine 2.05 KB / BulkOpenSummary 1.32 KB gzip) |
+
+**Phase 15 REQ coverage:** 17/17 ✓ (BOX-01..07, SLOT-01..08, UX-06, PERF-08).
+**Phase 15 outcome:** Полный box → slot-machine → serum drama-flow с lazy chunks. Связка Phase 14 + 15 + 16 даёт полный loop ship→mission→box→slot-machine→serum→apply→carrier. Все 27 unit тестов проходят (rarityRoll + slice + cosmicSettings).
