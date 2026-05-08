@@ -108,7 +108,12 @@
     "bug_report": "Reportar error 🐛",
     "sounds_stub": "Próximamente",
     "cosmic": "🧬 Cósmico",
-    "instant_boxes": "Cajas instantáneas"
+    "instant_boxes": "Cajas instantáneas",
+    "instant_boxes_desc": "Acorta la animación a 1s",
+    "calm_farm": "Granja tranquila",
+    "calm_farm_desc": "Desactiva aura y partículas alrededor de las ranas",
+    "reduced_effects": "Efectos reducidos",
+    "reduced_effects_desc": "Simplifica animaciones de alto rango"
   },
   "rarity": {
     "common": "Común",

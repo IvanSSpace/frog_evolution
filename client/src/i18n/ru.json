@@ -108,7 +108,12 @@
     "bug_report": "Баг репорт 🐛",
     "sounds_stub": "Скоро будет",
     "cosmic": "🧬 Космос",
-    "instant_boxes": "Боксы мгновенно"
+    "instant_boxes": "Боксы мгновенно",
+    "instant_boxes_desc": "Сокращает анимацию слот-машины до 1с",
+    "calm_farm": "Тихая ферма",
+    "calm_farm_desc": "Отключает ауру и частицы вокруг лягушек",
+    "reduced_effects": "Меньше эффектов",
+    "reduced_effects_desc": "Упрощает анимации высоких рангов"
   },
   "rarity": {
     "common": "обычная",

@@ -10,6 +10,8 @@ import { PlayerPanel } from '../../audio/components/PlayerPanel'
 import { sfx } from '../../audio/sfx'
 import {
   getInstantBoxes, setInstantBoxes, subscribeInstantBoxes,
+  getCalmFarmMode, setCalmFarmMode, subscribeCalmFarmMode,
+  getReducedEffects, setReducedEffects, subscribeReducedEffects,
 } from '../../utils/cosmicSettings'
 
 type Tab = 'bestiary' | 'settings' | 'player'
@@ -198,6 +200,18 @@ function SettingsTab() {
     getInstantBoxes,
     getInstantBoxes,
   )
+  // Phase 19-04 (UX-04): calm farm mode toggle (disables aura/idle particles).
+  const calmFarmMode = useSyncExternalStore(
+    subscribeCalmFarmMode,
+    getCalmFarmMode,
+    getCalmFarmMode,
+  )
+  // Phase 19-04 (UX-05): reduced effects toggle — default OFF Locked Decision.
+  const reducedEffects = useSyncExternalStore(
+    subscribeReducedEffects,
+    getReducedEffects,
+    getReducedEffects,
+  )
 
   const handleBugReport = () => {
     // TODO: replace with actual Telegram username
@@ -270,8 +284,31 @@ function SettingsTab() {
         <button
           onClick={() => setInstantBoxes(!instantBoxes)}
           className={`ff-btn text-xs px-3 py-1.5 ${instantBoxes ? 'ff-btn-green' : 'ff-btn-grey'}`}
+          title={t('settings.instant_boxes_desc')}
         >
           {instantBoxes ? t('player.on') : t('player.off')}
+        </button>
+      </SettingsRow>
+
+      {/* Phase 19-04 (UX-04): Calm farm mode toggle */}
+      <SettingsRow label={t('settings.calm_farm')}>
+        <button
+          onClick={() => setCalmFarmMode(!calmFarmMode)}
+          className={`ff-btn text-xs px-3 py-1.5 ${calmFarmMode ? 'ff-btn-green' : 'ff-btn-grey'}`}
+          title={t('settings.calm_farm_desc')}
+        >
+          {calmFarmMode ? t('player.on') : t('player.off')}
+        </button>
+      </SettingsRow>
+
+      {/* Phase 19-04 (UX-05): Reduced effects toggle (default OFF Locked Decision) */}
+      <SettingsRow label={t('settings.reduced_effects')}>
+        <button
+          onClick={() => setReducedEffects(!reducedEffects)}
+          className={`ff-btn text-xs px-3 py-1.5 ${reducedEffects ? 'ff-btn-green' : 'ff-btn-grey'}`}
+          title={t('settings.reduced_effects_desc')}
+        >
+          {reducedEffects ? t('player.on') : t('player.off')}
         </button>
       </SettingsRow>
 

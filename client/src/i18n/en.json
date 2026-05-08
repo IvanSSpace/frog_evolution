@@ -108,7 +108,12 @@
     "bug_report": "Bug Report 🐛",
     "sounds_stub": "Coming soon",
     "cosmic": "🧬 Cosmic",
-    "instant_boxes": "Instant boxes"
+    "instant_boxes": "Instant boxes",
+    "instant_boxes_desc": "Shortens slot machine animation to 1s",
+    "calm_farm": "Calm farm mode",
+    "calm_farm_desc": "Disables aura and particles around frogs",
+    "reduced_effects": "Reduced effects",
+    "reduced_effects_desc": "Simplifies high-tier animations"
   },
   "rarity": {
     "common": "Common",
