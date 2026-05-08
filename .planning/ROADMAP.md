@@ -96,7 +96,7 @@ Plans:
 - [x] 08-03-PLAN.md — Texture uniqueness fix (resolve 1 collision) + 10 refine attempts (SPEC #2) ✓ 2026-05-08
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 08-04-PLAN.md — Per-planet sound modulation system + THEME_SCALES + eventBus seed (D-05..D-10, D-13)
+- [x] 08-04-PLAN.md — Per-planet sound modulation system + THEME_SCALES + eventBus seed (D-05..D-10, D-13) ✓ 2026-05-08
 
 **Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 08-05-PLAN.md — Sound signature pipeline + refineSoundSeeds (D-11..D-12)
