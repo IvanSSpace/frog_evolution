@@ -1,14 +1,23 @@
 // Phase 12: types для FrogElementOverlay subsystem.
-// Pure types — без runtime зависимости от Phaser/store. Phase 13 расширит
-// ElementTier до 'common'|'rare'|'epic'|'legendary' (awakened tiers).
+// Pure types — без runtime зависимости от Phaser/store.
+// Phase 13: расширили ElementTier до 5-tier union (dormant + 4 awakened).
 
 import type { Element, Rarity } from '../../../store/cosmic/types'
 export type { Element, Rarity }
 export { ELEMENTS } from '../../../store/cosmic/types'
 
-// Phase 12 покрывает только dormant. Phase 13 расширит:
-//   export type ElementTier = 'dormant' | 'common' | 'rare' | 'epic' | 'legendary'
-export type ElementTier = 'dormant'
+// Phase 13: 5-tier ElementTier — dormant (Phase 12) + 4 awakened (this phase).
+export type ElementTier = 'dormant' | 'common' | 'rare' | 'epic' | 'legendary'
+
+// Полный список tiers (для итерации в pool/manager).
+export const ELEMENT_TIERS: readonly ElementTier[] = [
+  'dormant', 'common', 'rare', 'epic', 'legendary',
+]
+
+// Только awakened tiers — Rarity ⊂ awakened.
+export const AWAKENED_TIERS: readonly Exclude<ElementTier, 'dormant'>[] = [
+  'common', 'rare', 'epic', 'legendary',
+]
 
 export interface OverlayPresetParams {
   element: Element
