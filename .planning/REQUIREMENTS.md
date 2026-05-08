@@ -70,9 +70,9 @@
 - **ELEMENT-06**: Pool pattern (acquire/release), не destroy/create
 - **ELEMENT-07**: Hard cap 4 visible overlay + off-screen culling каждые 6 кадров
 - **ELEMENT-08**: Adaptive throttle респектируется (см. INFRA-05)
-- **ELEMENT-09**: Tier-gated complexity: dormant=1 Graphics + 1 idle particle; common=2-3; rare=4-5 + slight aura; epic=full aura + 5-6 + ground ember; legendary=full storm + ground glow
-- **ELEMENT-10**: При тапе на carrier — element-burst (как клик на StarMap)
-- **ELEMENT-11**: При мердже двух same-element carriers — element-merge anim особый
+- **ELEMENT-09** ✓ (Phase 13): Tier-gated complexity: dormant=1 Graphics + 1 idle particle; common=2-3; rare=4-5 + slight aura; epic=full aura + 5-6 + ground ember; legendary=full storm + ground glow
+- **ELEMENT-10** ✓ (Phase 13): При тапе на carrier — element-burst (как клик на StarMap)
+- **ELEMENT-11** ✓ (Phase 13): При мердже двух same-element carriers — element-merge anim особый
 - **ELEMENT-12**: 4 exclusive элемента (arcane/mechanical/war/void) только с main race миссий
 
 ### TINT TABLE

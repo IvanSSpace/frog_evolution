@@ -153,12 +153,13 @@
 
 **Requirements:** ELEMENT-09, ELEMENT-10, ELEMENT-11
 
-**Plans:**
-1. Build `elementTiers/{element}/{tier}.ts` factories (16 × 4 = 64 files), each composing primitives from `effects/anim/shared/` (Phase 9 output).
-2. Tier complexity ladder per ELEMENT-09: common = 2-3 components; rare = 4-5 + slight aura; epic = full aura + 5-6 + ground ember; legendary = full storm + ground glow.
-3. Tap-burst handler on carrier sprite — element-burst spawn at tap point, reuses primitives.
-4. Same-element merge anim: when two same-element same-level carriers merge, play special element-merge composite (consumed by Phase 17 merge logic, but anim ready here).
-5. Visual QA pass: each (element, tier) combo distinct from neighbours; no two tiers look identical.
+**Plans:** 4 plans in 3 waves
+
+Plans:
+- [x] 13-01-PLAN.md — Расширить ElementTier + создать awakenedPresets.ts (64 entries) + burstEffect.ts
+- [x] 13-02-PLAN.md — Tier-aware FrogElementOverlay.setTier + tier-keyed pool + syncCarriers rarity→tier
+- [x] 13-03-PLAN.md — mergeEffect.ts + wire burstEffect/mergeEffect hooks в MainScene
+- [x] 13-04-PLAN.md — Dev helpers (__setCarrierTier, __testBurstEffect, __testMergeEffect) + bundle check
 
 **Success Criteria:**
 1. Switching a carrier from dormant → common → rare → epic → legendary in dev panel produces visibly escalating effects (more particles, brighter aura, ground glow at legendary).
@@ -169,7 +170,9 @@
 
 **Depends on:** Phase 12.
 
-**Status:** pending
+**Status:** complete (2026-05-08)
+
+**Outcome:** 5-tier ElementTier union + 64 awakened idle presets (rule-based assembly: ELEMENT_CORE/GLOW/ACCENT/STORM × per-tier composition rules — common 2-3 → rare 4-5 + halo glow → epic 5-6 + ring → legendary 8+ + flash). Tier-aware FrogElementOverlay (`attach(..., tier)` + публичный `setTier()` + tier-зависимый orb radius 4→8 px). Pool разбит по составному ключу `${element}:${tier}` (Map-based). FrogOverlayManager.syncCarriers автоматически рендерит `carrier.rarity` как соответствующий visual tier (с `tierFromCarrier` валидацией против tampered store, T-13-04). burstEffect (ELEMENT-10) at tap on carrier → ring + sparkle + flash + optional starburst (для arcane/war/void/plasma) — 200-400ms self-cleaning. mergeEffect (ELEMENT-11) при same-element merge → 4-phase composite (ring → sparkle → ripple → flash) at depth 99998 (выше vortex 99997), pre-capture pattern в performMerge чтобы removeFrog не очистил carrier до начала анимации. Dev helpers: `__setCarrierTier`, `__testBurstEffect`, `__testMergeEffect` (все tree-shaken в prod, verified). Bundle delta gzip = **+1.58 KB** (Phase 12 baseline 207.87 KB → 209.45 KB; cap +20 KB ✓ — used 8% of budget). 3 ✓ REQ-IDs (ELEMENT-09, ELEMENT-10, ELEMENT-11). 8 atomic commits, 10 tasks across 4 plans. См. `.planning/phases/13-element-awakened-tiers/13-{01,02,03,04}-SUMMARY.md`.
 
 ---
 

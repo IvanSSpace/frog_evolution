@@ -2,22 +2,22 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: cosmic-frogs-system
-current_phase: 13
+current_phase: 14
 status: in-progress
 last_updated: "2026-05-08"
 progress:
   total_phases: 11
-  completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
-  percent: 27
+  completed_phases: 4
+  total_plans: 9
+  completed_plans: 9
+  percent: 36
 ---
 
 # Project State
 
 **Milestone:** Cosmic Frogs System (v2.0)
-**Status:** In-progress — Phase 12 complete (FrogElementOverlay dormant + pool + cap), next: Phase 13 (Element awakened tiers)
-**Current Phase:** 13 (next planned)
+**Status:** In-progress — Phase 13 complete (4 awakened tiers + burst + merge anim), next: Phase 14 (Сыворотки tab + tap-to-select DnD)
+**Current Phase:** 14 (next planned)
 **Last Updated:** 2026-05-08
 
 ## Phase Progress
@@ -29,7 +29,7 @@ progress:
 | 10 | Performance HUD (mini) | **skipped** — отложено по решению пользователя; добавим ad-hoc если потребуется |
 | 11 | CosmicSlice store + Cosmic Hub shell | **complete** (2026-05-08) — 3 waves, bundle delta +3.05 KB gzip, CosmicHubModal отдельный chunk, все 9 REQ-IDs покрыты |
 | 12 | FrogElementOverlay (dormant + pool + cap) | **complete** (2026-05-08) — Phaser-native overlay + pool + manager, bundle delta +2.53 KB gzip, 11 ✓ + 3 ◑ partial REQ-IDs (ELEMENT-04 awakened/Phase 13, ELEMENT-08 throttle hook/Phase 20, PERF-09 full bench/Phase 13) |
-| 13 | Element awakened tiers | pending |
+| 13 | Element awakened tiers | **complete** (2026-05-08) — 4 plans, 3 waves, 8 atomic commits; 64 awakened presets (rule-based assembly), 5-tier ElementTier, tier-keyed pool, burstEffect (ELEMENT-10) + mergeEffect (ELEMENT-11), bundle delta +1.58 KB gzip (cap +20 KB ✓). 3 ✓ REQ-IDs (ELEMENT-09/10/11). |
 | 14 | Сыворотки tab + tap-to-select DnD | pending |
 | 15 | Boxes: cascade + slot-machine + skip | pending |
 | 16 | Scouts + StarMap pick + mini-clicker | pending |
@@ -69,3 +69,13 @@ progress:
 |------|------|-------|-------|-------------------|
 | 1 | 12-01 | 3 (+1 auto-approved checkpoint) | 8 created + 5 modified | +2.53 KB |
 | **Total** | — | **3** | **13** | **+2.53 KB gzip** (cap: 20 KB ✓) |
+
+## Phase 13 (closed) — Performance Metrics
+
+| Wave | Plan | Tasks | Files | Bundle Delta gzip |
+|------|------|-------|-------|-------------------|
+| 1 | 13-01 (foundation) | 3 | 2 created + 1 modified | (cumulative) |
+| 2 | 13-02 (overlay/pool/manager) | 3 | 0 created + 3 modified | +1.13 KB after Wave 2 |
+| 2 | 13-03 (mergeEffect + MainScene) | 2 | 1 created + 1 modified | +1.58 KB after Wave 2/3 |
+| 3 | 13-04 (dev helpers + verify) | 2 | 0 created + 1 modified | +1.58 KB final (no growth) |
+| **Total** | — | **10** | **3 created + 6 modified** | **+1.58 KB gzip** (cap: 20 KB ✓) |
