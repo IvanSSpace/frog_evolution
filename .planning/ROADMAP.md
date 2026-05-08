@@ -211,13 +211,14 @@ Plans:
 
 **Requirements:** BOX-01, BOX-02, BOX-03, BOX-04, BOX-05, BOX-06, BOX-07, SLOT-01, SLOT-02, SLOT-03, SLOT-04, SLOT-05, SLOT-06, SLOT-07, SLOT-08, UX-06, PERF-08
 
-**Plans:**
-1. Box inventory in `cosmicSlice.boxes`; planet-archetype → element mapping for guaranteed serum (BOX-07).
-2. CascadeRevealModal component (code-split): timeline [200ms coins] → [200ms resources] → [PAUSE 400ms] → [slot-machine]; bonus drops Equal → Equal → BIG.
-3. SerumSlotMachine component (code-split): durations by rarity; checkpoint flashes at 1.5/3.5/5.5/8s (gray/blue/purple/gold); element-fingerprint particle from frame 1; build-up phase 0-50% drone+crescendo via sound-style labels; reveal phase drop + element-flash + text.
-4. Skip MVP: tap-anywhere after 0.6s, Skip button visible at 1s, Settings toggle "Open boxes instantly" minimizes drama to 1s.
-5. Bulk-open for 5+ boxes: "Открыть все" auto-applies skip; final summary modal with totals per rarity/element.
-6. Hook into serum inventory from Phase 14 — opened box adds to `cosmicSlice.serums[element][rarity]`.
+**Plans:** 5 plans in 4 waves
+
+Plans:
+- [ ] 15-01-PLAN.md — Foundation: BoxData type extension, rollRarity utility (50/35/12/3 + pity 3/10/15/20/25), store actions (addBox/rollBoxRarity/commitOpenedBox/removeBox), STORAGE_VERSION 16→17, dev-helper __addBox
+- [ ] 15-02-PLAN.md — BoxesTab UI rewrite: inventory cards с element-icon + planet-name, tap → lazy CascadeRevealModal mount, open-all placeholder
+- [ ] 15-03-PLAN.md — CascadeRevealModal: state machine (opening/coins/resources/pause/slot/reveal/closing), cascade timeline 200/200/200/400ms, instantMode bypass, lazy SerumSlotMachine import
+- [ ] 15-04-PLAN.md — SerumSlotMachine: rarity-dependent durations (1.2-9.5s), checkpoint flashes 1.5/3.5/5.5/8s gray/blue/purple/gold, skip MVP (tap-anywhere + button + instantMode), element fingerprint particles
+- [ ] 15-05-PLAN.md — BulkOpenSummary + cosmicSettings.ts + SettingsModal toggle «Боксы мгновенно» + lazy chunks verify + i18n RU/EN/ES + phase-level acceptance
 
 **Success Criteria:**
 1. Opening a box plays cascade in correct order (coins, resources, pause, slot) with timings within ±50ms; final serum lands in inventory.
@@ -257,9 +258,11 @@ Plans:
 6. После 4-й mission → «Изучить» disabled, tooltip показывает время до 00:00 локального. На следующий день credits восстановлены до 4/4.
 7. Fresh v2.0 install: только Сыворотки + Бестиарий tabs unlocked. После первого feed — Корабль unlock. После первой mission — Боксы unlock (verifiable в dev panel).
 
-**Depends on:** Phase 15.
+**Depends on:** Phase 15 (decoupled — Phase 16 не блокирует на Phase 15; box.bonusRarity готов к Phase 15 integration).
 
-**Status:** pending
+**Status:** **Complete** (2026-05-08) — 5 plans, 5 waves, 14 atomic commits. ShipState discriminated union, travel formula (1500..120000ms), crew daily limit (DAILY_CAP=4) с локальной полночью, ShipSprite Phaser-native (Container + Graphics + ParticleEmitter trail), StarMapScene integration (subscribe + cosmic:request-flight emit + cleanup), ShipTab + FlightConfirmDialog + CrewIndicator React components, MissionOverlay fullscreen с 3 mini-clickers (rhythm/defend/hotspot), investigatePlanet atomic transaction (consume credit + addBox + sentinel flip + toast), progressive disclosure (CosmicHubModal tab gating + DEV unlock + 5 dev helpers), i18n RU/EN/ES round 1 + locked tooltip keys. Bundle delta +8.20 KB gzip (cap 40 KB ✓; index.js 218.70 KB vs Phase 14 baseline 211.59 KB). 27/27 ✓ REQ-IDs.
+
+**Outcome:** v2.0 первый fully-playable milestone — ship→mission→box loop замыкается. Phase 15 cascade reveal будет integration слоем (`box.bonusRarity` готов).
 
 ---
 
@@ -287,6 +290,14 @@ Plans:
 5. Two same-element same-level carriers merging produce one carrier at level+1 with S-tier rarity, plays element-merge anim, and writes a bestiary bit.
 
 **Depends on:** Phase 16 (scouts produce boxes; players need carriers to feed).
+**Plan files:** 5 plans in 3 waves
+
+- [ ] 17-01-PLAN.md — Foundation: types + carrierEvolution.ts (TIER_RANGES, buckets, rollCeilingForCarrier, rollFeedOutcome, shouldForceS) + bestiary.ts (1536-bit indexing) + verify_carrier_evolution.cjs (Monte-Carlo + streak)
+- [ ] 17-02-PLAN.md — feedCarrier action + MainScene drag-feed wiring (performFeed) + carrier-merge guard + cosmic:carrier-stabilized eventBus
+- [ ] 17-03-PLAN.md — CarriersTab (5-th Cosmic Hub tab) + CarrierInfoCard + CeilingDisplay (progressive reveal) + i18n RU/EN/ES
+- [ ] 17-04-PLAN.md — StabilizationModal (slot-machine 3-4s) + visual lock в FrogElementOverlay/FrogOverlayManager
+- [ ] 17-05-PLAN.md — performCarrierMerge + DisposeConfirmModal + mergeCarriers/disposeCarrier/setBestiaryBit actions + gameStore migration 16→17 + verify --dispose
+
 
 **Status:** pending
 
