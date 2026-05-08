@@ -13,3 +13,8 @@ export { compHaloFlash } from './compHaloFlash'
 export { compConfetti } from './compConfetti'
 export { compRipple } from './compRipple'
 export { compEchoWave } from './compEchoWave'
+// Group C — Task 5 (elemental)
+export { compFlameTongues } from './compFlameTongues'
+export { compIceWisps } from './compIceWisps'
+export { compPlasmaArc } from './compPlasmaArc'
+export { compChromaShift } from './compChromaShift'

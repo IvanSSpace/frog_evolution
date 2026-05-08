@@ -17,6 +17,10 @@ import {
   compConfetti,
   compRipple,
   compEchoWave,
+  compFlameTongues,
+  compIceWisps,
+  compPlasmaArc,
+  compChromaShift,
 } from '../effects/anim/shared'
 
 // Phaser-сцена Звёздной карты. Запускается рядом с MainScene через scene-manager.
@@ -1085,10 +1089,10 @@ export class StarMapScene extends Phaser.Scene {
       case 47: this.compCrossFlash(sprite, sys, rng); break
       case 48: this.compWaveTrain(sprite, sys, rng); break
       case 49: this.compPetalStorm(sprite, sys, rng); break
-      case 50: this.compFlameTongues(sprite, sys, rng); break
+      case 50: compFlameTongues(this, sprite, sys, rng); break
       case 51: this.compSnakeTrail(sprite, sys, rng); break
       case 52: this.compBubblePop(sprite, sys, rng); break
-      case 53: this.compChromaShift(sprite, sys, rng); break
+      case 53: compChromaShift(this, sprite, sys, rng); break
       // Phase 7: новые компоненты
       case 54: this.compAtomShells(sprite, sys, rng); break
       case 55: this.compSupernova(sprite, sys, rng); break
@@ -1111,7 +1115,7 @@ export class StarMapScene extends Phaser.Scene {
       case 71: this.compCosmicWeb(sprite, sys, rng); break
       case 72: this.compParticleFountain(sprite, sys, rng); break
       case 73: this.compEchoSpawn(sprite, sys, rng); break
-      case 74: this.compIceWisps(sprite, sys, rng); break
+      case 74: compIceWisps(this, sprite, sys, rng); break
       case 75: this.compRipBlade(sprite, sys, rng); break
       // Расширение 4 — компоненты 76-87 (с явными sound-style)
       case 76: this.compChimeRing(sprite, sys, rng); break
@@ -1125,7 +1129,7 @@ export class StarMapScene extends Phaser.Scene {
       case 84: this.compWindRustle(sprite, sys, rng); break
       case 85: this.compClockGears(sprite, sys, rng); break
       case 86: this.compBubbleStream(sprite, sys, rng); break
-      case 87: this.compPlasmaArc(sprite, sys, rng); break
+      case 87: compPlasmaArc(this, sprite, sys, rng); break
       // Phase 8 — компоненты 88-95
       case 88: this.compBouncingBall(sprite, sys, rng); break
       case 89: this.compDigitalGlitch(sprite, sys, rng); break
@@ -2403,34 +2407,7 @@ export class StarMapScene extends Phaser.Scene {
     }
   }
 
-  // 50. Flame tongues — несколько языков пламени (для lava, plasma, energy)
-  private compFlameTongues(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
-    const N = 3 + Math.floor(rng() * 4)
-    const dur = 500 + rng() * 200
-    const baseAng = rng() * Math.PI * 2
-    const fanWidth = Math.PI * (0.5 + rng() * 1.5)
-    for (let i = 0; i < N; i++) {
-      const ang = baseAng - fanWidth / 2 + (i / Math.max(1, N - 1)) * fanWidth
-      const flame = this.add.graphics()
-      const color = this.pickColor(rng, sys)
-      const len = sys.size * (1.2 + rng() * 0.6)
-      const w = sys.size * 0.25
-      flame.fillStyle(color, 0.7)
-      // teardrop через ellipse
-      flame.fillEllipse(0, len * 0.5, w, len)
-      flame.fillStyle(0xffffff, 0.5)
-      flame.fillEllipse(0, len * 0.5, w * 0.4, len * 0.7)
-      flame.rotation = ang + Math.PI / 2
-      flame.scale = 0.6
-      sprite.add(flame)
-      this.tweens.add({
-        targets: flame, scaleY: 1.5 + rng() * 0.4, scaleX: 0.8, alpha: 0,
-        duration: dur + rng() * 150, ease: 'Cubic.easeOut',
-        delay: i * 40,
-        onComplete: () => flame.destroy(),
-      })
-    }
-  }
+  // 50. compFlameTongues — extracted в effects/anim/shared/compFlameTongues.ts (Phase 9).
 
   // 51. Snake trail — точка обходит S-образную форму с trail
   private compSnakeTrail(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
@@ -2513,35 +2490,7 @@ export class StarMapScene extends Phaser.Scene {
     }
   }
 
-  // 53. Chroma shift — RGB ghost split (3 копии в разных цветах смещаются и сливаются)
-  private compChromaShift(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
-    const offset = sys.size * (0.18 + rng() * 0.12)
-    const baseAng = rng() * Math.PI * 2
-    const colors = [0xff0066, 0x00ff66, 0x0066ff]
-    const ghosts: Phaser.GameObjects.Arc[] = []
-    for (let i = 0; i < 3; i++) {
-      const a = baseAng + (i / 3) * Math.PI * 2
-      const dx = Math.cos(a) * offset
-      const dy = Math.sin(a) * offset
-      const ghost = this.add.circle(0, 0, sys.size * 0.85, colors[i], 0.5)
-      ghost.setBlendMode(Phaser.BlendModes.SCREEN)
-      sprite.add(ghost)
-      ghosts.push(ghost)
-      this.tweens.add({
-        targets: ghost, x: dx, y: dy,
-        yoyo: true, duration: 200 + rng() * 100,
-        ease: 'Sine.easeInOut',
-        onComplete: () => {
-          this.tweens.add({
-            targets: ghost, alpha: 0,
-            duration: 200, ease: 'Cubic.easeOut',
-            onComplete: () => ghost.destroy(),
-          })
-        },
-      })
-    }
-    void ghosts
-  }
+  // 53. compChromaShift — extracted в effects/anim/shared/compChromaShift.ts (Phase 9).
 
   // === PHASE 7: UNIQUENESS CHECK ===
 
@@ -3432,37 +3381,7 @@ export class StarMapScene extends Phaser.Scene {
     }
   }
 
-  // 74. Ice wisps — ледяные завитки кружатся вокруг
-  private compIceWisps(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
-    const N = 4 + Math.floor(rng() * 3)
-    const direction = rng() < 0.5 ? 1 : -1
-    const dur = 700 + rng() * 200
-    for (let i = 0; i < N; i++) {
-      const phase = (i / N) * Math.PI * 2
-      const wisp = this.add.graphics()
-      const color = this.pickColor(rng, sys)
-      // мелкая дуга как закрученный завиток
-      wisp.lineStyle((1 + rng()) * DPR, color, 0.85)
-      wisp.beginPath()
-      const segs = 8
-      for (let s = 0; s <= segs; s++) {
-        const t = s / segs
-        const r = sys.size * (1.2 + t * 0.4)
-        const a = phase + direction * t * Math.PI / 2
-        const x = Math.cos(a) * r, y = Math.sin(a) * r
-        if (s === 0) wisp.moveTo(x, y); else wisp.lineTo(x, y)
-      }
-      wisp.strokePath()
-      wisp.scale = 0.5
-      sprite.add(wisp)
-      this.tweens.add({
-        targets: wisp, scale: 1.2, alpha: 0,
-        rotation: direction * Math.PI / 4,
-        duration: dur + rng() * 150, ease: 'Sine.easeOut',
-        onComplete: () => wisp.destroy(),
-      })
-    }
-  }
+  // 74. compIceWisps — extracted в effects/anim/shared/compIceWisps.ts (Phase 9).
 
   // 75. Rip blade — острый «разрез» прорезает планету диагонально
   private compRipBlade(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
@@ -3750,42 +3669,7 @@ export class StarMapScene extends Phaser.Scene {
     }
   }
 
-  // 87. Plasma arc — sound-style: arc-buzz (электрическая дуга)
-  // Изогнутая дуга-молния от точки к точке
-  private compPlasmaArc(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
-    const arcs = 2 + Math.floor(rng() * 2)
-    for (let i = 0; i < arcs; i++) {
-      const ang1 = rng() * Math.PI * 2
-      const ang2 = ang1 + Math.PI + (rng() - 0.5) * 0.8
-      const r = sys.size * (1.3 + rng() * 0.3)
-      const arc = this.add.graphics()
-      const color = this.pickColor(rng, sys)
-      arc.lineStyle(1.5 * DPR, color, 0.9)
-      // Bezier-кривая через 2 узла
-      const x1 = Math.cos(ang1) * r, y1 = Math.sin(ang1) * r
-      const x2 = Math.cos(ang2) * r, y2 = Math.sin(ang2) * r
-      const cx = (x1 + x2) / 2 + (rng() - 0.5) * sys.size * 0.6
-      const cy = (y1 + y2) / 2 + (rng() - 0.5) * sys.size * 0.6
-      const segs = 12
-      let px = x1, py = y1
-      for (let s = 1; s <= segs; s++) {
-        const t = s / segs; const u = 1 - t
-        const x = u*u*x1 + 2*u*t*cx + t*t*x2
-        const y = u*u*y1 + 2*u*t*cy + t*t*y2
-        // jitter — молниевый эффект
-        const jx = x + (rng() - 0.5) * 1.5 * DPR
-        const jy = y + (rng() - 0.5) * 1.5 * DPR
-        arc.lineBetween(px, py, jx, jy)
-        px = jx; py = jy
-      }
-      sprite.add(arc)
-      this.tweens.add({
-        targets: arc, alpha: 0,
-        duration: 350 + rng() * 150, ease: 'Cubic.easeOut',
-        onComplete: () => arc.destroy(),
-      })
-    }
-  }
+  // 87. compPlasmaArc — extracted в effects/anim/shared/compPlasmaArc.ts (Phase 9).
 
   // === PHASE 8 (компоненты 88-95) ===
   // Тематические дополнения: bouncingBall, digitalGlitch, ringPulsar, swarmParticles,
