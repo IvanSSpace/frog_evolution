@@ -1,10 +1,13 @@
 // Phase 11: Cosmic Hub fullscreen modal с 4 табами.
 // Lazy-loaded из App.tsx (React.lazy + Suspense → отдельный chunk).
 // sessionStorage сохраняет последний активный таб (COSMIC-HUB-07).
+// Phase 16: progressive disclosure (UX-09) — табы Корабль/Боксы gated через
+// sentinel флаги hasFirstFeed/hasFirstMission. DEV-mode unlocks all.
 
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { CosmicTab } from '../../store/cosmic/types'
+import { useGameStore } from '../../store/gameStore'
 import { ShipTab } from './ShipTab'
 import { BoxesTab } from './BoxesTab'
 import { SerumsTab } from './SerumsTab'
@@ -29,6 +32,8 @@ interface Tab {
   id: CosmicTab
   label: string
   icon: string
+  enabled: boolean
+  lockReason?: string  // i18n key для tooltip
 }
 
 interface Props {
@@ -39,15 +44,53 @@ export default function CosmicHubModal({ onClose }: Props) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<CosmicTab>(getInitialTab)
 
+  // Phase 16: sentinel flags для UX-09 gating
+  const hasFirstFeed = useGameStore((s) => s.hasFirstFeed)
+  const hasFirstMission = useGameStore((s) => s.hasFirstMission)
+  const isDev = import.meta.env.DEV
+
   // Локализованные labels — внутри компонента, чтобы пере-рендерить при смене языка.
   // Phase 16: tab id остаётся 'scouts' (sessionStorage backward compat),
   // но UI label теперь cosmic_hub.tab_ship («Корабль» / «Ship» / «Nave»).
   const TABS: Tab[] = [
-    { id: 'scouts',   label: t('cosmic_hub.tab_ship'),     icon: '🚀' },
-    { id: 'boxes',    label: t('cosmic_hub.tab_boxes'),    icon: '🎁' },
-    { id: 'serums',   label: t('cosmic_hub.tab_serums'),   icon: '🧪' },
-    { id: 'bestiary', label: t('cosmic_hub.tab_bestiary'), icon: '📖' },
+    {
+      id: 'scouts',
+      label: t('cosmic_hub.tab_ship'),
+      icon: '🚀',
+      enabled: isDev || hasFirstFeed,
+      lockReason: 'cosmic_hub.lock_first_feed',
+    },
+    {
+      id: 'boxes',
+      label: t('cosmic_hub.tab_boxes'),
+      icon: '🎁',
+      enabled: isDev || hasFirstMission,
+      lockReason: 'cosmic_hub.lock_first_mission',
+    },
+    {
+      id: 'serums',
+      label: t('cosmic_hub.tab_serums'),
+      icon: '🧪',
+      enabled: true,  // всегда unlock'ed
+    },
+    {
+      id: 'bestiary',
+      label: t('cosmic_hub.tab_bestiary'),
+      icon: '📖',
+      // Bestiary tab всегда видим в Phase 16 — empty state. Phase 18 polish может gate.
+      enabled: true,
+    },
   ]
+
+  // Если активный таб теперь disabled — fall back на первый enabled
+  useEffect(() => {
+    const active = TABS.find((tab) => tab.id === activeTab)
+    if (active && !active.enabled) {
+      const firstEnabled = TABS.find((tab) => tab.enabled)
+      if (firstEnabled) setActiveTab(firstEnabled.id)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasFirstFeed, hasFirstMission])
 
   // Сохраняем активный таб в sessionStorage при каждом переключении (COSMIC-HUB-07)
   useEffect(() => {
@@ -90,20 +133,24 @@ export default function CosmicHubModal({ onClose }: Props) {
         </button>
       </div>
 
-      {/* Tab strip */}
+      {/* Tab strip — Phase 16: progressive disclosure (UX-09) с lock indicator */}
       <div className="flex border-b border-white/10 flex-shrink-0">
         {TABS.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => tab.enabled && setActiveTab(tab.id)}
+            disabled={!tab.enabled}
+            title={!tab.enabled && tab.lockReason ? t(tab.lockReason) : undefined}
             className={[
               'flex-1 py-2 text-xs font-medium transition-colors',
-              activeTab === tab.id
-                ? 'text-white border-b-2 border-emerald-400'
-                : 'text-white/40',
+              !tab.enabled
+                ? 'text-white/20 cursor-not-allowed'
+                : activeTab === tab.id
+                  ? 'text-white border-b-2 border-emerald-400'
+                  : 'text-white/40',
             ].join(' ')}
           >
-            <span className="block text-base">{tab.icon}</span>
+            <span className="block text-base">{tab.enabled ? tab.icon : '🔒'}</span>
             <span>{tab.label}</span>
           </button>
         ))}
