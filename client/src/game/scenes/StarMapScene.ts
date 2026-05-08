@@ -8,6 +8,12 @@ import {
   pickColor as sharedPickColor,
   pickEase as sharedPickEase,
 } from '../effects/anim/shared/sharedHelpers'
+import {
+  compRing,
+  compSparkle,
+  compFlash,
+  compStarBurst,
+} from '../effects/anim/shared'
 
 // Phaser-сцена Звёздной карты. Запускается рядом с MainScene через scene-manager.
 // Ничего о gameStore не знает — это «декоративная карта» для просмотра системы
@@ -1025,17 +1031,17 @@ export class StarMapScene extends Phaser.Scene {
     rng: () => number,
   ) {
     switch (idx) {
-      case 0:  this.compRing(sprite, sys, rng); break
+      case 0:  compRing(this, sprite, sys, rng); break
       case 1:  this.compMultiRing(sprite, sys, rng); break
-      case 2:  this.compSparkle(sprite, sys, rng); break
-      case 3:  this.compFlash(sprite, rng); break
+      case 2:  compSparkle(this, sprite, sys, rng); break
+      case 3:  compFlash(this, sprite, rng); break
       case 4:  this.compLightning(sprite, sys, rng); break
       case 5:  this.compOrbit(sprite, sys, rng); break
       case 6:  this.compSpiral(sprite, sys, rng); break
       case 7:  this.compConfetti(sprite, sys, rng); break
       case 8:  this.compWave(sprite, sys, rng); break
       case 9:  this.compComet(sprite, sys, rng); break
-      case 10: this.compStarBurst(sprite, sys, rng); break
+      case 10: compStarBurst(this, sprite, sys, rng); break
       case 11: this.compHaloFlash(sprite, sys, rng); break
       case 12: this.compVortex(sprite, sys, rng); break
       case 13: this.compStormSwirl(sprite, sys, rng); break
@@ -1234,47 +1240,7 @@ export class StarMapScene extends Phaser.Scene {
 
   // === 12 АТОМАРНЫХ КОМПОНЕНТОВ ===
 
-  // 0. Кольцо (rng: цвет, толщина, scale, ease, duration, направление)
-  // Phase 7: расширены диапазоны thickness, endScale, log-scale duration; subVariant с пунктиром.
-  private compRing(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
-    const ring = this.add.graphics()
-    const color = this.pickColor(rng, sys)
-    const thickness = (1 + rng() * 5) * DPR
-    const alpha = 0.7 + rng() * 0.3
-    const startScale = 0.95 + rng() * 0.1
-    const endScale = 1.4 + rng() * 2.5
-    // log-scale duration: 200-1100ms (вместо linear 400-800)
-    const dur = Math.floor(200 * Math.exp(rng() * 1.7))
-    ring.lineStyle(thickness, color, alpha)
-    // 50% — обычный, 50% — пунктирный (приближение через arc-сегменты)
-    if (rng() < 0.5) {
-      ring.strokeCircle(0, 0, sys.size * 1.05)
-    } else {
-      const dashes = 8 + Math.floor(rng() * 12)
-      const r = sys.size * 1.05
-      const gap = 0.3 + rng() * 0.4
-      for (let i = 0; i < dashes; i++) {
-        const a0 = (i / dashes) * Math.PI * 2
-        const a1 = a0 + (Math.PI * 2 / dashes) * (1 - gap)
-        const segs = 4
-        let px = Math.cos(a0) * r, py = Math.sin(a0) * r
-        for (let s = 1; s <= segs; s++) {
-          const t = s / segs
-          const a = a0 + (a1 - a0) * t
-          const x = Math.cos(a) * r, y = Math.sin(a) * r
-          ring.lineBetween(px, py, x, y)
-          px = x; py = y
-        }
-      }
-    }
-    ring.scale = startScale
-    sprite.add(ring)
-    this.tweens.add({
-      targets: ring, scaleX: endScale, scaleY: endScale, alpha: 0,
-      duration: dur, ease: this.pickEase(rng),
-      onComplete: () => ring.destroy(),
-    })
-  }
+  // 0. compRing — extracted в effects/anim/shared/compRing.ts (Phase 9).
 
   // 1. 2-4 кольца последовательно с задержкой (рандом число + цвета + scale)
   private compMultiRing(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
@@ -1301,77 +1267,8 @@ export class StarMapScene extends Phaser.Scene {
     }
   }
 
-  // 2. Sparkle burst (rng: количество, дистанция, цвета, размер, mix tints)
-  // Phase 7: расширен диапазон N (4-19), dotSize (1-5); subVariant — мини-кресты вместо точек (40%).
-  private compSparkle(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
-    const N = 4 + Math.floor(rng() * 16) // 4-19
-    const baseDist = sys.size * (1.4 + rng() * 0.8)
-    const distVar = rng() * 0.4
-    const dotSize = (1 + rng() * 4) * DPR
-    const dur = 400 + rng() * 350
-    const useCross = rng() < 0.4
-    for (let i = 0; i < N; i++) {
-      const ang = (i / N) * Math.PI * 2 + (rng() - 0.5) * 0.5
-      const dist = baseDist * (1 - distVar + rng() * distVar * 2)
-      const tint = this.pickColor(rng, sys)
-      let dot: Phaser.GameObjects.Graphics | Phaser.GameObjects.Arc
-      if (useCross) {
-        const gfx = this.add.graphics()
-        gfx.fillStyle(tint, 1)
-        // мини-крест: 2 узких прямоугольника
-        gfx.fillRect(-dotSize, -dotSize * 0.3, dotSize * 2, dotSize * 0.6)
-        gfx.fillRect(-dotSize * 0.3, -dotSize, dotSize * 0.6, dotSize * 2)
-        gfx.rotation = rng() * Math.PI
-        sprite.add(gfx)
-        dot = gfx
-      } else {
-        const c = this.add.circle(0, 0, dotSize, tint, 1)
-        sprite.add(c)
-        dot = c
-      }
-      this.tweens.add({
-        targets: dot,
-        x: Math.cos(ang) * dist, y: Math.sin(ang) * dist,
-        alpha: 0, scaleX: 0.2 + rng() * 0.3, scaleY: 0.2 + rng() * 0.3,
-        duration: dur + rng() * 200,
-        ease: this.pickEase(rng),
-        onComplete: () => dot.destroy(),
-      })
-    }
-  }
-
-  // 3. Flash (rng: количество мерцаний, глубина, скорость)
-  // Phase 7: расширены blinks (1-4), depth (0.15-0.8); subVariant — асимметричный (быстрый-медленный).
-  private compFlash(sprite: Phaser.GameObjects.Container, rng: () => number) {
-    const blinks = 1 + Math.floor(rng() * 4) // 1-4
-    const depth = 0.15 + rng() * 0.65 // 0.15-0.8
-    const asymmetric = rng() < 0.3
-    const dur = 80 + rng() * 100
-    if (asymmetric && blinks >= 2) {
-      // 30%: чередуем быстрые/медленные blink'и через delayedCall
-      let cur = 0
-      const doBlink = () => {
-        if (cur >= blinks) return
-        const localDur = dur * (cur % 2 === 0 ? 0.6 : 1.4)
-        this.tweens.add({
-          targets: sprite,
-          alpha: { from: 1, to: 1 - depth },
-          yoyo: true, duration: localDur,
-          ease: 'Sine.easeInOut',
-          onComplete: () => { cur++; doBlink() },
-        })
-      }
-      doBlink()
-    } else {
-      this.tweens.add({
-        targets: sprite,
-        alpha: { from: 1, to: 1 - depth },
-        yoyo: true, duration: dur,
-        ease: 'Sine.easeInOut',
-        repeat: blinks - 1,
-      })
-    }
-  }
+  // 2. compSparkle — extracted в effects/anim/shared/compSparkle.ts (Phase 9).
+  // 3. compFlash — extracted в effects/anim/shared/compFlash.ts (Phase 9).
 
   // 4. Lightning (rng: количество молний, угол fan, цвет, глубина зигзага)
   private compLightning(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
@@ -1559,40 +1456,7 @@ export class StarMapScene extends Phaser.Scene {
     this.events.on('update', update)
   }
 
-  // 10. Star burst — N линий от центра планеты разной длины (rng: count, colors, length)
-  // Phase 7: расширен диапазон rays (4-19); 30% — некоторые лучи длиннее в 2x.
-  private compStarBurst(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
-    const rays = 4 + Math.floor(rng() * 16) // 4-19
-    const burst = this.add.graphics()
-    const color = this.pickColor(rng, sys)
-    const accent = this.pickColor(rng, sys)
-    const startR = sys.size * 0.6
-    const endRBase = sys.size * (1.5 + rng() * 0.6)
-    const tippingPct = rng() < 0.3 ? 0.3 : 0 // 30% recipes — некоторые лучи длиннее
-    burst.lineStyle((1 + rng() * 1.5) * DPR, color, 0.85)
-    for (let i = 0; i < rays; i++) {
-      const ang = (i / rays) * Math.PI * 2 + rng() * 0.2
-      const lenMult = (tippingPct > 0 && rng() < tippingPct) ? 2 : 1
-      const endR = endRBase * (0.7 + rng() * 0.4) * lenMult
-      burst.lineBetween(
-        Math.cos(ang) * startR, Math.sin(ang) * startR,
-        Math.cos(ang) * endR, Math.sin(ang) * endR,
-      )
-    }
-    // Тонкие accent поверх
-    burst.lineStyle(0.5 * DPR, accent, 0.7)
-    for (let i = 0; i < rays / 2; i++) {
-      const ang = (i / (rays / 2)) * Math.PI * 2 + rng() * 0.3 + Math.PI / rays
-      const endR = endRBase * (0.5 + rng() * 0.3)
-      burst.lineBetween(0, 0, Math.cos(ang) * endR, Math.sin(ang) * endR)
-    }
-    sprite.add(burst)
-    this.tweens.add({
-      targets: burst, alpha: 0, scaleX: 1.3 + rng() * 0.4, scaleY: 1.3 + rng() * 0.4,
-      duration: 400 + rng() * 300, ease: this.pickEase(rng),
-      onComplete: () => burst.destroy(),
-    })
-  }
+  // 10. compStarBurst — extracted в effects/anim/shared/compStarBurst.ts (Phase 9).
 
   // 11. Halo flash — большое свечение вокруг планеты (rng: цвет, размер, alpha)
   // Phase 7: расширены layers (2-6); subVariant — пульсирующий halo (40%).
