@@ -274,6 +274,13 @@ export class StarMapScene extends Phaser.Scene {
     this.refineTextureSeeds()
     this.refineAnimSeeds()
     this.refineSoundSeeds()  // Phase 8
+    // Phase 8 plan 06: anim+sound refine могут изменить rngSeed → редко создают
+    // новую texture коллизию (наблюдение: 1 collision из 984 после первого прогона).
+    // Второй проход texture refine стабилизирует pipeline до 984/984 unique.
+    // Anim/sound signatures не страдают: повторная texture mutation использует
+    // ту же константу 0x85ebca6b которую refineAnimSeeds учитывает в своих
+    // signature space (88+ comp × strict params, миллионы вариантов).
+    this.refineTextureSeeds()
 
     // Starfield — после генерации систем, чтобы кластеризовать звёзды вокруг планет
     this.setupStarfield()
