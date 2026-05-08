@@ -22,6 +22,10 @@ export interface BoxData {
   element: Element
   opened: boolean
   sourceArchetype?: string  // планета-источник (Phase 16)
+  // Phase 16: bonus rarity (additive к base rarity roll), 0..0.15. Optional —
+  // старые saved boxes без поля рассматриваются как 0. Phase 15 cascade
+  // читает это поле в slot-machine roll.
+  bonusRarity?: number
 }
 
 export interface ScoutData {
@@ -42,14 +46,21 @@ export interface CarrierData {
   level?: number
 }
 
-export interface ShipState {
-  state: 'docked' | 'transit'
-  dockedAt?: string         // planetId при docked
-  from?: string             // planetId при transit
-  to?: string               // planetId при transit
-  startedAt?: number        // unix ms при transit
-  arrivesAt?: number        // unix ms при transit
+// ===== Phase 16: ShipState discriminated union (REQ SHIP-01) =====
+export interface ShipStateDocked {
+  state: 'docked'
+  planetId: string  // unique idx в planetMap.json (e.g. 'home')
 }
+
+export interface ShipStateTransit {
+  state: 'transit'
+  fromPlanetId: string  // для UI «В пути от X к Y»
+  toPlanetId: string
+  startedAt: number     // unix ms (Date.now())
+  arrivesAt: number     // unix ms
+}
+
+export type ShipState = ShipStateDocked | ShipStateTransit
 
 export interface PityCounters {
   common: number    // боксов без гарантии common (всегда 0, placeholder)
@@ -89,12 +100,24 @@ export interface CosmicSlice {
   // Crew (Phase 16)
   crew: {
     missionsToday: number
-    lastResetDay: string  // ISO date 'YYYY-MM-DD'
+    lastResetDay: string  // ISO date 'YYYY-MM-DD' (LOCAL — Phase 16 fix CREW-03)
   }
 
   // Phase 14: serum tap-to-select / drag selection mode (transient UI state, НЕ persisted)
   serumDragActive: boolean
   selectedSerum: { element: Element; rarity: Rarity } | null
+
+  // Phase 16: progressive disclosure flags (REQ UX-09).
+  // gates Корабль tab; toggle при первом feed (Phase 17).
+  hasFirstFeed: boolean
+  // gates Боксы tab; toggle при первой completed mission (Phase 16).
+  hasFirstMission: boolean
+  // gates Бестиарий visualization; toggle при первом opened box (Phase 17/18).
+  hasOpenedAnyBox: boolean
+
+  // Phase 16: transient cached ship world position для redirect calc.
+  // НЕ persisted в localStorage (init на null после load → re-derived из planetCoords).
+  latestShipPos: { x: number; y: number } | null
 }
 
 export interface CosmicToastPayload {
@@ -132,5 +155,11 @@ export function makeInitialCosmicSlice(): CosmicSlice {
     // Phase 14: transient UI state — defaults на load, не persisted.
     serumDragActive: false,
     selectedSerum: null,
+    // Phase 16: progressive disclosure (REQ UX-09)
+    hasFirstFeed: false,
+    hasFirstMission: false,
+    hasOpenedAnyBox: false,
+    // Phase 16: transient ship position cache (used for redirect calc)
+    latestShipPos: null,
   }
 }
