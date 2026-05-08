@@ -353,5 +353,30 @@
       "milestone_96": "Recompensa: suero legendario por 96 celdas",
       "milestone_576": "Recompensa: visual exclusivo de rana por 576 celdas"
     }
+  },
+  "tutorial": {
+    "cta_understood": "¡Entendido!",
+    "first_box": {
+      "title": "🎰 ¡Tragaperras iniciada!",
+      "body": "La duración del giro indica la rareza. Toca en cualquier sitio tras el primer segundo para saltar."
+    },
+    "first_serum": {
+      "title": "🧪 Aplicar suero",
+      "body": "Toca un suero para seleccionar, luego toca una rana elegible. Común — pantano, raro — bosque, épico — continente, legendario — planeta."
+    },
+    "first_feed": {
+      "title": "🍽️ Alimentar y techo",
+      "body": "Cada portador tiene un techo oculto. Primeras alimentaciones — «???». Tras 3-4 — pista de color. Tras 5 — número exacto."
+    },
+    "first_stabilize": {
+      "title": "✨ Estabilización",
+      "body": "¡Portador estabilizado! Para superar el techo, fusiona dos portadores del mismo elemento y nivel — S-roll garantizado al siguiente nivel."
+    }
+  },
+  "cosmic_hub_pity": {
+    "pity_growing": "Suerte creciendo",
+    "pity_rare": "Hasta rara: {{n}}",
+    "pity_epic": "Hasta épica: {{n}}",
+    "pity_legendary": "Hasta legendaria: {{n}}"
   }
 }

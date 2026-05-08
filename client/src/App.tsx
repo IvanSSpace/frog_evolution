@@ -29,6 +29,7 @@ import { FlightConfirmDialog } from './components/CosmicHub/FlightConfirmDialog'
 import { MissionOverlay } from './components/MissionOverlay/MissionOverlay'
 import { StabilizationModal } from './components/CosmicHub/StabilizationModal'
 import { MilestoneToast } from './components/CosmicHub/bestiary/MilestoneToast'
+import { TutorialOverlay } from './components/Tutorial/TutorialOverlay'
 import { installBestiaryDevHelpers } from './utils/devHelpers'
 
 const queryClient = new QueryClient()
@@ -355,6 +356,8 @@ function App() {
       {/* Phase 18 (REQ BESTIARY-07): milestone toast — listens cosmic:bestiary-milestone
           event from cosmicSlice.setBestiaryBit; visible regardless of Cosmic Hub state. */}
       <MilestoneToast />
+      {/* Phase 19-05 (UX-08): tutorial overlay — always mounted; conditional null-render. */}
+      <TutorialOverlay />
       {pendingFlightPlanetId && (
         <FlightConfirmDialog
           toPlanetId={pendingFlightPlanetId}

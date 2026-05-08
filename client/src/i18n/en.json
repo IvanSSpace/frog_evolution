@@ -353,5 +353,30 @@
       "milestone_96": "Reward: legendary serum for 96 cells",
       "milestone_576": "Reward: exclusive frog visual for 576 cells"
     }
+  },
+  "tutorial": {
+    "cta_understood": "Got it!",
+    "first_box": {
+      "title": "🎰 Slot machine started!",
+      "body": "Spin duration hints rarity. Tap anywhere after the first second to skip."
+    },
+    "first_serum": {
+      "title": "🧪 Applying serum",
+      "body": "Tap a serum to select, then tap an eligible frog. Common — swamp, rare — forest, epic — continent, legendary — planet."
+    },
+    "first_feed": {
+      "title": "🍽️ Feeding and ceiling",
+      "body": "Each carrier has a hidden ceiling. First feeds — «???». After 3-4 — color hint. After 5 — exact number."
+    },
+    "first_stabilize": {
+      "title": "✨ Stabilization",
+      "body": "Carrier stabilized! To go above the ceiling, merge two same-element same-level carriers — guaranteed S-roll for next level."
+    }
+  },
+  "cosmic_hub_pity": {
+    "pity_growing": "Luck rising",
+    "pity_rare": "To rare: {{n}}",
+    "pity_epic": "To epic: {{n}}",
+    "pity_legendary": "To legendary: {{n}}"
   }
 }
