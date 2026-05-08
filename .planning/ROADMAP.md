@@ -87,7 +87,7 @@
 
 Plans:
 **Wave 1**
-- [ ] 08-01-PLAN.md — Pool expansion + 8 новых animation components (D-14, D-16)
+- [x] 08-01-PLAN.md — Pool expansion + 8 новых animation components (D-14, D-16) ✓ 2026-05-08
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 08-02-PLAN.md — Strict animation signature с quantized params + 10 refine attempts (D-01..D-04)

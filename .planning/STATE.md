@@ -2,22 +2,22 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 7
+current_phase: 8
 status: executing
-last_updated: "2026-05-08T05:29:03.372Z"
+last_updated: "2026-05-08T11:35:00.000Z"
 progress:
   total_phases: 7
   completed_phases: 1
-  total_plans: 11
-  completed_plans: 3
-  percent: 27
+  total_plans: 18
+  completed_plans: 4
+  percent: 22
 ---
 
 # Project State
 
 **Milestone:** Локализация + Панель настроек + Редкие боксы + Уникальные планеты
-**Status:** Ready to execute
-**Current Phase:** 7
+**Status:** Executing Phase 8
+**Current Phase:** 8
 **Last Updated:** 2026-05-07
 
 ## Phase Progress
@@ -41,3 +41,4 @@ progress:
 - Фазы 1-4 реализованы вручную (без execute-phase), статус обновлён 2026-05-06
 - Phase 5: редкий золотой бокс + слот-машина (React modal)
 - Phase 7 (2026-05-07): уникальность анимаций (100%, 450/450) и текстур (100%, 434/434 BG) для всех планет StarMap. 64 компонента анимаций (был 54), 9 архетипов получили sub-variants, 6 новых universal modifiers, refine-passes на загрузке.
+- Phase 8 plan 01 (2026-05-08): расширение animation pool с 88 до 96 компонентов (+8 новых: bouncingBall, digitalGlitch, ringPulsar, swarmParticles, prismRefract, lifeBloom, windRibbons, wreckageOrbit). Все 28 THEME_COMPONENTS pool'ов теперь ≥14 (минимум был 13).
