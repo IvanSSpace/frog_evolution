@@ -13,6 +13,15 @@ export interface CosmicSliceActions {
   addSerum: (element: Element, rarity: Rarity, count?: number) => void
   removeSerum: (element: Element, rarity: Rarity, count?: number) => void
 
+  // Phase 14: tap-to-select / drag selection mode (transient UI state).
+  setSerumDragActive: (
+    active: boolean,
+    payload?: { element: Element; rarity: Rarity } | null,
+  ) => void
+
+  // Phase 14: atomic apply (decrement serum + addCarrier + clear selection)
+  applySerum: (frogId: string, element: Element, rarity: Rarity, level: number) => void
+
   // Box actions (Phase 15)
   addBox: (box: BoxData) => void
   openBox: (id: string) => void
@@ -66,6 +75,50 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
         [element]: { ...s.serums[element], [rarity]: next },
       }
       set({ serums })
+    },
+
+    // Phase 14: tap-to-select / drag mode flag.
+    // active=true → переключает MainScene в selection mode (halos + auto-pause magnet/merge).
+    // active=false → clears selectedSerum независимо от второго аргумента.
+    setSerumDragActive: (active, payload) => {
+      if (active) {
+        set({ serumDragActive: true, selectedSerum: payload ?? null })
+      } else {
+        set({ serumDragActive: false, selectedSerum: null })
+      }
+    },
+
+    // Phase 14: atomic apply transaction.
+    //  - guard: serum availability (>= 1) и frog не должен уже быть carrier
+    //  - single set() для минимизации subscribe-flapping в FrogOverlayManager
+    applySerum: (frogId, element, rarity, level) => {
+      const s = get()
+
+      // Guard: serum доступен?
+      const cur = s.serums[element][rarity]
+      if (cur < 1) return
+
+      // Guard: idempotency — frog уже carrier?
+      if (s.carriers.some((c) => c.frogId === frogId)) return
+
+      const nextSerums = {
+        ...s.serums,
+        [element]: { ...s.serums[element], [rarity]: cur - 1 },
+      }
+      const nextCarrier: CarrierData = {
+        frogId,
+        element,
+        rarity,
+        feedCount: 0,
+        stabilized: false,
+        level,
+      }
+      set({
+        serums: nextSerums,
+        carriers: [...s.carriers, nextCarrier],
+        serumDragActive: false,
+        selectedSerum: null,
+      })
     },
 
     addBox: (box) => {

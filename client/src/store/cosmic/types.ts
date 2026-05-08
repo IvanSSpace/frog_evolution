@@ -91,10 +91,16 @@ export interface CosmicSlice {
     missionsToday: number
     lastResetDay: string  // ISO date 'YYYY-MM-DD'
   }
+
+  // Phase 14: serum tap-to-select / drag selection mode (transient UI state, НЕ persisted)
+  serumDragActive: boolean
+  selectedSerum: { element: Element; rarity: Rarity } | null
 }
 
 export interface CosmicToastPayload {
-  type: 'scout-returned' | 'box-received' | 'mission-complete' | 'generic'
+  type:
+    | 'scout-returned' | 'box-received' | 'mission-complete'
+    | 'serum-applied' | 'serum-mistap' | 'generic'
   msg: string
   action?: {
     label: string
@@ -102,6 +108,8 @@ export interface CosmicToastPayload {
   }
   // Если несколько событий за 1 сек → объединяются (COSMIC-HUB-06)
   count?: number
+  // Phase 14 (SERUM-10): override default auto-hide ms (default 4000).
+  duration?: number
 }
 
 // Фабрика начального состояния
@@ -121,5 +129,8 @@ export function makeInitialCosmicSlice(): CosmicSlice {
     pityCounters: { common: 0, rare: 0, epic: 0, legendary: 0 },
     lastActiveTab: 'scouts',
     crew: { missionsToday: 0, lastResetDay: '' },
+    // Phase 14: transient UI state — defaults на load, не persisted.
+    serumDragActive: false,
+    selectedSerum: null,
   }
 }

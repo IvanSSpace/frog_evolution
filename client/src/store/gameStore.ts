@@ -296,6 +296,9 @@ function loadCosmicSlice(): CosmicPersist {
         parsed.lastActiveTab === 'serums' || parsed.lastActiveTab === 'bestiary'
       ) ? parsed.lastActiveTab : 'scouts',
       crew: parsed.crew ?? defaults.crew,
+      // Phase 14: transient UI state — всегда defaults на load (НЕ из persisted state).
+      serumDragActive: false,
+      selectedSerum: null,
     }
   } catch {
     return defaults
@@ -558,6 +561,10 @@ useGameStore.subscribe((state, prev) => {
       pityCounters: state.pityCounters,
       lastActiveTab: state.lastActiveTab,
       crew: state.crew,
+      // Phase 14: transient UI state — saveCosmicSlice имеет CosmicPersist shape
+      // для type compatibility; на load возвращаются defaults (false/null).
+      serumDragActive: false,
+      selectedSerum: null,
     })
   }
 })
