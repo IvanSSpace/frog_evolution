@@ -1,6 +1,6 @@
-# Roadmap — Frog Evolution: Локализация + Настройки + Редкие боксы
+# Roadmap — Frog Evolution: Локализация + Настройки + Редкие боксы + Уникальные планеты
 
-**7 phases** | **19 requirements mapped** | All v1 requirements covered ✓
+**8 phases** | **25 requirements mapped** | All v1 + Phase 8 requirements covered ✓
 
 | # | Phase | Goal | Requirements | Files |
 |---|-------|------|--------------|-------|
@@ -11,6 +11,7 @@
 | 5 | Rare Crate | 3/3 | Complete    | 2026-05-06 |
 | 6 | Rare Box Rework | 5/5 | Complete    | 2026-05-07 |
 | 7 | Unique Planet Animations | Гарантированно уникальные анимации для всех 450 планет | ANIM-01–05, TEX-01–05 | `StarMapScene.ts` | Complete | 2026-05-07 |
+| 8 | Full Planet Uniqueness | 1000/1000/1000 unique anim/texture/sound для всех 1000 планет | SPEC-01–06 | `StarMapScene.ts`, `planetVoice.ts`, `client/scripts/verify_*.cjs` | Complete | 2026-05-08 |
 
 ---
 
@@ -105,7 +106,22 @@ Plans:
 - [x] 08-06-PLAN.md — Verify scripts в client/scripts/ + npm run verify-uniqueness (D-15, D-17) ✓ 2026-05-08
 
 **Wave 7** *(blocked on Wave 6 completion)*
-- [ ] 08-07-PLAN.md — Smoke test + final build size + STATE.md закрытие (SPEC #6, #10)
+- [x] 08-07-PLAN.md — Smoke test + final build size + STATE.md закрытие (SPEC #6, #10) ✓ 2026-05-08
+
+**Status:** Complete (2026-05-08)
+
+**Achieved:**
+- 1000/1000 unique strict animation signatures (`verify_anim_uniqueness_strict.cjs`)
+- 984/984 unique texture signatures (`verify_texture_uniqueness.cjs`, cascade-stable)
+- 1000/1000 unique sound signatures (`verify_sound_uniqueness.cjs`)
+- 96 animation components (88 → +8 Phase 8: bouncingBall, digitalGlitch, ringPulsar, swarmParticles, prismRefract, lifeBloom, windRibbons, wreckageOrbit)
+- All 28 theme pools ≥ 14 (target ≥ 12, min=15 max=22)
+- Per-planet sound modulation: 4032 combos per archetype (pitchStep×14 × rotationIdx×6 × inversionIdx×3 × detuneBin×4 × cutoffBin×4)
+- 28 archetype/type → MIDI scale mapping в `THEME_SCALES`
+- 3-pass refine pipeline в `StarMapScene.create()`: texture → anim → sound → texture stabilize
+- `npm run verify-uniqueness` — sequential gate (anim → texture → sound), exit 1 на первой коллизии
+- TypeScript clean, build passes
+- Bundle delta: **+7.21 kB gzipped** (≤ +50 kB cap, 6.9× headroom)
 
 ---
 
