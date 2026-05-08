@@ -154,7 +154,10 @@ const COSMIC_KEY = 'frog_evolution_cosmic'
 // 17 (Phase 16): ShipState discriminated union + sentinel flags + bonusRarity
 // 18 (Phase 15): BoxData shape extended (planetId/planetName/archetype/createdAt);
 //                bonusRarity changed number → 'rare'|'epic'|'legendary' enum.
-const STORAGE_VERSION = 18
+// 19 (Phase 17): bestiaryBitset 24→192 bytes (lossless pad migration); CosmicTab
+//                union extended с 'carriers'; CarrierData расширен
+//                ceiling?/rollHistory? (optional → backward compat).
+const STORAGE_VERSION = 19
 
 function loadUpgrades(): Upgrades {
   const defaults: Upgrades = { dropSpeed: 0, tractor: 0, magnet: 0, crateQuality: 0, rareBoxSpeed: 0 }
@@ -344,13 +347,18 @@ function loadCosmicSlice(): CosmicPersist {
       scouts: Array.isArray(parsed.scouts) ? parsed.scouts : [],
       ship,
       carriers: Array.isArray(parsed.carriers) ? parsed.carriers : [],
-      bestiaryBitset: Array.isArray(parsed.bestiaryBitset) && parsed.bestiaryBitset.length === 24
-        ? parsed.bestiaryBitset
-        : defaults.bestiaryBitset,
+      // Phase 17: bitset extended 24 → 192 bytes (1536 bits). Pad-only migration.
+      bestiaryBitset: (() => {
+        if (!Array.isArray(parsed.bestiaryBitset)) return defaults.bestiaryBitset
+        const arr = parsed.bestiaryBitset.slice()
+        while (arr.length < 192) arr.push(0)
+        return arr.slice(0, 192)
+      })(),
       pityCounters: parsed.pityCounters ?? defaults.pityCounters,
       lastActiveTab: (
         parsed.lastActiveTab === 'scouts' || parsed.lastActiveTab === 'boxes' ||
-        parsed.lastActiveTab === 'serums' || parsed.lastActiveTab === 'bestiary'
+        parsed.lastActiveTab === 'serums' || parsed.lastActiveTab === 'bestiary' ||
+        parsed.lastActiveTab === 'carriers'
       ) ? parsed.lastActiveTab : 'scouts',
       crew: parsed.crew ?? defaults.crew,
       // Phase 14: transient UI state — всегда defaults на load (НЕ из persisted state).

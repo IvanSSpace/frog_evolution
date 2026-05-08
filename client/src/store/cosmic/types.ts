@@ -40,6 +40,17 @@ export interface ScoutData {
   planetId: string
 }
 
+/**
+ * Phase 17: исход одного feed roll.
+ *  - 'success'   → carrier.level += 1
+ *  - 'fail'      → carrier.level unchanged
+ *  - 'stabilize' → carrier достиг ceiling (carrier.stabilized = true)
+ */
+export type RollResult =
+  | { type: 'success'; timestamp: number }
+  | { type: 'fail'; timestamp: number }
+  | { type: 'stabilize'; timestamp: number }
+
 export interface CarrierData {
   frogId: string
   element: Element
@@ -49,6 +60,11 @@ export interface CarrierData {
   // Phase 12+: опциональный уровень лягушки на момент привязки сыворотки.
   // Phase 12 manager не использует это поле; добавлено для будущей логики (Phase 17 evolution).
   level?: number
+  // Phase 17 NEW (все optional для backward compat):
+  /** Pre-determined ceiling level (1..24). undefined = ещё не было feed'ов. */
+  ceiling?: number
+  /** Sequence of feed outcomes; clamped to last 24 entries. */
+  rollHistory?: RollResult[]
 }
 
 // ===== Phase 16: ShipState discriminated union (REQ SHIP-01) =====
@@ -74,7 +90,8 @@ export interface PityCounters {
   legendary: number // боксов подряд без legendary
 }
 
-export type CosmicTab = 'scouts' | 'boxes' | 'serums' | 'bestiary'
+// Phase 17: добавлен carriers tab.
+export type CosmicTab = 'scouts' | 'boxes' | 'serums' | 'bestiary' | 'carriers'
 
 export interface CosmicSlice {
   // Инвентарь сывороток: Record<Element, Record<Rarity, count>>
@@ -92,9 +109,10 @@ export interface CosmicSlice {
   // Карьеры (Phase 14/17)
   carriers: CarrierData[]
 
-  // Бестиарий bitset: 24 байта = 192 бита (placeholder Phase 18; финал — 1536 ячеек)
-  // Хранится как number[] (JSON-serializable). Восстанавливается в Uint8Array при использовании.
-  bestiaryBitset: number[]  // length = 24
+  // Бестиарий bitset: Phase 17 расширен до 192 байт = 1536 битов.
+  // Layout: 16 elements × 4 rarities × 24 levels = 1536 уникальных combos.
+  // Хранится как number[] (JSON-serializable).
+  bestiaryBitset: number[]  // length = 192
 
   // Pity counters (Phase 19)
   pityCounters: PityCounters
@@ -153,7 +171,7 @@ export function makeInitialCosmicSlice(): CosmicSlice {
     scouts: [],
     ship: null,
     carriers: [],
-    bestiaryBitset: new Array(24).fill(0),  // 192 bits, все нули
+    bestiaryBitset: new Array(192).fill(0),  // Phase 17: full 1536 bits = 192 bytes
     pityCounters: { common: 0, rare: 0, epic: 0, legendary: 0 },
     lastActiveTab: 'scouts',
     crew: { missionsToday: 0, lastResetDay: '' },
