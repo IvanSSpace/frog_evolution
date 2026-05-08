@@ -24,8 +24,9 @@ import {
   getTractorIncomePerSec,
 } from './store/gameStore'
 import type { CosmicToastPayload } from './store/cosmic/types'
-import { findPlanetById } from './game/data/missionConfig'
+import { findPlanetById, DAILY_CAP, type MissionResult } from './game/data/missionConfig'
 import { FlightConfirmDialog } from './components/CosmicHub/FlightConfirmDialog'
+import { MissionOverlay } from './components/MissionOverlay/MissionOverlay'
 
 const queryClient = new QueryClient()
 
@@ -49,6 +50,10 @@ function App() {
   // Phase 16 (REQ SHIP-07/08): Flight confirm dialog state.
   // Set non-null когда юзер тапает по planet на StarMap при открытом Cosmic Hub.
   const [pendingFlightPlanetId, setPendingFlightPlanetId] = useState<string | null>(null)
+
+  // Phase 16 (REQ MISSION-01..08): mission overlay state.
+  // Set non-null когда eventBus emits 'cosmic:start-mission' и валидация прошла.
+  const [activeMissionPlanetId, setActiveMissionPlanetId] = useState<string | null>(null)
 
   useEffect(() => {
     initSfx()
@@ -220,6 +225,30 @@ function App() {
     return () => { eventBus.off('cosmic:request-flight', handleRequestFlight) }
   }, [cosmicHubOpen])
 
+  // Phase 16 (REQ MISSION-01): subscriber на 'cosmic:start-mission'
+  // → mount MissionOverlay (с валидацией ship.docked + crew credits).
+  useEffect(() => {
+    const handleStart = ({ planetId }: { planetId: string }) => {
+      const state = useGameStore.getState()
+      if (!state.ship || state.ship.state !== 'docked' || state.ship.planetId !== planetId) return
+      if (state.crew.missionsToday >= DAILY_CAP) return
+      setActiveMissionPlanetId(planetId)
+    }
+    eventBus.on('cosmic:start-mission', handleStart)
+    return () => { eventBus.off('cosmic:start-mission', handleStart) }
+  }, [])
+
+  // Phase 16 (REQ MISSION-05): subscriber на 'cosmic:mission-complete'
+  // → call investigatePlanet (atomic credit + addBox + toast).
+  useEffect(() => {
+    const handleComplete = ({ planetId, result }: { planetId: string; result: MissionResult }) => {
+      useGameStore.getState().investigatePlanet(planetId, result)
+      setActiveMissionPlanetId(null)
+    }
+    eventBus.on('cosmic:mission-complete', handleComplete)
+    return () => { eventBus.off('cosmic:mission-complete', handleComplete) }
+  }, [])
+
   const handleRareCrateClaim = (wonLevel: number) => {
     setRareCrate(null)
     eventBus.emit('rareCrate:claim', { level: wonLevel })
@@ -262,6 +291,12 @@ function App() {
             setPendingFlightPlanetId(null)
           }}
           onCancel={() => setPendingFlightPlanetId(null)}
+        />
+      )}
+      {activeMissionPlanetId && (
+        <MissionOverlay
+          planetId={activeMissionPlanetId}
+          onClose={() => setActiveMissionPlanetId(null)}
         />
       )}
       {discovered !== null && (
