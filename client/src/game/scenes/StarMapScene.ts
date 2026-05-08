@@ -788,6 +788,7 @@ export class StarMapScene extends Phaser.Scene {
         type: sys.type,
         archetype: 'archetype' in sys ? (sys as BgSystem).archetype : undefined,
         durationMs,
+        seed: this.effectiveSeed(sys),
       })
       this.playUniqueAnimation(sys)
       st.count = 0
@@ -961,6 +962,17 @@ export class StarMapScene extends Phaser.Scene {
       }
     }
     return mulberry32(seed)
+  }
+
+  // Phase 8: возвращает фактический seed используемый для anim/sound модуляций.
+  // Для BG: rngSeed после возможного refine. Для main: mainSeedOverride или hashId.
+  private effectiveSeed(sys: Race | BgSystem): number {
+    if ('rngSeed' in sys && typeof (sys as BgSystem).rngSeed === 'number') {
+      return (sys as BgSystem).rngSeed
+    }
+    const override = this.mainSeedOverride.get(sys.id)
+    if (override !== undefined) return override
+    return this.hashId(sys.id)
   }
 
   // Главный entry — собирает уникальный рецепт анимации для планеты.
