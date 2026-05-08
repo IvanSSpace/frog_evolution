@@ -2826,13 +2826,28 @@ export class StarMapScene extends Phaser.Scene {
 
   // === PHASE 7: UNIQUENESS CHECK ===
 
+  // Phase 8: квантует значение в индекс ближайшего бина (по abs distance).
+  // thresholds — отсортированный массив центров бинов. Возвращает 0..thresholds.length-1.
+  private quantize(value: number, thresholds: number[]): number {
+    let bestIdx = 0
+    let bestDist = Math.abs(value - thresholds[0])
+    for (let i = 1; i < thresholds.length; i++) {
+      const d = Math.abs(value - thresholds[i])
+      if (d < bestDist) { bestDist = d; bestIdx = i }
+    }
+    return bestIdx
+  }
+
   // Симулирует первые RNG-вызовы playUniqueAnimation и возвращает signature.
   // Должен ТОЧНО реплицировать порядок rng() calls в реальной игре.
+  // Phase 8: signature расширена strict-параметрами (rotationBin, scaleBin, hueBin, delayBins)
+  // для отлова коллизий по visible-различимым параметрам, не только recipe set.
   private buildAnimSignature(sys: Race | BgSystem): string {
     const rng = this.animRng(sys)
     const theme = (sys as BgSystem).archetype ?? sys.type
     const pool = this.THEME_COMPONENTS[theme] ?? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-    // Реплицируем playUniqueAnimation:
+
+    // (1) recipe size + components — реплицирует playUniqueAnimation:984-992
     const r1 = rng()
     const targetCount = r1 < 0.5 ? 2 : r1 < 0.85 ? 3 : 4
     const compCount = Math.min(targetCount, pool.length)
@@ -2842,9 +2857,49 @@ export class StarMapScene extends Phaser.Scene {
       const c = pool[Math.floor(rng() * pool.length)]
       if (!used.has(c)) { used.add(c); components.push(c) }
     }
-    // Modifier flag (25%)
-    const modFlag = rng() < 0.25 ? 1 : 0
-    return `${[...components].sort((a, b) => a - b).join(',')}|m${modFlag}|${theme}`
+
+    // (2) modifier flag + rotation/scale (реплицирует playUniqueAnimation:997-999)
+    const useModifier = rng() < 0.25
+    const modRotation = useModifier ? (rng() - 0.5) * Math.PI : 0
+    const modScale = useModifier ? 0.7 + rng() * 0.6 : 1
+
+    // Phase 8: квантуем modifier params в бины
+    // rotation: 4 бина около (-π/2, -π/4, +π/4, +π/2); -1 если modifier нет
+    const rotationBin = useModifier
+      ? this.quantize(modRotation, [-Math.PI / 2, -Math.PI / 4, Math.PI / 4, Math.PI / 2])
+      : -1
+    // scale: 4 бина около (0.7, 0.85, 1.15, 1.3); -1 если modifier нет
+    const scaleBin = useModifier
+      ? this.quantize(modScale, [0.7, 0.85, 1.15, 1.3])
+      : -1
+
+    // (3) hue_bin: дополнительный детерминированный hash от seed (НЕ дёргает rng).
+    // ВАЖНО: pickColor вызывает rng() уже внутри runAnimComponent — мы НЕ можем
+    // повторить этот порядок в signature, т.к. он зависит от внутренностей comp.
+    // Решение: используем raw seed (как его вычисляет animRng) и проектируем в 8 бинов.
+    const seedSource = ('rngSeed' in sys && typeof (sys as BgSystem).rngSeed === 'number')
+      ? (sys as BgSystem).rngSeed
+      : (this.mainSeedOverride.get(sys.id) ?? this.hashId(sys.id))
+    // Проектируем seed в 8 hue bins (0..7)
+    const hueBin = (seedSource >>> 5) & 0x7
+
+    // (4) delay_bins per non-first comp (3 бина: <100ms / 100-199ms / ≥200ms)
+    // ВАЖНО: реплицирует playUniqueAnimation:1002 — `Math.floor(rng() * 250) + 50`
+    // (диапазон 50..299), затем мы квантуем в 3 бина.
+    const delayBins: number[] = []
+    for (let i = 1; i < components.length; i++) {
+      const delay = Math.floor(rng() * 250) + 50
+      let bin: number
+      if (delay < 100) bin = 0
+      else if (delay < 200) bin = 1
+      else bin = 2
+      delayBins.push(bin)
+    }
+
+    // Sorted comps for set-equality (как в Phase 7), плюс strict params
+    // (rotationBin, scaleBin, hueBin, delayBins encoded in segments r/s/h/d).
+    const compsKey = [...components].sort((a, b) => a - b).join(',')
+    return `${compsKey}|m${useModifier ? 1 : 0}|r${rotationBin}|s${scaleBin}|h${hueBin}|d${delayBins.join(',')}|${theme}`
   }
 
   // После создания allSystems — refine seeds для уникальности recipe.
