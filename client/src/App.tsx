@@ -249,6 +249,63 @@ function App() {
     return () => { eventBus.off('cosmic:mission-complete', handleComplete) }
   }, [])
 
+  // Phase 16 (REQ UX-09): DEV-mode unlocks all sentinel flags + window dev helpers.
+  // Production: флаги управляются gameplay (hasFirstMission через investigatePlanet,
+  // hasFirstFeed/hasOpenedAnyBox в Phase 17/18). DEV — всё true для testability.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    // Defer на microtask чтобы dev tools видели init.
+    queueMicrotask(() => {
+      const cur = useGameStore.getState()
+      if (!cur.hasFirstFeed) cur.setHasFirstFeed(true)
+      if (!cur.hasFirstMission) cur.setHasFirstMission(true)
+      if (!cur.hasOpenedAnyBox) cur.setHasOpenedAnyBox(true)
+    })
+
+    // Window-exposed dev helpers (testability: forceMissionType etc.).
+    const w = window as unknown as Record<string, unknown>
+
+    w.__forceMissionType = (type: 'rhythm' | 'defend' | 'hotspot') => {
+      localStorage.setItem('__force_mission_type', type)
+      console.log('[dev] forced mission type:', type)
+    }
+
+    w.__resetCrewToday = () => {
+      useGameStore.setState((s) => ({
+        crew: { ...s.crew, missionsToday: 0 },
+      }))
+      console.log('[dev] crew reset')
+    }
+
+    w.__unlockAllTabs = () => {
+      const s = useGameStore.getState()
+      s.setHasFirstFeed(true)
+      s.setHasFirstMission(true)
+      s.setHasOpenedAnyBox(true)
+      console.log('[dev] all tabs unlocked')
+    }
+
+    w.__lockAllTabs = () => {
+      const s = useGameStore.getState()
+      s.setHasFirstFeed(false)
+      s.setHasFirstMission(false)
+      s.setHasOpenedAnyBox(false)
+      console.log('[dev] all tabs locked (simulating fresh prod install)')
+    }
+
+    w.__shipTo = (planetId: string) => {
+      useGameStore.getState().arriveShipAt(planetId)
+    }
+
+    return () => {
+      delete w.__forceMissionType
+      delete w.__resetCrewToday
+      delete w.__unlockAllTabs
+      delete w.__lockAllTabs
+      delete w.__shipTo
+    }
+  }, [])
+
   const handleRareCrateClaim = (wonLevel: number) => {
     setRareCrate(null)
     eventBus.emit('rareCrate:claim', { level: wonLevel })
