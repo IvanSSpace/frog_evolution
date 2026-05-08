@@ -10,7 +10,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "preview": "vite preview",
-    "prepare": "husky || true"
+    "prepare": "husky || true",
+    "verify-uniqueness": "node scripts/verify_anim_uniqueness_strict.cjs && node scripts/verify_texture_uniqueness.cjs && node scripts/verify_sound_uniqueness.cjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.60.6",
@@ -24,6 +25,7 @@
     "react-i18next": "^17.0.6",
     "react-modal": "^3.16.1",
     "tailwindcss": "^3.4.15",
+    "tone": "^15.1.22",
     "zustand": "^5.0.1"
   },
   "devDependencies": {
