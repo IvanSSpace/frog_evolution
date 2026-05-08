@@ -151,7 +151,8 @@ const FORMAT_KEY = 'frog_format'
 const COSMIC_KEY = 'frog_evolution_cosmic'
 // Бампается когда меняются конфиги — старые сейвы сбрасываются
 // 16 (Phase 11): добавлен COSMIC_KEY для CosmicSlice (Cosmic Frogs System)
-const STORAGE_VERSION = 16
+// 17 (Phase 16): ShipState discriminated union + sentinel flags + bonusRarity
+const STORAGE_VERSION = 17
 
 function loadUpgrades(): Upgrades {
   const defaults: Upgrades = { dropSpeed: 0, tractor: 0, magnet: 0, crateQuality: 0, rareBoxSpeed: 0 }
@@ -281,11 +282,37 @@ function loadCosmicSlice(): CosmicPersist {
     const parsed = JSON.parse(raw)
     // Graceful fallback: каждое поле проверяется отдельно — поломанные части
     // заменяются дефолтами (T-11-01 mitigation).
+
+    // Phase 16: ShipState shape validation. Old shape (Phase 11) had optional
+    // dockedAt/from/to. New discriminated union requires planetId или
+    // fromPlanetId+toPlanetId+startedAt+arrivesAt. Any mismatch → null (re-init).
+    let ship: CosmicPersist['ship'] = null
+    if (parsed.ship && typeof parsed.ship === 'object' && parsed.ship.state) {
+      if (parsed.ship.state === 'docked' && typeof parsed.ship.planetId === 'string') {
+        ship = { state: 'docked', planetId: parsed.ship.planetId }
+      } else if (
+        parsed.ship.state === 'transit' &&
+        typeof parsed.ship.fromPlanetId === 'string' &&
+        typeof parsed.ship.toPlanetId === 'string' &&
+        typeof parsed.ship.startedAt === 'number' &&
+        typeof parsed.ship.arrivesAt === 'number'
+      ) {
+        ship = {
+          state: 'transit',
+          fromPlanetId: parsed.ship.fromPlanetId,
+          toPlanetId: parsed.ship.toPlanetId,
+          startedAt: parsed.ship.startedAt,
+          arrivesAt: parsed.ship.arrivesAt,
+        }
+      }
+      // else: legacy Phase 11 shape (dockedAt/from/to) → ship = null (re-init)
+    }
+
     return {
       serums: parsed.serums ?? defaults.serums,
       boxes: Array.isArray(parsed.boxes) ? parsed.boxes : [],
       scouts: Array.isArray(parsed.scouts) ? parsed.scouts : [],
-      ship: parsed.ship ?? null,
+      ship,
       carriers: Array.isArray(parsed.carriers) ? parsed.carriers : [],
       bestiaryBitset: Array.isArray(parsed.bestiaryBitset) && parsed.bestiaryBitset.length === 24
         ? parsed.bestiaryBitset
@@ -299,6 +326,12 @@ function loadCosmicSlice(): CosmicPersist {
       // Phase 14: transient UI state — всегда defaults на load (НЕ из persisted state).
       serumDragActive: false,
       selectedSerum: null,
+      // Phase 16: progressive disclosure flags (REQ UX-09)
+      hasFirstFeed: typeof parsed.hasFirstFeed === 'boolean' ? parsed.hasFirstFeed : defaults.hasFirstFeed,
+      hasFirstMission: typeof parsed.hasFirstMission === 'boolean' ? parsed.hasFirstMission : defaults.hasFirstMission,
+      hasOpenedAnyBox: typeof parsed.hasOpenedAnyBox === 'boolean' ? parsed.hasOpenedAnyBox : defaults.hasOpenedAnyBox,
+      // Phase 16: latestShipPos НЕ persisted — всегда null на load.
+      latestShipPos: null,
     }
   } catch {
     return defaults
@@ -549,7 +582,10 @@ useGameStore.subscribe((state, prev) => {
     state.bestiaryBitset !== prev.bestiaryBitset ||
     state.pityCounters !== prev.pityCounters ||
     state.lastActiveTab !== prev.lastActiveTab ||
-    state.crew !== prev.crew
+    state.crew !== prev.crew ||
+    state.hasFirstFeed !== prev.hasFirstFeed ||
+    state.hasFirstMission !== prev.hasFirstMission ||
+    state.hasOpenedAnyBox !== prev.hasOpenedAnyBox
   ) {
     saveCosmicSlice({
       serums: state.serums,
@@ -565,6 +601,12 @@ useGameStore.subscribe((state, prev) => {
       // для type compatibility; на load возвращаются defaults (false/null).
       serumDragActive: false,
       selectedSerum: null,
+      // Phase 16: progressive disclosure (REQ UX-09)
+      hasFirstFeed: state.hasFirstFeed,
+      hasFirstMission: state.hasFirstMission,
+      hasOpenedAnyBox: state.hasOpenedAnyBox,
+      // Phase 16: latestShipPos НЕ persisted (transient) — saved as null shape
+      latestShipPos: null,
     })
   }
 })

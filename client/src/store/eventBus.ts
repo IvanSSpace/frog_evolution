@@ -1,5 +1,6 @@
 import mitt from 'mitt'
 import type { CosmicToastPayload, Element, Rarity } from './cosmic/types'
+import type { MissionResult } from '../game/data/missionConfig'
 
 type Events = {
   'poop:collected': { value: number }
@@ -29,6 +30,14 @@ type Events = {
   'cosmic:cancel-serum': void
   'cosmic:serum-pointer-move': { x: number; y: number }
   'cosmic:serum-pointer-up': { x: number; y: number }
+  // Phase 16 — ship + mission events
+  'cosmic:request-flight': { planetId: string }
+  'cosmic:flight-confirm': { planetId: string }
+  'cosmic:flight-cancel': void
+  'cosmic:ship-arrived': { planetId: string }
+  'cosmic:start-mission': { planetId: string }
+  'cosmic:mission-complete': { planetId: string; result: MissionResult }
+  'cosmic:mission-cancel': void
 }
 
 export const eventBus = mitt<Events>()

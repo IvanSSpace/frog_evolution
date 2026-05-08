@@ -6,6 +6,11 @@ import {
   type BoxData, type ScoutData, type CarrierData,
   makeInitialCosmicSlice,
 } from './types'
+import { eventBus } from '../eventBus'
+import {
+  travelTimeMs, planetDistance, findPlanetById, getLocalDateString,
+  DAILY_CAP,
+} from '../../game/data/missionConfig'
 
 // Actions — то, что наполняется в Phase 14-19. Здесь — placeholder stubs.
 export interface CosmicSliceActions {
@@ -40,6 +45,17 @@ export interface CosmicSliceActions {
   // Crew (Phase 16)
   consumeMissionCredit: () => boolean  // false если cap достигнут
   resetCrewIfNewDay: () => void
+
+  // Phase 16: Ship navigation (REQ SHIP-01..06)
+  ensureShipExists: () => void
+  sendShipTo: (toPlanetId: string) => void
+  arriveShipAt: (planetId: string) => void
+  setShipPosition: (x: number, y: number) => void
+
+  // Phase 16: Sentinel flags toggles (REQ UX-09; used by Phase 17/19 + dev panel)
+  setHasFirstFeed: (v: boolean) => void
+  setHasFirstMission: (v: boolean) => void
+  setHasOpenedAnyBox: (v: boolean) => void
 }
 
 export type CosmicState = CosmicSlice & CosmicSliceActions
@@ -155,20 +171,96 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
       set({ lastActiveTab: tab })
     },
 
+    // Phase 16: использует DAILY_CAP константу из missionConfig.ts (было hardcoded 4).
+    // Pity counter (CREW-08) растёт ТОЛЬКО при consume — не при flight.
     consumeMissionCredit: () => {
-      const DAILY_CAP = 4
       const state = get()
       if (state.crew.missionsToday >= DAILY_CAP) return false
       set({ crew: { ...state.crew, missionsToday: state.crew.missionsToday + 1 } })
       return true
     },
 
+    // Phase 16 fix CREW-03: ЛОКАЛЬНАЯ дата вместо UTC.
     resetCrewIfNewDay: () => {
-      const today = new Date().toISOString().slice(0, 10)  // 'YYYY-MM-DD'
+      const today = getLocalDateString()
       const state = get()
       if (state.crew.lastResetDay !== today) {
         set({ crew: { missionsToday: 0, lastResetDay: today } })
       }
     },
+
+    // Phase 16: Ship navigation actions
+    ensureShipExists: () => {
+      const s = get()
+      if (s.ship !== null) return
+      set({ ship: { state: 'docked', planetId: 'home' } })
+    },
+
+    sendShipTo: (toPlanetId) => {
+      const s = get()
+      const target = findPlanetById(toPlanetId)
+      if (!target) {
+        // unknown planet — ignore (corrupt state guard, T-16-02)
+        return
+      }
+      // Если ship === null — pre-init
+      if (s.ship === null) {
+        set({ ship: { state: 'docked', planetId: 'home' } })
+      }
+      const ship = get().ship!  // non-null после ensure
+
+      // No-op: уже docked у этой planet (UI должен предотвратить — но slice idempotent)
+      if (ship.state === 'docked' && ship.planetId === toPlanetId) return
+
+      let fromPos: { x: number; y: number }
+      let fromPlanetIdForUi: string
+
+      if (ship.state === 'docked') {
+        const fromPlanet = findPlanetById(ship.planetId)
+        if (!fromPlanet) return  // corrupt — bail
+        fromPos = { x: fromPlanet.x, y: fromPlanet.y }
+        fromPlanetIdForUi = ship.planetId
+      } else {
+        // REDIRECT: используем cached latestShipPos если есть, иначе fromPlanetId
+        const latest = get().latestShipPos
+        if (latest) {
+          fromPos = latest
+        } else {
+          const fp = findPlanetById(ship.fromPlanetId)
+          if (!fp) return
+          fromPos = { x: fp.x, y: fp.y }
+        }
+        fromPlanetIdForUi = ship.fromPlanetId  // сохраняем UI «откуда летели изначально»
+      }
+
+      const dist = planetDistance(fromPos, { x: target.x, y: target.y })
+      const dur = travelTimeMs(dist)
+      const now = Date.now()
+      set({
+        ship: {
+          state: 'transit',
+          fromPlanetId: fromPlanetIdForUi,
+          toPlanetId,
+          startedAt: now,
+          arrivesAt: now + dur,
+        },
+      })
+    },
+
+    arriveShipAt: (planetId) => {
+      const target = findPlanetById(planetId)
+      if (!target) return  // защита от mismatch
+      set({ ship: { state: 'docked', planetId } })
+      // Notify subscribers (ShipTab, MissionOverlay enabler).
+      eventBus.emit('cosmic:ship-arrived', { planetId })
+    },
+
+    setShipPosition: (x, y) => {
+      set({ latestShipPos: { x, y } })
+    },
+
+    setHasFirstFeed: (v) => set({ hasFirstFeed: v }),
+    setHasFirstMission: (v) => set({ hasFirstMission: v }),
+    setHasOpenedAnyBox: (v) => set({ hasOpenedAnyBox: v }),
   }
 }
