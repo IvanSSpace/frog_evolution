@@ -159,6 +159,24 @@
     "toast_scout_returned_plural": "{{count}} скаутов вернулись! {{count}} боксов получено.",
     "toast_open_box": "Открыть бокс",
     "toast_grouped": "{{count}} событий",
-    "crew_tired": "Экипаж устал. Возвращайтесь завтра."
+    "crew_tired": "Экипаж устал. Возвращайтесь завтра.",
+    "elements": {
+      "fire": "Огонь",
+      "ice": "Лёд",
+      "water": "Вода",
+      "forest": "Лес",
+      "toxic": "Яд",
+      "plasma": "Плазма",
+      "shadow": "Тень",
+      "crystal": "Кристалл",
+      "desert": "Песок",
+      "gas": "Газ",
+      "ring": "Кольцо",
+      "binary": "Бинарь",
+      "arcane": "Магия",
+      "mechanical": "Меха",
+      "war": "Война",
+      "void": "Пустота"
+    }
   }
 }

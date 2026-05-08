@@ -159,6 +159,24 @@
     "toast_scout_returned_plural": "¡{{count}} exploradores regresaron! {{count}} cajas recibidas.",
     "toast_open_box": "Abrir caja",
     "toast_grouped": "{{count}} eventos",
-    "crew_tired": "La tripulación está cansada. Vuelve mañana."
+    "crew_tired": "La tripulación está cansada. Vuelve mañana.",
+    "elements": {
+      "fire": "Fuego",
+      "ice": "Hielo",
+      "water": "Agua",
+      "forest": "Bosque",
+      "toxic": "Tóxico",
+      "plasma": "Plasma",
+      "shadow": "Sombra",
+      "crystal": "Cristal",
+      "desert": "Desierto",
+      "gas": "Gas",
+      "ring": "Anillo",
+      "binary": "Binario",
+      "arcane": "Arcano",
+      "mechanical": "Mecánico",
+      "war": "Guerra",
+      "void": "Vacío"
+    }
   }
 }

@@ -159,6 +159,24 @@
     "toast_scout_returned_plural": "{{count}} scouts returned! {{count}} boxes received.",
     "toast_open_box": "Open box",
     "toast_grouped": "{{count}} events",
-    "crew_tired": "Crew is tired. Come back tomorrow."
+    "crew_tired": "Crew is tired. Come back tomorrow.",
+    "elements": {
+      "fire": "Fire",
+      "ice": "Ice",
+      "water": "Water",
+      "forest": "Forest",
+      "toxic": "Toxic",
+      "plasma": "Plasma",
+      "shadow": "Shadow",
+      "crystal": "Crystal",
+      "desert": "Desert",
+      "gas": "Gas",
+      "ring": "Ring",
+      "binary": "Binary",
+      "arcane": "Arcane",
+      "mechanical": "Mech",
+      "war": "War",
+      "void": "Void"
+    }
   }
 }
