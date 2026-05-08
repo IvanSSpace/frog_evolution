@@ -12,6 +12,7 @@ import { ShipTab } from './ShipTab'
 import { BoxesTab } from './BoxesTab'
 import { SerumsTab } from './SerumsTab'
 import { BestiaryTab } from './BestiaryTab'
+import { CarriersTab } from './CarriersTab'
 
 const SESSION_KEY = 'cosmic_last_tab'
 
@@ -20,7 +21,8 @@ function getInitialTab(): CosmicTab {
     const saved = sessionStorage.getItem(SESSION_KEY)
     if (
       saved === 'scouts' || saved === 'boxes' ||
-      saved === 'serums' || saved === 'bestiary'
+      saved === 'serums' || saved === 'bestiary' ||
+      saved === 'carriers'
     ) {
       return saved
     }
@@ -80,6 +82,13 @@ export default function CosmicHubModal({ onClose }: Props) {
       // Bestiary tab всегда видим в Phase 16 — empty state. Phase 18 polish может gate.
       enabled: true,
     },
+    {
+      id: 'carriers',
+      label: t('cosmic_hub.tab_carriers'),
+      icon: '🐸',
+      // Phase 17: carriers tab всегда видим. Empty state когда carriers пуст.
+      enabled: true,
+    },
   ]
 
   // Если активный таб теперь disabled — fall back на первый enabled
@@ -115,6 +124,7 @@ export default function CosmicHubModal({ onClose }: Props) {
       // мог видеть ферму с halos.
       case 'serums':   return <SerumsTab onClose={onClose} />
       case 'bestiary': return <BestiaryTab />
+      case 'carriers': return <CarriersTab />
     }
   }
 

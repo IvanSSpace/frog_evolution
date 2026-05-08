@@ -200,6 +200,7 @@
     "tab_boxes": "Boxes",
     "tab_serums": "Serums",
     "tab_bestiary": "Bestiary",
+    "tab_carriers": "Carriers",
     "lock_first_feed": "Unlocks after first feed",
     "lock_first_mission": "Unlocks after first mission",
     "scouts_placeholder": "Scouts coming in next update",
@@ -272,6 +273,41 @@
       "location_forest": "Forest",
       "location_continent": "Continent",
       "location_planet": "Planet"
+    },
+    "carrier": {
+      "empty_state": "No carriers",
+      "empty_hint": "Apply serums to create carriers",
+      "count": "{{count}} carriers",
+      "ceiling_label": "Ceiling",
+      "ceiling_high": "High",
+      "ceiling_mid": "Mid",
+      "ceiling_low": "Low",
+      "progress_stabilized": "Stable",
+      "dispose_button": "Dispose",
+      "feed_fail": "Failed",
+      "merge_blocked_unstabilized": "Carrier must stabilize first",
+      "merge_blocked_mismatch": "Incompatible carriers",
+      "merge_cross_location_warn": "Cross-location merge — carrier restored later",
+      "stabilize": {
+        "title": "Stabilized",
+        "rolling": "Rolling...",
+        "s_top": "Top-tier!",
+        "a_high": "High",
+        "b_mid": "Mid",
+        "c_low": "Stable",
+        "tap_to_dismiss": "Tap to dismiss",
+        "modal_label": "Carrier stabilization"
+      },
+      "dispose": {
+        "title": "Dispose?",
+        "body": "Carrier {{element}} ({{rarity}}). 30% chance to recover serum.",
+        "warning": "This is irreversible.",
+        "confirm": "Dispose",
+        "cancel": "Cancel",
+        "modal_label": "Confirm dispose",
+        "toast_recovered": "Serum recovered!",
+        "toast_no_recovery": "Carrier disposed"
+      }
     }
   }
 }

@@ -200,6 +200,7 @@
     "tab_boxes": "Cajas",
     "tab_serums": "Sueros",
     "tab_bestiary": "Bestiario",
+    "tab_carriers": "Carriers",
     "lock_first_feed": "Se desbloquea tras la primera alimentación",
     "lock_first_mission": "Se desbloquea tras la primera misión",
     "scouts_placeholder": "Exploradores llegando próximamente",
@@ -272,6 +273,41 @@
       "location_forest": "Bosque",
       "location_continent": "Continente",
       "location_planet": "Planeta"
+    },
+    "carrier": {
+      "empty_state": "Sin carriers",
+      "empty_hint": "Aplica sueros para crear carriers",
+      "count": "{{count}} carriers",
+      "ceiling_label": "Tope",
+      "ceiling_high": "Alto",
+      "ceiling_mid": "Medio",
+      "ceiling_low": "Bajo",
+      "progress_stabilized": "Est.",
+      "dispose_button": "Util.",
+      "feed_fail": "Fallido",
+      "merge_blocked_unstabilized": "Carrier debe estabilizar",
+      "merge_blocked_mismatch": "Carriers incompatibles",
+      "merge_cross_location_warn": "Merge entre ubicaciones — restaurado",
+      "stabilize": {
+        "title": "Estabilizada",
+        "rolling": "Rolando...",
+        "s_top": "¡Top!",
+        "a_high": "Alta",
+        "b_mid": "Media",
+        "c_low": "Estable",
+        "tap_to_dismiss": "Toca para cerrar",
+        "modal_label": "Estabilización del carrier"
+      },
+      "dispose": {
+        "title": "¿Utilizar?",
+        "body": "Carrier {{element}} ({{rarity}}). 30% probabilidad de recuperar suero.",
+        "warning": "Acción irreversible.",
+        "confirm": "Utilizar",
+        "cancel": "Cancelar",
+        "modal_label": "Confirmar utilizar",
+        "toast_recovered": "¡Suero recuperado!",
+        "toast_no_recovery": "Carrier utilizado"
+      }
     }
   }
 }

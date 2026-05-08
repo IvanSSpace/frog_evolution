@@ -200,6 +200,7 @@
     "tab_boxes": "Боксы",
     "tab_serums": "Сыворотки",
     "tab_bestiary": "Бестиарий",
+    "tab_carriers": "Карьеры",
     "lock_first_feed": "Откроется после первого кормления",
     "lock_first_mission": "Откроется после первой миссии",
     "scouts_placeholder": "Скауты появятся в следующем обновлении",
@@ -272,6 +273,41 @@
       "location_forest": "Лес",
       "location_continent": "Континент",
       "location_planet": "Планета"
+    },
+    "carrier": {
+      "empty_state": "Нет carrier'ов",
+      "empty_hint": "Применяйте сыворотки чтобы создавать carrier'ов",
+      "count": "{{count}} carrier'ов",
+      "ceiling_label": "Потолок",
+      "ceiling_high": "Высокий",
+      "ceiling_mid": "Средний",
+      "ceiling_low": "Низкий",
+      "progress_stabilized": "Стаб.",
+      "dispose_button": "Утил.",
+      "feed_fail": "Не вышло",
+      "merge_blocked_unstabilized": "Carrier должен стабилизироваться",
+      "merge_blocked_mismatch": "Несовместимые carrier'ы",
+      "merge_cross_location_warn": "Cross-location merge — carrier восстановит позицию",
+      "stabilize": {
+        "title": "Стабилизация",
+        "rolling": "Roll'ит...",
+        "s_top": "Топ-редкая!",
+        "a_high": "Высокая",
+        "b_mid": "Средняя",
+        "c_low": "Стабильная",
+        "tap_to_dismiss": "Нажмите чтобы закрыть",
+        "modal_label": "Стабилизация carrier'а"
+      },
+      "dispose": {
+        "title": "Утилизировать?",
+        "body": "Carrier {{element}} ({{rarity}}). 30% шанс вернуть сыворотку.",
+        "warning": "Действие необратимо.",
+        "confirm": "Утил.",
+        "cancel": "Отмена",
+        "modal_label": "Подтвердить утилизацию",
+        "toast_recovered": "Сыворотка возвращена!",
+        "toast_no_recovery": "Carrier утилизирован"
+      }
     }
   }
 }
