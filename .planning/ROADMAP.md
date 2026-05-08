@@ -99,7 +99,7 @@ Plans:
 - [x] 08-04-PLAN.md — Per-planet sound modulation system + THEME_SCALES + eventBus seed (D-05..D-10, D-13) ✓ 2026-05-08
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 08-05-PLAN.md — Sound signature pipeline + refineSoundSeeds (D-11..D-12)
+- [x] 08-05-PLAN.md — Sound signature pipeline + refineSoundSeeds (D-11..D-12) ✓ 2026-05-08
 
 **Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 08-06-PLAN.md — Verify scripts в client/scripts/ + npm run verify-uniqueness (D-15, D-17)
