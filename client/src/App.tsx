@@ -25,6 +25,7 @@ import {
 } from './store/gameStore'
 import type { CosmicToastPayload } from './store/cosmic/types'
 import { findPlanetById } from './game/data/missionConfig'
+import { FlightConfirmDialog } from './components/CosmicHub/FlightConfirmDialog'
 
 const queryClient = new QueryClient()
 
@@ -44,6 +45,10 @@ function App() {
   const toastBufferRef = useRef<CosmicToastPayload[]>([])
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const toastHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Phase 16 (REQ SHIP-07/08): Flight confirm dialog state.
+  // Set non-null когда юзер тапает по planet на StarMap при открытом Cosmic Hub.
+  const [pendingFlightPlanetId, setPendingFlightPlanetId] = useState<string | null>(null)
 
   useEffect(() => {
     initSfx()
@@ -201,6 +206,20 @@ function App() {
     return () => { eventBus.off('cosmic:ship-arrived', handleArrived) }
   }, [])
 
+  // Phase 16 (REQ SHIP-07/08): subscriber на 'cosmic:request-flight'
+  // → показывать FlightConfirmDialog только если Cosmic Hub открыт.
+  // Same-planet docked → пропускаем confirm (SHIP-08).
+  useEffect(() => {
+    const handleRequestFlight = ({ planetId }: { planetId: string }) => {
+      if (!cosmicHubOpen) return
+      const ship = useGameStore.getState().ship
+      if (ship && ship.state === 'docked' && ship.planetId === planetId) return
+      setPendingFlightPlanetId(planetId)
+    }
+    eventBus.on('cosmic:request-flight', handleRequestFlight)
+    return () => { eventBus.off('cosmic:request-flight', handleRequestFlight) }
+  }, [cosmicHubOpen])
+
   const handleRareCrateClaim = (wonLevel: number) => {
     setRareCrate(null)
     eventBus.emit('rareCrate:claim', { level: wonLevel })
@@ -235,6 +254,16 @@ function App() {
           <CosmicHubModal onClose={() => setCosmicHubOpen(false)} />
         )}
       </Suspense>
+      {pendingFlightPlanetId && (
+        <FlightConfirmDialog
+          toPlanetId={pendingFlightPlanetId}
+          onConfirm={() => {
+            useGameStore.getState().sendShipTo(pendingFlightPlanetId)
+            setPendingFlightPlanetId(null)
+          }}
+          onCancel={() => setPendingFlightPlanetId(null)}
+        />
+      )}
       {discovered !== null && (
         <DiscoveryModal level={discovered} onClose={() => setDiscovered(null)} />
       )}
