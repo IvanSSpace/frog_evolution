@@ -27,6 +27,7 @@ import type { SharedBgSystem } from '../anim/shared/types'
 import { ELEMENT_TINTS } from './elementTints'
 import { archetypeForElement } from './elementMapping'
 import type { OverlayLifecycle } from './types'
+import { devWarn } from '../../../utils/devLog'
 
 // Все primitives кроме compFlash принимают (scene, container, sys, rng).
 // compFlash — special case: (scene, container, rng).
@@ -152,7 +153,7 @@ export function scheduleDormantIdle(
         }
       } catch (e) {
         // T-12-08: primitive crash не должен ломать сцену; warn один раз и тихо стопаем idle.
-        console.warn('[dormant] primitive failed for', element, e)
+        devWarn('[dormant] primitive failed for', element, e)
         timer.remove(false)
       }
     },

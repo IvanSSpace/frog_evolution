@@ -31,6 +31,7 @@ import { isEligible, getEligibilityHint } from '../../utils/serumEligibility'
 import { classifyDropTarget } from '../../utils/carrierFeed'
 import i18next from 'i18next'
 import type { Element, Rarity } from '../../store/cosmic/types'
+import { devLog, devWarn } from '../../utils/devLog'
 
 const tintToHex = (cssHex: string): number =>
   parseInt(cssHex.replace('#', ''), 16)
@@ -361,7 +362,9 @@ export class MainScene extends Phaser.Scene {
       const carrierLevel = c.level ?? 1
       // Normal: match by level. Debug carriers (frogId='debug:el:loc'): any free frog.
       const match =
-        this.frogs.find((f) => f.level === carrierLevel && !boundIds.has(f.id)) ??
+        this.frogs.find(
+          (f) => f.level === carrierLevel && !boundIds.has(f.id),
+        ) ??
         (c.frogId.startsWith('debug:')
           ? this.frogs.find((f) => !boundIds.has(f.id))
           : undefined)
@@ -1455,7 +1458,11 @@ export class MainScene extends Phaser.Scene {
       { aId: a.id, aLevel: a.level, bId: b.id, bLevel: b.level },
       carriers,
     )
-    console.log('[performMerge]', cls.kind, { aId: a.id, bId: b.id, carrierIds: carriers.map(c => c.frogId) })
+    devLog('[performMerge]', cls.kind, {
+      aId: a.id,
+      bId: b.id,
+      carrierIds: carriers.map((c) => c.frogId),
+    })
 
     if (cls.kind === 'blocked-unstabilized') {
       eventBus.emit('cosmic:toast', {
@@ -1485,7 +1492,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     if (cls.kind === 'no-match') {
-      console.warn('[performMerge] no-match unexpected', { a: a.id, b: b.id })
+      devWarn('[performMerge] no-match unexpected', { a: a.id, b: b.id })
       return
     }
 
@@ -1654,7 +1661,12 @@ export class MainScene extends Phaser.Scene {
 
       // Atomic feed — store mutates carrier + maybe emits stabilization event.
       const outcome = useGameStore.getState().feedCarrier(carrier.id)
-      console.log('[performFeed] feedCarrier result:', outcome, 'carrierId:', carrier.id)
+      devLog(
+        '[performFeed] feedCarrier result:',
+        outcome,
+        'carrierId:',
+        carrier.id,
+      )
 
       if (!outcome) {
         // Defensive: carrier disappeared between drag-end and apply.
@@ -1685,9 +1697,17 @@ export class MainScene extends Phaser.Scene {
           // Немедленный sync overlay — новый frog получает element-цвет до setScale(0),
           // иначе overlay прицепится лишь через кадр и pop-in начнётся без элемент-тинта.
           this.overlayManager?.syncNow()
-          console.log('[performFeed] frogId transferred to newFrog', newFrog.id, 'overlayActiveCount:', this.overlayManager?.activeCount)
+          devLog(
+            '[performFeed] frogId transferred to newFrog',
+            newFrog.id,
+            'overlayActiveCount:',
+            this.overlayManager?.activeCount,
+          )
         } else {
-          console.warn('[performFeed] carrier frogId transfer failed, orphaned carrier', carrier.id)
+          devWarn(
+            '[performFeed] carrier frogId transfer failed, orphaned carrier',
+            carrier.id,
+          )
         }
         newFrog.container.setScale(0)
         this.tweens.add({
@@ -1835,7 +1855,7 @@ export class MainScene extends Phaser.Scene {
           .getState()
           .mergeCarriers(a.id, b.id, newFrog.id)
         if (!merged) {
-          console.warn(
+          devWarn(
             '[performCarrierMerge] mergeCarriers returned null — defensive',
           )
         }
@@ -2618,9 +2638,22 @@ export class MainScene extends Phaser.Scene {
   // rebindCarriers links placeholders to real frogs when user navigates there.
   debugSpawnAllCarriers(): void {
     const ELEMENTS: Array<Element> = [
-      'fire', 'ice', 'water', 'forest', 'toxic', 'plasma',
-      'shadow', 'crystal', 'desert', 'gas', 'ring', 'binary',
-      'arcane', 'mechanical', 'war', 'void',
+      'fire',
+      'ice',
+      'water',
+      'forest',
+      'toxic',
+      'plasma',
+      'shadow',
+      'crystal',
+      'desert',
+      'gas',
+      'ring',
+      'binary',
+      'arcane',
+      'mechanical',
+      'war',
+      'void',
     ]
     const RARITIES: Rarity[] = ['common', 'rare', 'epic', 'legendary']
     // Representative level per location
@@ -2629,7 +2662,9 @@ export class MainScene extends Phaser.Scene {
     const store = useGameStore.getState()
     const currentLoc = store.currentLocation
     const newCarriers = [...store.carriers]
-    const newLocationFrogs = store.locationFrogs.map((a) => [...a]) as number[][]
+    const newLocationFrogs = store.locationFrogs.map((a) => [
+      ...a,
+    ]) as number[][]
 
     for (let loc = 1; loc <= 4; loc++) {
       const level = LOC_LEVEL[loc]
@@ -2663,8 +2698,11 @@ export class MainScene extends Phaser.Scene {
       })
     }
 
-    useGameStore.setState({ carriers: newCarriers, locationFrogs: newLocationFrogs })
+    useGameStore.setState({
+      carriers: newCarriers,
+      locationFrogs: newLocationFrogs,
+    })
     this.overlayManager?.markDirty()
-    console.log('[debug] spawned 16 carrier frogs on each of 4 locations (64 total)')
+    devLog('[debug] spawned 16 carrier frogs on each of 4 locations (64 total)')
   }
 }

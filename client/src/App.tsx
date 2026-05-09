@@ -30,6 +30,7 @@ import { TutorialOverlay } from './components/Tutorial/TutorialOverlay'
 import { SerumModal } from './components/CosmicHub/SerumModal'
 import { SerumBar } from './components/SerumBar'
 import { installBestiaryDevHelpers } from './utils/devHelpers'
+import { devLog } from './utils/devLog'
 
 const queryClient = new QueryClient()
 
@@ -95,7 +96,7 @@ function App() {
 
     // Открытие нового вида лягушки
     const onDiscovered = ({ level }: { level: number }) => {
-      console.log('[discovery] new level:', level)
+      devLog('[discovery] new level:', level)
       // Лёгкая задержка чтобы pop-анимация на поле успела сыграть
       setTimeout(() => setDiscovered(level), 250)
     }
@@ -146,7 +147,7 @@ function App() {
       useGameStore.setState((s) => ({
         crew: { ...s.crew, missionsToday: 0 },
       }))
-      console.log('[dev] crew reset')
+      devLog('[dev] crew reset')
     }
 
     w.__unlockAllTabs = () => {
@@ -154,7 +155,7 @@ function App() {
       s.setHasFirstFeed(true)
       s.setHasFirstMission(true)
       s.setHasOpenedAnyBox(true)
-      console.log('[dev] all tabs unlocked')
+      devLog('[dev] all tabs unlocked')
     }
 
     w.__lockAllTabs = () => {
@@ -162,7 +163,7 @@ function App() {
       s.setHasFirstFeed(false)
       s.setHasFirstMission(false)
       s.setHasOpenedAnyBox(false)
-      console.log('[dev] all tabs locked (simulating fresh prod install)')
+      devLog('[dev] all tabs locked (simulating fresh prod install)')
     }
 
     w.__shipTo = (planetId: string) => {
@@ -175,7 +176,7 @@ function App() {
       count = 1,
     ) => {
       useGameStore.getState().addSerum(element, rarity, count)
-      console.log(`[dev] granted ${count}× ${rarity} ${element} serum`)
+      devLog(`[dev] granted ${count}× ${rarity} ${element} serum`)
     }
 
     // Phase 18: bestiary dev helpers (window.__unlockBestiaryCells / __bestiaryCount / __resetBestiary).

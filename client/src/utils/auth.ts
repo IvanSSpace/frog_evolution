@@ -1,5 +1,6 @@
 import { api, setToken } from './api'
 import { getInitData, isInsideTelegram } from './telegram'
+import { devLog, devWarn } from '../utils/devLog'
 
 export interface AuthUser {
   id: number
@@ -40,11 +41,11 @@ export async function authenticate(): Promise<AuthResult> {
 
   // Не в Telegram
   if (import.meta.env.DEV) {
-    console.log('[auth] dev-режим: проверка Telegram отключена')
+    devLog('[auth] dev-режим: проверка Telegram отключена')
     return { user: null, mode: 'dev' }
   }
 
-  console.warn(
+  devWarn(
     '[auth] Telegram WebApp не обнаружен — приложение должно запускаться внутри Telegram',
   )
   return { user: null, mode: 'failed' }

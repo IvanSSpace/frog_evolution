@@ -9,6 +9,7 @@ import { compRing, compSparkle, compFlash, compStarBurst } from '../anim/shared'
 import type { SharedBgSystem } from '../anim/shared/types'
 import { ELEMENT_TINTS } from './elementTints'
 import { archetypeForElement } from './elementMapping'
+import { devWarn } from '../../../utils/devLog'
 
 // Elements которые получают дополнительный compStarBurst — "magical" feel.
 const STAR_BURST_ELEMENTS: ReadonlySet<Element> = new Set<Element>([
@@ -64,6 +65,6 @@ export function burstEffect(
     }
   } catch (e) {
     // Не ломаем scene даже при сбое примитива.
-    console.warn('[burstEffect] primitive failed for', element, e)
+    devWarn('[burstEffect] primitive failed for', element, e)
   }
 }

@@ -17,6 +17,7 @@ import {
 import { elementOverlayPool } from './elementOverlayPool'
 import type { FrogElementOverlay } from './FrogElementOverlay'
 import type { ElementTier } from './elements/types'
+import { devWarn } from '../../utils/devLog'
 
 // PERF-02: hard cap visible overlays.
 const HARD_CAP_VISIBLE = 4
@@ -32,10 +33,7 @@ const VALID_RARITIES: ReadonlySet<string> = new Set<string>(RARITIES)
 /** Resolve carrier.rarity → ElementTier с защитой от tampered store. */
 function tierFromCarrier(carrier: CarrierData): ElementTier {
   if (VALID_RARITIES.has(carrier.rarity)) return carrier.rarity as ElementTier
-  console.warn(
-    '[FrogOverlayManager] invalid rarity in carrier (tampered?)',
-    carrier,
-  )
+  devWarn('[FrogOverlayManager] invalid rarity in carrier (tampered?)', carrier)
   return 'dormant'
 }
 
@@ -121,7 +119,7 @@ export class FrogOverlayManager {
     const live: { carrier: CarrierData; frog: FrogLike }[] = []
     for (const c of carriers) {
       if (!VALID_ELEMENTS.has(c.element)) {
-        console.warn(
+        devWarn(
           '[FrogOverlayManager] invalid element in carrier (tampered?)',
           c,
         )

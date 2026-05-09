@@ -13,6 +13,7 @@
 
 import { useGameStore } from '../store/gameStore'
 import { api } from './api'
+import { devLog, devWarn } from '../utils/devLog'
 
 interface ServerGameState {
   gold: string // BigInt → string
@@ -80,13 +81,10 @@ export async function loadGameState(): Promise<boolean> {
           ? data.locationFrogs
           : store.locationFrogs,
     })
-    console.log('[gameSync] loaded state from server')
+    devLog('[gameSync] loaded state from server')
     return true
   } catch (err) {
-    console.warn(
-      '[gameSync] failed to load state — продолжаем с локальным',
-      err,
-    )
+    devWarn('[gameSync] failed to load state — продолжаем с локальным', err)
     return false
   }
 }
@@ -99,7 +97,7 @@ export async function saveGameState(force = false): Promise<boolean> {
     pendingSave = false
     return true
   } catch (err) {
-    console.warn('[gameSync] failed to save state', err)
+    devWarn('[gameSync] failed to save state', err)
     return false
   }
 }

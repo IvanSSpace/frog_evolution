@@ -115,6 +115,7 @@ import {
 } from '../effects/anim/shared'
 import type { Race, BgSystem, Archetype, PlanetMapEntry } from './starmap/types'
 import { mulberry32, hashId, effectiveSeed, animRng } from './starmap/helpers'
+import { devLog, devWarn } from '../../utils/devLog'
 
 // Phaser-сцена Звёздной карты. Запускается рядом с MainScene через scene-manager.
 // Ничего о gameStore не знает — это «декоративная карта» для просмотра системы
@@ -330,7 +331,7 @@ export class StarMapScene extends Phaser.Scene {
       if (shader && typeof shader.setDepth === 'function')
         shader.setDepth(-9000)
     } catch (err) {
-      console.warn('[NebulaBackground] failed to attach:', err)
+      devWarn('[NebulaBackground] failed to attach:', err)
     }
 
     // Starfield перенесён ниже — нужны this.allSystems для кластеризации звёзд
@@ -635,8 +636,7 @@ export class StarMapScene extends Phaser.Scene {
       // Spike-детектор: лог в консоль если кадр > 50ms (FPS < 20) — для диагностики лагов.
       if (dt > 50) {
         const visibleNow = this.cullableData.filter((c) => c.obj.visible).length
-        // eslint-disable-next-line no-console
-        console.warn(
+        devWarn(
           `[StarMap spike] frame=${dt.toFixed(1)}ms zoom=${cam.zoom.toFixed(3)} visible=${visibleNow}/${this.cullableData.length} tweens=${this.tweens.getTweens().length}`,
         )
       }
@@ -1978,8 +1978,7 @@ export class StarMapScene extends Phaser.Scene {
       }
       sigs.set(sig, sys.id)
     }
-    // eslint-disable-next-line no-console
-    console.log(
+    devLog(
       `[StarMap] anim signatures (strict): ${sigs.size}/${this.allSystems.length} unique, ${conflicts} unresolved conflicts (max 10 attempts)`,
     )
   }
@@ -2028,8 +2027,7 @@ export class StarMapScene extends Phaser.Scene {
       }
       sigs.set(sig, sys.id)
     }
-    // eslint-disable-next-line no-console
-    console.log(
+    devLog(
       `[StarMap] sound signatures: ${sigs.size}/${this.allSystems.length} unique, ${conflicts} unresolved conflicts (max 10 attempts)`,
     )
   }
@@ -2102,8 +2100,7 @@ export class StarMapScene extends Phaser.Scene {
       }
       sigs.set(sig, sys.id)
     }
-    // eslint-disable-next-line no-console
-    console.log(
+    devLog(
       `[StarMap] texture signatures: ${sigs.size}/${bgCount} unique BG, ${conflicts} unresolved`,
     )
   }

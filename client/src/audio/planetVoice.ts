@@ -296,7 +296,11 @@ const PROFILES: Record<string, VoiceProfile> = {
     synths: ['drone', 'bell'],
     gain: -1,
   },
-  ice: { notes: [E + 12, B + 12, E + 24], synths: ['bell', 'pluck'], gain: -1.5 },
+  ice: {
+    notes: [E + 12, B + 12, E + 24],
+    synths: ['bell', 'pluck'],
+    gain: -1.5,
+  },
   ocean: {
     notes: [F, A, C + 12],
     synths: ['drone', 'noise'],

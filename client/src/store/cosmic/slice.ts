@@ -44,6 +44,7 @@ import {
   milestonesCrossed,
 } from './bestiary'
 import { MAX_LEVEL } from '../../game/config/frogs'
+import { devWarn } from '../../utils/devLog'
 
 // Actions — то, что наполняется в Phase 14-19. Здесь — placeholder stubs.
 export interface CosmicSliceActions {
@@ -424,7 +425,7 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
 
       // Defensive: если ceiling всё ещё undefined (corrupted state), abort.
       if (ceiling === undefined) {
-        console.warn(
+        devWarn(
           '[feedCarrier] carrier missing ceiling after feedCount > 0',
           carrier,
         )
@@ -761,7 +762,8 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
       // good и fail дают чистый весовой ролл (70% common) — иначе common не могут выпасть.
       const bonusNum = bonusRarityForResult(result)
       let bonusRarityEnum: 'rare' | 'epic' | 'legendary' | undefined
-      if (bonusNum >= 0.15) bonusRarityEnum = 'rare' // perfect → минимум rare
+      if (bonusNum >= 0.15)
+        bonusRarityEnum = 'rare' // perfect → минимум rare
       else bonusRarityEnum = undefined // good/fail → чистый ролл, common возможен
 
       // Atomic transaction: один set()

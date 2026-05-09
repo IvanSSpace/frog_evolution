@@ -1,5 +1,6 @@
 import type * as ToneNS from 'tone'
 import type { ToneLib } from './types'
+import { devWarn } from '../utils/devLog'
 
 const KEY_MUTED = 'audio.sfxMuted'
 const KEY_VOLUME = 'audio.sfxVolume'
@@ -223,7 +224,7 @@ class SfxEngine {
         }
       }
     } catch (e) {
-      console.warn('[sfx] audio scheduling error (ignored):', e)
+      devWarn('[sfx] audio scheduling error (ignored):', e)
     }
   }
 }

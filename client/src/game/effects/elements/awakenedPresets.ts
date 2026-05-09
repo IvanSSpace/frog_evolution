@@ -107,6 +107,7 @@ import { ELEMENT_TINTS } from './elementTints'
 import { archetypeForElement } from './elementMapping'
 import type { ElementTier, OverlayLifecycle } from './types'
 import { AWAKENED_TIERS } from './types'
+import { devWarn } from '../../../utils/devLog'
 
 // ============== Primitive types ==============
 
@@ -139,10 +140,10 @@ interface TierParams {
 }
 
 const TIER_PARAMS: Record<AwakenedTier, TierParams> = {
-  common:    { size: 8,  brightness: 0.55, intervalMs: 2500 },
-  rare:      { size: 10, brightness: 0.70, intervalMs: 2000 },
-  epic:      { size: 13, brightness: 0.85, intervalMs: 1500 },
-  legendary: { size: 16, brightness: 1.00, intervalMs: 1000 },
+  common: { size: 8, brightness: 0.55, intervalMs: 2500 },
+  rare: { size: 10, brightness: 0.7, intervalMs: 2000 },
+  epic: { size: 13, brightness: 0.85, intervalMs: 1500 },
+  legendary: { size: 16, brightness: 1.0, intervalMs: 1000 },
 }
 
 // ============== Direct element × tier preset table ==============
@@ -151,79 +152,283 @@ const TIER_PARAMS: Record<AwakenedTier, TierParams> = {
 
 const PRESETS: Record<AwakenedTier, Record<Element, TierPresetList>> = {
   common: {
-    fire:       { fns: [compFlameTongues, compSolarFlare] },
-    ice:        { fns: [compIceWisps, compSnowDrift] },
-    water:      { fns: [compRipple, compBubbleStream] },
-    forest:     { fns: [compBloomPetals, compLifeBloom] },
-    toxic:      { fns: [compToxicCloud, compBubbleStream] },
-    plasma:     { fns: [compPlasmaArc, compCrackleDischarge] },
-    shadow:     { fns: [compHaloFlash, compEchoWave] },
-    crystal:    { fns: [compCrystalShatter, compCrystalGrow] },
-    desert:     { fns: [compSandSwirl, compDustPuff] },
-    gas:        { fns: [compChromaShift, compDopplerWave] },
-    ring:       { fns: [compChimeRing, compRingPulsar] },
-    binary:     { fns: [compEchoWave, compMorseFlash] },
-    arcane:     { fns: [compStarBurst, compConstellation] },
+    fire: { fns: [compFlameTongues, compSolarFlare] },
+    ice: { fns: [compIceWisps, compSnowDrift] },
+    water: { fns: [compRipple, compBubbleStream] },
+    forest: { fns: [compBloomPetals, compLifeBloom] },
+    toxic: { fns: [compToxicCloud, compBubbleStream] },
+    plasma: { fns: [compPlasmaArc, compCrackleDischarge] },
+    shadow: { fns: [compHaloFlash, compEchoWave] },
+    crystal: { fns: [compCrystalShatter, compCrystalGrow] },
+    desert: { fns: [compSandSwirl, compDustPuff] },
+    gas: { fns: [compChromaShift, compDopplerWave] },
+    ring: { fns: [compChimeRing, compRingPulsar] },
+    binary: { fns: [compEchoWave, compMorseFlash] },
+    arcane: { fns: [compStarBurst, compConstellation] },
     mechanical: { fns: [compConfetti, compClockGears] },
-    war:        { fns: [], flashes: [compFlash, compFlash] },
-    void:       { fns: [compBubbleStream, compWormhole] },
+    war: { fns: [], flashes: [compFlash, compFlash] },
+    void: { fns: [compBubbleStream, compWormhole] },
   },
 
   rare: {
-    fire:       { fns: [compFlameTongues, compSolarFlare, compLavaErupt] },
-    ice:        { fns: [compIceWisps, compSnowDrift, compFrostExplode] },
-    water:      { fns: [compRipple, compWave, compBubblePop] },
-    forest:     { fns: [compBloomPetals, compLifeBloom, compPetalStorm] },
-    toxic:      { fns: [compToxicCloud, compBubblePop, compDustPuff] },
-    plasma:     { fns: [compPlasmaArc, compCrackleDischarge, compLightning] },
-    shadow:     { fns: [compHaloFlash, compEchoWave, compSingularity] },
-    crystal:    { fns: [compCrystalBell, compCrystalGrow, compPrismRefract] },
-    desert:     { fns: [compSandSwirl, compDustPuff, compStormSwirl] },
-    gas:        { fns: [compChromaShift, compDopplerWave, compAuroraRibbon] },
-    ring:       { fns: [compRingPulsar, compRingDance, compChimeRing] },
-    binary:     { fns: [compEchoWave, compDigitalGlitch, compScanline] },
-    arcane:     { fns: [compStarBurst, compConstellation, compGalaxySpawn] },
+    fire: { fns: [compFlameTongues, compSolarFlare, compLavaErupt] },
+    ice: { fns: [compIceWisps, compSnowDrift, compFrostExplode] },
+    water: { fns: [compRipple, compWave, compBubblePop] },
+    forest: { fns: [compBloomPetals, compLifeBloom, compPetalStorm] },
+    toxic: { fns: [compToxicCloud, compBubblePop, compDustPuff] },
+    plasma: { fns: [compPlasmaArc, compCrackleDischarge, compLightning] },
+    shadow: { fns: [compHaloFlash, compEchoWave, compSingularity] },
+    crystal: { fns: [compCrystalBell, compCrystalGrow, compPrismRefract] },
+    desert: { fns: [compSandSwirl, compDustPuff, compStormSwirl] },
+    gas: { fns: [compChromaShift, compDopplerWave, compAuroraRibbon] },
+    ring: { fns: [compRingPulsar, compRingDance, compChimeRing] },
+    binary: { fns: [compEchoWave, compDigitalGlitch, compScanline] },
+    arcane: { fns: [compStarBurst, compConstellation, compGalaxySpawn] },
     mechanical: { fns: [compClockGears, compBouncingBall, compBeam] },
-    war:        { fns: [compLavaErupt, compCrossFlash], flashes: [compFlash] },
-    void:       { fns: [compBubbleStream, compWormhole, compGravityWell] },
+    war: { fns: [compLavaErupt, compCrossFlash], flashes: [compFlash] },
+    void: { fns: [compBubbleStream, compWormhole, compGravityWell] },
   },
 
   epic: {
-    fire:       { fns: [compPhoenixBurst, compFlameTongues, compLavaErupt, compFireworks] },
-    ice:        { fns: [compFrostExplode, compCrystalGrow, compIceWisps, compShieldRipple] },
-    water:      { fns: [compRipple, compLiquidPool, compBubblePop, compWaveTrain] },
-    forest:     { fns: [compLifeBloom, compPetalStorm, compWindRustle, compBloomPetals] },
-    toxic:      { fns: [compToxicCloud, compBubblePop, compChromaShift, compDimensionRift] },
-    plasma:     { fns: [compPlasmaArc, compLightning, compChargeBurst, compCrackleDischarge] },
-    shadow:     { fns: [compSingularity, compEchoSpawn, compGravityWell, compHaloFlash] },
-    crystal:    { fns: [compCrystalBell, compPrismShift, compCrystalGrow, compCrystalShatter] },
-    desert:     { fns: [compTornado, compSandSwirl, compDustPuff, compEarthquakeShake] },
-    gas:        { fns: [compChromaShift, compPrismShift, compAuroraRibbon, compDopplerWave] },
-    ring:       { fns: [compMultiRing, compRingDance, compRingPulsar, compChimeRing] },
-    binary:     { fns: [compDigitalGlitch, compPixelGrid, compGlyphFlash, compMorseFlash] },
-    arcane:     { fns: [compGalaxySpawn, compStarPolygon, compFlickerStars, compConstellation] },
-    mechanical: { fns: [compClockGears, compAtomShells, compOrbit, compBouncingBall] },
-    war:        { fns: [compFireworks, compLavaErupt, compCrossFlash, compEarthquakeShake], flashes: [compFlash] },
-    void:       { fns: [compSingularity, compWormhole, compDimensionRift, compGravityKnot] },
+    fire: {
+      fns: [compPhoenixBurst, compFlameTongues, compLavaErupt, compFireworks],
+    },
+    ice: {
+      fns: [compFrostExplode, compCrystalGrow, compIceWisps, compShieldRipple],
+    },
+    water: { fns: [compRipple, compLiquidPool, compBubblePop, compWaveTrain] },
+    forest: {
+      fns: [compLifeBloom, compPetalStorm, compWindRustle, compBloomPetals],
+    },
+    toxic: {
+      fns: [compToxicCloud, compBubblePop, compChromaShift, compDimensionRift],
+    },
+    plasma: {
+      fns: [
+        compPlasmaArc,
+        compLightning,
+        compChargeBurst,
+        compCrackleDischarge,
+      ],
+    },
+    shadow: {
+      fns: [compSingularity, compEchoSpawn, compGravityWell, compHaloFlash],
+    },
+    crystal: {
+      fns: [
+        compCrystalBell,
+        compPrismShift,
+        compCrystalGrow,
+        compCrystalShatter,
+      ],
+    },
+    desert: {
+      fns: [compTornado, compSandSwirl, compDustPuff, compEarthquakeShake],
+    },
+    gas: {
+      fns: [compChromaShift, compPrismShift, compAuroraRibbon, compDopplerWave],
+    },
+    ring: {
+      fns: [compMultiRing, compRingDance, compRingPulsar, compChimeRing],
+    },
+    binary: {
+      fns: [compDigitalGlitch, compPixelGrid, compGlyphFlash, compMorseFlash],
+    },
+    arcane: {
+      fns: [
+        compGalaxySpawn,
+        compStarPolygon,
+        compFlickerStars,
+        compConstellation,
+      ],
+    },
+    mechanical: {
+      fns: [compClockGears, compAtomShells, compOrbit, compBouncingBall],
+    },
+    war: {
+      fns: [compFireworks, compLavaErupt, compCrossFlash, compEarthquakeShake],
+      flashes: [compFlash],
+    },
+    void: {
+      fns: [compSingularity, compWormhole, compDimensionRift, compGravityKnot],
+    },
   },
 
   legendary: {
-    fire:       { fns: [compPhoenixBurst, compFireworks, compSolarFlare, compLavaErupt, compFlameTongues, compStarBurst], flashes: [compFlash] },
-    ice:        { fns: [compFrostExplode, compCrystalBell, compIceWisps, compSnowDrift, compCrystalShatter, compShieldRipple] },
-    water:      { fns: [compTornado, compBubblePop, compRipple, compWave, compLiquidPool, compDopplerWave, compParticleFountain] },
-    forest:     { fns: [compPetalStorm, compLifeBloom, compWindRibbons, compBloomPetals, compHeartPulse, compSpiral, compFlickerStars] },
-    toxic:      { fns: [compDimensionRift, compChromaShift, compToxicCloud, compBubblePop, compVortex, compEchoWave, compSwarmParticles] },
-    plasma:     { fns: [compLightning, compChargeBurst, compMagneticField, compPlasmaArc, compCrackleDischarge, compCosmicRay, compBeam] },
-    shadow:     { fns: [compSingularity, compWormhole, compGravityKnot, compEchoWave, compHaloFlash, compDimensionRift, compRipBlade] },
-    crystal:    { fns: [compPrismRefract, compPrismShift, compCrystalBell, compKaleidoscope, compCrystalGrow, compCrystalShatter, compMultiRing] },
-    desert:     { fns: [compTornado, compEarthquakeShake, compStormSwirl, compSandSwirl, compConstellation, compComet, compDustPuff] },
-    gas:        { fns: [compAuroraRibbon, compPrismShift, compChromaShift, compKaleidoscope, compInfinityTrail, compTimeWave, compLightDance] },
-    ring:       { fns: [compMultiRing, compRingDance, compAtomShells, compRingPulsar, compOrbit, compChimeRing, compTwinPulse] },
-    binary:     { fns: [compGlyphFlash, compDNAHelix, compDigitalGlitch, compPixelGrid, compSnakeTrail, compMorseFlash, compGlitchStutter] },
-    arcane:     { fns: [compSupernova, compGalaxySpawn, compConstellation, compStarPolygon, compAccretionDisk, compCosmicWeb, compSpiralArms] },
-    mechanical: { fns: [compDNAHelix, compOrbit, compClockGears, compAtomShells, compWreckageOrbit, compSwarmParticles, compCosmicRay] },
-    war:        { fns: [compFireworks, compSupernova, compStarBurst, compPhoenixBurst, compLavaErupt], flashes: [compFlash, compFlash] },
-    void:       { fns: [compSingularity, compDimensionRift, compWormhole, compGravityWell, compQuantumSplit, compEchoSpawn, compCosmicWeb] },
+    fire: {
+      fns: [
+        compPhoenixBurst,
+        compFireworks,
+        compSolarFlare,
+        compLavaErupt,
+        compFlameTongues,
+        compStarBurst,
+      ],
+      flashes: [compFlash],
+    },
+    ice: {
+      fns: [
+        compFrostExplode,
+        compCrystalBell,
+        compIceWisps,
+        compSnowDrift,
+        compCrystalShatter,
+        compShieldRipple,
+      ],
+    },
+    water: {
+      fns: [
+        compTornado,
+        compBubblePop,
+        compRipple,
+        compWave,
+        compLiquidPool,
+        compDopplerWave,
+        compParticleFountain,
+      ],
+    },
+    forest: {
+      fns: [
+        compPetalStorm,
+        compLifeBloom,
+        compWindRibbons,
+        compBloomPetals,
+        compHeartPulse,
+        compSpiral,
+        compFlickerStars,
+      ],
+    },
+    toxic: {
+      fns: [
+        compDimensionRift,
+        compChromaShift,
+        compToxicCloud,
+        compBubblePop,
+        compVortex,
+        compEchoWave,
+        compSwarmParticles,
+      ],
+    },
+    plasma: {
+      fns: [
+        compLightning,
+        compChargeBurst,
+        compMagneticField,
+        compPlasmaArc,
+        compCrackleDischarge,
+        compCosmicRay,
+        compBeam,
+      ],
+    },
+    shadow: {
+      fns: [
+        compSingularity,
+        compWormhole,
+        compGravityKnot,
+        compEchoWave,
+        compHaloFlash,
+        compDimensionRift,
+        compRipBlade,
+      ],
+    },
+    crystal: {
+      fns: [
+        compPrismRefract,
+        compPrismShift,
+        compCrystalBell,
+        compKaleidoscope,
+        compCrystalGrow,
+        compCrystalShatter,
+        compMultiRing,
+      ],
+    },
+    desert: {
+      fns: [
+        compTornado,
+        compEarthquakeShake,
+        compStormSwirl,
+        compSandSwirl,
+        compConstellation,
+        compComet,
+        compDustPuff,
+      ],
+    },
+    gas: {
+      fns: [
+        compAuroraRibbon,
+        compPrismShift,
+        compChromaShift,
+        compKaleidoscope,
+        compInfinityTrail,
+        compTimeWave,
+        compLightDance,
+      ],
+    },
+    ring: {
+      fns: [
+        compMultiRing,
+        compRingDance,
+        compAtomShells,
+        compRingPulsar,
+        compOrbit,
+        compChimeRing,
+        compTwinPulse,
+      ],
+    },
+    binary: {
+      fns: [
+        compGlyphFlash,
+        compDNAHelix,
+        compDigitalGlitch,
+        compPixelGrid,
+        compSnakeTrail,
+        compMorseFlash,
+        compGlitchStutter,
+      ],
+    },
+    arcane: {
+      fns: [
+        compSupernova,
+        compGalaxySpawn,
+        compConstellation,
+        compStarPolygon,
+        compAccretionDisk,
+        compCosmicWeb,
+        compSpiralArms,
+      ],
+    },
+    mechanical: {
+      fns: [
+        compDNAHelix,
+        compOrbit,
+        compClockGears,
+        compAtomShells,
+        compWreckageOrbit,
+        compSwarmParticles,
+        compCosmicRay,
+      ],
+    },
+    war: {
+      fns: [
+        compFireworks,
+        compSupernova,
+        compStarBurst,
+        compPhoenixBurst,
+        compLavaErupt,
+      ],
+      flashes: [compFlash, compFlash],
+    },
+    void: {
+      fns: [
+        compSingularity,
+        compDimensionRift,
+        compWormhole,
+        compGravityWell,
+        compQuantumSplit,
+        compEchoSpawn,
+        compCosmicWeb,
+      ],
+    },
   },
 }
 
@@ -253,9 +458,9 @@ function buildFakeSys(
 
 // ============== Convenience exports (for tests / external consumers) ==============
 
-export const COMMON_PRESETS    = PRESETS['common']
-export const RARE_PRESETS      = PRESETS['rare']
-export const EPIC_PRESETS      = PRESETS['epic']
+export const COMMON_PRESETS = PRESETS['common']
+export const RARE_PRESETS = PRESETS['rare']
+export const EPIC_PRESETS = PRESETS['epic']
 export const LEGENDARY_PRESETS = PRESETS['legendary']
 
 // ============== Public API ==============
@@ -307,7 +512,7 @@ export function scheduleAwakenedIdle(
           for (const flash of preset.flashes) flash(scene, container, rng)
         }
       } catch (e) {
-        console.warn('[awakened] primitive failed for', element, safeTier, e)
+        devWarn('[awakened] primitive failed for', element, safeTier, e)
         timer.remove(false)
       }
     },

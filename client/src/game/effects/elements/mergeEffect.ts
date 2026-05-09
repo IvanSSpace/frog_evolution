@@ -10,6 +10,7 @@ import { compRing, compSparkle, compFlash, compRipple } from '../anim/shared'
 import type { SharedBgSystem } from '../anim/shared/types'
 import { ELEMENT_TINTS } from './elementTints'
 import { archetypeForElement } from './elementMapping'
+import { devWarn } from '../../../utils/devLog'
 
 const MERGE_SIZE = 16
 const MERGE_BRIGHTNESS = 1.0
@@ -57,7 +58,7 @@ export function mergeEffect(
   try {
     compRing(scene, tmp, fakeSys, rng)
   } catch (e) {
-    console.warn('[mergeEffect] compRing failed', element, e)
+    devWarn('[mergeEffect] compRing failed', element, e)
   }
 
   // t=100ms: sparkle burst.
@@ -66,7 +67,7 @@ export function mergeEffect(
     try {
       compSparkle(scene, tmp, fakeSys, rng)
     } catch (e) {
-      console.warn('[mergeEffect] compSparkle failed', element, e)
+      devWarn('[mergeEffect] compSparkle failed', element, e)
     }
   })
 
@@ -76,7 +77,7 @@ export function mergeEffect(
     try {
       compRipple(scene, tmp, fakeSys, rng)
     } catch (e) {
-      console.warn('[mergeEffect] compRipple failed', element, e)
+      devWarn('[mergeEffect] compRipple failed', element, e)
     }
   })
 
@@ -86,7 +87,7 @@ export function mergeEffect(
     try {
       compFlash(scene, tmp, rng)
     } catch (e) {
-      console.warn('[mergeEffect] compFlash failed', element, e)
+      devWarn('[mergeEffect] compFlash failed', element, e)
     }
   })
 
