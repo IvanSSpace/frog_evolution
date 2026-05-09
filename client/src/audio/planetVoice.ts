@@ -534,10 +534,10 @@ class PlanetVoice {
     if (mod) {
       const droneCutoff = cutoffHz(
         mod.cutoffBin,
-        profile.cutoffRange ?? [400, 4000],
+        profile.cutoffRange ?? [600, 4000],
       )
       k.droneFilter.frequency.rampTo(droneCutoff, 0.05)
-      const noiseCutoff = cutoffHz(mod.cutoffBin, [600, 3000])
+      const noiseCutoff = cutoffHz(mod.cutoffBin, [800, 3000])
       k.noiseFilter.frequency.rampTo(noiseCutoff, 0.05)
     }
 

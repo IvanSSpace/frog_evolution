@@ -293,6 +293,7 @@
       "feed_fail": "Не вышло",
       "merge_blocked_unstabilized": "Carrier должен стабилизироваться",
       "merge_blocked_mismatch": "Несовместимые carrier'ы",
+      "merge_blocked_stabilized": "Лягушка достигла потолка! Объедините двух стабилизированных носителей одного элемента.",
       "merge_cross_location_warn": "Cross-location merge — carrier восстановит позицию",
       "stabilize": {
         "title": "Стабилизация",

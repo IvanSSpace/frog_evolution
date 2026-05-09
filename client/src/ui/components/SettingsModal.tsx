@@ -5,6 +5,7 @@ import { setLang, type Lang } from '../../i18n/index'
 import { useGameStore } from '../../store/gameStore'
 import { FROG_LEVELS, getTargetIncomePerSec } from '../../game/config/frogs'
 import { getTelegramWebApp, isDevMode } from '../../utils/telegram'
+import { ELEMENTS, RARITIES } from '../../store/cosmic/types'
 import { fmtRate } from '../../utils/formatting'
 import { PlayerPanel } from '../../audio/components/PlayerPanel'
 import { sfx } from '../../audio/sfx'
@@ -224,6 +225,7 @@ function SettingsTab() {
   const addGold = useGameStore((s) => s.addGold)
   const devResetUpgrades = useGameStore((s) => s.devResetUpgrades)
   const devClearAllFrogs = useGameStore((s) => s.devClearAllFrogs)
+  const addSerum = useGameStore((s) => s.addSerum)
   const crew = useGameStore((s) => s.crew)
   const resetCrew = () =>
     useGameStore.setState((s) => ({ crew: { ...s.crew, missionsToday: 0 } }))
@@ -395,6 +397,18 @@ function SettingsTab() {
             className="ff-btn ff-btn-green text-sm w-full"
           >
             Сбросить усталость экипажа ({crew.missionsToday}/4)
+          </button>
+          <button
+            onClick={() => {
+              for (const el of ELEMENTS) {
+                for (const r of RARITIES) {
+                  addSerum(el, r, 1)
+                }
+              }
+            }}
+            className="ff-btn ff-btn-green text-sm w-full"
+          >
+            Выдать по 1 сыворотке каждого типа
           </button>
         </div>
       )}

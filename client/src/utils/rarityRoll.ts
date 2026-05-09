@@ -1,6 +1,6 @@
 // Phase 15: rarity roll utility для box-open flow.
-// Locked weights 50/35/12/3 (REQ BALANCE-01..05).
-// Pity guarantees: rare 3, epic 10, legendary hard 25 + soft 15/20.
+// Weights 70/20/8/2 (BALANCE rebalance: common должен падать чаще редких).
+// Pity guarantees: rare 8, epic 20, legendary hard 40 + soft 28/35.
 // Phase 19-01: WIRED into cosmic/slice.openBox (BALANCE-01..07).
 //              PityState shape синхронизирован с PityCounters (без common поля).
 //              При изменении shape — синхронизировать оба места + simulate_balance.cjs.
@@ -8,16 +8,16 @@
 import type { Rarity } from '../store/cosmic/types'
 
 export const RARITY_WEIGHTS: Record<Rarity, number> = {
-  common: 50,
-  rare: 35,
-  epic: 12,
-  legendary: 3,
+  common: 70,
+  rare: 20,
+  epic: 8,
+  legendary: 2,
 }
 
 export interface PityState {
-  rare: number // боксов подряд без rare+ (3 → guarantee rare+)
-  epic: number // боксов подряд без epic+ (10 → guarantee epic+)
-  legendary: number // боксов подряд без legendary (25 → hard; 15/20 → soft boost)
+  rare: number // боксов подряд без rare+ (8 → guarantee rare+)
+  epic: number // боксов подряд без epic+ (20 → guarantee epic+)
+  legendary: number // боксов подряд без legendary (40 → hard; 28/35 → soft boost)
 }
 
 const ORDER: Rarity[] = ['common', 'rare', 'epic', 'legendary']
@@ -42,22 +42,22 @@ export function rollRarity(
   rng: () => number = Math.random,
 ): Rarity {
   // 1. Hard guarantees
-  if (pity.legendary >= 25) return 'legendary'
-  if (pity.epic >= 10) {
+  if (pity.legendary >= 40) return 'legendary'
+  if (pity.epic >= 20) {
     // epic+ guarantee. bonusRarity epic/legendary effectively уже >= epic.
     return rollWeighted(rng, ['epic', 'legendary'], [80, 20])
   }
-  if (pity.rare >= 3 && !bonusRarity) {
+  if (pity.rare >= 8 && !bonusRarity) {
     // rare+ guarantee. bonusRarity rare уже floor; не overlap.
     return rollWeighted(rng, ['rare', 'epic', 'legendary'], [70, 25, 5])
   }
 
-  // 2. Soft pity boost
+  // 2. Soft pity boost (legendary)
   let weights = { ...RARITY_WEIGHTS }
-  if (pity.legendary >= 20) {
-    weights = { common: 45, rare: 33, epic: 12, legendary: 10 } // +7%
-  } else if (pity.legendary >= 15) {
-    weights = { common: 48, rare: 34, epic: 12, legendary: 6 } // +3%
+  if (pity.legendary >= 35) {
+    weights = { common: 55, rare: 18, epic: 14, legendary: 13 } // сильный буст
+  } else if (pity.legendary >= 28) {
+    weights = { common: 63, rare: 19, epic: 10, legendary: 8 } // умеренный буст
   }
 
   // 3. Weighted random

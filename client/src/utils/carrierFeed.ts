@@ -9,6 +9,7 @@ export type DropClassification =
   | 'carrier-merge'
   | 'blocked-unstabilized'
   | 'blocked-mismatch'
+  | 'blocked-stabilized'
   | 'no-match'
 
 export interface FrogPair {
@@ -57,6 +58,10 @@ export function classifyDropTarget(
   }
 
   // Exactly one carrier
+  const carrierData = ca ?? cb
+  if (carrierData!.stabilized) {
+    return { kind: 'blocked-stabilized' }
+  }
   const carrierFrogId = ca ? pair.aId : pair.bId
   const sacrificeFrogId = ca ? pair.bId : pair.aId
   return { kind: 'feed', carrierFrogId, sacrificeFrogId }

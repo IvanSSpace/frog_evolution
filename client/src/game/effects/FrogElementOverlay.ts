@@ -48,6 +48,8 @@ export class FrogElementOverlay {
   private idleLifecycle: OverlayLifecycle | null = null
   private appliedTintToBody: Phaser.GameObjects.Image | null = null
   private prevBodyTint: number | null = null
+  // Phaser 4: tintMode is separate from tint color. 0 = MULTIPLY (default), 1 = FILL.
+  private prevTintMode: number | null = null
 
   constructor(scene: Phaser.Scene) {
     this.container = scene.add.container(0, 0)
@@ -65,6 +67,7 @@ export class FrogElementOverlay {
     )
     this.orb.setStrokeStyle(1, 0xffffff, 0.4)
     this.container.add(this.orb)
+    this.orb.setAlpha(0) // орб скрыт по требованию дизайна
   }
 
   /**
@@ -111,7 +114,7 @@ export class FrogElementOverlay {
     const radius = orbRadiusForTier(newTier)
     // Phaser.GameObjects.Arc имеет .setRadius (с phaser 3.50+); используем напрямую через radius prop.
     this.orb.setRadius(radius)
-    this.orb.setAlpha(newTier === 'dormant' ? 0.85 : 1.0)
+    // орб скрыт: alpha остаётся 0
     const scene = this.container.scene as Phaser.Scene | null
     if (!scene || !this.container.active) return
     this.startIdleForTier(scene, newTier)
@@ -156,8 +159,12 @@ export class FrogElementOverlay {
     this.orb.setY(orbY)
 
     // Тинт тела — лягушка принимает цвет элемента.
+    // Phaser 4: сохраняем оба — цвет и режим тинта.
+    // Режим 0 (MULTIPLY, default) смешивает с текстурой — аналогично уровневому тинту лягушки.
     this.prevBodyTint = body.tintTopLeft
+    this.prevTintMode = body.tintMode as unknown as number
     body.setTint(tint)
+    body.setTintMode(0) // TintModes.MULTIPLY — same as regular frog level tint
     this.appliedTintToBody = body
 
     // Reparent overlay container into host frog container.
@@ -196,13 +203,17 @@ export class FrogElementOverlay {
         this.appliedTintToBody.active && this.appliedTintToBody.scene
       if (stillActive) {
         if (this.prevBodyTint != null && this.prevBodyTint !== 0xffffff) {
+          // Восстанавливаем уровневый тинт: сначала цвет, потом режим (MULTIPLY).
           this.appliedTintToBody.setTint(this.prevBodyTint)
+          this.appliedTintToBody.setTintMode(this.prevTintMode ?? 0)
         } else {
+          // clearTint() сбрасывает и цвет (0xffffff) и режим (MULTIPLY) одновременно.
           this.appliedTintToBody.clearTint()
         }
       }
       this.appliedTintToBody = null
       this.prevBodyTint = null
+      this.prevTintMode = null
     }
 
     this.hostFrogId = null

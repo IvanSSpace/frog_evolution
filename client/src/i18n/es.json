@@ -293,6 +293,7 @@
       "feed_fail": "Fallido",
       "merge_blocked_unstabilized": "Carrier debe estabilizar",
       "merge_blocked_mismatch": "Carriers incompatibles",
+      "merge_blocked_stabilized": "¡El portador ha alcanzado su techo! Fusiona dos portadores estabilizados del mismo elemento.",
       "merge_cross_location_warn": "Merge entre ubicaciones — restaurado",
       "stabilize": {
         "title": "Estabilizada",

@@ -225,7 +225,10 @@ export class StarMapScene extends Phaser.Scene {
   // Список объектов для manual culling (Phaser не делает frustum culling для Container).
   // lodMinZoom: если zoom < lodMinZoom → объект скрыт независимо от viewport (LOD).
   private cullableData: Array<{
-    obj: Phaser.GameObjects.GameObject
+    obj: Phaser.GameObjects.GameObject & {
+      visible: boolean
+      setVisible: (v: boolean) => unknown
+    }
     x: number
     y: number
     r: number
@@ -336,20 +339,23 @@ export class StarMapScene extends Phaser.Scene {
     // (DPR=1 base) → умножаем на real DPR в runtime.
     const bg: BgSystem[] = (planetMap.planets as PlanetMapEntry[])
       .filter((p) => p.kind === 'bg')
-      .map((p) => ({
-        id: p.id,
-        name: p.name,
-        x: p.x * DPR,
-        y: p.y * DPR,
-        type: p.type,
-        archetype: p.archetype,
-        color: p.color,
-        accent: p.accent,
-        size: p.size * DPR,
-        brightness: p.brightness,
-        hasMoon: p.hasMoon,
-        rngSeed: p.rngSeed,
-      }))
+      .map(
+        (p): BgSystem => ({
+          id: p.id,
+          name: p.name,
+          x: p.x * DPR,
+          y: p.y * DPR,
+          // bg-планеты в JSON имеют только 'resource' | 'hostile' | 'empty' (см. generate_planet_map)
+          type: p.type as BgSystem['type'],
+          archetype: p.archetype as BgSystem['archetype'],
+          color: p.color,
+          accent: p.accent,
+          size: p.size * DPR,
+          brightness: p.brightness as number,
+          hasMoon: p.hasMoon as boolean,
+          rngSeed: p.rngSeed as number,
+        }),
+      )
 
     // Помечаем 51 случайную фоновую как обитаемую (16 главных + 51 = 67 всего обитаемых)
     const inhabitedNeeded = Math.max(0, TOTAL_INHABITED - MAIN_RACES.length)

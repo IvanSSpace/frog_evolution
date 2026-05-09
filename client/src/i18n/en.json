@@ -293,6 +293,7 @@
       "feed_fail": "Failed",
       "merge_blocked_unstabilized": "Carrier must stabilize first",
       "merge_blocked_mismatch": "Incompatible carriers",
+      "merge_blocked_stabilized": "Carrier has reached its ceiling! Merge two stabilized carriers of the same element.",
       "merge_cross_location_warn": "Cross-location merge — carrier restored later",
       "stabilize": {
         "title": "Stabilized",

@@ -757,13 +757,12 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
       const { archetype, mainRaceType } = planetElementInputs(planet)
       const element = elementFromPlanet(archetype, mainRaceType) ?? 'fire' // fallback
 
-      // Phase 15 update: bonusRarity now enum 'rare'|'epic'|'legendary'|undefined
-      // (was number 0..0.15). Map: perfect → 'epic', good → 'rare', fail → undefined.
+      // BALANCE fix: bonusRarity — пол редкости только для perfect миссий (гарантия rare).
+      // good и fail дают чистый весовой ролл (70% common) — иначе common не могут выпасть.
       const bonusNum = bonusRarityForResult(result)
       let bonusRarityEnum: 'rare' | 'epic' | 'legendary' | undefined
-      if (bonusNum >= 0.15) bonusRarityEnum = 'epic'
-      else if (bonusNum >= 0.05) bonusRarityEnum = 'rare'
-      else bonusRarityEnum = undefined
+      if (bonusNum >= 0.15) bonusRarityEnum = 'rare' // perfect → минимум rare
+      else bonusRarityEnum = undefined // good/fail → чистый ролл, common возможен
 
       // Atomic transaction: один set()
       const newBoxId = `box_${Date.now()}_${Math.floor(Math.random() * 1e6)}`

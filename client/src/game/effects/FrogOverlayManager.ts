@@ -94,6 +94,19 @@ export class FrogOverlayManager {
   }
 
   /**
+   * Немедленный sync без ожидания следующего tick().
+   * Используется в performFeed success path чтобы overlay появился одновременно
+   * с pop-in анимацией нового frog (не с задержкой в 1 кадр).
+   */
+  syncNow(): void {
+    if (this.disposed) return
+    const carriers = useGameStore.getState().carriers
+    this.lastCarriersSnapshot = carriers
+    this.syncCarriers(carriers)
+    this.dirty = false
+  }
+
+  /**
    * Синхронизирует carriers ↔ active overlays:
    *  - acquire для top-4 closest to camera carrier-frogs;
    *  - release для всех, кто выпал из top-4 (или из store целиком).

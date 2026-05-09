@@ -237,6 +237,7 @@ export class MainScene extends Phaser.Scene {
     // Phase 12: overlay manager — создаётся ПОСЛЕ spawnLocationFrogs так что
     // первый sync видит уже живых лягушек, и для их frogId-match с CarrierData.
     this.overlayManager = new FrogOverlayManager(this, () => this.frogs)
+    this.rebindCarriers()
 
     // Phase 14: serum selection layer + subscribe на serumDragActive.
     this.selectionLayer = new SerumSelectionLayer(this)
@@ -338,6 +339,41 @@ export class MainScene extends Phaser.Scene {
     })
   }
 
+  /**
+   * После спавна лягушек — перепривязывает CarrierData.frogId к живым лягушкам.
+   * Нужно при перезагрузке страницы: старые session-only frogId стали невалидны,
+   * но carrier.level совпадает с уровнем лягушки → матчим по уровню.
+   */
+  private rebindCarriers(): void {
+    const carriers = useGameStore.getState().carriers
+    if (carriers.length === 0) return
+    const liveFrogIds = new Set(this.frogs.map((f) => f.id))
+    const staleCarriers = carriers.filter((c) => !liveFrogIds.has(c.frogId))
+    if (staleCarriers.length === 0) return
+
+    // Build set of already-bound frog IDs to avoid double-binding
+    const boundIds = new Set(
+      carriers.filter((c) => liveFrogIds.has(c.frogId)).map((c) => c.frogId),
+    )
+
+    const updated = carriers.map((c) => {
+      if (liveFrogIds.has(c.frogId)) return c
+      const carrierLevel = c.level ?? 1
+      // Normal: match by level. Debug carriers (frogId='debug:el:loc'): any free frog.
+      const match =
+        this.frogs.find((f) => f.level === carrierLevel && !boundIds.has(f.id)) ??
+        (c.frogId.startsWith('debug:')
+          ? this.frogs.find((f) => !boundIds.has(f.id))
+          : undefined)
+      if (!match) return c
+      boundIds.add(match.id)
+      return { ...c, frogId: match.id }
+    })
+
+    useGameStore.setState({ carriers: updated })
+    this.overlayManager?.markDirty()
+  }
+
   // Полная очистка поля при смене локации
   private clearField() {
     // Phase 12: dispose overlay manager до уничтожения frog containers,
@@ -429,6 +465,7 @@ export class MainScene extends Phaser.Scene {
       this.spawnLocationFrogs()
       // Phase 12: re-create manager после snap-cleanup и спавна новых frogs.
       this.overlayManager = new FrogOverlayManager(this, () => this.frogs)
+      this.rebindCarriers()
       // Phase 14: re-create selection layer (clearField его dispose'нул).
       this.selectionLayer = new SerumSelectionLayer(this)
       this.isLocationTransitioning = false
@@ -656,6 +693,7 @@ export class MainScene extends Phaser.Scene {
         // Phase 12: пересоздаём overlay manager ПОСЛЕ возврата лягушек в scene root
         // (manager attach'ает overlay.container внутрь frog.container).
         this.overlayManager = new FrogOverlayManager(this, () => this.frogs)
+        this.rebindCarriers()
         // Phase 14: пересоздаём selection layer (subscribe уже active в create()).
         this.selectionLayer = new SerumSelectionLayer(this)
 
@@ -1417,6 +1455,7 @@ export class MainScene extends Phaser.Scene {
       { aId: a.id, aLevel: a.level, bId: b.id, bLevel: b.level },
       carriers,
     )
+    console.log('[performMerge]', cls.kind, { aId: a.id, bId: b.id, carrierIds: carriers.map(c => c.frogId) })
 
     if (cls.kind === 'blocked-unstabilized') {
       eventBus.emit('cosmic:toast', {
@@ -1431,6 +1470,15 @@ export class MainScene extends Phaser.Scene {
       eventBus.emit('cosmic:toast', {
         type: 'generic',
         msg: i18next.t('cosmic_hub.carrier.merge_blocked_mismatch'),
+      })
+      hapticNotification('error')
+      return
+    }
+
+    if (cls.kind === 'blocked-stabilized') {
+      eventBus.emit('cosmic:toast', {
+        type: 'generic',
+        msg: i18next.t('cosmic_hub.carrier.merge_blocked_stabilized'),
       })
       hapticNotification('error')
       return
@@ -1591,6 +1639,12 @@ export class MainScene extends Phaser.Scene {
     this.spawnVortexParticles(cx, cy, VORTEX_DURATION)
 
     this.time.delayedCall(VORTEX_DURATION, () => {
+      // Kill spiral tweens immediately: TimeManager fires before TweenManager in
+      // the same frame, so if the tween's last frame fires after this callback,
+      // it would overwrite setScale(BASE_SCALE) in fail/stabilize paths → carrier invisible.
+      this.tweens.killTweensOf(carrier.container)
+      this.tweens.killTweensOf(sacrifice.container)
+
       const oldLevel = sacrifice.level
       this.removeFrog(sacrifice)
       const store0 = useGameStore.getState()
@@ -1600,6 +1654,7 @@ export class MainScene extends Phaser.Scene {
 
       // Atomic feed — store mutates carrier + maybe emits stabilization event.
       const outcome = useGameStore.getState().feedCarrier(carrier.id)
+      console.log('[performFeed] feedCarrier result:', outcome, 'carrierId:', carrier.id)
 
       if (!outcome) {
         // Defensive: carrier disappeared between drag-end and apply.
@@ -1627,6 +1682,12 @@ export class MainScene extends Phaser.Scene {
         if (idx >= 0) {
           carriersNow[idx] = { ...carriersNow[idx], frogId: newFrog.id }
           useGameStore.setState({ carriers: carriersNow })
+          // Немедленный sync overlay — новый frog получает element-цвет до setScale(0),
+          // иначе overlay прицепится лишь через кадр и pop-in начнётся без элемент-тинта.
+          this.overlayManager?.syncNow()
+          console.log('[performFeed] frogId transferred to newFrog', newFrog.id, 'overlayActiveCount:', this.overlayManager?.activeCount)
+        } else {
+          console.warn('[performFeed] carrier frogId transfer failed, orphaned carrier', carrier.id)
         }
         newFrog.container.setScale(0)
         this.tweens.add({
@@ -2549,5 +2610,61 @@ export class MainScene extends Phaser.Scene {
     eventBus.off('cosmic:serum-pointer-move', this.onSerumPointerMove)
     eventBus.off('cosmic:serum-pointer-up', this.onSerumPointerUp)
     this.input.off('pointerdown', this.onPointerDownGlobal, this)
+  }
+
+  // Dev-only: spawn one frog per element on ALL 4 locations.
+  // Current location: real Phaser objects (visible immediately).
+  // Other locations: stored in locationFrogs + carrier placeholder IDs ('debug:el:loc').
+  // rebindCarriers links placeholders to real frogs when user navigates there.
+  debugSpawnAllCarriers(): void {
+    const ELEMENTS: Array<Element> = [
+      'fire', 'ice', 'water', 'forest', 'toxic', 'plasma',
+      'shadow', 'crystal', 'desert', 'gas', 'ring', 'binary',
+      'arcane', 'mechanical', 'war', 'void',
+    ]
+    const RARITIES: Rarity[] = ['common', 'rare', 'epic', 'legendary']
+    // Representative level per location
+    const LOC_LEVEL: Record<number, number> = { 1: 1, 2: 7, 3: 13, 4: 19 }
+
+    const store = useGameStore.getState()
+    const currentLoc = store.currentLocation
+    const newCarriers = [...store.carriers]
+    const newLocationFrogs = store.locationFrogs.map((a) => [...a]) as number[][]
+
+    for (let loc = 1; loc <= 4; loc++) {
+      const level = LOC_LEVEL[loc]
+      ELEMENTS.forEach((element, i) => {
+        const rarity = RARITIES[i % RARITIES.length]
+        if (loc === currentLoc) {
+          // Spawn real Phaser frog — overlay attaches immediately
+          const { x, y } = this.randomFieldPos()
+          const frog = this.spawnFrog(x, y, level)
+          newLocationFrogs[loc - 1].push(level)
+          newCarriers.push({
+            frogId: frog.id,
+            element,
+            rarity,
+            feedCount: 0,
+            stabilized: false,
+            level,
+          })
+        } else {
+          // Store placeholder — rebindCarriers links on navigation
+          newLocationFrogs[loc - 1].push(level)
+          newCarriers.push({
+            frogId: `debug:${element}:${loc}`,
+            element,
+            rarity,
+            feedCount: 0,
+            stabilized: false,
+            level,
+          })
+        }
+      })
+    }
+
+    useGameStore.setState({ carriers: newCarriers, locationFrogs: newLocationFrogs })
+    this.overlayManager?.markDirty()
+    console.log('[debug] spawned 16 carrier frogs on each of 4 locations (64 total)')
   }
 }
