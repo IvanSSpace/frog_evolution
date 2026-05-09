@@ -5,11 +5,11 @@ import {
   attachNebulaBackground,
   type NebulaBackgroundHandle,
 } from '../effects/NebulaBackground'
-import { ShipSprite } from '../effects/ShipSprite'
 import { violetRing } from '../effects/presets'
 import planetMap from '../data/planetMap.json'
-import { findPlanetById, DAILY_CAP } from '../data/missionConfig'
-import type { ShipState } from '../../store/cosmic/types'
+import { DAILY_CAP } from '../data/missionConfig'
+import { ShipController } from './starmap/shipController'
+// ShipSprite/ShipState — теперь только внутри shipController.ts (Phase 20-04, Wave 4).
 import { deriveModulations } from '../../audio/planetVoice'
 import {
   compRing,
@@ -303,10 +303,8 @@ export class StarMapScene extends Phaser.Scene {
 
   // Phase 16: Ship singleton — Phaser-native ракетка с trail.
   // Auto-spawn в create() через ensureShipExists. Subscribed на cosmicSlice.ship.
-  private shipSprite: ShipSprite | null = null
-  private shipUnsubscribe: (() => void) | null = null
-  private lastShipStateSig = ''
-  private followingShip = false
+  // Phase 20-04 (Wave 4): Lifecycle вынесен в ShipController.
+  private shipController!: ShipController
 
   constructor() {
     super({ key: 'StarMapScene' })
@@ -463,112 +461,20 @@ export class StarMapScene extends Phaser.Scene {
     })
 
     // Phase 16: Ship singleton (REQ SHIP-02..06).
-    this.setupShipSprite()
+    // Phase 20-04 (Wave 4): lifecycle делегирован ShipController.
+    this.shipController = new ShipController(this)
+    this.shipController.setup()
 
     // Phase 16: cleanup на shutdown — destroy ship + unsubscribe store.
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
-      this.teardownShipSprite(),
+      this.shipController.teardown(),
     )
     this.events.once(Phaser.Scenes.Events.DESTROY, () =>
-      this.teardownShipSprite(),
+      this.shipController.teardown(),
     )
   }
 
-  /** Phase 16: Auto-spawn ship и подписка на cosmicSlice.ship. */
-  private setupShipSprite() {
-    // Гарантируем что ship существует (auto-spawn at home при первом open).
-    useGameStore.getState().ensureShipExists()
-    const initialShip = useGameStore.getState().ship
-    const homeId =
-      initialShip?.state === 'docked' ? initialShip.planetId : 'home'
-    const homePlanet = findPlanetById(homeId) ?? findPlanetById('home')
-    if (!homePlanet) return
-
-    // planetMap.json — DPR=1 base, scene умножает на DPR. Применяем тот же multiplier.
-    this.shipSprite = new ShipSprite({
-      scene: this,
-      parent: null, // scene root; нет worldContainer в этой scene
-      initialPosition: { x: homePlanet.x * DPR, y: homePlanet.y * DPR },
-      depth: 1500,
-      onPositionUpdate: (x, y) => {
-        // throttled выше; здесь — простой proxy в store для redirect calc.
-        // Позиция нормализуется обратно в DPR=1 base (для slice + sendShipTo math).
-        useGameStore.getState().setShipPosition(x / DPR, y / DPR)
-      },
-    })
-
-    // Sync initial state
-    this.applyShipState(useGameStore.getState().ship)
-
-    // Subscribe — реагируем на изменения ship через JSON-сигнатуру dedup.
-    this.shipUnsubscribe = useGameStore.subscribe((state) => {
-      this.applyShipState(state.ship)
-      // Disable follow when ship docks
-      if (state.ship?.state !== 'transit' && this.followingShip) {
-        this.followingShip = false
-        eventBus.emit('starmap:follow-changed', { following: false })
-      }
-    })
-
-    // React button → toggle follow mode
-    const onFollowShip = ({ enable }: { enable: boolean }) => {
-      this.followingShip = enable
-    }
-    eventBus.on('starmap:follow-ship', onFollowShip)
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
-      eventBus.off('starmap:follow-ship', onFollowShip),
-    )
-    this.events.once(Phaser.Scenes.Events.DESTROY, () =>
-      eventBus.off('starmap:follow-ship', onFollowShip),
-    )
-  }
-
-  private teardownShipSprite() {
-    if (this.shipUnsubscribe) {
-      this.shipUnsubscribe()
-      this.shipUnsubscribe = null
-    }
-    if (this.shipSprite) {
-      this.shipSprite.destroy()
-      this.shipSprite = null
-    }
-    this.lastShipStateSig = ''
-  }
-
-  /** Phase 16: применить ShipState из store к ShipSprite. JSON-dedup чтобы не reapply identical state. */
-  private applyShipState(ship: ShipState | null): void {
-    if (!this.shipSprite || ship === null) return
-
-    const sig = JSON.stringify(ship)
-    if (sig === this.lastShipStateSig) return
-    this.lastShipStateSig = sig
-
-    if (ship.state === 'docked') {
-      const p = findPlanetById(ship.planetId)
-      if (!p) return
-      this.shipSprite.setDocked(
-        { x: p.x * DPR, y: p.y * DPR },
-        (p.size ?? 60) * DPR,
-      )
-    } else {
-      const fp = findPlanetById(ship.fromPlanetId)
-      const tp = findPlanetById(ship.toPlanetId)
-      if (!fp || !tp) return
-      const onArrive = () => {
-        useGameStore.getState().arriveShipAt(ship.toPlanetId)
-      }
-      this.shipSprite.syncFromState(
-        {
-          from: { x: fp.x * DPR, y: fp.y * DPR },
-          to: { x: tp.x * DPR, y: tp.y * DPR },
-          startedAt: ship.startedAt,
-          arrivesAt: ship.arrivesAt,
-        },
-        (tp.size ?? 60) * DPR,
-        onArrive,
-      )
-    }
-  }
+  // setupShipSprite/teardownShipSprite/applyShipState — extracted в './starmap/shipController.ts' (Phase 20-04, Wave 4).
 
   // Адаптивный hit-area для главных планет — чем сильнее zoom-out,
   // тем больше зона тапа в мировых координатах (фиксированно ~32px на экране).
@@ -4333,8 +4239,8 @@ export class StarMapScene extends Phaser.Scene {
       velX = 0
       velY = 0
       // Drag cancels follow mode
-      if (this.followingShip) {
-        this.followingShip = false
+      if (this.shipController.followingShip) {
+        this.shipController.followingShip = false
         eventBus.emit('starmap:follow-changed', { following: false })
       }
       lastMoveTime = Date.now()
@@ -4420,10 +4326,11 @@ export class StarMapScene extends Phaser.Scene {
     // меняет scroll (Phaser internals, resize и т.п.) — заявляем целевую позицию заново.
     this.events.on('update', (_t: number, dt: number) => {
       // Ship follow mode — overrides inertia/drag
-      if (this.followingShip && this.shipSprite) {
+      const shipSprite = this.shipController.sprite
+      if (this.shipController.followingShip && shipSprite) {
         velX = 0
         velY = 0
-        this.setCameraCenter(this.shipSprite.worldX, this.shipSprite.worldY)
+        this.setCameraCenter(shipSprite.worldX, shipSprite.worldY)
         return
       }
       // Inertia только когда не идёт активный drag
