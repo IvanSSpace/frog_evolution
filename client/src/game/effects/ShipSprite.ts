@@ -126,6 +126,25 @@ export class ShipSprite {
     g.destroy()
   }
 
+  // Per-emitter perpendicular Y offset (relative to ship's heading axis).
+  // Lookup is keyed by the emitter object; avoids attaching custom properties.
+  private emitterOffsetY = new WeakMap<
+    Phaser.GameObjects.Particles.ParticleEmitter,
+    number
+  >()
+
+  // Phaser 4 EmitterOp typing exposes speedX/speedY as objects, but the setters
+  // accept plain numbers (forwarded to onChange). Narrow type for that path.
+  private writeEmitterSpeed(
+    e: Phaser.GameObjects.Particles.ParticleEmitter,
+    speedX: number,
+    speedY: number,
+  ): void {
+    const writable = e as unknown as { speedX: number; speedY: number }
+    writable.speedX = speedX
+    writable.speedY = speedY
+  }
+
   // localOffsetY: offset along the ship's local Y axis (perpendicular to heading)
   private makeEmitter(
     localOffsetY: number,
@@ -143,7 +162,7 @@ export class ShipSprite {
     // depth lower than ship container so particles render behind the ship
     e.setDepth((this.opts.depth ?? 1500) - 2)
     e.stop()
-    ;(e as unknown as Record<string, number>).__localOffsetY = localOffsetY
+    this.emitterOffsetY.set(e, localOffsetY)
     return e
   }
 
@@ -161,16 +180,13 @@ export class ShipSprite {
 
     for (const e of [this.thruster1, this.thruster2]) {
       if (!e) continue
-      const localY =
-        (e as unknown as Record<string, number>).__localOffsetY * this.dpr
+      const offsetY = this.emitterOffsetY.get(e) ?? 0
+      const localY = offsetY * this.dpr
       // rotate local (nozzleLocal, localY) → world space
       e.x = this.container.x + cos * nozzleLocal - sin * localY
       e.y = this.container.y + sin * nozzleLocal + cos * localY
-      // exhaust velocity: opposite to heading, with slight perpendicular spread
-      ;(e as unknown as { speedX: number; speedY: number }).speedX =
-        -cos * SPEED
-      ;(e as unknown as { speedX: number; speedY: number }).speedY =
-        -sin * SPEED
+      // exhaust velocity: opposite to heading
+      this.writeEmitterSpeed(e, -cos * SPEED, -sin * SPEED)
     }
   }
 
