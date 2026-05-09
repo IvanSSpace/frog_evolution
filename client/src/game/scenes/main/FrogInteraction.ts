@@ -1,0 +1,387 @@
+// Phase 21-05 (Wave 5): Frog interaction controller (tap / serum), extracted
+// from MainScene.ts.
+//
+// Owns: обработка тап-by-frog (онFrogTapped), serum apply / mis-tap логика,
+// desktop-DnD pointer-move/up handlers, subscribe на serum-state из gameStore,
+// global pointerdown handler для cancel-в-пустоту.
+//
+// Public API:
+//   - setup(): подвязывает eventBus + Zustand subscribe; вызывается из MainScene.create()
+//     после создания selectionLayer/overlayManager.
+//   - teardown(): отписывает всё; вызывается из MainScene.destroy().
+//   - onFrogTapped(frog, tapX, tapY): public — вызывается FrogSpawner из dragend.
+//
+// Coupling: ссылка на MainScene + FrogSpawner + MergeController. Использует
+// scene.frogs, scene.selectionLayer, scene.cachedSerumDragActive,
+// scene.lastHaptiHover. Вызывает spawner.startIdleAnim,
+// merge.findMergeTarget / merge.performMerge / merge.spawnFloatingText.
+
+import Phaser from 'phaser'
+import { useGameStore } from '../../../store/gameStore'
+import { eventBus } from '../../../store/eventBus'
+import { MAX_LEVEL } from '../../config/frogs'
+import { hapticImpact, hapticNotification } from '../../../utils/telegram'
+import { burstEffect } from '../../effects/elements/burstEffect'
+import { ELEMENT_TINT } from '../../../components/CosmicHub/ElementGrid'
+import { isEligible, getEligibilityHint } from '../../../utils/serumEligibility'
+import i18next from 'i18next'
+import type { Element, Rarity } from '../../../store/cosmic/types'
+import { DPR, tintToHex, type FrogData } from './types'
+import type { MainScene } from '../MainScene'
+import type { FrogSpawner } from './FrogSpawner'
+import type { MergeController } from './MergeController'
+
+export class FrogInteraction {
+  private scene: MainScene
+  private spawner: FrogSpawner
+  private merge: MergeController
+  private unsubSerum: (() => void) | null = null
+
+  constructor(scene: MainScene, spawner: FrogSpawner, merge: MergeController) {
+    this.scene = scene
+    this.spawner = spawner
+    this.merge = merge
+  }
+
+  /**
+   * Подвязка handler'ов: subscribe на serumDragActive (selection halo управление),
+   * eventBus listener'ы для desktop drag (Phase 14 SERUM-11), глобальный
+   * pointerdown handler для cancel-в-пустоту.
+   */
+  setup(): void {
+    this.subscribeSerumState()
+    this.scene.input.on('pointerdown', this.onPointerDownGlobal, this)
+    eventBus.on('cosmic:serum-pointer-move', this.onSerumPointerMove)
+    eventBus.on('cosmic:serum-pointer-up', this.onSerumPointerUp)
+  }
+
+  teardown(): void {
+    this.unsubSerum?.()
+    this.unsubSerum = null
+    eventBus.off('cosmic:serum-pointer-move', this.onSerumPointerMove)
+    eventBus.off('cosmic:serum-pointer-up', this.onSerumPointerUp)
+    this.scene.input.off('pointerdown', this.onPointerDownGlobal, this)
+  }
+
+  // Phase 14: subscribe на serumDragActive + selectedSerum.
+  // На каждый change → пересчитать eligible set + show/hide halos.
+  private subscribeSerumState() {
+    const scene = this.scene
+    if (this.unsubSerum) {
+      this.unsubSerum()
+      this.unsubSerum = null
+    }
+    this.unsubSerum = useGameStore.subscribe((state) => {
+      const active = state.serumDragActive
+      const dragChanged = active !== scene.cachedSerumDragActive
+      scene.cachedSerumDragActive = active
+
+      if (active) {
+        const sel = state.selectedSerum
+        if (!sel) {
+          scene.selectionLayer?.hide()
+          return
+        }
+        const eligible = scene.frogs.filter((f) =>
+          isEligible(
+            { id: f.id, level: f.level },
+            sel.element,
+            sel.rarity,
+            state.carriers,
+          ),
+        )
+        scene.selectionLayer?.show(
+          eligible.map((f) => ({
+            id: f.id,
+            container: f.container,
+            body: f.body,
+          })),
+          tintToHex(ELEMENT_TINT[sel.element]),
+        )
+      } else if (dragChanged) {
+        // Just deactivated — hide halos.
+        scene.selectionLayer?.hide()
+        scene.lastHaptiHover = false
+      }
+    })
+  }
+
+  // Phase 14: tap в пустое место (нет game object под pointer'ом) → cancel selection.
+  private onPointerDownGlobal = (
+    _pointer: Phaser.Input.Pointer,
+    currentlyOver: Phaser.GameObjects.GameObject[],
+  ) => {
+    if (!useGameStore.getState().serumDragActive) return
+    // Если тап попал в любой interactive object (frog body) — пускай handler frog'и отрабатывает.
+    if (currentlyOver.length > 0) return
+    // Тап в пустое место — cancel selection.
+    useGameStore.getState().setSerumDragActive(false)
+    eventBus.emit('cosmic:cancel-serum')
+  }
+
+  onFrogTapped(
+    frog: FrogData,
+    tapX: number = frog.container.x,
+    tapY: number = frog.container.y,
+  ) {
+    const scene = this.scene
+    // Phase 14: serum selection mode переопределяет normal tap behavior
+    // (apply / mis-tap вместо merge / coin / burst).
+    if (useGameStore.getState().serumDragActive) {
+      this.handleSerumTap(frog)
+      return
+    }
+
+    // Тап-мердж: ищем рядом с точкой тапа другую лягушку того же уровня
+    if (frog.level < MAX_LEVEL) {
+      const target = this.merge.findMergeTarget(tapX, tapY, frog.level, frog)
+      if (target) {
+        this.merge.performMerge(frog, target, tapX, tapY)
+        return
+      }
+    }
+
+    // Лёгкая вибрация на тап по лягушке
+    hapticImpact('light')
+
+    // Тап = +1 монета (не зависит от уровня), отдельно от какашек
+    useGameStore.getState().addGold(1)
+    this.merge.spawnFloatingText(
+      frog.container.x,
+      frog.container.y - 20 * DPR,
+      '+1',
+      'regular',
+    )
+
+    // ELEMENT-10: element-burst при тапе на carrier-лягушку.
+    // Читаем из store — не зависим от overlayManager internals.
+    {
+      const carriers = useGameStore.getState().carriers
+      const carrier = carriers.find((c) => c.frogId === frog.id)
+      if (carrier) {
+        burstEffect(scene, frog.container, carrier.element as Element)
+      }
+    }
+
+    scene.tweens.killTweensOf(frog.body)
+    frog.body.scaleY = 1.0
+    scene.tweens.add({
+      targets: frog.body,
+      scaleY: 0.78,
+      duration: 55,
+      ease: 'Power2.easeIn',
+      onComplete: () => {
+        scene.tweens.add({
+          targets: frog.body,
+          scaleY: 1.0,
+          duration: 150,
+          ease: 'Back.easeOut',
+          onComplete: () => {
+            if (!frog.isMoving && !frog.isMerging)
+              this.spawner.startIdleAnim(frog)
+          },
+        })
+      },
+    })
+  }
+
+  /** Tap по frog'е в selection mode → eligible→apply, ineligible→mis-tap. */
+  private handleSerumTap(frog: FrogData) {
+    const scene = this.scene
+    const state = useGameStore.getState()
+    const sel = state.selectedSerum
+    if (!sel) {
+      // Race condition fallback — clear selection.
+      useGameStore.getState().setSerumDragActive(false)
+      return
+    }
+
+    const eligible = isEligible(
+      { id: frog.id, level: frog.level },
+      sel.element,
+      sel.rarity,
+      state.carriers,
+    )
+
+    if (!eligible) {
+      // SERUM-07: mis-tap → red flash + error toast + haptic error.
+      // Selection остаётся active — юзер может попробовать другую лягушку.
+      scene.selectionLayer?.flashRed({
+        id: frog.id,
+        container: frog.container,
+        body: frog.body,
+      })
+      hapticNotification('error')
+      this.emitMisTapToast(sel.rarity)
+      return
+    }
+
+    // SERUM-09: eligible → 2-сек pulse + carrier создан.
+    this.applySerumToFrog(frog, sel.element, sel.rarity)
+  }
+
+  /** Helper: build mis-tap toast message via i18next + emit. */
+  private emitMisTapToast(rarity: Rarity) {
+    const hint = getEligibilityHint(rarity)
+    const locKey =
+      ['swamp', 'forest', 'continent', 'planet'][hint.locationId - 1] ?? 'swamp'
+    const locationLabel = i18next.t(`cosmic_hub.serums.location_${locKey}`)
+    eventBus.emit('cosmic:toast', {
+      type: 'serum-mistap',
+      msg: i18next.t('cosmic_hub.serums.mis_tap_msg', {
+        level: hint.level,
+        location: locationLabel,
+      }),
+    })
+  }
+
+  /** Apply serum: 2-сек pulse + burst at midpoint + atomic store mutation + toast. */
+  private applySerumToFrog(frog: FrogData, element: Element, rarity: Rarity) {
+    const scene = this.scene
+    // Lock from tap during animation — переиспользуем isMerging флаг
+    // (existing блоки respect его: poop, drag, magnet target check).
+    frog.isMerging = true
+    scene.tweens.killTweensOf(frog.body)
+
+    // 2-секундная pulse: scale 1.0 → 1.15 → 1.0 (yoyo, 1 cycle).
+    scene.tweens.add({
+      targets: frog.body,
+      scaleY: 1.15,
+      scaleX: 1.15,
+      duration: 1000,
+      yoyo: true,
+      ease: 'Sine.easeInOut',
+      onComplete: () => {
+        frog.isMerging = false
+        // Возобновить idle, если frog ещё на сцене.
+        if (scene.frogs.includes(frog) && !frog.isMoving)
+          this.spawner.startIdleAnim(frog)
+      },
+    })
+
+    // Burst effect at midpoint (1с) — драматичность apply (ELEMENT-10 reuse).
+    scene.time.delayedCall(1000, () => {
+      if (!scene.frogs.includes(frog)) return // killed mid-anim
+      burstEffect(scene, frog.container, element)
+    })
+
+    // Atomic mutation: clears selection, decrements serum, adds carrier.
+    // FrogOverlayManager (Phase 12) автоматически нарисует overlay tier через subscribe.
+    useGameStore.getState().applySerum(frog.id, element, rarity, frog.level)
+
+    hapticNotification('success')
+
+    // SERUM-10: success toast с undo action (4 сек window).
+    eventBus.emit('cosmic:toast', {
+      type: 'serum-applied',
+      msg: i18next.t('cosmic_hub.serums.applied'),
+      action: {
+        label: i18next.t('cosmic_hub.serums.undo_label'),
+        onClick: () => {
+          // Undo: removeCarrier + addSerum обратно (atomic — два action'а на разные slices).
+          useGameStore.getState().removeCarrier(frog.id)
+          useGameStore.getState().addSerum(element, rarity, 1)
+        },
+      },
+      duration: 4000,
+    })
+  }
+
+  /** Helper: client coords → world point. */
+  private clientToWorld(clientX: number, clientY: number): Phaser.Math.Vector2 {
+    const scene = this.scene
+    const canvas = scene.game.canvas
+    const rect = canvas.getBoundingClientRect()
+    const cx = clientX - rect.left
+    const cy = clientY - rect.top
+    return scene.cameras.main.getWorldPoint(cx, cy)
+  }
+
+  /** Helper: find frog в snap radius (80 * DPR) от world point. */
+  private findFrogAt(worldX: number, worldY: number): FrogData | null {
+    const SNAP = 80 * DPR
+    let hit: FrogData | null = null
+    let bestDist = SNAP
+    for (const f of this.scene.frogs) {
+      const d = Phaser.Math.Distance.Between(
+        worldX,
+        worldY,
+        f.container.x,
+        f.container.y,
+      )
+      if (d <= bestDist) {
+        hit = f
+        bestDist = d
+      }
+    }
+    return hit
+  }
+
+  /** Phase 14 SERUM-11: desktop drag move — haptic medium при hover eligible. */
+  private onSerumPointerMove = (p: { x: number; y: number }) => {
+    const scene = this.scene
+    const state = useGameStore.getState()
+    if (!state.serumDragActive || !state.selectedSerum) return
+    const sel = state.selectedSerum
+
+    const wp = this.clientToWorld(p.x, p.y)
+    const hit = this.findFrogAt(wp.x, wp.y)
+
+    if (hit) {
+      const eligible = isEligible(
+        { id: hit.id, level: hit.level },
+        sel.element,
+        sel.rarity,
+        state.carriers,
+      )
+      if (eligible && !scene.lastHaptiHover) {
+        hapticImpact('medium')
+        scene.lastHaptiHover = true
+      } else if (!eligible) {
+        // Reset hover state — позволит haptic re-fire при следующем eligible.
+        scene.lastHaptiHover = false
+      }
+    } else {
+      scene.lastHaptiHover = false
+    }
+  }
+
+  /** Phase 14 SERUM-11: desktop drag release — apply / mis-tap / cancel. */
+  private onSerumPointerUp = (p: { x: number; y: number }) => {
+    const scene = this.scene
+    const state = useGameStore.getState()
+    if (!state.serumDragActive || !state.selectedSerum) return
+    const sel = state.selectedSerum
+
+    scene.lastHaptiHover = false
+
+    const wp = this.clientToWorld(p.x, p.y)
+    const hit = this.findFrogAt(wp.x, wp.y)
+
+    if (!hit) {
+      // Drop в пустое — cancel selection, серум не списан.
+      useGameStore.getState().setSerumDragActive(false)
+      return
+    }
+
+    const eligible = isEligible(
+      { id: hit.id, level: hit.level },
+      sel.element,
+      sel.rarity,
+      state.carriers,
+    )
+
+    if (eligible) {
+      this.applySerumToFrog(hit, sel.element, sel.rarity)
+    } else {
+      // Mis-tap — red flash + error toast, selection остаётся (как в tap-flow).
+      scene.selectionLayer?.flashRed({
+        id: hit.id,
+        container: hit.container,
+        body: hit.body,
+      })
+      hapticNotification('error')
+      this.emitMisTapToast(sel.rarity)
+    }
+  }
+}
