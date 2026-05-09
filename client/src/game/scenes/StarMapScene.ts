@@ -17,6 +17,7 @@ import {
 } from './starmap/starfield'
 import { CoordinatesHUDController } from './starmap/coordinatesHUD'
 import { CameraController } from './starmap/cameraController'
+import { ControlsController } from './starmap/controlsController'
 import { PopoverController } from './starmap/popovers'
 import { deriveModulations } from '../../audio/planetVoice'
 // 96 comp* импортов и DAILY_CAP/useGameStore — теперь только в popovers.ts
@@ -281,8 +282,11 @@ export class StarMapScene extends Phaser.Scene {
   // Phase 20-04 (Wave 4): Lifecycle вынесен в ShipController.
   private shipController!: ShipController
   // Phase 20-04 (Wave 4): popover/popup + tap orchestration вынесены в PopoverController.
-  // Package-public — setupControls и pointerup-handlers вызывают методы напрямую.
+  // Package-public — ControlsController и pointerup-handlers вызывают методы напрямую.
   popoverController!: PopoverController
+  // Phase 20-05 (Wave 5): pointer/wheel/drag/inertia/follow-ship вынесены в ControlsController.
+  // Хранится как field только для reference; subscriptions cleanup через Phaser scene shutdown.
+  private controls!: ControlsController
 
   constructor() {
     super({ key: 'StarMapScene' })
@@ -395,8 +399,6 @@ export class StarMapScene extends Phaser.Scene {
     this.camera.setCenter(home.x, home.y)
     this.camera.updatePlanetHitAreas()
 
-    this.setupControls()
-
     // Сброс выбранной планеты при закрытии popover извне
     eventBus.on('starmap:popover-close', () => {
       this.selectedMainRaceId = null
@@ -464,6 +466,15 @@ export class StarMapScene extends Phaser.Scene {
     // Phase 20-04 (Wave 4): lifecycle делегирован ShipController.
     this.shipController = new ShipController(this)
     this.shipController.setup()
+
+    // Phase 20-05 (Wave 5): pointer/wheel/drag/inertia + follow-ship cancellation.
+    // Создаём ПОСЛЕ ShipController — ControlsController хранит на него ref.
+    this.controls = new ControlsController(
+      this,
+      this.camera,
+      this.shipController,
+    )
+    this.controls.setup()
 
     // Phase 16: cleanup на shutdown — destroy ship + unsubscribe store.
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
@@ -2717,7 +2728,8 @@ export class StarMapScene extends Phaser.Scene {
 
   // ============== PHASER POPOVER ==============
 
-  private closePhaserPopover() {
+  // Phase 20-05 (Wave 5): package-public — ControlsController вызывает на тап-в-пустоту.
+  closePhaserPopover() {
     if (this.popover) {
       this.popover.destroy(true)
       this.popover = undefined
@@ -2728,175 +2740,8 @@ export class StarMapScene extends Phaser.Scene {
   // — extracted в './starmap/popovers.ts' (Phase 20-04, Wave 4).
 
   // ============== УПРАВЛЕНИЕ ==============
-
-  private setupControls() {
-    this.input.setTopOnly(false)
-
-    let isDragging = false
-    let lastX = 0,
-      lastY = 0
-    let initialPinchDist: number | null = null
-    let initialZoom = 1
-    // Инерция камеры: сохраняем velocity при drag, применяем после pointerup
-    let velX = 0,
-      velY = 0
-    let lastMoveTime = 0
-    const VEL_THRESHOLD = 0.005 // px/ms — ниже считаем что остановились
-    const FRICTION_PER_16MS = 0.92 // насколько velocity сохраняется за ~кадр
-    let tapDownX = 0,
-      tapDownY = 0
-    let tapDownTime = 0
-
-    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      isDragging = true
-      lastX = p.x
-      lastY = p.y
-      velX = 0
-      velY = 0
-      // Drag cancels follow mode
-      if (this.shipController.followingShip) {
-        this.shipController.followingShip = false
-        eventBus.emit('starmap:follow-changed', { following: false })
-      }
-      lastMoveTime = Date.now()
-      initialPinchDist = null
-      // Сброс tap-флага. Если планета его не выставит до pointerup и не было drag —
-      // на pointerup закроем popover (тап в пустое место карты).
-      this.tapHandledThisFrame = false
-      tapDownX = p.x
-      tapDownY = p.y
-      tapDownTime = Date.now()
-    })
-
-    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
-      const ps = this.input.manager.pointers.filter(
-        (pt) => pt.active && pt.isDown,
-      )
-      const cam = this.cameras.main
-      if (ps.length === 2) {
-        const dx = ps[0].x - ps[1].x
-        const dy = ps[0].y - ps[1].y
-        const d = Math.sqrt(dx * dx + dy * dy)
-        if (initialPinchDist == null) {
-          initialPinchDist = d
-          initialZoom = cam.zoom
-        } else {
-          const ratio = d / initialPinchDist
-          cam.setZoom(
-            Phaser.Math.Clamp(
-              initialZoom * ratio,
-              this.camera.getMinZoom(),
-              1.8,
-            ),
-          )
-          // Re-clamp center после изменения zoom
-          this.camera.setCenter(this.camera.centerX, this.camera.centerY)
-          this.camera.scheduleBoundsUpdate()
-        }
-        velX = 0
-        velY = 0
-      } else if (isDragging && ps.length === 1) {
-        const dx = p.x - lastX
-        const dy = p.y - lastY
-        const now = Date.now()
-        const dt = Math.max(1, now - lastMoveTime)
-        // Накопление velocity + движение камеры через единую API camera.setCenter
-        const instantVX = dx / dt
-        const instantVY = dy / dt
-        velX = velX * 0.6 + instantVX * 0.4
-        velY = velY * 0.6 + instantVY * 0.4
-        const dxWorld = dx / cam.zoom
-        const dyWorld = dy / cam.zoom
-        const result = this.camera.setCenter(
-          this.camera.centerX - dxWorld,
-          this.camera.centerY - dyWorld,
-        )
-        if (result.hitX) velX = 0
-        if (result.hitY) velY = 0
-        lastX = p.x
-        lastY = p.y
-        lastMoveTime = now
-        initialPinchDist = null
-      }
-    })
-
-    this.input.on('pointerup', (p: Phaser.Input.Pointer) => {
-      isDragging = false
-      initialPinchDist = null
-      // Если клик был быстрым, без перемещения и НЕ был перехвачен interactive объектом
-      // (планета/звезда) — закрываем popover (тап в пустое место).
-      const dt = Date.now() - tapDownTime
-      const moved = Math.abs(p.x - tapDownX) + Math.abs(p.y - tapDownY)
-      if (!this.tapHandledThisFrame && dt < 300 && moved < 8 * DPR) {
-        // Тап в пустое место карты — закрываем popover'ы.
-        // Сбрасываем счётчик нажатий → следующий тап на планету снова
-        // запустит уникальную анимацию (как на первом нажатии).
-        this.currentPressedPlanetId = null
-        if (this.selectedMainRaceId) {
-          this.selectedMainRaceId = null
-          this.closePhaserPopover()
-        }
-        this.popoverController.closeBgNamePopup()
-      }
-    })
-
-    // Inertia — двигаем камеру через единую setCameraCenter() с автоматическим clamp.
-    // Дополнительный «hard re-center» каждый кадр: на всякий случай, если что-то снаружи
-    // меняет scroll (Phaser internals, resize и т.п.) — заявляем целевую позицию заново.
-    this.events.on('update', (_t: number, dt: number) => {
-      // Ship follow mode — overrides inertia/drag
-      const shipSprite = this.shipController.sprite
-      if (this.shipController.followingShip && shipSprite) {
-        velX = 0
-        velY = 0
-        this.camera.setCenter(shipSprite.worldX, shipSprite.worldY)
-        return
-      }
-      // Inertia только когда не идёт активный drag
-      if (!isDragging) {
-        const speed = Math.sqrt(velX * velX + velY * velY)
-        if (speed >= VEL_THRESHOLD) {
-          const cam = this.cameras.main
-          const dxWorld = (velX * dt) / cam.zoom
-          const dyWorld = (velY * dt) / cam.zoom
-          const result = this.camera.setCenter(
-            this.camera.centerX - dxWorld,
-            this.camera.centerY - dyWorld,
-          )
-          if (result.hitX) velX = 0
-          if (result.hitY) velY = 0
-          const decay = Math.pow(FRICTION_PER_16MS, dt / 16)
-          velX *= decay
-          velY *= decay
-        } else {
-          velX = 0
-          velY = 0
-          // Жёсткий re-center каждый кадр — гарантия что Phaser не "уехал" сам.
-          // Это идемпотентная операция: если уже на месте — ничего не меняет.
-          this.camera.setCenter(this.camera.centerX, this.camera.centerY)
-        }
-      }
-    })
-
-    this.input.on(
-      'wheel',
-      (
-        _p: Phaser.Input.Pointer,
-        _gos: Phaser.GameObjects.GameObject[],
-        _dx: number,
-        dy: number,
-      ) => {
-        const cam = this.cameras.main
-        const factor = dy > 0 ? 0.9 : 1.1
-        cam.setZoom(
-          Phaser.Math.Clamp(cam.zoom * factor, this.camera.getMinZoom(), 1.8),
-        )
-        // Re-clamp center: пределы изменились с zoom, текущая позиция могла стать невалидной
-        this.camera.setCenter(this.camera.centerX, this.camera.centerY)
-        this.camera.scheduleBoundsUpdate()
-      },
-    )
-  }
+  // setupControls (pointer/wheel/drag/inertia + follow-ship cancel)
+  // — extracted в './starmap/controlsController.ts' (Phase 20-05, Wave 5).
 
   shutdown() {
     this.closePhaserPopover()
