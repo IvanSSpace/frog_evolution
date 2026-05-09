@@ -10,6 +10,14 @@ import planetMap from '../data/planetMap.json'
 import { DAILY_CAP } from '../data/missionConfig'
 import { ShipController } from './starmap/shipController'
 // ShipSprite/ShipState — теперь только внутри shipController.ts (Phase 20-04, Wave 4).
+import {
+  setupStarfield,
+  drawLines,
+  redrawMainLines,
+  buildBgBatch,
+  renderSystem,
+  createSparkleAt,
+} from './starmap/starfield'
 import { deriveModulations } from '../../audio/planetVoice'
 import {
   compRing,
@@ -225,12 +233,16 @@ function generatePalette(
 // Чтобы изменить позицию/цвет/имя конкретной планеты — правь planetMap.json напрямую.
 
 export class StarMapScene extends Phaser.Scene {
-  private allSystems: (Race | BgSystem)[] = []
-  private systemSprites = new Map<string, Phaser.GameObjects.Container>()
+  // Phase 20-04 (Wave 4): несколько полей переведены с `private` на package-public,
+  // потому что starmap/starfield.ts и starmap/coordinatesHUD.ts читают/мутируют их
+  // напрямую (free functions / controller class) — TS не имеет `friend`/`internal`,
+  // поэтому это эквивалент package-private. Не используются вне starmap/* модулей.
+  allSystems: (Race | BgSystem)[] = []
+  systemSprites = new Map<string, Phaser.GameObjects.Container>()
   private selectionMarker: Phaser.GameObjects.Graphics | null = null
   // Список объектов для manual culling (Phaser не делает frustum culling для Container).
   // lodMinZoom: если zoom < lodMinZoom → объект скрыт независимо от viewport (LOD).
-  private cullableData: Array<{
+  cullableData: Array<{
     obj: Phaser.GameObjects.GameObject & {
       visible: boolean
       setVisible: (v: boolean) => unknown
@@ -240,9 +252,9 @@ export class StarMapScene extends Phaser.Scene {
     r: number
     lodMinZoom?: number
   }> = []
-  private cullTickCounter = 0
+  cullTickCounter = 0
   // Адаптивный hit-area для главных планет (тап по ним удобен на любом зуме)
-  private mainPlanetHits: Array<{
+  mainPlanetHits: Array<{
     container: Phaser.GameObjects.Container
     baseR: number
     circle: Phaser.Geom.Circle
@@ -259,12 +271,12 @@ export class StarMapScene extends Phaser.Scene {
   private bgNamePopupTimer?: Phaser.Time.TimerEvent
   private nebula?: NebulaBackgroundHandle
   // Звёзды-ромбы, которые компенсируют zoom (видны и при максимальном отдалении)
-  private zoomCompStars: Array<{
+  zoomCompStars: Array<{
     obj: Phaser.GameObjects.Graphics
     baseScale: number
   }> = []
   // Спутники планет — рендерятся только при zoom >= MOON_MIN_ZOOM, иначе скрыты.
-  private moons: Array<{
+  moons: Array<{
     obj: Phaser.GameObjects.Arc
     angle: number
     radius: number
@@ -273,23 +285,23 @@ export class StarMapScene extends Phaser.Scene {
   // Детализация BG-планет (archetype-specific графика + universal modifiers).
   // При zoom < BG_DETAIL_MIN_ZOOM скрывается → видны только базовые шары.
   // Это даёт ~80% сокращение draw calls на zoom-out → +20-30 FPS.
-  private bgArchetypeGfx: Phaser.GameObjects.Graphics[] = []
+  bgArchetypeGfx: Phaser.GameObjects.Graphics[] = []
   // Batch-рендер всех 434 BG как точек в одном Graphics — для экстремального zoom (<0.10).
   // Заменяет 434 индивидуальных контейнера → 1 draw call. Не кликабелен (звёздное небо).
-  private bgBatchGfx: Phaser.GameObjects.Graphics | null = null
+  bgBatchGfx: Phaser.GameObjects.Graphics | null = null
   // Контейнеры BG-планет для быстрого toggle interactive по zoom.
   // При zoom < BG_INTERACTIVE_MIN_ZOOM — input.enabled = false для всех (нет hit-test overhead).
-  private bgInteractiveContainers: Phaser.GameObjects.Container[] = []
-  private bgInteractiveEnabled = true
+  bgInteractiveContainers: Phaser.GameObjects.Container[] = []
+  bgInteractiveEnabled = true
   // Линии связи между главными расами + кэш edges для перерисовки при изменении zoom.
-  private mainLinesGfx: Phaser.GameObjects.Graphics | null = null
-  private mainLinesEdges: Array<{
+  mainLinesGfx: Phaser.GameObjects.Graphics | null = null
+  mainLinesEdges: Array<{
     ax: number
     ay: number
     bx: number
     by: number
   }> = []
-  private mainLinesLastZoom = -1
+  mainLinesLastZoom = -1
   // Состояние счётчика тапов на каждую планету. Уникальная анимация срабатывает
   // на первом нажатии после смены/перерыва, потом раз в 2-6 нажатий.
   private planetPressState = new Map<
@@ -388,15 +400,15 @@ export class StarMapScene extends Phaser.Scene {
     this.refineTextureSeeds()
 
     // Starfield — после генерации систем, чтобы кластеризовать звёзды вокруг планет
-    this.setupStarfield()
+    setupStarfield(this, { worldSize: WORLD_SIZE, seed: SEED })
 
-    this.drawLines()
+    drawLines(this, MAIN_RACES)
 
-    for (const sys of this.allSystems) this.renderSystem(sys)
+    for (const sys of this.allSystems) renderSystem(this, sys, MAIN_RACES)
 
     // Batch-рендер всех BG-планет как точек (один Graphics, 1 draw call).
     // Виден при zoom < BG_PLANET_MIN_ZOOM, заменяет 434 индивидуальных контейнера.
-    this.buildBgBatch()
+    buildBgBatch(this)
 
     // Камера: ставим zoom 1.0 и центрируем на HOME (родной планете).
     // Координаты HOME — из planetMap.json, поэтому камера автоматически
@@ -604,7 +616,7 @@ export class StarMapScene extends Phaser.Scene {
         this.mainLinesGfx &&
         Math.abs(zoom - this.mainLinesLastZoom) / Math.max(zoom, 0.001) > 0.02
       ) {
-        this.redrawMainLines()
+        redrawMainLines(this)
       }
 
       // LOD деталей BG-планет: при zoom < BG_DETAIL_MIN_ZOOM скрываем archetype-detail
@@ -663,328 +675,8 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // ============== ФОНЫ ==============
-
-  private setupStarfield() {
-    const bgRng = mulberry32(SEED + 1)
-    const farStars = this.add.graphics()
-    farStars.setDepth(-100)
-    // Дальние звёзды (один Graphics — 1 draw call). Снижено с 5000.
-    for (let i = 0; i < 2000; i++) {
-      const x = (bgRng() - 0.5) * WORLD_SIZE * 1.9
-      const y = (bgRng() - 0.5) * WORLD_SIZE * 1.9
-      const a = 0.15 + bgRng() * 0.4
-      farStars.fillStyle(0xffffff, a)
-      farStars.fillCircle(x, y, 1 * DPR)
-    }
-    // Helper: gauss-распределение от центра одной из переданных планет (radius в DPR-px)
-    const sampleNearPlanetIn = (
-      pool: ReadonlyArray<{ x: number; y: number }>,
-      clusterRadius: number,
-    ): { x: number; y: number } => {
-      const planet = pool[Math.floor(bgRng() * pool.length)]
-      let u = 0,
-        v = 0
-      while (u === 0) u = bgRng()
-      while (v === 0) v = bgRng()
-      const g = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v)
-      const angle = bgRng() * Math.PI * 2
-      const dist = Math.abs(g) * clusterRadius
-      return {
-        x: planet.x + Math.cos(angle) * dist,
-        y: planet.y + Math.sin(angle) * dist,
-      }
-    }
-    const allPlanets = this.allSystems
-    const sampleNearPlanet = (clusterRadius: number) =>
-      sampleNearPlanetIn(allPlanets, clusterRadius)
-
-    // Средние мерцающие — кластеризуются вокруг планет, не рандомно
-    for (let i = 0; i < 200; i++) {
-      const { x, y } = sampleNearPlanet(180 * DPR)
-      const tint = [0xffffff, 0xfff7ed, 0xa5f3fc, 0xfde047, 0xfdba74][
-        Math.floor(bgRng() * 5)
-      ]
-      const radius = (1.2 + bgRng() * 1.4) * DPR
-      const star = this.add.circle(x, y, radius, tint, 0.85)
-      star.setDepth(-90)
-      this.tweens.add({
-        targets: star,
-        alpha: { from: 0.35, to: 1 },
-        duration: 900 + bgRng() * 2200,
-        yoyo: true,
-        repeat: -1,
-        delay: bgRng() * 2500,
-        ease: 'Sine.easeInOut',
-      })
-      // Mid stars видны всегда — это звёздное небо. На сильном отдалении полезно.
-      this.cullableData.push({ obj: star, x, y, r: 4 * DPR })
-    }
-
-    // Sparkle-звёзды теперь создаются в renderSystem/renderBgPoint как
-    // отдельные world-coords Graphics, привязанные к позиции конкретной планеты.
-    // См. createSparkleAt(). Старый блок удалён — sparkle на каждой планете.
-
-    // Близкие крупные с лучами и tween-анимациями. Снижено с 40.
-    for (let i = 0; i < 16; i++) {
-      const x = (bgRng() - 0.5) * WORLD_SIZE * 1.6
-      const y = (bgRng() - 0.5) * WORLD_SIZE * 1.6
-      const color = [0xfff7ed, 0xa5f3fc, 0xfed7aa][Math.floor(bgRng() * 3)]
-      const g = this.add.graphics()
-      g.fillStyle(color, 0.9)
-      g.fillCircle(0, 0, 2.5 * DPR)
-      g.lineStyle(1 * DPR, color, 0.5)
-      g.lineBetween(-6 * DPR, 0, 6 * DPR, 0)
-      g.lineBetween(0, -6 * DPR, 0, 6 * DPR)
-      g.x = x
-      g.y = y
-      g.setDepth(-85)
-      this.tweens.add({
-        targets: g,
-        angle: 360,
-        duration: 30000 + bgRng() * 30000,
-        repeat: -1,
-        ease: 'Linear',
-      })
-      this.tweens.add({
-        targets: g,
-        alpha: { from: 0.6, to: 1 },
-        duration: 2200 + bgRng() * 2000,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut',
-      })
-      this.cullableData.push({ obj: g, x, y, r: 12 * DPR })
-      // Тап по звезде — вспышка + ⭐
-      const starBaseR = 14 * DPR
-      const starHit = new Phaser.Geom.Circle(0, 0, starBaseR)
-      g.setInteractive(starHit, Phaser.Geom.Circle.Contains)
-      let dt = 0,
-        dx = 0,
-        dy = 0
-      g.on('pointerdown', (p: Phaser.Input.Pointer) => {
-        dt = Date.now()
-        dx = p.x
-        dy = p.y
-      })
-      g.on('pointerup', (p: Phaser.Input.Pointer) => {
-        const elapsed = Date.now() - dt
-        const moved = Math.abs(p.x - dx) + Math.abs(p.y - dy)
-        if (elapsed < 300 && moved < 8 * DPR) {
-          this.tapHandledThisFrame = true
-          this.popEmojiAt(x, y, '⭐', g)
-        }
-      })
-      this.mainPlanetHits.push({
-        container: g as unknown as Phaser.GameObjects.Container,
-        baseR: starBaseR,
-        circle: starHit,
-      })
-    }
-  }
-
-  // Туманности удалены — пользователь добавит свои ассеты позже
-
-  // ============== СВЯЗИ И СИСТЕМЫ ==============
-
-  private drawLines() {
-    // Соединяем каждую расу с её K ближайшими соседями ИЗ MAIN_RACES.
-    // Толщина линий компенсирует zoom через redrawMainLines() в update-loop —
-    // при отдалении линии остаются видимыми (плавно растут).
-    const K = 3
-    const drawn = new Set<string>()
-    this.mainLinesEdges = []
-    for (const race of MAIN_RACES) {
-      const others = MAIN_RACES.filter((r) => r.id !== race.id)
-        .map((r) => ({ r, d: Math.hypot(r.x - race.x, r.y - race.y) }))
-        .sort((a, b) => a.d - b.d)
-        .slice(0, K)
-      for (const { r } of others) {
-        const key = race.id < r.id ? `${race.id}|${r.id}` : `${r.id}|${race.id}`
-        if (drawn.has(key)) continue
-        drawn.add(key)
-        this.mainLinesEdges.push({ ax: race.x, ay: race.y, bx: r.x, by: r.y })
-      }
-    }
-    this.mainLinesGfx = this.add.graphics()
-    this.mainLinesGfx.setDepth(-50)
-    this.redrawMainLines() // initial draw
-  }
-
-  // Пере-рисовывает линии связи с толщиной, компенсирующей текущий zoom.
-  // Вызывается из update-loop когда zoom изменился (с throttling).
-  // Цель: линии плавно растут при отдалении камеры, остаются видимыми.
-  private redrawMainLines() {
-    if (!this.mainLinesGfx) return
-    const zoom = this.cameras.main.zoom
-    // Smooth zoom compensation. При zoom=1 → толщина 2*DPR. При zoom=0.05 → ~24*DPR.
-    // sqrt сглаживает рост — иначе линии бы стали гигантскими при сильном отдалении.
-    const zoomComp = 1 / Math.max(0.05, Math.sqrt(zoom))
-    const thickness = 2 * DPR * Math.max(1, zoomComp)
-    const alpha = 0.55
-    this.mainLinesGfx.clear()
-    this.mainLinesGfx.lineStyle(thickness, 0x67e8f9, alpha)
-    for (const e of this.mainLinesEdges) {
-      this.mainLinesGfx.lineBetween(e.ax, e.ay, e.bx, e.by)
-    }
-    this.mainLinesLastZoom = zoom
-  }
-
-  // Batch-рендер всех 434 BG как точек в одном Graphics.
-  // Используется на zoom < BG_PLANET_MIN_ZOOM (звёздное небо). Не кликабелен.
-  // 1 draw call вместо 434 — огромная экономия на сильном отдалении.
-  private buildBgBatch() {
-    const gfx = this.add.graphics()
-    gfx.setDepth(-80)
-    gfx.setVisible(false) // visible toggle через update
-    for (const sys of this.allSystems) {
-      if (!('archetype' in sys)) continue // только BG, не main
-      // Точка цветом sys.color, радиус ~ половине size (silhouette)
-      gfx.fillStyle(sys.color, 0.85)
-      gfx.fillCircle(sys.x, sys.y, sys.size * 0.6)
-    }
-    this.bgBatchGfx = gfx
-  }
-
-  private renderSystem(sys: Race | BgSystem) {
-    const isMain = MAIN_RACES.some((m) => m.id === sys.id)
-    if (isMain) this.renderMainPlanet(sys as Race)
-    else this.renderBgPoint(sys as BgSystem)
-  }
-
-  // Создаёт sparkle-звёздочку (8-конечную) над планетой в world-coords.
-  // Звёздочки НЕ являются child контейнера — это отдельные Graphics с фиксированной
-  // позицией в мире, чтобы LOD-скрытие планеты не убивало sparkle (см. BG_PLANET_MIN_ZOOM).
-  // Между flash'ами alpha=0, активные tweens только на момент мерцания.
-  private createSparkleAt(
-    planetX: number,
-    planetY: number,
-    planetSize: number,
-    rng: () => number,
-  ) {
-    // 70% белый, 30% жёлтый
-    const isYellow = rng() < 0.3
-    const c = isYellow
-      ? [0xfde047, 0xfbbf24, 0xfacc15][Math.floor(rng() * 3)]
-      : [0xffffff, 0xfff7ed, 0xfafafa][Math.floor(rng() * 3)]
-    const baseR = (4 + rng() * 4) * DPR
-
-    // 8-конечная sparkle-звезда: 4 длинных луча по осям + 4 коротких по диагонали.
-    const longR = baseR
-    const shortR = baseR * 0.4
-    const innerR = baseR * 0.16
-    const points: Phaser.Math.Vector2[] = []
-    for (let p = 0; p < 16; p++) {
-      const a = (p * Math.PI) / 8 - Math.PI / 2
-      let r: number
-      if (p % 2 === 1) r = innerR
-      else r = p % 4 === 0 ? longR : shortR
-      points.push(new Phaser.Math.Vector2(Math.cos(a) * r, Math.sin(a) * r))
-    }
-
-    const star = this.add.graphics()
-    star.setDepth(-87)
-    star.fillStyle(c, 1)
-    star.fillPoints(points, true)
-    // Position: случайная точка ВНУТРИ диска планеты (равномерное распределение по площади
-    // через sqrt(rng) для радиуса). Sparkle остаётся в world-coords — при LOD-скрытии
-    // планеты-контейнера она остаётся видна как звезда.
-    const ang = rng() * Math.PI * 2
-    const rad = Math.sqrt(rng()) * planetSize * 0.7
-    star.x = planetX + Math.cos(ang) * rad
-    star.y = planetY + Math.sin(ang) * rad
-    star.setAlpha(0)
-    this.zoomCompStars.push({ obj: star, baseScale: 1 })
-
-    // Flash в редком ритме. 3 типа поведения (rotate/fade/spin) для разнообразия.
-    const flashType: 'rotate' | 'fade' | 'spin' = (() => {
-      const r = rng()
-      if (r < 0.45) return 'rotate'
-      if (r < 0.85) return 'fade'
-      return 'spin'
-    })()
-
-    const triggerFlash = () => {
-      if (!star.active) return
-      if (flashType === 'rotate') {
-        star.setAngle(Math.random() * 360)
-        star.setAlpha(0)
-        const dur = 600 + Math.random() * 500
-        this.tweens.add({
-          targets: star,
-          alpha: 1,
-          duration: dur * 0.4,
-          ease: 'Sine.easeOut',
-          onComplete: () => {
-            this.tweens.add({
-              targets: star,
-              alpha: 0,
-              duration: dur * 0.6,
-              ease: 'Sine.easeIn',
-            })
-          },
-        })
-        this.tweens.add({
-          targets: star,
-          angle: star.angle + 180,
-          duration: dur,
-          ease: 'Linear',
-        })
-      } else if (flashType === 'fade') {
-        star.setAlpha(0)
-        const dur = 900 + Math.random() * 800
-        this.tweens.add({
-          targets: star,
-          alpha: 1,
-          duration: dur * 0.4,
-          ease: 'Sine.easeOut',
-          onComplete: () => {
-            this.tweens.add({
-              targets: star,
-              alpha: 0,
-              duration: dur * 0.6,
-              ease: 'Sine.easeIn',
-            })
-          },
-        })
-      } else {
-        star.setAngle(Math.random() * 360)
-        star.setAlpha(0)
-        const dur = 2000 + Math.random() * 1000
-        this.tweens.add({
-          targets: star,
-          alpha: 1,
-          duration: dur * 0.3,
-          ease: 'Sine.easeOut',
-          onComplete: () => {
-            this.tweens.add({
-              targets: star,
-              alpha: 0,
-              duration: dur * 0.7,
-              ease: 'Sine.easeIn',
-            })
-          },
-        })
-        this.tweens.add({
-          targets: star,
-          angle: star.angle + 360,
-          duration: dur,
-          ease: 'Linear',
-        })
-      }
-    }
-
-    const scheduleNext = () => {
-      const wait = 25000 + Math.random() * 35000
-      this.time.delayedCall(wait, () => {
-        triggerFlash()
-        scheduleNext()
-      })
-    }
-    this.time.delayedCall(rng() * 30000, () => {
-      triggerFlash()
-      scheduleNext()
-    })
-  }
+  // setupStarfield/drawLines/redrawMainLines/buildBgBatch/renderSystem/createSparkleAt
+  // — extracted в './starmap/starfield.ts' (Phase 20-04, Wave 4).
 
   // ============== УНИКАЛЬНЫЕ АНИМАЦИИ ПЛАНЕТ ==============
 
@@ -2077,10 +1769,12 @@ export class StarMapScene extends Phaser.Scene {
   // 94. compWindRibbons — extracted в effects/anim/shared/compWindRibbons.ts (Phase 20-02).
   // 95. compWreckageOrbit — extracted в effects/anim/shared/compWreckageOrbit.ts (Phase 20-02).
 
-  private renderMainPlanet(sys: Race) {
+  // Phase 20-04 (Wave 4): package-public — вызывается из starfield.ts (renderSystem dispatcher).
+  renderMainPlanet(sys: Race) {
     // Sparkle над планетой — один на каждую главную расу.
     // Создаётся в world coords (НЕ child container), чтобы не зависеть от LOD-скрытия.
-    this.createSparkleAt(
+    createSparkleAt(
+      this,
       sys.x,
       sys.y,
       sys.size,
@@ -2642,7 +2336,8 @@ export class StarMapScene extends Phaser.Scene {
     this.bgInteractiveContainers.push(container)
   }
 
-  private renderBgPoint(sys: BgSystem) {
+  // Phase 20-04 (Wave 4): package-public — вызывается из starfield.ts (renderSystem dispatcher).
+  renderBgPoint(sys: BgSystem) {
     // Контейнер для всей планеты — позволяет idle-анимации (вращение, дыхание)
     const container = this.add.container(sys.x, sys.y)
     const rng = mulberry32(sys.rngSeed)
@@ -2650,7 +2345,13 @@ export class StarMapScene extends Phaser.Scene {
     // Sparkle над планетой — у ~40% фоновых планет.
     // Создаётся в world coords (НЕ child container), чтобы не исчезать при LOD-скрытии планеты.
     if (rng() < 0.4) {
-      this.createSparkleAt(sys.x, sys.y, sys.size, mulberry32(sys.rngSeed + 17))
+      createSparkleAt(
+        this,
+        sys.x,
+        sys.y,
+        sys.size,
+        mulberry32(sys.rngSeed + 17),
+      )
     }
 
     // ── Разделение на 2 Graphics для LOD ──
@@ -4386,7 +4087,8 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // Лёгкая реакция на тап по второстепенному объекту (звезда, лягушка-спутник)
-  private popEmojiAt(
+  // Phase 20-04 (Wave 4): package-public — вызывается из starfield.ts (free function).
+  popEmojiAt(
     x: number,
     y: number,
     emoji: string,
