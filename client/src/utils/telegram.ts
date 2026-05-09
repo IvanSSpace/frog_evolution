@@ -31,11 +31,15 @@ export function initTelegram(): void {
 
 // ============== HAPTIC FEEDBACK ==============
 
-export function hapticImpact(style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft' = 'light'): void {
+export function hapticImpact(
+  style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft' = 'light',
+): void {
   getTelegramWebApp()?.HapticFeedback?.impactOccurred(style)
 }
 
-export function hapticNotification(type: 'error' | 'success' | 'warning'): void {
+export function hapticNotification(
+  type: 'error' | 'success' | 'warning',
+): void {
   getTelegramWebApp()?.HapticFeedback?.notificationOccurred(type)
 }
 

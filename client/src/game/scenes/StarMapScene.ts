@@ -1,17 +1,21 @@
 import Phaser from 'phaser'
 import { eventBus } from '../../store/eventBus'
 import { useGameStore } from '../../store/gameStore'
-import { attachNebulaBackground, type NebulaBackgroundHandle } from '../effects/NebulaBackground'
+import {
+  attachNebulaBackground,
+  type NebulaBackgroundHandle,
+} from '../effects/NebulaBackground'
 import { ShipSprite } from '../effects/ShipSprite'
 import { violetRing } from '../effects/presets'
 import planetMap from '../data/planetMap.json'
-import { findPlanetById } from '../data/missionConfig'
+import { findPlanetById, DAILY_CAP } from '../data/missionConfig'
 import type { ShipState } from '../../store/cosmic/types'
 import { deriveModulations } from '../../audio/planetVoice'
 import {
   pickColor as sharedPickColor,
   pickEase as sharedPickEase,
 } from '../effects/anim/shared/sharedHelpers'
+import type { AnimSys } from '../effects/anim/shared/types'
 import {
   compRing,
   compSparkle,
@@ -45,7 +49,7 @@ const TOTAL_INHABITED = 67
 // Спутники появляются плавным fade-in между MOON_FADE_START и MOON_FADE_END.
 // Ниже START — alpha 0, выше END — alpha 1, между — линейный переход.
 // Цель: спутники видны только при близком zoom (>0.85), не грузят сцену при отдалении.
-const MOON_FADE_START = 0.70
+const MOON_FADE_START = 0.7
 const MOON_FADE_END = 0.85
 // Минимальный zoom, при котором BG-контейнеры (с детальным рендером + interactivity)
 // показываются. Ниже — batch-точки (звёздное небо, 1 draw call). Не кликабельны.
@@ -53,11 +57,25 @@ const BG_PLANET_MIN_ZOOM = 0.08
 // Минимальный zoom, при котором рисуется ДЕТАЛИЗАЦИЯ BG-планет
 // (archetype-specific узоры + universal modifiers).
 // 0.10 — детали видны почти всегда. Ниже порога вступает batch-рендер (звёздное небо).
-const BG_DETAIL_MIN_ZOOM = 0.10
+const BG_DETAIL_MIN_ZOOM = 0.1
 // Минимальный zoom, при котором планеты (BG + main) кликабельны.
 // Ниже — interactive отключён (планеты выглядят как точки, клики бессмысленны).
 // Это снимает hit-test overhead с pointer events во время drag/pinch.
 const BG_INTERACTIVE_MIN_ZOOM = 0.41
+
+// Shape of entries in planetMap.json — superset of Race/BgSystem fields.
+interface PlanetMapEntry {
+  kind: string
+  id: string
+  name: string
+  x: number
+  y: number
+  type: string
+  color: number
+  accent: number
+  size: number
+  [key: string]: unknown
+}
 
 interface Race {
   id: string
@@ -73,9 +91,9 @@ interface Race {
 // MAIN_RACES читаются из planetMap.json — источник истины для всех 16 главных рас.
 // Координаты/размеры в JSON хранятся в DPR=1 base, в runtime умножаются на real DPR.
 // Чтобы изменить позицию/цвет/размер главной расы — правь planetMap.json напрямую.
-const MAIN_RACES: Race[] = (planetMap.planets as Array<any>)
-  .filter(p => p.kind === 'main')
-  .map(p => ({
+const MAIN_RACES: Race[] = (planetMap.planets as PlanetMapEntry[])
+  .filter((p) => p.kind === 'main')
+  .map((p) => ({
     id: p.id,
     name: p.name,
     x: p.x * DPR,
@@ -91,16 +109,29 @@ const MAIN_RACES: Race[] = (planetMap.planets as Array<any>)
 // получает уникальное стабильное имя.
 
 const TYPE_LABELS: Record<string, string> = {
-  home: 'Родина', crystal: 'Кристаллы', rocky: 'Камень', ancient: 'Древние',
-  mystic: 'Провидцы', organic: 'Органики', forge: 'Кузнецы', military: 'Военные',
-  destroyed: 'Уничтожено', crystal_bio: 'Кристалло-биоты', mechano: 'Механо',
-  energy: 'Энергеты', mist: 'Туман', aquatic: 'Водные', shadow: 'Тени', aerial: 'Воздушные',
+  home: 'Родина',
+  crystal: 'Кристаллы',
+  rocky: 'Камень',
+  ancient: 'Древние',
+  mystic: 'Провидцы',
+  organic: 'Органики',
+  forge: 'Кузнецы',
+  military: 'Военные',
+  destroyed: 'Уничтожено',
+  crystal_bio: 'Кристалло-биоты',
+  mechano: 'Механо',
+  energy: 'Энергеты',
+  mist: 'Туман',
+  aquatic: 'Водные',
+  shadow: 'Тени',
+  aerial: 'Воздушные',
 }
 
 function mulberry32(seed: number) {
   let a = seed >>> 0
   return () => {
-    a |= 0; a = (a + 0x6D2B79F5) | 0
+    a |= 0
+    a = (a + 0x6d2b79f5) | 0
     let t = a
     t = Math.imul(t ^ (t >>> 15), t | 1)
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
@@ -112,18 +143,18 @@ const SEED = 19450707
 
 // Архетипы планет — визуальная типизация. Каждая фоновая получает один.
 type Archetype =
-  | 'gas_giant'    // газовый гигант (большой, полосы)
-  | 'gas_ringed'   // газовый с кольцом (редкий, очень большой)
-  | 'ice'          // ледяной (белый+голубой, блики)
-  | 'ocean'        // водный (голубой+белый облака)
-  | 'desert'       // пустынный (жёлто-оранжевый)
-  | 'lava'         // лавовый (красный+чёрный, трещины)
-  | 'forest'       // лесной/живой (зелёный)
-  | 'mineral'      // рудный (металлик)
-  | 'dead'         // мёртвый (серый, кратеры)
-  | 'toxic'        // токсичный (фиолетовый, ядовитый)
-  | 'plasma'       // плазменный (горячий, лучи)
-  | 'binary'       // двойной шар (два сросшихся)
+  | 'gas_giant' // газовый гигант (большой, полосы)
+  | 'gas_ringed' // газовый с кольцом (редкий, очень большой)
+  | 'ice' // ледяной (белый+голубой, блики)
+  | 'ocean' // водный (голубой+белый облака)
+  | 'desert' // пустынный (жёлто-оранжевый)
+  | 'lava' // лавовый (красный+чёрный, трещины)
+  | 'forest' // лесной/живой (зелёный)
+  | 'mineral' // рудный (металлик)
+  | 'dead' // мёртвый (серый, кратеры)
+  | 'toxic' // токсичный (фиолетовый, ядовитый)
+  | 'plasma' // плазменный (горячий, лучи)
+  | 'binary' // двойной шар (два сросшихся)
 
 interface BgSystem {
   id: string
@@ -147,22 +178,23 @@ interface BgSystem {
 // Базовые HSL hue по архетипам (диапазон). Цвет генерируется из этого
 // + рандомное смещение, чтобы каждая планета имела УНИКАЛЬНЫЙ оттенок.
 const ARCHETYPE_HUES: Record<Archetype, [number, number]> = {
-  gas_giant:  [25, 55],    // жёлто-оранжевый
-  gas_ringed: [260, 295],  // фиолетовый
-  ice:        [180, 220],  // голубой
-  ocean:      [200, 230],  // синий
-  desert:     [30, 50],    // песочный
-  lava:       [0, 25],     // красно-оранжевый
-  forest:     [90, 140],   // зелёный
-  mineral:    [200, 280],  // серо-синий-фиолет
-  dead:       [200, 240],  // холодный серый
-  toxic:      [80, 130],   // ядовито-зелёный
-  plasma:     [20, 50],    // оранжево-жёлтый
-  binary:     [0, 360],    // любой (две планеты разных цветов)
+  gas_giant: [25, 55], // жёлто-оранжевый
+  gas_ringed: [260, 295], // фиолетовый
+  ice: [180, 220], // голубой
+  ocean: [200, 230], // синий
+  desert: [30, 50], // песочный
+  lava: [0, 25], // красно-оранжевый
+  forest: [90, 140], // зелёный
+  mineral: [200, 280], // серо-синий-фиолет
+  dead: [200, 240], // холодный серый
+  toxic: [80, 130], // ядовито-зелёный
+  plasma: [20, 50], // оранжево-жёлтый
+  binary: [0, 360], // любой (две планеты разных цветов)
 }
 
 function hslToHex(h: number, s: number, l: number): number {
-  s /= 100; l /= 100
+  s /= 100
+  l /= 100
   const k = (n: number) => (n + h / 30) % 12
   const a = s * Math.min(l, 1 - l)
   const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1))
@@ -172,7 +204,10 @@ function hslToHex(h: number, s: number, l: number): number {
   return (r << 16) | (g << 8) | b
 }
 
-function generatePalette(archetype: Archetype, rng: () => number): { color: number; accent: number } {
+function generatePalette(
+  archetype: Archetype,
+  rng: () => number,
+): { color: number; accent: number } {
   const [hMin, hMax] = ARCHETYPE_HUES[archetype]
   const h = hMin + rng() * (hMax - hMin)
   const s = 55 + rng() * 35
@@ -197,10 +232,20 @@ export class StarMapScene extends Phaser.Scene {
   private selectionMarker: Phaser.GameObjects.Graphics | null = null
   // Список объектов для manual culling (Phaser не делает frustum culling для Container).
   // lodMinZoom: если zoom < lodMinZoom → объект скрыт независимо от viewport (LOD).
-  private cullableData: Array<{ obj: any; x: number; y: number; r: number; lodMinZoom?: number }> = []
+  private cullableData: Array<{
+    obj: Phaser.GameObjects.GameObject
+    x: number
+    y: number
+    r: number
+    lodMinZoom?: number
+  }> = []
   private cullTickCounter = 0
   // Адаптивный hit-area для главных планет (тап по ним удобен на любом зуме)
-  private mainPlanetHits: Array<{ container: Phaser.GameObjects.Container; baseR: number; circle: Phaser.Geom.Circle }> = []
+  private mainPlanetHits: Array<{
+    container: Phaser.GameObjects.Container
+    baseR: number
+    circle: Phaser.Geom.Circle
+  }> = []
   // Целевая позиция центра камеры в world coords. Управляем через setCameraCenter().
   // Phaser scroll выводится из этой позиции через centerOn() каждый раз.
   private camCenterX = 0
@@ -213,9 +258,17 @@ export class StarMapScene extends Phaser.Scene {
   private bgNamePopupTimer?: Phaser.Time.TimerEvent
   private nebula?: NebulaBackgroundHandle
   // Звёзды-ромбы, которые компенсируют zoom (видны и при максимальном отдалении)
-  private zoomCompStars: Array<{ obj: Phaser.GameObjects.Graphics; baseScale: number }> = []
+  private zoomCompStars: Array<{
+    obj: Phaser.GameObjects.Graphics
+    baseScale: number
+  }> = []
   // Спутники планет — рендерятся только при zoom >= MOON_MIN_ZOOM, иначе скрыты.
-  private moons: Array<{ obj: Phaser.GameObjects.Arc; angle: number; radius: number; speed: number }> = []
+  private moons: Array<{
+    obj: Phaser.GameObjects.Arc
+    angle: number
+    radius: number
+    speed: number
+  }> = []
   // Детализация BG-планет (archetype-specific графика + universal modifiers).
   // При zoom < BG_DETAIL_MIN_ZOOM скрывается → видны только базовые шары.
   // Это даёт ~80% сокращение draw calls на zoom-out → +20-30 FPS.
@@ -229,11 +282,19 @@ export class StarMapScene extends Phaser.Scene {
   private bgInteractiveEnabled = true
   // Линии связи между главными расами + кэш edges для перерисовки при изменении zoom.
   private mainLinesGfx: Phaser.GameObjects.Graphics | null = null
-  private mainLinesEdges: Array<{ ax: number; ay: number; bx: number; by: number }> = []
+  private mainLinesEdges: Array<{
+    ax: number
+    ay: number
+    bx: number
+    by: number
+  }> = []
   private mainLinesLastZoom = -1
   // Состояние счётчика тапов на каждую планету. Уникальная анимация срабатывает
   // на первом нажатии после смены/перерыва, потом раз в 2-6 нажатий.
-  private planetPressState = new Map<string, { count: number; threshold: number }>()
+  private planetPressState = new Map<
+    string,
+    { count: number; threshold: number }
+  >()
   private currentPressedPlanetId: string | null = null
   // Флаг: текущий pointerup перехвачен interactive объектом (планетой/звездой).
   // Используется глобальным pointerup'ом для определения «тап в пустое место».
@@ -244,8 +305,15 @@ export class StarMapScene extends Phaser.Scene {
   private shipSprite: ShipSprite | null = null
   private shipUnsubscribe: (() => void) | null = null
   private lastShipStateSig = ''
+  private followingShip = false
 
-  constructor() { super({ key: 'StarMapScene' }) }
+  constructor() {
+    super({ key: 'StarMapScene' })
+  }
+
+  preload() {
+    this.load.image('spaceShip', '/spaceShip.png')
+  }
 
   create() {
     this.cameras.main.setBackgroundColor(0x000000)
@@ -264,7 +332,8 @@ export class StarMapScene extends Phaser.Scene {
         y: 0,
       })
       const shader = this.nebula.shader
-      if (shader && typeof shader.setDepth === 'function') shader.setDepth(-9000)
+      if (shader && typeof shader.setDepth === 'function')
+        shader.setDepth(-9000)
     } catch (err) {
       console.warn('[NebulaBackground] failed to attach:', err)
     }
@@ -273,9 +342,9 @@ export class StarMapScene extends Phaser.Scene {
 
     // Источник истины для всех планет — planetMap.json. Координаты/размеры в DPR-units
     // (DPR=1 base) → умножаем на real DPR в runtime.
-    const bg: BgSystem[] = (planetMap.planets as Array<any>)
-      .filter(p => p.kind === 'bg')
-      .map(p => ({
+    const bg: BgSystem[] = (planetMap.planets as PlanetMapEntry[])
+      .filter((p) => p.kind === 'bg')
+      .map((p) => ({
         id: p.id,
         name: p.name,
         x: p.x * DPR,
@@ -307,7 +376,7 @@ export class StarMapScene extends Phaser.Scene {
     // (0xc2b2ae3d) чтобы не пересекаться с anim (0x9e3779b9) и texture (0x85ebca6b).
     this.refineTextureSeeds()
     this.refineAnimSeeds()
-    this.refineSoundSeeds()  // Phase 8
+    this.refineSoundSeeds() // Phase 8
     // Phase 8 plan 06: anim+sound refine могут изменить rngSeed → редко создают
     // новую texture коллизию (наблюдение: 1 collision из 984 после первого прогона).
     // Второй проход texture refine стабилизирует pipeline до 984/984 unique.
@@ -330,7 +399,7 @@ export class StarMapScene extends Phaser.Scene {
     // Камера: ставим zoom 1.0 и центрируем на HOME (родной планете).
     // Координаты HOME — из planetMap.json, поэтому камера автоматически
     // подстраивается если HOME перемещён в JSON.
-    const home = MAIN_RACES.find(r => r.id === 'home') ?? MAIN_RACES[0]
+    const home = MAIN_RACES.find((r) => r.id === 'home') ?? MAIN_RACES[0]
     this.cameras.main.setZoom(1.0)
     this.setCameraCenter(home.x, home.y)
     this.updatePlanetHitAreas()
@@ -338,11 +407,13 @@ export class StarMapScene extends Phaser.Scene {
     this.setupControls()
 
     // Сброс выбранной планеты при закрытии popover извне
-    eventBus.on('starmap:popover-close', () => { this.selectedMainRaceId = null })
+    eventBus.on('starmap:popover-close', () => {
+      this.selectedMainRaceId = null
+    })
 
     // Центрирование камеры на HOME с плавным tween (повторный клик по кнопке "Космос")
     eventBus.on('starmap:centerHome', () => {
-      const homeRace = MAIN_RACES.find(r => r.id === 'home') ?? MAIN_RACES[0]
+      const homeRace = MAIN_RACES.find((r) => r.id === 'home') ?? MAIN_RACES[0]
       const cam = this.cameras.main
       // Плавный zoom-back до 1.0 + центрирование на HOME
       this.tweens.add({
@@ -353,7 +424,7 @@ export class StarMapScene extends Phaser.Scene {
         duration: 700,
         ease: 'Cubic.easeInOut',
         onUpdate: (tw) => {
-          const t: any = tw.targets[0]
+          const t = tw.targets[0] as { x: number; y: number; z: number }
           cam.setZoom(t.z)
           this.setCameraCenter(t.x, t.y)
           // Hit-areas зависят от zoom — обновляем по ходу tween, иначе после
@@ -390,8 +461,12 @@ export class StarMapScene extends Phaser.Scene {
     this.setupShipSprite()
 
     // Phase 16: cleanup на shutdown — destroy ship + unsubscribe store.
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardownShipSprite())
-    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.teardownShipSprite())
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
+      this.teardownShipSprite(),
+    )
+    this.events.once(Phaser.Scenes.Events.DESTROY, () =>
+      this.teardownShipSprite(),
+    )
   }
 
   /** Phase 16: Auto-spawn ship и подписка на cosmicSlice.ship. */
@@ -399,14 +474,15 @@ export class StarMapScene extends Phaser.Scene {
     // Гарантируем что ship существует (auto-spawn at home при первом open).
     useGameStore.getState().ensureShipExists()
     const initialShip = useGameStore.getState().ship
-    const homeId = initialShip?.state === 'docked' ? initialShip.planetId : 'home'
+    const homeId =
+      initialShip?.state === 'docked' ? initialShip.planetId : 'home'
     const homePlanet = findPlanetById(homeId) ?? findPlanetById('home')
     if (!homePlanet) return
 
     // planetMap.json — DPR=1 base, scene умножает на DPR. Применяем тот же multiplier.
     this.shipSprite = new ShipSprite({
       scene: this,
-      parent: null,  // scene root; нет worldContainer в этой scene
+      parent: null, // scene root; нет worldContainer в этой scene
       initialPosition: { x: homePlanet.x * DPR, y: homePlanet.y * DPR },
       depth: 1500,
       onPositionUpdate: (x, y) => {
@@ -422,7 +498,24 @@ export class StarMapScene extends Phaser.Scene {
     // Subscribe — реагируем на изменения ship через JSON-сигнатуру dedup.
     this.shipUnsubscribe = useGameStore.subscribe((state) => {
       this.applyShipState(state.ship)
+      // Disable follow when ship docks
+      if (state.ship?.state !== 'transit' && this.followingShip) {
+        this.followingShip = false
+        eventBus.emit('starmap:follow-changed', { following: false })
+      }
     })
+
+    // React button → toggle follow mode
+    const onFollowShip = ({ enable }: { enable: boolean }) => {
+      this.followingShip = enable
+    }
+    eventBus.on('starmap:follow-ship', onFollowShip)
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
+      eventBus.off('starmap:follow-ship', onFollowShip),
+    )
+    this.events.once(Phaser.Scenes.Events.DESTROY, () =>
+      eventBus.off('starmap:follow-ship', onFollowShip),
+    )
   }
 
   private teardownShipSprite() {
@@ -466,6 +559,7 @@ export class StarMapScene extends Phaser.Scene {
           startedAt: ship.startedAt,
           arrivesAt: ship.arrivesAt,
         },
+        (tp.size ?? 60) * DPR,
         onArrive,
       )
     }
@@ -493,10 +587,13 @@ export class StarMapScene extends Phaser.Scene {
 
   // ЕДИНАЯ ТОЧКА управления камерой: все компоненты вызывают это.
   // Возвращает true если значение упёрлось в границу (для обнуления velocity).
-  private setCameraCenter(targetX: number, targetY: number): { hitX: boolean; hitY: boolean } {
+  private setCameraCenter(
+    targetX: number,
+    targetY: number,
+  ): { hitX: boolean; hitY: boolean } {
     const cam = this.cameras.main
-    const halfViewW = (cam.width / cam.zoom) / 2
-    const halfViewH = (cam.height / cam.zoom) / 2
+    const halfViewW = cam.width / cam.zoom / 2
+    const halfViewH = cam.height / cam.zoom / 2
     const boundHalfW = Math.max(WORLD_SIZE - halfViewW, 0)
     const boundHalfH = Math.max(WORLD_SIZE - halfViewH, 0)
     const clampedX = Math.max(-boundHalfW, Math.min(boundHalfW, targetX))
@@ -508,7 +605,6 @@ export class StarMapScene extends Phaser.Scene {
     cam.centerOn(clampedX, clampedY)
     return { hitX, hitY }
   }
-
 
   // Hit-areas обновляются throttled — не критично для визуала
   private hitAreasScheduled = false
@@ -543,9 +639,11 @@ export class StarMapScene extends Phaser.Scene {
 
       // Spike-детектор: лог в консоль если кадр > 50ms (FPS < 20) — для диагностики лагов.
       if (dt > 50) {
-        const visibleNow = this.cullableData.filter(c => c.obj.visible).length
+        const visibleNow = this.cullableData.filter((c) => c.obj.visible).length
         // eslint-disable-next-line no-console
-        console.warn(`[StarMap spike] frame=${dt.toFixed(1)}ms zoom=${cam.zoom.toFixed(3)} visible=${visibleNow}/${this.cullableData.length} tweens=${this.tweens.getTweens().length}`)
+        console.warn(
+          `[StarMap spike] frame=${dt.toFixed(1)}ms zoom=${cam.zoom.toFixed(3)} visible=${visibleNow}/${this.cullableData.length} tweens=${this.tweens.getTweens().length}`,
+        )
       }
 
       // Culling tick — каждые 6 кадров
@@ -566,9 +664,12 @@ export class StarMapScene extends Phaser.Scene {
           // не нужны — превращаются в шум, плюс одновременное setVisible(true)
           // при возврате zoom давало FPS-spike.
           const lodOk = c.lodMinZoom === undefined || curZoom >= c.lodMinZoom
-          const inView = lodOk &&
-            c.x + c.r > left && c.x - c.r < right &&
-            c.y + c.r > top && c.y - c.r < bottom
+          const inView =
+            lodOk &&
+            c.x + c.r > left &&
+            c.x - c.r < right &&
+            c.y + c.r > top &&
+            c.y - c.r < bottom
           if (c.obj.visible !== inView) c.obj.setVisible(inView)
           if (inView) visibleCount++
         }
@@ -589,7 +690,10 @@ export class StarMapScene extends Phaser.Scene {
 
       // Линии связи между главными расами: re-draw с новой толщиной если zoom
       // изменился заметно (>2%). Плавный рост видимости при отдалении.
-      if (this.mainLinesGfx && Math.abs(zoom - this.mainLinesLastZoom) / Math.max(zoom, 0.001) > 0.02) {
+      if (
+        this.mainLinesGfx &&
+        Math.abs(zoom - this.mainLinesLastZoom) / Math.max(zoom, 0.001) > 0.02
+      ) {
         this.redrawMainLines()
       }
 
@@ -597,7 +701,10 @@ export class StarMapScene extends Phaser.Scene {
       // Graphics. Видны только базовые шары → ~80% меньше draw calls на zoom-out.
       const detailVisible = zoom >= BG_DETAIL_MIN_ZOOM
       // Update только если состояние изменилось (раз в zoom-переход, не каждый кадр)
-      if (this.bgArchetypeGfx.length > 0 && this.bgArchetypeGfx[0].visible !== detailVisible) {
+      if (
+        this.bgArchetypeGfx.length > 0 &&
+        this.bgArchetypeGfx[0].visible !== detailVisible
+      ) {
         for (const gd of this.bgArchetypeGfx) gd.setVisible(detailVisible)
       }
 
@@ -622,7 +729,8 @@ export class StarMapScene extends Phaser.Scene {
       // alpha 0 при zoom < 0.45, alpha 1 при zoom > 0.55 — плавный crossfade.
       const moonAlpha = Phaser.Math.Clamp(
         (zoom - MOON_FADE_START) / (MOON_FADE_END - MOON_FADE_START),
-        0, 1,
+        0,
+        1,
       )
       const moonsActive = moonAlpha > 0.001
       const dtSec = dt / 1000
@@ -664,7 +772,8 @@ export class StarMapScene extends Phaser.Scene {
       clusterRadius: number,
     ): { x: number; y: number } => {
       const planet = pool[Math.floor(bgRng() * pool.length)]
-      let u = 0, v = 0
+      let u = 0,
+        v = 0
       while (u === 0) u = bgRng()
       while (v === 0) v = bgRng()
       const g = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v)
@@ -676,12 +785,15 @@ export class StarMapScene extends Phaser.Scene {
       }
     }
     const allPlanets = this.allSystems
-    const sampleNearPlanet = (clusterRadius: number) => sampleNearPlanetIn(allPlanets, clusterRadius)
+    const sampleNearPlanet = (clusterRadius: number) =>
+      sampleNearPlanetIn(allPlanets, clusterRadius)
 
     // Средние мерцающие — кластеризуются вокруг планет, не рандомно
     for (let i = 0; i < 200; i++) {
       const { x, y } = sampleNearPlanet(180 * DPR)
-      const tint = [0xffffff, 0xfff7ed, 0xa5f3fc, 0xfde047, 0xfdba74][Math.floor(bgRng() * 5)]
+      const tint = [0xffffff, 0xfff7ed, 0xa5f3fc, 0xfde047, 0xfdba74][
+        Math.floor(bgRng() * 5)
+      ]
       const radius = (1.2 + bgRng() * 1.4) * DPR
       const star = this.add.circle(x, y, radius, tint, 0.85)
       star.setDepth(-90)
@@ -708,27 +820,55 @@ export class StarMapScene extends Phaser.Scene {
       const y = (bgRng() - 0.5) * WORLD_SIZE * 1.6
       const color = [0xfff7ed, 0xa5f3fc, 0xfed7aa][Math.floor(bgRng() * 3)]
       const g = this.add.graphics()
-      g.fillStyle(color, 0.9); g.fillCircle(0, 0, 2.5 * DPR)
+      g.fillStyle(color, 0.9)
+      g.fillCircle(0, 0, 2.5 * DPR)
       g.lineStyle(1 * DPR, color, 0.5)
       g.lineBetween(-6 * DPR, 0, 6 * DPR, 0)
       g.lineBetween(0, -6 * DPR, 0, 6 * DPR)
-      g.x = x; g.y = y
+      g.x = x
+      g.y = y
       g.setDepth(-85)
-      this.tweens.add({ targets: g, angle: 360, duration: 30000 + bgRng() * 30000, repeat: -1, ease: 'Linear' })
-      this.tweens.add({ targets: g, alpha: { from: 0.6, to: 1 }, duration: 2200 + bgRng() * 2000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      this.tweens.add({
+        targets: g,
+        angle: 360,
+        duration: 30000 + bgRng() * 30000,
+        repeat: -1,
+        ease: 'Linear',
+      })
+      this.tweens.add({
+        targets: g,
+        alpha: { from: 0.6, to: 1 },
+        duration: 2200 + bgRng() * 2000,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      })
       this.cullableData.push({ obj: g, x, y, r: 12 * DPR })
       // Тап по звезде — вспышка + ⭐
       const starBaseR = 14 * DPR
       const starHit = new Phaser.Geom.Circle(0, 0, starBaseR)
       g.setInteractive(starHit, Phaser.Geom.Circle.Contains)
-      let dt = 0, dx = 0, dy = 0
-      g.on('pointerdown', (p: Phaser.Input.Pointer) => { dt = Date.now(); dx = p.x; dy = p.y })
+      let dt = 0,
+        dx = 0,
+        dy = 0
+      g.on('pointerdown', (p: Phaser.Input.Pointer) => {
+        dt = Date.now()
+        dx = p.x
+        dy = p.y
+      })
       g.on('pointerup', (p: Phaser.Input.Pointer) => {
         const elapsed = Date.now() - dt
         const moved = Math.abs(p.x - dx) + Math.abs(p.y - dy)
-        if (elapsed < 300 && moved < 8 * DPR) { this.tapHandledThisFrame = true; this.popEmojiAt(x, y, '⭐', g) }
+        if (elapsed < 300 && moved < 8 * DPR) {
+          this.tapHandledThisFrame = true
+          this.popEmojiAt(x, y, '⭐', g)
+        }
       })
-      this.mainPlanetHits.push({ container: g as any, baseR: starBaseR, circle: starHit })
+      this.mainPlanetHits.push({
+        container: g as unknown as Phaser.GameObjects.Container,
+        baseR: starBaseR,
+        circle: starHit,
+      })
     }
   }
 
@@ -744,9 +884,8 @@ export class StarMapScene extends Phaser.Scene {
     const drawn = new Set<string>()
     this.mainLinesEdges = []
     for (const race of MAIN_RACES) {
-      const others = MAIN_RACES
-        .filter(r => r.id !== race.id)
-        .map(r => ({ r, d: Math.hypot(r.x - race.x, r.y - race.y) }))
+      const others = MAIN_RACES.filter((r) => r.id !== race.id)
+        .map((r) => ({ r, d: Math.hypot(r.x - race.x, r.y - race.y) }))
         .sort((a, b) => a.d - b.d)
         .slice(0, K)
       for (const { r } of others) {
@@ -797,7 +936,7 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   private renderSystem(sys: Race | BgSystem) {
-    const isMain = MAIN_RACES.some(m => m.id === sys.id)
+    const isMain = MAIN_RACES.some((m) => m.id === sys.id)
     if (isMain) this.renderMainPlanet(sys as Race)
     else this.renderBgPoint(sys as BgSystem)
   }
@@ -806,12 +945,17 @@ export class StarMapScene extends Phaser.Scene {
   // Звёздочки НЕ являются child контейнера — это отдельные Graphics с фиксированной
   // позицией в мире, чтобы LOD-скрытие планеты не убивало sparkle (см. BG_PLANET_MIN_ZOOM).
   // Между flash'ами alpha=0, активные tweens только на момент мерцания.
-  private createSparkleAt(planetX: number, planetY: number, planetSize: number, rng: () => number) {
+  private createSparkleAt(
+    planetX: number,
+    planetY: number,
+    planetSize: number,
+    rng: () => number,
+  ) {
     // 70% белый, 30% жёлтый
     const isYellow = rng() < 0.3
     const c = isYellow
-      ? ([0xfde047, 0xfbbf24, 0xfacc15][Math.floor(rng() * 3)])
-      : ([0xffffff, 0xfff7ed, 0xfafafa][Math.floor(rng() * 3)])
+      ? [0xfde047, 0xfbbf24, 0xfacc15][Math.floor(rng() * 3)]
+      : [0xffffff, 0xfff7ed, 0xfafafa][Math.floor(rng() * 3)]
     const baseR = (4 + rng() * 4) * DPR
 
     // 8-конечная sparkle-звезда: 4 длинных луча по осям + 4 коротких по диагонали.
@@ -823,7 +967,7 @@ export class StarMapScene extends Phaser.Scene {
       const a = (p * Math.PI) / 8 - Math.PI / 2
       let r: number
       if (p % 2 === 1) r = innerR
-      else r = (p % 4 === 0) ? longR : shortR
+      else r = p % 4 === 0 ? longR : shortR
       points.push(new Phaser.Math.Vector2(Math.cos(a) * r, Math.sin(a) * r))
     }
 
@@ -856,19 +1000,40 @@ export class StarMapScene extends Phaser.Scene {
         star.setAlpha(0)
         const dur = 600 + Math.random() * 500
         this.tweens.add({
-          targets: star, alpha: 1, duration: dur * 0.4, ease: 'Sine.easeOut',
+          targets: star,
+          alpha: 1,
+          duration: dur * 0.4,
+          ease: 'Sine.easeOut',
           onComplete: () => {
-            this.tweens.add({ targets: star, alpha: 0, duration: dur * 0.6, ease: 'Sine.easeIn' })
+            this.tweens.add({
+              targets: star,
+              alpha: 0,
+              duration: dur * 0.6,
+              ease: 'Sine.easeIn',
+            })
           },
         })
-        this.tweens.add({ targets: star, angle: star.angle + 180, duration: dur, ease: 'Linear' })
+        this.tweens.add({
+          targets: star,
+          angle: star.angle + 180,
+          duration: dur,
+          ease: 'Linear',
+        })
       } else if (flashType === 'fade') {
         star.setAlpha(0)
         const dur = 900 + Math.random() * 800
         this.tweens.add({
-          targets: star, alpha: 1, duration: dur * 0.4, ease: 'Sine.easeOut',
+          targets: star,
+          alpha: 1,
+          duration: dur * 0.4,
+          ease: 'Sine.easeOut',
           onComplete: () => {
-            this.tweens.add({ targets: star, alpha: 0, duration: dur * 0.6, ease: 'Sine.easeIn' })
+            this.tweens.add({
+              targets: star,
+              alpha: 0,
+              duration: dur * 0.6,
+              ease: 'Sine.easeIn',
+            })
           },
         })
       } else {
@@ -876,12 +1041,25 @@ export class StarMapScene extends Phaser.Scene {
         star.setAlpha(0)
         const dur = 2000 + Math.random() * 1000
         this.tweens.add({
-          targets: star, alpha: 1, duration: dur * 0.3, ease: 'Sine.easeOut',
+          targets: star,
+          alpha: 1,
+          duration: dur * 0.3,
+          ease: 'Sine.easeOut',
           onComplete: () => {
-            this.tweens.add({ targets: star, alpha: 0, duration: dur * 0.7, ease: 'Sine.easeIn' })
+            this.tweens.add({
+              targets: star,
+              alpha: 0,
+              duration: dur * 0.7,
+              ease: 'Sine.easeIn',
+            })
           },
         })
-        this.tweens.add({ targets: star, angle: star.angle + 360, duration: dur, ease: 'Linear' })
+        this.tweens.add({
+          targets: star,
+          angle: star.angle + 360,
+          duration: dur,
+          ease: 'Linear',
+        })
       }
     }
 
@@ -936,26 +1114,103 @@ export class StarMapScene extends Phaser.Scene {
   // внутри comp* функций. Cap=1500ms (wrapper destroy в playUniqueAnimation).
   // Phase 8: добавлены entries 88-95 для новых компонентов.
   private static readonly COMP_DURATIONS_MS: Record<number, number> = {
-    0: 800, 1: 800, 2: 600, 3: 250, 4: 500, 5: 1500, 6: 900, 7: 800,
-    8: 850, 9: 1200, 10: 700, 11: 800, 12: 1300, 13: 1100, 14: 1000, 15: 600,
-    16: 800, 17: 1000, 18: 1100, 19: 900, 20: 1000, 21: 1100, 22: 550, 23: 750,
-    24: 1000, 25: 700, 26: 1000, 27: 900, 28: 1200, 29: 1000, 30: 550, 31: 900,
-    32: 850, 33: 1200, 34: 1300, 35: 550, 36: 600, 37: 800, 38: 350, 39: 800,
-    40: 1500, 41: 700, 42: 1200, 43: 800, 44: 750, 45: 1500, 46: 750, 47: 550,
-    48: 1000, 49: 1100, 50: 600, 51: 1000, 52: 700, 53: 400, 54: 1500, 55: 1300,
-    56: 1500, 57: 800, 58: 900, 59: 1100, 60: 700, 61: 900, 62: 550, 63: 600,
-    64: 900, 65: 1500, 66: 700, 67: 800, 68: 800, 69: 1000, 70: 1200, 71: 1000,
-    72: 900, 73: 800, 74: 1100, 75: 550, 76: 700, 77: 800, 78: 1000, 79: 1500,
-    80: 400, 81: 900, 82: 600, 83: 700, 84: 1000, 85: 1100, 86: 900, 87: 1200,
+    0: 800,
+    1: 800,
+    2: 600,
+    3: 250,
+    4: 500,
+    5: 1500,
+    6: 900,
+    7: 800,
+    8: 850,
+    9: 1200,
+    10: 700,
+    11: 800,
+    12: 1300,
+    13: 1100,
+    14: 1000,
+    15: 600,
+    16: 800,
+    17: 1000,
+    18: 1100,
+    19: 900,
+    20: 1000,
+    21: 1100,
+    22: 550,
+    23: 750,
+    24: 1000,
+    25: 700,
+    26: 1000,
+    27: 900,
+    28: 1200,
+    29: 1000,
+    30: 550,
+    31: 900,
+    32: 850,
+    33: 1200,
+    34: 1300,
+    35: 550,
+    36: 600,
+    37: 800,
+    38: 350,
+    39: 800,
+    40: 1500,
+    41: 700,
+    42: 1200,
+    43: 800,
+    44: 750,
+    45: 1500,
+    46: 750,
+    47: 550,
+    48: 1000,
+    49: 1100,
+    50: 600,
+    51: 1000,
+    52: 700,
+    53: 400,
+    54: 1500,
+    55: 1300,
+    56: 1500,
+    57: 800,
+    58: 900,
+    59: 1100,
+    60: 700,
+    61: 900,
+    62: 550,
+    63: 600,
+    64: 900,
+    65: 1500,
+    66: 700,
+    67: 800,
+    68: 800,
+    69: 1000,
+    70: 1200,
+    71: 1000,
+    72: 900,
+    73: 800,
+    74: 1100,
+    75: 550,
+    76: 700,
+    77: 800,
+    78: 1000,
+    79: 1500,
+    80: 400,
+    81: 900,
+    82: 600,
+    83: 700,
+    84: 1000,
+    85: 1100,
+    86: 900,
+    87: 1200,
     // Phase 8 components
-    88: 900,  // bouncingBall
-    89: 600,  // digitalGlitch
-    90: 900,  // ringPulsar
+    88: 900, // bouncingBall
+    89: 600, // digitalGlitch
+    90: 900, // ringPulsar
     91: 1000, // swarmParticles
-    92: 600,  // prismRefract
+    92: 600, // prismRefract
     93: 1000, // lifeBloom
     94: 1100, // windRibbons
-    95: 900,  // wreckageOrbit
+    95: 900, // wreckageOrbit
   }
 
   // Прогоняет ту же логику recipe-сборки что и playUniqueAnimation, но без
@@ -964,7 +1219,9 @@ export class StarMapScene extends Phaser.Scene {
   private getAnimationDurationMs(sys: Race | BgSystem): number {
     const rng = this.animRng(sys)
     const theme = (sys as BgSystem).archetype ?? sys.type
-    const pool = this.THEME_COMPONENTS[theme] ?? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    const pool = this.THEME_COMPONENTS[theme] ?? [
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+    ]
 
     // Реплицируем порядок rng() из playUniqueAnimation
     const r1 = rng()
@@ -974,12 +1231,18 @@ export class StarMapScene extends Phaser.Scene {
     const components: number[] = []
     while (components.length < compCount) {
       const c = pool[Math.floor(rng() * pool.length)]
-      if (!used.has(c)) { used.add(c); components.push(c) }
+      if (!used.has(c)) {
+        used.add(c)
+        components.push(c)
+      }
     }
 
     // useModifier rng calls (для совпадения порядка, хотя нам они не нужны)
     const useModifier = rng() < 0.25
-    if (useModifier) { rng(); rng() }
+    if (useModifier) {
+      rng()
+      rng()
+    }
 
     let maxFinish = 0
     components.forEach((c, i) => {
@@ -1010,35 +1273,49 @@ export class StarMapScene extends Phaser.Scene {
   // Phase 8: расширены под-загруженные pool'ы новыми компонентами 88-95, все pool'ы ≥14.
   private readonly THEME_COMPONENTS: Record<string, number[]> = {
     // BG archetypes
-    gas_giant:   [12, 13, 6, 2, 8, 11, 27, 32, 33, 0, 1, 40, 45, 50, 49, 56, 67, 70, 79, 81],
-    gas_ringed:  [1, 5, 0, 8, 14, 28, 32, 30, 43, 49, 46, 56, 65, 71, 76, 83],
-    ice:         [15, 2, 4, 0, 11, 10, 36, 32, 25, 41, 42, 47, 60, 64, 74, 76, 83, 84],
-    ocean:       [16, 8, 2, 6, 11, 25, 28, 37, 48, 52, 51, 69, 72, 81, 86],
-    desert:      [17, 7, 8, 6, 11, 35, 27, 42, 51, 0, 3, 68, 75, 77, 84],
-    lava:        [18, 4, 10, 7, 9, 11, 33, 27, 30, 38, 50, 53, 67, 75, 72, 87, 77],
-    forest:      [19, 11, 2, 6, 14, 29, 28, 49, 41, 51, 69, 71, 84, 86, 91, 93],
-    mineral:     [15, 10, 4, 2, 0, 30, 31, 38, 41, 44, 46, 54, 66, 75, 78, 83, 92],
-    dead:        [20, 3, 11, 8, 26, 24, 34, 53, 55, 35, 9, 73, 70, 79, 77, 95],
-    toxic:       [21, 6, 2, 11, 7, 38, 26, 52, 53, 50, 69, 75, 80, 86, 91, 89],
-    plasma:      [4, 22, 10, 9, 11, 0, 27, 30, 35, 32, 47, 50, 53, 55, 58, 63, 64, 67, 75, 80, 87, 92],
-    binary:      [23, 5, 1, 7, 11, 14, 36, 29, 37, 53, 43, 65, 73, 81, 88, 90],
+    gas_giant: [
+      12, 13, 6, 2, 8, 11, 27, 32, 33, 0, 1, 40, 45, 50, 49, 56, 67, 70, 79, 81,
+    ],
+    gas_ringed: [1, 5, 0, 8, 14, 28, 32, 30, 43, 49, 46, 56, 65, 71, 76, 83],
+    ice: [15, 2, 4, 0, 11, 10, 36, 32, 25, 41, 42, 47, 60, 64, 74, 76, 83, 84],
+    ocean: [16, 8, 2, 6, 11, 25, 28, 37, 48, 52, 51, 69, 72, 81, 86],
+    desert: [17, 7, 8, 6, 11, 35, 27, 42, 51, 0, 3, 68, 75, 77, 84],
+    lava: [18, 4, 10, 7, 9, 11, 33, 27, 30, 38, 50, 53, 67, 75, 72, 87, 77],
+    forest: [19, 11, 2, 6, 14, 29, 28, 49, 41, 51, 69, 71, 84, 86, 91, 93],
+    mineral: [15, 10, 4, 2, 0, 30, 31, 38, 41, 44, 46, 54, 66, 75, 78, 83, 92],
+    dead: [20, 3, 11, 8, 26, 24, 34, 53, 55, 35, 9, 73, 70, 79, 77, 95],
+    toxic: [21, 6, 2, 11, 7, 38, 26, 52, 53, 50, 69, 75, 80, 86, 91, 89],
+    plasma: [
+      4, 22, 10, 9, 11, 0, 27, 30, 35, 32, 47, 50, 53, 55, 58, 63, 64, 67, 75,
+      80, 87, 92,
+    ],
+    binary: [23, 5, 1, 7, 11, 14, 36, 29, 37, 53, 43, 65, 73, 81, 88, 90],
     // Main types — заточены под лор каждой расы
-    home:        [11, 2, 0, 1, 5, 14, 19, 28, 37, 31, 49, 43, 66, 71, 76, 83],
-    crystal:     [15, 2, 10, 0, 4, 30, 36, 31, 38, 41, 44, 46, 60, 66, 64, 78, 83],
-    rocky:       [3, 20, 4, 7, 26, 35, 39, 47, 11, 0, 53, 75, 77, 88, 95],
-    ancient:     [11, 0, 6, 2, 22, 31, 29, 26, 44, 46, 43, 57, 61, 62, 65, 71, 78, 85],
-    mystic:      [11, 6, 22, 4, 12, 14, 26, 31, 34, 28, 43, 53, 57, 59, 61, 62, 70, 73, 78, 82],
-    organic:     [19, 11, 2, 6, 14, 29, 37, 49, 51, 41, 69, 72, 86, 84, 91, 93],
-    forge:       [7, 10, 4, 9, 22, 18, 33, 27, 38, 50, 47, 53, 64, 67, 75, 87, 85],
-    military:    [10, 7, 4, 9, 22, 18, 27, 30, 35, 47, 39, 53, 66, 67, 75, 82, 87],
-    destroyed:   [7, 3, 9, 20, 24, 34, 26, 39, 53, 55, 59, 70, 75, 80, 89, 95],
+    home: [11, 2, 0, 1, 5, 14, 19, 28, 37, 31, 49, 43, 66, 71, 76, 83],
+    crystal: [15, 2, 10, 0, 4, 30, 36, 31, 38, 41, 44, 46, 60, 66, 64, 78, 83],
+    rocky: [3, 20, 4, 7, 26, 35, 39, 47, 11, 0, 53, 75, 77, 88, 95],
+    ancient: [
+      11, 0, 6, 2, 22, 31, 29, 26, 44, 46, 43, 57, 61, 62, 65, 71, 78, 85,
+    ],
+    mystic: [
+      11, 6, 22, 4, 12, 14, 26, 31, 34, 28, 43, 53, 57, 59, 61, 62, 70, 73, 78,
+      82,
+    ],
+    organic: [19, 11, 2, 6, 14, 29, 37, 49, 51, 41, 69, 72, 86, 84, 91, 93],
+    forge: [7, 10, 4, 9, 22, 18, 33, 27, 38, 50, 47, 53, 64, 67, 75, 87, 85],
+    military: [10, 7, 4, 9, 22, 18, 27, 30, 35, 47, 39, 53, 66, 67, 75, 82, 87],
+    destroyed: [7, 3, 9, 20, 24, 34, 26, 39, 53, 55, 59, 70, 75, 80, 89, 95],
     crystal_bio: [15, 2, 11, 6, 19, 36, 29, 41, 49, 62, 63, 64, 78, 83, 90, 92],
-    mechano:     [15, 4, 9, 1, 22, 10, 32, 38, 30, 39, 47, 54, 58, 66, 71, 80, 82, 85, 89],
-    energy:      [10, 22, 4, 11, 0, 30, 27, 35, 32, 53, 50, 54, 58, 63, 64, 67, 80, 87],
-    mist:        [11, 8, 6, 21, 20, 28, 26, 52, 51, 57, 73, 64, 79, 84, 91, 94],
-    aquatic:     [8, 16, 2, 11, 6, 25, 37, 28, 48, 52, 51, 69, 72, 81, 86],
-    shadow:      [3, 20, 11, 6, 12, 26, 34, 24, 53, 51, 59, 70, 73, 75, 79, 89],
-    aerial:      [6, 8, 11, 2, 16, 28, 32, 35, 42, 51, 49, 60, 64, 72, 84, 94],
+    mechano: [
+      15, 4, 9, 1, 22, 10, 32, 38, 30, 39, 47, 54, 58, 66, 71, 80, 82, 85, 89,
+    ],
+    energy: [
+      10, 22, 4, 11, 0, 30, 27, 35, 32, 53, 50, 54, 58, 63, 64, 67, 80, 87,
+    ],
+    mist: [11, 8, 6, 21, 20, 28, 26, 52, 51, 57, 73, 64, 79, 84, 91, 94],
+    aquatic: [8, 16, 2, 11, 6, 25, 37, 28, 48, 52, 51, 69, 72, 81, 86],
+    shadow: [3, 20, 11, 6, 12, 26, 34, 24, 53, 51, 59, 70, 73, 75, 79, 89],
+    aerial: [6, 8, 11, 2, 16, 28, 32, 35, 42, 51, 49, 60, 64, 72, 84, 94],
   }
 
   // ANIM_EASES — extracted в effects/anim/shared/sharedHelpers.ts (Phase 9).
@@ -1060,7 +1337,8 @@ export class StarMapScene extends Phaser.Scene {
         seed = override
       } else {
         let h = 5381
-        for (let i = 0; i < sys.id.length; i++) h = ((h * 33) ^ sys.id.charCodeAt(i)) >>> 0
+        for (let i = 0; i < sys.id.length; i++)
+          h = ((h * 33) ^ sys.id.charCodeAt(i)) >>> 0
         seed = h
       }
     }
@@ -1091,7 +1369,9 @@ export class StarMapScene extends Phaser.Scene {
 
     // Тематический pool компонентов
     const theme = (sys as BgSystem).archetype ?? sys.type
-    const pool = this.THEME_COMPONENTS[theme] ?? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    const pool = this.THEME_COMPONENTS[theme] ?? [
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+    ]
 
     // Phase 7: минимум 2 компонента — 1-component recipes давали всего 10 уникальных вариантов
     // на pool из 10, что приводило к видимым повторам среди ~25% планет.
@@ -1103,7 +1383,10 @@ export class StarMapScene extends Phaser.Scene {
     const components: number[] = []
     while (components.length < compCount) {
       const c = pool[Math.floor(rng() * pool.length)]
-      if (!used.has(c)) { used.add(c); components.push(c) }
+      if (!used.has(c)) {
+        used.add(c)
+        components.push(c)
+      }
     }
 
     // Phase 7: композитный модификатор recipe (25% шанс) —
@@ -1142,106 +1425,298 @@ export class StarMapScene extends Phaser.Scene {
     rng: () => number,
   ) {
     switch (idx) {
-      case 0:  compRing(this, sprite, sys, rng); break
-      case 1:  this.compMultiRing(sprite, sys, rng); break
-      case 2:  compSparkle(this, sprite, sys, rng); break
-      case 3:  compFlash(this, sprite, rng); break
-      case 4:  this.compLightning(sprite, sys, rng); break
-      case 5:  this.compOrbit(sprite, sys, rng); break
-      case 6:  this.compSpiral(sprite, sys, rng); break
-      case 7:  compConfetti(this, sprite, sys, rng); break
-      case 8:  this.compWave(sprite, sys, rng); break
-      case 9:  this.compComet(sprite, sys, rng); break
-      case 10: compStarBurst(this, sprite, sys, rng); break
-      case 11: compHaloFlash(this, sprite, sys, rng); break
-      case 12: this.compVortex(sprite, sys, rng); break
-      case 13: this.compStormSwirl(sprite, sys, rng); break
-      case 14: this.compRingDance(sprite, sys, rng); break
-      case 15: compCrystalShatter(this, sprite, sys, rng); break
-      case 16: compRipple(this, sprite, sys, rng); break
-      case 17: compSandSwirl(this, sprite, sys, rng); break
-      case 18: this.compLavaErupt(sprite, sys, rng); break
-      case 19: compBloomPetals(this, sprite, sys, rng); break
-      case 20: this.compDustPuff(sprite, sys, rng); break
-      case 21: compToxicCloud(this, sprite, sys, rng); break
-      case 22: this.compBeam(sprite, sys, rng); break
-      case 23: this.compTwinPulse(sprite, sys, rng); break
-      case 24: this.compSingularity(sprite, sys, rng); break
-      case 25: compEchoWave(this, sprite, sys, rng); break
-      case 26: this.compGravityWell(sprite, sys, rng); break
-      case 27: this.compSolarFlare(sprite, sys, rng); break
-      case 28: this.compAuroraRibbon(sprite, sys, rng); break
-      case 29: this.compDNAHelix(sprite, sys, rng); break
-      case 30: this.compLensFlare(sprite, sys, rng); break
-      case 31: this.compConstellation(sprite, sys, rng); break
-      case 32: this.compMagneticField(sprite, sys, rng); break
-      case 33: this.compPhoenixBurst(sprite, sys, rng); break
-      case 34: this.compWormhole(sprite, sys, rng); break
-      case 35: this.compCosmicRay(sprite, sys, rng); break
-      case 36: this.compQuantumSplit(sprite, sys, rng); break
-      case 37: this.compHeartPulse(sprite, sys, rng); break
-      case 38: this.compCrackleDischarge(sprite, sys, rng); break
-      case 39: this.compPixelGrid(sprite, sys, rng); break
-      case 40: this.compSpiralArms(sprite, sys, rng); break
-      case 41: this.compCrystalGrow(sprite, sys, rng); break
-      case 42: this.compSnowDrift(sprite, sys, rng); break
-      case 43: this.compGalaxySpawn(sprite, sys, rng); break
-      case 44: this.compPulseHex(sprite, sys, rng); break
-      case 45: this.compTornado(sprite, sys, rng); break
-      case 46: this.compStarPolygon(sprite, sys, rng); break
-      case 47: this.compCrossFlash(sprite, sys, rng); break
-      case 48: this.compWaveTrain(sprite, sys, rng); break
-      case 49: this.compPetalStorm(sprite, sys, rng); break
-      case 50: compFlameTongues(this, sprite, sys, rng); break
-      case 51: this.compSnakeTrail(sprite, sys, rng); break
-      case 52: this.compBubblePop(sprite, sys, rng); break
-      case 53: compChromaShift(this, sprite, sys, rng); break
+      case 0:
+        compRing(this, sprite, sys, rng)
+        break
+      case 1:
+        this.compMultiRing(sprite, sys, rng)
+        break
+      case 2:
+        compSparkle(this, sprite, sys, rng)
+        break
+      case 3:
+        compFlash(this, sprite, rng)
+        break
+      case 4:
+        this.compLightning(sprite, sys, rng)
+        break
+      case 5:
+        this.compOrbit(sprite, sys, rng)
+        break
+      case 6:
+        this.compSpiral(sprite, sys, rng)
+        break
+      case 7:
+        compConfetti(this, sprite, sys, rng)
+        break
+      case 8:
+        this.compWave(sprite, sys, rng)
+        break
+      case 9:
+        this.compComet(sprite, sys, rng)
+        break
+      case 10:
+        compStarBurst(this, sprite, sys, rng)
+        break
+      case 11:
+        compHaloFlash(this, sprite, sys, rng)
+        break
+      case 12:
+        this.compVortex(sprite, sys, rng)
+        break
+      case 13:
+        this.compStormSwirl(sprite, sys, rng)
+        break
+      case 14:
+        this.compRingDance(sprite, sys, rng)
+        break
+      case 15:
+        compCrystalShatter(this, sprite, sys, rng)
+        break
+      case 16:
+        compRipple(this, sprite, sys, rng)
+        break
+      case 17:
+        compSandSwirl(this, sprite, sys, rng)
+        break
+      case 18:
+        this.compLavaErupt(sprite, sys, rng)
+        break
+      case 19:
+        compBloomPetals(this, sprite, sys, rng)
+        break
+      case 20:
+        this.compDustPuff(sprite, sys, rng)
+        break
+      case 21:
+        compToxicCloud(this, sprite, sys, rng)
+        break
+      case 22:
+        this.compBeam(sprite, sys, rng)
+        break
+      case 23:
+        this.compTwinPulse(sprite, sys, rng)
+        break
+      case 24:
+        this.compSingularity(sprite, sys, rng)
+        break
+      case 25:
+        compEchoWave(this, sprite, sys, rng)
+        break
+      case 26:
+        this.compGravityWell(sprite, sys, rng)
+        break
+      case 27:
+        this.compSolarFlare(sprite, sys, rng)
+        break
+      case 28:
+        this.compAuroraRibbon(sprite, sys, rng)
+        break
+      case 29:
+        this.compDNAHelix(sprite, sys, rng)
+        break
+      case 30:
+        this.compLensFlare(sprite, sys, rng)
+        break
+      case 31:
+        this.compConstellation(sprite, sys, rng)
+        break
+      case 32:
+        this.compMagneticField(sprite, sys, rng)
+        break
+      case 33:
+        this.compPhoenixBurst(sprite, sys, rng)
+        break
+      case 34:
+        this.compWormhole(sprite, sys, rng)
+        break
+      case 35:
+        this.compCosmicRay(sprite, sys, rng)
+        break
+      case 36:
+        this.compQuantumSplit(sprite, sys, rng)
+        break
+      case 37:
+        this.compHeartPulse(sprite, sys, rng)
+        break
+      case 38:
+        this.compCrackleDischarge(sprite, sys, rng)
+        break
+      case 39:
+        this.compPixelGrid(sprite, sys, rng)
+        break
+      case 40:
+        this.compSpiralArms(sprite, sys, rng)
+        break
+      case 41:
+        this.compCrystalGrow(sprite, sys, rng)
+        break
+      case 42:
+        this.compSnowDrift(sprite, sys, rng)
+        break
+      case 43:
+        this.compGalaxySpawn(sprite, sys, rng)
+        break
+      case 44:
+        this.compPulseHex(sprite, sys, rng)
+        break
+      case 45:
+        this.compTornado(sprite, sys, rng)
+        break
+      case 46:
+        this.compStarPolygon(sprite, sys, rng)
+        break
+      case 47:
+        this.compCrossFlash(sprite, sys, rng)
+        break
+      case 48:
+        this.compWaveTrain(sprite, sys, rng)
+        break
+      case 49:
+        this.compPetalStorm(sprite, sys, rng)
+        break
+      case 50:
+        compFlameTongues(this, sprite, sys, rng)
+        break
+      case 51:
+        this.compSnakeTrail(sprite, sys, rng)
+        break
+      case 52:
+        this.compBubblePop(sprite, sys, rng)
+        break
+      case 53:
+        compChromaShift(this, sprite, sys, rng)
+        break
       // Phase 7: новые компоненты
-      case 54: this.compAtomShells(sprite, sys, rng); break
-      case 55: this.compSupernova(sprite, sys, rng); break
-      case 56: this.compAccretionDisk(sprite, sys, rng); break
-      case 57: this.compFlickerStars(sprite, sys, rng); break
-      case 58: this.compLightDance(sprite, sys, rng); break
-      case 59: this.compDimensionRift(sprite, sys, rng); break
-      case 60: this.compFrostExplode(sprite, sys, rng); break
-      case 61: this.compTimeWave(sprite, sys, rng); break
-      case 62: this.compGlyphFlash(sprite, sys, rng); break
-      case 63: this.compPrismShift(sprite, sys, rng); break
+      case 54:
+        this.compAtomShells(sprite, sys, rng)
+        break
+      case 55:
+        this.compSupernova(sprite, sys, rng)
+        break
+      case 56:
+        this.compAccretionDisk(sprite, sys, rng)
+        break
+      case 57:
+        this.compFlickerStars(sprite, sys, rng)
+        break
+      case 58:
+        this.compLightDance(sprite, sys, rng)
+        break
+      case 59:
+        this.compDimensionRift(sprite, sys, rng)
+        break
+      case 60:
+        this.compFrostExplode(sprite, sys, rng)
+        break
+      case 61:
+        this.compTimeWave(sprite, sys, rng)
+        break
+      case 62:
+        this.compGlyphFlash(sprite, sys, rng)
+        break
+      case 63:
+        this.compPrismShift(sprite, sys, rng)
+        break
       // Расширение 3 (доп. оригинальные компоненты)
-      case 64: this.compChargeBurst(sprite, sys, rng); break
-      case 65: this.compInfinityTrail(sprite, sys, rng); break
-      case 66: this.compShieldRipple(sprite, sys, rng); break
-      case 67: this.compFireworks(sprite, sys, rng); break
-      case 68: this.compScanline(sprite, sys, rng); break
-      case 69: this.compLiquidPool(sprite, sys, rng); break
-      case 70: this.compGravityKnot(sprite, sys, rng); break
-      case 71: this.compCosmicWeb(sprite, sys, rng); break
-      case 72: this.compParticleFountain(sprite, sys, rng); break
-      case 73: this.compEchoSpawn(sprite, sys, rng); break
-      case 74: compIceWisps(this, sprite, sys, rng); break
-      case 75: this.compRipBlade(sprite, sys, rng); break
+      case 64:
+        this.compChargeBurst(sprite, sys, rng)
+        break
+      case 65:
+        this.compInfinityTrail(sprite, sys, rng)
+        break
+      case 66:
+        this.compShieldRipple(sprite, sys, rng)
+        break
+      case 67:
+        this.compFireworks(sprite, sys, rng)
+        break
+      case 68:
+        this.compScanline(sprite, sys, rng)
+        break
+      case 69:
+        this.compLiquidPool(sprite, sys, rng)
+        break
+      case 70:
+        this.compGravityKnot(sprite, sys, rng)
+        break
+      case 71:
+        this.compCosmicWeb(sprite, sys, rng)
+        break
+      case 72:
+        this.compParticleFountain(sprite, sys, rng)
+        break
+      case 73:
+        this.compEchoSpawn(sprite, sys, rng)
+        break
+      case 74:
+        compIceWisps(this, sprite, sys, rng)
+        break
+      case 75:
+        this.compRipBlade(sprite, sys, rng)
+        break
       // Расширение 4 — компоненты 76-87 (с явными sound-style)
-      case 76: compChimeRing(this, sprite, sys, rng); break
-      case 77: this.compEarthquakeShake(sprite, sys, rng); break
-      case 78: this.compKaleidoscope(sprite, sys, rng); break
-      case 79: this.compDroneHum(sprite, sys, rng); break
-      case 80: this.compGlitchStutter(sprite, sys, rng); break
-      case 81: this.compDopplerWave(sprite, sys, rng); break
-      case 82: this.compMorseFlash(sprite, sys, rng); break
-      case 83: this.compCrystalBell(sprite, sys, rng); break
-      case 84: this.compWindRustle(sprite, sys, rng); break
-      case 85: this.compClockGears(sprite, sys, rng); break
-      case 86: compBubbleStream(this, sprite, sys, rng); break
-      case 87: compPlasmaArc(this, sprite, sys, rng); break
+      case 76:
+        compChimeRing(this, sprite, sys, rng)
+        break
+      case 77:
+        this.compEarthquakeShake(sprite, sys, rng)
+        break
+      case 78:
+        this.compKaleidoscope(sprite, sys, rng)
+        break
+      case 79:
+        this.compDroneHum(sprite, sys, rng)
+        break
+      case 80:
+        this.compGlitchStutter(sprite, sys, rng)
+        break
+      case 81:
+        this.compDopplerWave(sprite, sys, rng)
+        break
+      case 82:
+        this.compMorseFlash(sprite, sys, rng)
+        break
+      case 83:
+        this.compCrystalBell(sprite, sys, rng)
+        break
+      case 84:
+        this.compWindRustle(sprite, sys, rng)
+        break
+      case 85:
+        this.compClockGears(sprite, sys, rng)
+        break
+      case 86:
+        compBubbleStream(this, sprite, sys, rng)
+        break
+      case 87:
+        compPlasmaArc(this, sprite, sys, rng)
+        break
       // Phase 8 — компоненты 88-95
-      case 88: this.compBouncingBall(sprite, sys, rng); break
-      case 89: this.compDigitalGlitch(sprite, sys, rng); break
-      case 90: this.compRingPulsar(sprite, sys, rng); break
-      case 91: this.compSwarmParticles(sprite, sys, rng); break
-      case 92: this.compPrismRefract(sprite, sys, rng); break
-      case 93: this.compLifeBloom(sprite, sys, rng); break
-      case 94: this.compWindRibbons(sprite, sys, rng); break
-      case 95: this.compWreckageOrbit(sprite, sys, rng); break
+      case 88:
+        this.compBouncingBall(sprite, sys, rng)
+        break
+      case 89:
+        this.compDigitalGlitch(sprite, sys, rng)
+        break
+      case 90:
+        this.compRingPulsar(sprite, sys, rng)
+        break
+      case 91:
+        this.compSwarmParticles(sprite, sys, rng)
+        break
+      case 92:
+        this.compPrismRefract(sprite, sys, rng)
+        break
+      case 93:
+        this.compLifeBloom(sprite, sys, rng)
+        break
+      case 94:
+        this.compWindRibbons(sprite, sys, rng)
+        break
+      case 95:
+        this.compWreckageOrbit(sprite, sys, rng)
+        break
     }
   }
 
@@ -1343,7 +1818,7 @@ export class StarMapScene extends Phaser.Scene {
   // Phase 9: extracted в effects/anim/shared/sharedHelpers.ts. Здесь — thin wrappers
   // для backward-compat 78 не-целевых comp методов которые продолжают вызывать this.pickXxx.
   private pickColor(rng: () => number, sys: Race | BgSystem): number {
-    return sharedPickColor(rng, sys as any)
+    return sharedPickColor(rng, sys as AnimSys)
   }
   private pickEase(rng: () => number): string {
     return sharedPickEase(rng)
@@ -1354,7 +1829,11 @@ export class StarMapScene extends Phaser.Scene {
   // 0. compRing — extracted в effects/anim/shared/compRing.ts (Phase 9).
 
   // 1. 2-4 кольца последовательно с задержкой (рандом число + цвета + scale)
-  private compMultiRing(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compMultiRing(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const count = 2 + Math.floor(rng() * 3) // 2-4
     const baseDelay = 80 + rng() * 120
     const baseDur = 450 + rng() * 250
@@ -1370,8 +1849,12 @@ export class StarMapScene extends Phaser.Scene {
         ring.strokeCircle(0, 0, sys.size * 1.1)
         sprite.add(ring)
         this.tweens.add({
-          targets: ring, scaleX: maxScale, scaleY: maxScale, alpha: 0,
-          duration: baseDur, ease: this.pickEase(rng),
+          targets: ring,
+          scaleX: maxScale,
+          scaleY: maxScale,
+          alpha: 0,
+          duration: baseDur,
+          ease: this.pickEase(rng),
           onComplete: () => ring.destroy(),
         })
       })
@@ -1382,19 +1865,29 @@ export class StarMapScene extends Phaser.Scene {
   // 3. compFlash — extracted в effects/anim/shared/compFlash.ts (Phase 9).
 
   // 4. Lightning (rng: количество молний, угол fan, цвет, глубина зигзага)
-  private compLightning(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compLightning(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const bolts = 3 + Math.floor(rng() * 5) // 3-7
     const fanCenter = rng() * Math.PI * 2
     const fanWidth = rng() < 0.4 ? Math.PI * 2 : Math.PI * (0.5 + rng() * 1) // часто полный круг, иногда сектор
     const segments = 2 + Math.floor(rng() * 3) // 2-4
     const baseColor = rng() < 0.6 ? 0xfde047 : this.pickColor(rng, sys)
     const lightning = this.add.graphics()
-    lightning.lineStyle((1.5 + rng() * 1.5) * DPR, baseColor, 0.85 + rng() * 0.15)
+    lightning.lineStyle(
+      (1.5 + rng() * 1.5) * DPR,
+      baseColor,
+      0.85 + rng() * 0.15,
+    )
     for (let i = 0; i < bolts; i++) {
-      const ang = fanCenter - fanWidth / 2 + (i / Math.max(1, bolts - 1)) * fanWidth
+      const ang =
+        fanCenter - fanWidth / 2 + (i / Math.max(1, bolts - 1)) * fanWidth
       const r1 = sys.size * (0.3 + rng() * 0.2)
       const r2 = sys.size * (1.4 + rng() * 0.7)
-      let px = Math.cos(ang) * r1, py = Math.sin(ang) * r1
+      let px = Math.cos(ang) * r1,
+        py = Math.sin(ang) * r1
       for (let j = 1; j <= segments; j++) {
         const t = j / segments
         const r = r1 + (r2 - r1) * t
@@ -1402,19 +1895,26 @@ export class StarMapScene extends Phaser.Scene {
         const x = Math.cos(ang + jitter) * r
         const y = Math.sin(ang + jitter) * r
         lightning.lineBetween(px, py, x, y)
-        px = x; py = y
+        px = x
+        py = y
       }
     }
     sprite.add(lightning)
     this.tweens.add({
-      targets: lightning, alpha: 0,
-      duration: 250 + rng() * 250, ease: this.pickEase(rng),
+      targets: lightning,
+      alpha: 0,
+      duration: 250 + rng() * 250,
+      ease: this.pickEase(rng),
       onComplete: () => lightning.destroy(),
     })
   }
 
   // 5. Orbit dart (rng: количество точек на орбите, скорость, направление, радиус)
-  private compOrbit(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compOrbit(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const dots = 1 + Math.floor(rng() * 3) // 1-3 точки
     const radius = sys.size * (1.2 + rng() * 0.5)
     const direction = rng() < 0.5 ? 1 : -1
@@ -1425,29 +1925,51 @@ export class StarMapScene extends Phaser.Scene {
       const phase = (i / dots) * Math.PI * 2
       const color = this.pickColor(rng, sys)
       const dot = this.add.circle(0, 0, (2 + rng() * 2) * DPR, 0xffffff, 1)
-      const glow = this.add.circle(0, 0, (5 + rng() * 4) * DPR, color, 0.4 + rng() * 0.3)
-      sprite.add(glow); sprite.add(dot)
+      const glow = this.add.circle(
+        0,
+        0,
+        (5 + rng() * 4) * DPR,
+        color,
+        0.4 + rng() * 0.3,
+      )
+      sprite.add(glow)
+      sprite.add(dot)
       const startTime = this.time.now
       const update = () => {
-        if (!dot.active) { this.events.off('update', update); return }
+        if (!dot.active) {
+          this.events.off('update', update)
+          return
+        }
         const t = (this.time.now - startTime) / dur
         if (t >= 1) {
-          dot.destroy(); glow.destroy()
+          dot.destroy()
+          glow.destroy()
           this.events.off('update', update)
           return
         }
         const a = startAng + phase + direction * t * Math.PI * 2 * cycles
-        const x = Math.cos(a) * radius; const y = Math.sin(a) * radius
-        dot.x = x; dot.y = y; glow.x = x; glow.y = y
+        const x = Math.cos(a) * radius
+        const y = Math.sin(a) * radius
+        dot.x = x
+        dot.y = y
+        glow.x = x
+        glow.y = y
         // fade в конце
-        if (t > 0.7) { dot.alpha = 1 - (t - 0.7) / 0.3; glow.alpha = (0.4 + rng() * 0.3) * (1 - (t - 0.7) / 0.3) }
+        if (t > 0.7) {
+          dot.alpha = 1 - (t - 0.7) / 0.3
+          glow.alpha = (0.4 + rng() * 0.3) * (1 - (t - 0.7) / 0.3)
+        }
       }
       this.events.on('update', update)
     }
   }
 
   // 6. Spiral burst — sparkles разлетаются по спирали (rng: rotation, count)
-  private compSpiral(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compSpiral(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 8 + Math.floor(rng() * 8) // 8-15
     const rotations = 0.5 + rng() * 1.5 // 0.5-2 оборота за время полёта
     const direction = rng() < 0.5 ? 1 : -1
@@ -1461,7 +1983,10 @@ export class StarMapScene extends Phaser.Scene {
       const startTime = this.time.now
       const localDur = dur + rng() * 150
       const update = () => {
-        if (!dot.active) { this.events.off('update', update); return }
+        if (!dot.active) {
+          this.events.off('update', update)
+          return
+        }
         const t = (this.time.now - startTime) / localDur
         if (t >= 1) {
           dot.destroy()
@@ -1481,7 +2006,11 @@ export class StarMapScene extends Phaser.Scene {
   // 7. compConfetti — extracted в effects/anim/shared/compConfetti.ts (Phase 9).
 
   // 8. Wave — ассимметричное эллиптическое расширение (rng: aspect, color, scale)
-  private compWave(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compWave(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const wave = this.add.graphics()
     const color = this.pickColor(rng, sys)
     const aspectX = 0.7 + rng() * 0.7 // 0.7-1.4 — сжатый или растянутый
@@ -1494,14 +2023,22 @@ export class StarMapScene extends Phaser.Scene {
     wave.angle = angle
     sprite.add(wave)
     this.tweens.add({
-      targets: wave, scaleX: maxScale, scaleY: maxScale, alpha: 0,
-      duration: dur, ease: this.pickEase(rng),
+      targets: wave,
+      scaleX: maxScale,
+      scaleY: maxScale,
+      alpha: 0,
+      duration: dur,
+      ease: this.pickEase(rng),
       onComplete: () => wave.destroy(),
     })
   }
 
   // 9. Comet — точка пролетает мимо планеты (rng: angle, speed, trail length)
-  private compComet(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compComet(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const angle = rng() * Math.PI * 2
     const distance = sys.size * (3 + rng() * 1.5)
     const sx = Math.cos(angle) * -distance
@@ -1513,27 +2050,40 @@ export class StarMapScene extends Phaser.Scene {
     // Голова кометы
     const head = this.add.circle(sx, sy, (3 + rng() * 2) * DPR, 0xffffff, 1)
     const halo = this.add.circle(sx, sy, (7 + rng() * 4) * DPR, color, 0.5)
-    sprite.add(halo); sprite.add(head)
+    sprite.add(halo)
+    sprite.add(head)
     // Trail — N точек в очереди за головой
     const trailLen = 3 + Math.floor(rng() * 4) // 3-6
     const trail: Phaser.GameObjects.Arc[] = []
     for (let i = 0; i < trailLen; i++) {
-      const t = this.add.circle(sx, sy, (2 - i * 0.2) * DPR, color, 0.5 - i * 0.07)
+      const t = this.add.circle(
+        sx,
+        sy,
+        (2 - i * 0.2) * DPR,
+        color,
+        0.5 - i * 0.07,
+      )
       sprite.add(t)
       trail.push(t)
     }
     const startTime = this.time.now
     const update = () => {
-      if (!head.active) { this.events.off('update', update); return }
+      if (!head.active) {
+        this.events.off('update', update)
+        return
+      }
       const t = (this.time.now - startTime) / dur
       if (t >= 1) {
-        head.destroy(); halo.destroy(); trail.forEach(d => d.destroy())
+        head.destroy()
+        halo.destroy()
+        trail.forEach((d) => d.destroy())
         this.events.off('update', update)
         return
       }
       head.x = sx + (ex - sx) * t
       head.y = sy + (ey - sy) * t
-      halo.x = head.x; halo.y = head.y
+      halo.x = head.x
+      halo.y = head.y
       trail.forEach((dot, i) => {
         const tt = Math.max(0, t - (i + 1) * 0.05)
         dot.x = sx + (ex - sx) * tt
@@ -1550,7 +2100,11 @@ export class StarMapScene extends Phaser.Scene {
   // === ТЕМАТИЧЕСКИЕ КОМПОНЕНТЫ 12-23 ===
 
   // 12. Vortex — точки притягиваются К центру по спирали (для gas_giant, mystic, shadow)
-  private compVortex(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compVortex(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 8 + Math.floor(rng() * 8)
     const startR = sys.size * (1.6 + rng() * 0.6)
     const rotations = 1 + rng() * 1.5
@@ -1564,12 +2118,20 @@ export class StarMapScene extends Phaser.Scene {
       const startTime = this.time.now
       const localDur = dur + rng() * 150
       const update = () => {
-        if (!dot.active) { this.events.off('update', update); return }
+        if (!dot.active) {
+          this.events.off('update', update)
+          return
+        }
         const t = (this.time.now - startTime) / localDur
-        if (t >= 1) { dot.destroy(); this.events.off('update', update); return }
+        if (t >= 1) {
+          dot.destroy()
+          this.events.off('update', update)
+          return
+        }
         const r = startR * (1 - t)
         const a = baseAng + direction * t * Math.PI * 2 * rotations
-        dot.x = Math.cos(a) * r; dot.y = Math.sin(a) * r
+        dot.x = Math.cos(a) * r
+        dot.y = Math.sin(a) * r
         dot.alpha = 0.3 + 0.7 * t
         dot.scale = 0.4 + t * 0.7
       }
@@ -1578,7 +2140,11 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 13. Storm swirl — большой эллиптический вихрь (для gas_giant)
-  private compStormSwirl(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compStormSwirl(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const swirl = this.add.graphics()
     const color = this.pickColor(rng, sys)
     const accent = this.pickColor(rng, sys)
@@ -1590,15 +2156,23 @@ export class StarMapScene extends Phaser.Scene {
     swirl.angle = angle
     sprite.add(swirl)
     this.tweens.add({
-      targets: swirl, angle: angle + (rng() < 0.5 ? 180 : -180),
-      scaleX: 1.4 + rng() * 0.4, scaleY: 1.4 + rng() * 0.4, alpha: 0,
-      duration: 600 + rng() * 350, ease: this.pickEase(rng),
+      targets: swirl,
+      angle: angle + (rng() < 0.5 ? 180 : -180),
+      scaleX: 1.4 + rng() * 0.4,
+      scaleY: 1.4 + rng() * 0.4,
+      alpha: 0,
+      duration: 600 + rng() * 350,
+      ease: this.pickEase(rng),
       onComplete: () => swirl.destroy(),
     })
   }
 
   // 14. Ring dance — кольцо вращается + пульсирует (для gas_ringed, home, mystic)
-  private compRingDance(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compRingDance(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const ring = this.add.graphics()
     const color = this.pickColor(rng, sys)
     const accent = this.pickColor(rng, sys)
@@ -1610,9 +2184,13 @@ export class StarMapScene extends Phaser.Scene {
     ring.angle = tilt
     sprite.add(ring)
     this.tweens.add({
-      targets: ring, angle: tilt + (rng() < 0.5 ? 360 : -360),
-      scaleX: 1.2 + rng() * 0.3, scaleY: 1.2 + rng() * 0.3, alpha: 0,
-      duration: 700 + rng() * 300, ease: this.pickEase(rng),
+      targets: ring,
+      angle: tilt + (rng() < 0.5 ? 360 : -360),
+      scaleX: 1.2 + rng() * 0.3,
+      scaleY: 1.2 + rng() * 0.3,
+      alpha: 0,
+      duration: 700 + rng() * 300,
+      ease: this.pickEase(rng),
       onComplete: () => ring.destroy(),
     })
   }
@@ -1622,7 +2200,11 @@ export class StarMapScene extends Phaser.Scene {
   // 17. compSandSwirl — extracted в effects/anim/shared/compSandSwirl.ts (Phase 9).
 
   // 18. Lava erupt — точки извергаются вверх с trail и падают (для lava, forge)
-  private compLavaErupt(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compLavaErupt(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 8 + Math.floor(rng() * 6)
     const baseAng = -Math.PI / 2 + (rng() - 0.5) * 0.6 // вверх ± 17°
     const fanWidth = 0.8 + rng() * 0.7
@@ -1640,9 +2222,16 @@ export class StarMapScene extends Phaser.Scene {
       const startTime = this.time.now
       const localDur = dur + rng() * 200
       const update = () => {
-        if (!dot.active) { this.events.off('update', update); return }
+        if (!dot.active) {
+          this.events.off('update', update)
+          return
+        }
         const t = (this.time.now - startTime) / localDur
-        if (t >= 1) { dot.destroy(); this.events.off('update', update); return }
+        if (t >= 1) {
+          dot.destroy()
+          this.events.off('update', update)
+          return
+        }
         dot.x = vx * t
         dot.y = vy * t + 0.5 * g * t * t
         dot.alpha = 1 - t * 0.7
@@ -1655,7 +2244,11 @@ export class StarMapScene extends Phaser.Scene {
   // 19. compBloomPetals — extracted в effects/anim/shared/compBloomPetals.ts (Phase 9).
 
   // 20. Dust puff — медленный low-alpha облачный пуф (для dead, rocky, shadow)
-  private compDustPuff(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compDustPuff(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const puff = this.add.graphics()
     const color = this.pickColor(rng, sys)
     const blobs = 4 + Math.floor(rng() * 3)
@@ -1669,8 +2262,11 @@ export class StarMapScene extends Phaser.Scene {
     sprite.add(puff)
     this.tweens.add({
       targets: puff,
-      scaleX: 1.4 + rng() * 0.3, scaleY: 1.4 + rng() * 0.3, alpha: 0,
-      duration: 700 + rng() * 350, ease: 'Sine.easeOut',
+      scaleX: 1.4 + rng() * 0.3,
+      scaleY: 1.4 + rng() * 0.3,
+      alpha: 0,
+      duration: 700 + rng() * 350,
+      ease: 'Sine.easeOut',
       onComplete: () => puff.destroy(),
     })
   }
@@ -1678,7 +2274,11 @@ export class StarMapScene extends Phaser.Scene {
   // 21. compToxicCloud — extracted в effects/anim/shared/compToxicCloud.ts (Phase 9).
 
   // 22. Beam — прямой длинный луч в случайном направлении (для plasma, energy, mechano)
-  private compBeam(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compBeam(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const beams = 1 + Math.floor(rng() * 3) // 1-3 луча
     for (let i = 0; i < beams; i++) {
       const ang = rng() * Math.PI * 2
@@ -1694,16 +2294,22 @@ export class StarMapScene extends Phaser.Scene {
       beam.rotation = ang
       sprite.add(beam)
       this.tweens.add({
-        targets: beam, alpha: 0,
+        targets: beam,
+        alpha: 0,
         scaleX: 1 + rng() * 0.3,
-        duration: 350 + rng() * 200, ease: this.pickEase(rng),
+        duration: 350 + rng() * 200,
+        ease: this.pickEase(rng),
         onComplete: () => beam.destroy(),
       })
     }
   }
 
   // 23. Twin pulse — 2 одновременных импульса в противоположных направлениях (для binary)
-  private compTwinPulse(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compTwinPulse(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const baseAng = rng() * Math.PI * 2
     const dist = sys.size * (1.0 + rng() * 0.4)
     for (const sign of [1, -1]) {
@@ -1714,8 +2320,11 @@ export class StarMapScene extends Phaser.Scene {
       sprite.add(pulse)
       this.tweens.add({
         targets: pulse,
-        scaleX: 1.8 + rng() * 0.4, scaleY: 1.8 + rng() * 0.4, alpha: 0,
-        duration: 500 + rng() * 250, ease: this.pickEase(rng),
+        scaleX: 1.8 + rng() * 0.4,
+        scaleY: 1.8 + rng() * 0.4,
+        alpha: 0,
+        duration: 500 + rng() * 250,
+        ease: this.pickEase(rng),
         onComplete: () => pulse.destroy(),
       })
     }
@@ -1724,7 +2333,11 @@ export class StarMapScene extends Phaser.Scene {
   // === КРЕАТИВНЫЕ КОМПОНЕНТЫ 24-38 ===
 
   // 24. Singularity collapse — sprite сжимается в точку, потом резкий burst
-  private compSingularity(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compSingularity(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     // 8-12 точек сначала засасываются к центру, потом разлетаются
     const N = 10 + Math.floor(rng() * 4)
     const startR = sys.size * (1.6 + rng() * 0.4)
@@ -1732,20 +2345,33 @@ export class StarMapScene extends Phaser.Scene {
     for (let i = 0; i < N; i++) {
       const ang = (i / N) * Math.PI * 2 + rng() * 0.3
       const color = this.pickColor(rng, sys)
-      const dot = this.add.circle(Math.cos(ang) * startR, Math.sin(ang) * startR, (1.5 + rng()) * DPR, color, 1)
+      const dot = this.add.circle(
+        Math.cos(ang) * startR,
+        Math.sin(ang) * startR,
+        (1.5 + rng()) * DPR,
+        color,
+        1,
+      )
       sprite.add(dot)
       this.tweens.add({
-        targets: dot, x: 0, y: 0,
-        duration: collapseDur, ease: 'Cubic.easeIn',
+        targets: dot,
+        x: 0,
+        y: 0,
+        duration: collapseDur,
+        ease: 'Cubic.easeIn',
         onComplete: () => {
           // burst наружу
           const newAng = rng() * Math.PI * 2
           const newDist = sys.size * (2 + rng())
           this.tweens.add({
             targets: dot,
-            x: Math.cos(newAng) * newDist, y: Math.sin(newAng) * newDist,
-            alpha: 0, scaleX: 1.5, scaleY: 1.5,
-            duration: 350 + rng() * 200, ease: 'Cubic.easeOut',
+            x: Math.cos(newAng) * newDist,
+            y: Math.sin(newAng) * newDist,
+            alpha: 0,
+            scaleX: 1.5,
+            scaleY: 1.5,
+            duration: 350 + rng() * 200,
+            ease: 'Cubic.easeOut',
             onComplete: () => dot.destroy(),
           })
         },
@@ -1756,7 +2382,11 @@ export class StarMapScene extends Phaser.Scene {
   // 25. compEchoWave — extracted в effects/anim/shared/compEchoWave.ts (Phase 9).
 
   // 26. Gravity well — тёмная воронка-деформация вокруг
-  private compGravityWell(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compGravityWell(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const layers = 4
     for (let i = 0; i < layers; i++) {
       const ring = this.add.graphics()
@@ -1765,10 +2395,13 @@ export class StarMapScene extends Phaser.Scene {
       ring.strokeCircle(0, 0, r)
       sprite.add(ring)
       this.tweens.add({
-        targets: ring, scaleX: 1.4, scaleY: 0.6, // squash в эллипс (deformation)
+        targets: ring,
+        scaleX: 1.4,
+        scaleY: 0.6, // squash в эллипс (deformation)
         rotation: (rng() - 0.5) * Math.PI,
         alpha: 0,
-        duration: 600 + i * 80, ease: 'Cubic.easeOut',
+        duration: 600 + i * 80,
+        ease: 'Cubic.easeOut',
         onComplete: () => ring.destroy(),
       })
     }
@@ -1776,14 +2409,22 @@ export class StarMapScene extends Phaser.Scene {
     const dark = this.add.circle(0, 0, sys.size * 1.3, 0x000000, 0.4)
     sprite.add(dark)
     this.tweens.add({
-      targets: dark, alpha: 0, scaleX: 1.5, scaleY: 1.5,
-      duration: 500, ease: 'Cubic.easeOut',
+      targets: dark,
+      alpha: 0,
+      scaleX: 1.5,
+      scaleY: 1.5,
+      duration: 500,
+      ease: 'Cubic.easeOut',
       onComplete: () => dark.destroy(),
     })
   }
 
   // 27. Solar flare — гигантская асимметричная вспышка с одной стороны
-  private compSolarFlare(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compSolarFlare(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const ang = rng() * Math.PI * 2
     const flare = this.add.graphics()
     const color = this.pickColor(rng, sys)
@@ -1800,14 +2441,21 @@ export class StarMapScene extends Phaser.Scene {
     flare.rotation = ang
     sprite.add(flare)
     this.tweens.add({
-      targets: flare, alpha: 0, scaleY: 1.4 + rng() * 0.4,
-      duration: 500 + rng() * 250, ease: this.pickEase(rng),
+      targets: flare,
+      alpha: 0,
+      scaleY: 1.4 + rng() * 0.4,
+      duration: 500 + rng() * 250,
+      ease: this.pickEase(rng),
       onComplete: () => flare.destroy(),
     })
   }
 
   // 28. Aurora ribbon — изогнутая лента из точек по дуге
-  private compAuroraRibbon(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compAuroraRibbon(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 14 + Math.floor(rng() * 8)
     const baseAng = rng() * Math.PI * 2
     const arcSpan = Math.PI * (0.6 + rng() * 0.5)
@@ -1818,12 +2466,21 @@ export class StarMapScene extends Phaser.Scene {
       const ang = baseAng - arcSpan / 2 + t * arcSpan
       const r = baseR + Math.sin(t * Math.PI) * sys.size * 0.4 // изгиб
       const color = this.pickColor(rng, sys)
-      const dot = this.add.circle(Math.cos(ang) * r, Math.sin(ang) * r, (1 + rng()) * DPR, color, 0.85)
+      const dot = this.add.circle(
+        Math.cos(ang) * r,
+        Math.sin(ang) * r,
+        (1 + rng()) * DPR,
+        color,
+        0.85,
+      )
       sprite.add(dot)
       this.tweens.add({
-        targets: dot, alpha: 0,
-        scaleX: 1.5, scaleY: 1.5,
-        duration: dur + i * 30, ease: 'Sine.easeOut',
+        targets: dot,
+        alpha: 0,
+        scaleX: 1.5,
+        scaleY: 1.5,
+        duration: dur + i * 30,
+        ease: 'Sine.easeOut',
         delay: i * 25,
         onComplete: () => dot.destroy(),
       })
@@ -1831,7 +2488,11 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 29. DNA helix — две точки переплетаются по синусоиде друг с другом
-  private compDNAHelix(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compDNAHelix(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const ang = rng() * Math.PI * 2
     const len = sys.size * (3 + rng())
     const dur = 700 + rng() * 200
@@ -1840,33 +2501,44 @@ export class StarMapScene extends Phaser.Scene {
     const c2 = this.pickColor(rng, sys)
     const dot1 = this.add.circle(0, 0, (2 + rng()) * DPR, c1, 1)
     const dot2 = this.add.circle(0, 0, (2 + rng()) * DPR, c2, 1)
-    sprite.add(dot1); sprite.add(dot2)
+    sprite.add(dot1)
+    sprite.add(dot2)
     const startTime = this.time.now
     const update = () => {
-      if (!dot1.active) { this.events.off('update', update); return }
+      if (!dot1.active) {
+        this.events.off('update', update)
+        return
+      }
       const t = (this.time.now - startTime) / dur
       if (t >= 1) {
-        dot1.destroy(); dot2.destroy()
+        dot1.destroy()
+        dot2.destroy()
         this.events.off('update', update)
         return
       }
       const along = -len / 2 + len * t
       const wave = Math.sin(t * Math.PI * 2 * turns) * sys.size * 0.5
-      const cosA = Math.cos(ang), sinA = Math.sin(ang)
+      const cosA = Math.cos(ang),
+        sinA = Math.sin(ang)
       // dot1
       dot1.x = along * cosA - wave * sinA
       dot1.y = along * sinA + wave * cosA
       // dot2 — anti-phase
-      dot2.x = along * cosA - (-wave) * sinA
-      dot2.y = along * sinA + (-wave) * cosA
+      dot2.x = along * cosA - -wave * sinA
+      dot2.y = along * sinA + -wave * cosA
       const fade = t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3
-      dot1.alpha = fade; dot2.alpha = fade
+      dot1.alpha = fade
+      dot2.alpha = fade
     }
     this.events.on('update', update)
   }
 
   // 30. Lens flare — длинная горизонтальная вспышка через всю планету
-  private compLensFlare(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compLensFlare(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const flare = this.add.graphics()
     const color = this.pickColor(rng, sys)
     const ang = rng() * Math.PI * 2
@@ -1881,14 +2553,21 @@ export class StarMapScene extends Phaser.Scene {
     flare.rotation = ang
     sprite.add(flare)
     this.tweens.add({
-      targets: flare, alpha: 0, scaleX: 1.2 + rng() * 0.3,
-      duration: 350 + rng() * 200, ease: 'Cubic.easeOut',
+      targets: flare,
+      alpha: 0,
+      scaleX: 1.2 + rng() * 0.3,
+      duration: 350 + rng() * 200,
+      ease: 'Cubic.easeOut',
       onComplete: () => flare.destroy(),
     })
   }
 
   // 31. Constellation — N точек + линии между ближайшими
-  private compConstellation(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compConstellation(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 5 + Math.floor(rng() * 4)
     const points: { x: number; y: number }[] = []
     const dots: Phaser.GameObjects.Arc[] = []
@@ -1896,7 +2575,8 @@ export class StarMapScene extends Phaser.Scene {
     for (let i = 0; i < N; i++) {
       const ang = (i / N) * Math.PI * 2 + rng() * 0.6
       const r = sys.size * (1.3 + rng() * 0.6)
-      const x = Math.cos(ang) * r, y = Math.sin(ang) * r
+      const x = Math.cos(ang) * r,
+        y = Math.sin(ang) * r
       points.push({ x, y })
       const dot = this.add.circle(x, y, (1.5 + rng()) * DPR, 0xffffff, 1)
       sprite.add(dot)
@@ -1906,38 +2586,56 @@ export class StarMapScene extends Phaser.Scene {
     const lines = this.add.graphics()
     lines.lineStyle(0.8 * DPR, color, 0.5)
     for (let i = 0; i < N; i++) {
-      const a = points[i]; const b = points[(i + 1) % N]
+      const a = points[i]
+      const b = points[(i + 1) % N]
       lines.lineBetween(a.x, a.y, b.x, b.y)
     }
     sprite.add(lines)
     this.tweens.add({
-      targets: [...dots, lines], alpha: 0,
-      duration: 700 + rng() * 200, ease: 'Sine.easeOut',
+      targets: [...dots, lines],
+      alpha: 0,
+      duration: 700 + rng() * 200,
+      ease: 'Sine.easeOut',
       delay: 150,
-      onComplete: () => { dots.forEach(d => d.destroy()); lines.destroy() },
+      onComplete: () => {
+        dots.forEach((d) => d.destroy())
+        lines.destroy()
+      },
     })
   }
 
   // 32. Magnetic field — кривые из «полюсов» планеты
-  private compMagneticField(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compMagneticField(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const lines = this.add.graphics()
     const color = this.pickColor(rng, sys)
     const accent = this.pickColor(rng, sys)
     const polarAng = rng() * Math.PI * 2
     const arcs = 4 + Math.floor(rng() * 3)
     for (let i = 0; i < arcs; i++) {
-      const offset = ((i / (arcs - 1)) - 0.5) * Math.PI * 0.6
+      const offset = (i / (arcs - 1) - 0.5) * Math.PI * 0.6
       const span = sys.size * (1.3 + i * 0.18)
       // Bezier-like curve через 3 точки симметрично
-      const cosP = Math.cos(polarAng), sinP = Math.sin(polarAng)
-      const x0 = cosP * sys.size, y0 = sinP * sys.size
+      const cosP = Math.cos(polarAng),
+        sinP = Math.sin(polarAng)
+      const x0 = cosP * sys.size,
+        y0 = sinP * sys.size
       const x1 = cosP * span + sinP * span * (i % 2 === 0 ? 1 : -1) * 0.5
       const y1 = sinP * span - cosP * span * (i % 2 === 0 ? 1 : -1) * 0.5
-      const x2 = -x0, y2 = -y0
-      lines.lineStyle((0.8 + rng()) * DPR, i % 2 === 0 ? color : accent, 0.6 + rng() * 0.3)
+      const x2 = -x0,
+        y2 = -y0
+      lines.lineStyle(
+        (0.8 + rng()) * DPR,
+        i % 2 === 0 ? color : accent,
+        0.6 + rng() * 0.3,
+      )
       // approximation as 12 segments
       const segs = 12
-      let px = x0, py = y0
+      let px = x0,
+        py = y0
       for (let s = 1; s <= segs; s++) {
         const t = s / segs
         // quadratic bezier
@@ -1945,20 +2643,29 @@ export class StarMapScene extends Phaser.Scene {
         const xx = u * u * x0 + 2 * u * t * x1 + t * t * x2
         const yy = u * u * y0 + 2 * u * t * y1 + t * t * y2
         lines.lineBetween(px, py, xx, yy)
-        px = xx; py = yy
+        px = xx
+        py = yy
       }
       void offset
     }
     sprite.add(lines)
     this.tweens.add({
-      targets: lines, alpha: 0, scaleX: 1.3, scaleY: 1.3,
-      duration: 600 + rng() * 250, ease: 'Cubic.easeOut',
+      targets: lines,
+      alpha: 0,
+      scaleX: 1.3,
+      scaleY: 1.3,
+      duration: 600 + rng() * 250,
+      ease: 'Cubic.easeOut',
       onComplete: () => lines.destroy(),
     })
   }
 
   // 33. Phoenix burst — искры взлетают и догорают (огненный фонтан)
-  private compPhoenixBurst(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compPhoenixBurst(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 14 + Math.floor(rng() * 8)
     const fanCenter = -Math.PI / 2 + (rng() - 0.5) * 0.4
     const fanWidth = 1.0 + rng() * 0.6
@@ -1974,9 +2681,16 @@ export class StarMapScene extends Phaser.Scene {
       const g = sys.size * 2.5
       const startTime = this.time.now
       const update = () => {
-        if (!dot.active) { this.events.off('update', update); return }
+        if (!dot.active) {
+          this.events.off('update', update)
+          return
+        }
         const t = (this.time.now - startTime) / dur
-        if (t >= 1) { dot.destroy(); this.events.off('update', update); return }
+        if (t >= 1) {
+          dot.destroy()
+          this.events.off('update', update)
+          return
+        }
         dot.x = vx * t
         dot.y = vy * t + 0.5 * g * t * t
         // догорает: смещение цвета через alpha + scale
@@ -1988,7 +2702,11 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 34. Wormhole — концентрические уменьшающиеся кольца (туннель)
-  private compWormhole(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compWormhole(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const rings = 5
     const baseColor = this.pickColor(rng, sys)
     const accent = this.pickColor(rng, sys)
@@ -2001,8 +2719,12 @@ export class StarMapScene extends Phaser.Scene {
         ring.strokeCircle(0, 0, sys.size * (2.2 - i * 0.2))
         sprite.add(ring)
         this.tweens.add({
-          targets: ring, scaleX: 0.1, scaleY: 0.1, alpha: 0,
-          duration: 600, ease: 'Cubic.easeIn',
+          targets: ring,
+          scaleX: 0.1,
+          scaleY: 0.1,
+          alpha: 0,
+          duration: 600,
+          ease: 'Cubic.easeIn',
           onComplete: () => ring.destroy(),
         })
       })
@@ -2010,7 +2732,11 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 35. Cosmic ray — длинная прямая линия с свечением, проходит мимо
-  private compCosmicRay(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compCosmicRay(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const ang = rng() * Math.PI * 2
     const reach = sys.size * (3.5 + rng())
     const sx = Math.cos(ang) * -reach
@@ -2027,14 +2753,20 @@ export class StarMapScene extends Phaser.Scene {
     sprite.add(ray)
     // двигаем альфу
     this.tweens.add({
-      targets: ray, alpha: 0,
-      duration: 350 + rng() * 200, ease: 'Cubic.easeOut',
+      targets: ray,
+      alpha: 0,
+      duration: 350 + rng() * 200,
+      ease: 'Cubic.easeOut',
       onComplete: () => ray.destroy(),
     })
   }
 
   // 36. Quantum split — на момент 2 фантомных копии расходятся, потом сжимаются
-  private compQuantumSplit(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compQuantumSplit(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const ang = rng() * Math.PI * 2
     const dist = sys.size * (1.0 + rng() * 0.4)
     for (const sign of [1, -1]) {
@@ -2043,15 +2775,25 @@ export class StarMapScene extends Phaser.Scene {
       const tx = Math.cos(ang) * dist * sign
       const ty = Math.sin(ang) * dist * sign
       this.tweens.add({
-        targets: ghost, x: tx, y: ty, alpha: 0, scaleX: 0.8, scaleY: 0.8,
-        duration: 400 + rng() * 200, ease: 'Cubic.easeOut',
+        targets: ghost,
+        x: tx,
+        y: ty,
+        alpha: 0,
+        scaleX: 0.8,
+        scaleY: 0.8,
+        duration: 400 + rng() * 200,
+        ease: 'Cubic.easeOut',
         onComplete: () => ghost.destroy(),
       })
     }
   }
 
   // 37. Heart pulse — пульс из 2 кругов в виде сердца (горячая планета любви)
-  private compHeartPulse(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compHeartPulse(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const heart = this.add.graphics()
     const color = this.pickColor(rng, sys)
     const r = sys.size * 0.7
@@ -2062,14 +2804,22 @@ export class StarMapScene extends Phaser.Scene {
     heart.fillTriangle(-r, 0, r, 0, 0, r * 1.0)
     sprite.add(heart)
     this.tweens.add({
-      targets: heart, scaleX: 1.6 + rng() * 0.3, scaleY: 1.6 + rng() * 0.3, alpha: 0,
-      duration: 600 + rng() * 200, ease: 'Sine.easeOut',
+      targets: heart,
+      scaleX: 1.6 + rng() * 0.3,
+      scaleY: 1.6 + rng() * 0.3,
+      alpha: 0,
+      duration: 600 + rng() * 200,
+      ease: 'Sine.easeOut',
       onComplete: () => heart.destroy(),
     })
   }
 
   // 38. Crackle discharge — короткие электрические разряды по поверхности
-  private compCrackleDischarge(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compCrackleDischarge(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const sparks = 6 + Math.floor(rng() * 5)
     for (let i = 0; i < sparks; i++) {
       const delay = Math.floor(rng() * 250)
@@ -2087,16 +2837,21 @@ export class StarMapScene extends Phaser.Scene {
         const midR = (r1 + r2) / 2
         const midA = (startA + endA) / 2 + (rng() - 0.5) * 0.3
         arc.lineBetween(
-          Math.cos(startA) * r1, Math.sin(startA) * r1,
-          Math.cos(midA) * midR, Math.sin(midA) * midR,
+          Math.cos(startA) * r1,
+          Math.sin(startA) * r1,
+          Math.cos(midA) * midR,
+          Math.sin(midA) * midR,
         )
         arc.lineBetween(
-          Math.cos(midA) * midR, Math.sin(midA) * midR,
-          Math.cos(endA) * r2, Math.sin(endA) * r2,
+          Math.cos(midA) * midR,
+          Math.sin(midA) * midR,
+          Math.cos(endA) * r2,
+          Math.sin(endA) * r2,
         )
         sprite.add(arc)
         this.tweens.add({
-          targets: arc, alpha: 0,
+          targets: arc,
+          alpha: 0,
           duration: 200 + rng() * 150,
           onComplete: () => arc.destroy(),
         })
@@ -2107,7 +2862,11 @@ export class StarMapScene extends Phaser.Scene {
   // === РАСШИРЕНИЕ 39-53 ===
 
   // 39. Pixel grid — N квадратиков образуют сетку и распадаются
-  private compPixelGrid(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compPixelGrid(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const grid = 4 + Math.floor(rng() * 2) // 4x4 или 5x5
     const span = sys.size * 1.4
     const cell = (span * 2) / grid
@@ -2122,8 +2881,10 @@ export class StarMapScene extends Phaser.Scene {
         const px = this.add.rectangle(x, y, cellSize, cellSize, color, 0.85)
         sprite.add(px)
         this.tweens.add({
-          targets: px, alpha: 0,
-          x: x * (1 + rng() * 0.4), y: y * (1 + rng() * 0.4),
+          targets: px,
+          alpha: 0,
+          x: x * (1 + rng() * 0.4),
+          y: y * (1 + rng() * 0.4),
           rotation: (rng() - 0.5) * Math.PI,
           duration: dur + rng() * 150,
           delay: rng() * 200,
@@ -2135,7 +2896,11 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 40. Spiral arms — 2-4 спиральных рукава из точек как маленькая галактика
-  private compSpiralArms(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compSpiralArms(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const arms = 2 + Math.floor(rng() * 3) // 2-4
     const dotsPerArm = 8 + Math.floor(rng() * 4)
     const turns = 0.7 + rng() * 0.7
@@ -2153,9 +2918,11 @@ export class StarMapScene extends Phaser.Scene {
         sprite.add(dot)
         this.tweens.add({
           targets: dot,
-          x: Math.cos(ang) * r, y: Math.sin(ang) * r,
+          x: Math.cos(ang) * r,
+          y: Math.sin(ang) * r,
           alpha: 0,
-          duration: dur + i * 30, ease: 'Cubic.easeOut',
+          duration: dur + i * 30,
+          ease: 'Cubic.easeOut',
           delay: i * 25,
           onComplete: () => dot.destroy(),
         })
@@ -2164,7 +2931,11 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 41. Crystal grow — кристаллы растут наружу из центра как ледяные иглы
-  private compCrystalGrow(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compCrystalGrow(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 5 + Math.floor(rng() * 4)
     for (let i = 0; i < N; i++) {
       const ang = (i / N) * Math.PI * 2 + rng() * 0.3
@@ -2175,17 +2946,29 @@ export class StarMapScene extends Phaser.Scene {
       shard.fillStyle(color, 0.9)
       shard.fillTriangle(0, 0, w, finalLen * 0.5, -w, finalLen * 0.5)
       shard.fillStyle(0xffffff, 0.5)
-      shard.fillTriangle(0, 0, w * 0.5, finalLen * 0.5, -w * 0.5, finalLen * 0.5)
+      shard.fillTriangle(
+        0,
+        0,
+        w * 0.5,
+        finalLen * 0.5,
+        -w * 0.5,
+        finalLen * 0.5,
+      )
       shard.rotation = ang - Math.PI / 2
       shard.scale = 0.05
       sprite.add(shard)
       this.tweens.add({
-        targets: shard, scale: 1,
-        duration: 350 + rng() * 150, ease: 'Back.easeOut',
+        targets: shard,
+        scale: 1,
+        duration: 350 + rng() * 150,
+        ease: 'Back.easeOut',
         onComplete: () => {
           this.tweens.add({
-            targets: shard, alpha: 0, scale: 1.2,
-            duration: 400 + rng() * 200, ease: 'Cubic.easeIn',
+            targets: shard,
+            alpha: 0,
+            scale: 1.2,
+            duration: 400 + rng() * 200,
+            ease: 'Cubic.easeIn',
             onComplete: () => shard.destroy(),
           })
         },
@@ -2194,7 +2977,11 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 42. Snow drift — снежинки парят и опускаются (для ice, aerial)
-  private compSnowDrift(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compSnowDrift(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 10 + Math.floor(rng() * 6)
     for (let i = 0; i < N; i++) {
       const startX = (rng() - 0.5) * sys.size * 3
@@ -2202,11 +2989,21 @@ export class StarMapScene extends Phaser.Scene {
       const endY = sys.size * 1.5 + rng() * sys.size * 0.5
       const driftX = (rng() - 0.5) * sys.size * 0.8
       const color = this.pickColor(rng, sys)
-      const flake = this.add.circle(startX, startY, (1 + rng()) * DPR, color, 0.9)
+      const flake = this.add.circle(
+        startX,
+        startY,
+        (1 + rng()) * DPR,
+        color,
+        0.9,
+      )
       sprite.add(flake)
       this.tweens.add({
-        targets: flake, y: endY, x: startX + driftX, alpha: 0,
-        duration: 700 + rng() * 400, ease: 'Sine.easeIn',
+        targets: flake,
+        y: endY,
+        x: startX + driftX,
+        alpha: 0,
+        duration: 700 + rng() * 400,
+        ease: 'Sine.easeIn',
         delay: rng() * 150,
         onComplete: () => flake.destroy(),
       })
@@ -2214,7 +3011,11 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 43. Galaxy spawn — мини-галактика рождается рядом с планетой (для gas_giant, ancient)
-  private compGalaxySpawn(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compGalaxySpawn(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const offsetAng = rng() * Math.PI * 2
     const offsetDist = sys.size * (1.6 + rng() * 0.5)
     const cx = Math.cos(offsetAng) * offsetDist
@@ -2230,17 +3031,24 @@ export class StarMapScene extends Phaser.Scene {
     galaxy.fillCircle(0, 0, ovalRX * 0.25)
     galaxy.fillStyle(accent, 0.5)
     galaxy.fillEllipse(0, 0, ovalRX * 1.4, ovalRY * 1.4)
-    galaxy.x = cx; galaxy.y = cy
+    galaxy.x = cx
+    galaxy.y = cy
     galaxy.rotation = rng() * Math.PI * 2
     galaxy.scale = 0
     sprite.add(galaxy)
     this.tweens.add({
-      targets: galaxy, scale: 1, rotation: galaxy.rotation + Math.PI,
-      duration: 500 + rng() * 200, ease: 'Back.easeOut',
+      targets: galaxy,
+      scale: 1,
+      rotation: galaxy.rotation + Math.PI,
+      duration: 500 + rng() * 200,
+      ease: 'Back.easeOut',
       onComplete: () => {
         this.tweens.add({
-          targets: galaxy, alpha: 0, scale: 1.5,
-          duration: 350, ease: 'Cubic.easeOut',
+          targets: galaxy,
+          alpha: 0,
+          scale: 1.5,
+          duration: 350,
+          ease: 'Cubic.easeOut',
           onComplete: () => galaxy.destroy(),
         })
       },
@@ -2248,7 +3056,11 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 44. Pulse hex — гексагональное кольцо появляется и расширяется
-  private compPulseHex(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compPulseHex(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const sides = rng() < 0.5 ? 6 : 8
     const hex = this.add.graphics()
     const color = this.pickColor(rng, sys)
@@ -2257,7 +3069,8 @@ export class StarMapScene extends Phaser.Scene {
     hex.beginPath()
     for (let i = 0; i <= sides; i++) {
       const a = (i / sides) * Math.PI * 2
-      const x = Math.cos(a) * r, y = Math.sin(a) * r
+      const x = Math.cos(a) * r,
+        y = Math.sin(a) * r
       if (i === 0) hex.moveTo(x, y)
       else hex.lineTo(x, y)
     }
@@ -2265,36 +3078,58 @@ export class StarMapScene extends Phaser.Scene {
     hex.rotation = rng() * Math.PI * 2
     sprite.add(hex)
     this.tweens.add({
-      targets: hex, scale: 1.8 + rng() * 0.5, alpha: 0,
+      targets: hex,
+      scale: 1.8 + rng() * 0.5,
+      alpha: 0,
       rotation: hex.rotation + (rng() < 0.5 ? Math.PI / 6 : -Math.PI / 6),
-      duration: 500 + rng() * 250, ease: 'Cubic.easeOut',
+      duration: 500 + rng() * 250,
+      ease: 'Cubic.easeOut',
       onComplete: () => hex.destroy(),
     })
   }
 
   // 45. Tornado — спираль конусом вверх (вертикальный вихрь)
-  private compTornado(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compTornado(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 16 + Math.floor(rng() * 6)
     const dur = 700 + rng() * 200
     const direction = rng() < 0.5 ? 1 : -1
     const ang = -Math.PI / 2 // вверх
     for (let i = 0; i < N; i++) {
       const t0 = i / N
-      const dot = this.add.circle(0, 0, (1 + rng()) * DPR, this.pickColor(rng, sys), 0.85)
+      const dot = this.add.circle(
+        0,
+        0,
+        (1 + rng()) * DPR,
+        this.pickColor(rng, sys),
+        0.85,
+      )
       sprite.add(dot)
       const startTime = this.time.now + i * 25
       const localDur = dur
       const update = () => {
-        if (!dot.active) { this.events.off('update', update); return }
+        if (!dot.active) {
+          this.events.off('update', update)
+          return
+        }
         const t = (this.time.now - startTime) / localDur
         if (t < 0) return
-        if (t >= 1) { dot.destroy(); this.events.off('update', update); return }
+        if (t >= 1) {
+          dot.destroy()
+          this.events.off('update', update)
+          return
+        }
         const along = sys.size * (1.5 - t * 2.5) // снизу-вверх
         const radius = sys.size * (0.2 + t * 0.6) // расширяется
         const phase = direction * t * Math.PI * 4 + t0 * Math.PI * 2
-        const cosA = Math.cos(ang), sinA = Math.sin(ang)
+        const cosA = Math.cos(ang),
+          sinA = Math.sin(ang)
         // local coords: forward = ang, side = perpendicular
-        const sideX = -sinA, sideY = cosA
+        const sideX = -sinA,
+          sideY = cosA
         dot.x = cosA * along + sideX * Math.cos(phase) * radius
         dot.y = sinA * along + sideY * Math.cos(phase) * radius
         dot.alpha = 0.85 * (1 - t)
@@ -2304,7 +3139,11 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 46. Star polygon — пятиконечная (или 6-) звезда расширяется
-  private compStarPolygon(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compStarPolygon(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const points = 5 + Math.floor(rng() * 3) // 5-7
     const star = this.add.graphics()
     const color = this.pickColor(rng, sys)
@@ -2320,7 +3159,8 @@ export class StarMapScene extends Phaser.Scene {
     star.fillStyle(color, 0.7)
     star.beginPath()
     star.moveTo(verts[0], verts[1])
-    for (let i = 2; i < verts.length; i += 2) star.lineTo(verts[i], verts[i + 1])
+    for (let i = 2; i < verts.length; i += 2)
+      star.lineTo(verts[i], verts[i + 1])
     star.closePath()
     star.fill()
     star.lineStyle(DPR, accent, 0.85)
@@ -2328,15 +3168,22 @@ export class StarMapScene extends Phaser.Scene {
     star.scale = 0.3
     sprite.add(star)
     this.tweens.add({
-      targets: star, scale: 1.6 + rng() * 0.5, alpha: 0,
-      rotation: (rng() < 0.5 ? 1 : -1) * Math.PI / 5,
-      duration: 550 + rng() * 200, ease: 'Cubic.easeOut',
+      targets: star,
+      scale: 1.6 + rng() * 0.5,
+      alpha: 0,
+      rotation: ((rng() < 0.5 ? 1 : -1) * Math.PI) / 5,
+      duration: 550 + rng() * 200,
+      ease: 'Cubic.easeOut',
       onComplete: () => star.destroy(),
     })
   }
 
   // 47. Cross flash — крестообразная вспышка X или + (для military, mineral)
-  private compCrossFlash(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compCrossFlash(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const cross = this.add.graphics()
     const color = this.pickColor(rng, sys)
     const len = sys.size * (2.5 + rng() * 0.7)
@@ -2351,14 +3198,21 @@ export class StarMapScene extends Phaser.Scene {
     cross.scale = 0.4
     sprite.add(cross)
     this.tweens.add({
-      targets: cross, scale: 1.3 + rng() * 0.3, alpha: 0,
-      duration: 350 + rng() * 200, ease: 'Cubic.easeOut',
+      targets: cross,
+      scale: 1.3 + rng() * 0.3,
+      alpha: 0,
+      duration: 350 + rng() * 200,
+      ease: 'Cubic.easeOut',
       onComplete: () => cross.destroy(),
     })
   }
 
   // 48. Wave train — несколько асимметричных волн в одну сторону
-  private compWaveTrain(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compWaveTrain(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const count = 3 + Math.floor(rng() * 3)
     const direction = rng() * Math.PI * 2
     const stepDelay = 100 + rng() * 80
@@ -2375,8 +3229,10 @@ export class StarMapScene extends Phaser.Scene {
           targets: wave,
           x: Math.cos(direction) * sys.size * 1.5,
           y: Math.sin(direction) * sys.size * 1.5,
-          alpha: 0, scaleX: 1.5,
-          duration: 600, ease: 'Sine.easeOut',
+          alpha: 0,
+          scaleX: 1.5,
+          duration: 600,
+          ease: 'Sine.easeOut',
           onComplete: () => wave.destroy(),
         })
       })
@@ -2384,7 +3240,11 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 49. Petal storm — много лепестков-эллипсов кружатся вокруг
-  private compPetalStorm(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compPetalStorm(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 12 + Math.floor(rng() * 6)
     const direction = rng() < 0.5 ? 1 : -1
     const dur = 700 + rng() * 250
@@ -2392,14 +3252,28 @@ export class StarMapScene extends Phaser.Scene {
     for (let i = 0; i < N; i++) {
       const phase = (i / N) * Math.PI * 2
       const color = this.pickColor(rng, sys)
-      const petal = this.add.ellipse(0, 0, (3 + rng() * 2) * DPR, (1.5 + rng()) * DPR, color, 0.85)
+      const petal = this.add.ellipse(
+        0,
+        0,
+        (3 + rng() * 2) * DPR,
+        (1.5 + rng()) * DPR,
+        color,
+        0.85,
+      )
       petal.rotation = phase
       sprite.add(petal)
       const startTime = this.time.now
       const update = () => {
-        if (!petal.active) { this.events.off('update', update); return }
+        if (!petal.active) {
+          this.events.off('update', update)
+          return
+        }
         const t = (this.time.now - startTime) / dur
-        if (t >= 1) { petal.destroy(); this.events.off('update', update); return }
+        if (t >= 1) {
+          petal.destroy()
+          this.events.off('update', update)
+          return
+        }
         const r = baseR * (1 + t * 0.6)
         const a = phase + direction * t * Math.PI * 2
         petal.x = Math.cos(a) * r
@@ -2414,25 +3288,47 @@ export class StarMapScene extends Phaser.Scene {
   // 50. compFlameTongues — extracted в effects/anim/shared/compFlameTongues.ts (Phase 9).
 
   // 51. Snake trail — точка обходит S-образную форму с trail
-  private compSnakeTrail(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compSnakeTrail(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const dur = 700 + rng() * 250
     const amplitude = sys.size * (0.6 + rng() * 0.3)
     const length = sys.size * (3 + rng())
     const ang = rng() * Math.PI * 2
-    const cosA = Math.cos(ang), sinA = Math.sin(ang)
-    const head = this.add.circle(0, 0, (2.5 + rng()) * DPR, this.pickColor(rng, sys), 1)
+    const cosA = Math.cos(ang),
+      sinA = Math.sin(ang)
+    const head = this.add.circle(
+      0,
+      0,
+      (2.5 + rng()) * DPR,
+      this.pickColor(rng, sys),
+      1,
+    )
     const trail: Phaser.GameObjects.Arc[] = []
     sprite.add(head)
     for (let i = 0; i < 6; i++) {
-      const t = this.add.circle(0, 0, (2 - i * 0.25) * DPR, this.pickColor(rng, sys), 0.7 - i * 0.1)
-      sprite.add(t); trail.push(t)
+      const t = this.add.circle(
+        0,
+        0,
+        (2 - i * 0.25) * DPR,
+        this.pickColor(rng, sys),
+        0.7 - i * 0.1,
+      )
+      sprite.add(t)
+      trail.push(t)
     }
     const startTime = this.time.now
     const update = () => {
-      if (!head.active) { this.events.off('update', update); return }
+      if (!head.active) {
+        this.events.off('update', update)
+        return
+      }
       const t = (this.time.now - startTime) / dur
       if (t >= 1) {
-        head.destroy(); trail.forEach(d => d.destroy())
+        head.destroy()
+        trail.forEach((d) => d.destroy())
         this.events.off('update', update)
         return
       }
@@ -2452,7 +3348,11 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 52. Bubble pop — пузыри всплывают и лопаются (для ocean, toxic)
-  private compBubblePop(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compBubblePop(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 5 + Math.floor(rng() * 4)
     for (let i = 0; i < N; i++) {
       const startAng = rng() * Math.PI * 2
@@ -2468,23 +3368,32 @@ export class StarMapScene extends Phaser.Scene {
       bubble.strokeCircle(0, 0, r)
       bubble.fillStyle(0xffffff, 0.6)
       bubble.fillCircle(-r * 0.3, -r * 0.3, r * 0.3)
-      bubble.x = sx; bubble.y = sy
+      bubble.x = sx
+      bubble.y = sy
       bubble.scale = 0
       sprite.add(bubble)
       const upX = sx + (rng() - 0.5) * sys.size * 0.4
       const upY = sy - sys.size * (0.7 + rng() * 0.5)
       this.tweens.add({
-        targets: bubble, scale: 1,
-        duration: 200, ease: 'Back.easeOut',
+        targets: bubble,
+        scale: 1,
+        duration: 200,
+        ease: 'Back.easeOut',
         delay: i * 50,
         onComplete: () => {
           this.tweens.add({
-            targets: bubble, x: upX, y: upY,
-            duration: 400 + rng() * 200, ease: 'Sine.easeOut',
+            targets: bubble,
+            x: upX,
+            y: upY,
+            duration: 400 + rng() * 200,
+            ease: 'Sine.easeOut',
             onComplete: () => {
               this.tweens.add({
-                targets: bubble, scale: 1.6, alpha: 0,
-                duration: 150, ease: 'Cubic.easeOut',
+                targets: bubble,
+                scale: 1.6,
+                alpha: 0,
+                duration: 150,
+                ease: 'Cubic.easeOut',
                 onComplete: () => bubble.destroy(),
               })
             },
@@ -2505,7 +3414,10 @@ export class StarMapScene extends Phaser.Scene {
     let bestDist = Math.abs(value - thresholds[0])
     for (let i = 1; i < thresholds.length; i++) {
       const d = Math.abs(value - thresholds[i])
-      if (d < bestDist) { bestDist = d; bestIdx = i }
+      if (d < bestDist) {
+        bestDist = d
+        bestIdx = i
+      }
     }
     return bestIdx
   }
@@ -2517,7 +3429,9 @@ export class StarMapScene extends Phaser.Scene {
   private buildAnimSignature(sys: Race | BgSystem): string {
     const rng = this.animRng(sys)
     const theme = (sys as BgSystem).archetype ?? sys.type
-    const pool = this.THEME_COMPONENTS[theme] ?? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    const pool = this.THEME_COMPONENTS[theme] ?? [
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+    ]
 
     // (1) recipe size + components — реплицирует playUniqueAnimation:984-992
     const r1 = rng()
@@ -2527,7 +3441,10 @@ export class StarMapScene extends Phaser.Scene {
     const components: number[] = []
     while (components.length < compCount) {
       const c = pool[Math.floor(rng() * pool.length)]
-      if (!used.has(c)) { used.add(c); components.push(c) }
+      if (!used.has(c)) {
+        used.add(c)
+        components.push(c)
+      }
     }
 
     // (2) modifier flag + rotation/scale (реплицирует playUniqueAnimation:997-999)
@@ -2538,7 +3455,12 @@ export class StarMapScene extends Phaser.Scene {
     // Phase 8: квантуем modifier params в бины
     // rotation: 4 бина около (-π/2, -π/4, +π/4, +π/2); -1 если modifier нет
     const rotationBin = useModifier
-      ? this.quantize(modRotation, [-Math.PI / 2, -Math.PI / 4, Math.PI / 4, Math.PI / 2])
+      ? this.quantize(modRotation, [
+          -Math.PI / 2,
+          -Math.PI / 4,
+          Math.PI / 4,
+          Math.PI / 2,
+        ])
       : -1
     // scale: 4 бина около (0.7, 0.85, 1.15, 1.3); -1 если modifier нет
     const scaleBin = useModifier
@@ -2549,9 +3471,10 @@ export class StarMapScene extends Phaser.Scene {
     // ВАЖНО: pickColor вызывает rng() уже внутри runAnimComponent — мы НЕ можем
     // повторить этот порядок в signature, т.к. он зависит от внутренностей comp.
     // Решение: используем raw seed (как его вычисляет animRng) и проектируем в 8 бинов.
-    const seedSource = ('rngSeed' in sys && typeof (sys as BgSystem).rngSeed === 'number')
-      ? (sys as BgSystem).rngSeed
-      : (this.mainSeedOverride.get(sys.id) ?? this.hashId(sys.id))
+    const seedSource =
+      'rngSeed' in sys && typeof (sys as BgSystem).rngSeed === 'number'
+        ? (sys as BgSystem).rngSeed
+        : (this.mainSeedOverride.get(sys.id) ?? this.hashId(sys.id))
     // Проектируем seed в 8 hue bins (0..7)
     const hueBin = (seedSource >>> 5) & 0x7
 
@@ -2585,11 +3508,14 @@ export class StarMapScene extends Phaser.Scene {
       let attempt = 0
       let sig = this.buildAnimSignature(sys)
       while (sigs.has(sig) && attempt < 10) {
-        const isBg = 'rngSeed' in sys && typeof (sys as BgSystem).rngSeed === 'number'
-        const cur = isBg ? (sys as BgSystem).rngSeed : (this.mainSeedOverride.get(sys.id) ?? this.hashId(sys.id))
+        const isBg =
+          'rngSeed' in sys && typeof (sys as BgSystem).rngSeed === 'number'
+        const cur = isBg
+          ? (sys as BgSystem).rngSeed
+          : (this.mainSeedOverride.get(sys.id) ?? this.hashId(sys.id))
         const newSeed = (cur ^ ((attempt + 1) * 0x9e3779b9)) >>> 0
         if (isBg) {
-          (sys as BgSystem).rngSeed = newSeed
+          ;(sys as BgSystem).rngSeed = newSeed
         } else {
           this.mainSeedOverride.set(sys.id, newSeed)
         }
@@ -2600,7 +3526,9 @@ export class StarMapScene extends Phaser.Scene {
       sigs.set(sig, sys.id)
     }
     // eslint-disable-next-line no-console
-    console.log(`[StarMap] anim signatures (strict): ${sigs.size}/${this.allSystems.length} unique, ${conflicts} unresolved conflicts (max 10 attempts)`)
+    console.log(
+      `[StarMap] anim signatures (strict): ${sigs.size}/${this.allSystems.length} unique, ${conflicts} unresolved conflicts (max 10 attempts)`,
+    )
   }
 
   // Helper: hash id → seed (используется в refineAnimSeeds для main races без rngSeed)
@@ -2635,13 +3563,14 @@ export class StarMapScene extends Phaser.Scene {
       let attempt = 0
       let sig = this.buildSoundSignature(sys)
       while (sigs.has(sig) && attempt < 10) {
-        const isBg = 'rngSeed' in sys && typeof (sys as BgSystem).rngSeed === 'number'
+        const isBg =
+          'rngSeed' in sys && typeof (sys as BgSystem).rngSeed === 'number'
         const cur = isBg
           ? (sys as BgSystem).rngSeed
           : (this.mainSeedOverride.get(sys.id) ?? this.hashId(sys.id))
         const newSeed = (cur ^ ((attempt + 1) * 0xc2b2ae3d)) >>> 0
         if (isBg) {
-          (sys as BgSystem).rngSeed = newSeed
+          ;(sys as BgSystem).rngSeed = newSeed
         } else {
           this.mainSeedOverride.set(sys.id, newSeed)
         }
@@ -2652,7 +3581,9 @@ export class StarMapScene extends Phaser.Scene {
       sigs.set(sig, sys.id)
     }
     // eslint-disable-next-line no-console
-    console.log(`[StarMap] sound signatures: ${sigs.size}/${this.allSystems.length} unique, ${conflicts} unresolved conflicts (max 10 attempts)`)
+    console.log(
+      `[StarMap] sound signatures: ${sigs.size}/${this.allSystems.length} unique, ${conflicts} unresolved conflicts (max 10 attempts)`,
+    )
   }
 
   // Phase 7: signature для текстуры BG-планеты — реплицирует первые ~10 rng() calls
@@ -2724,19 +3655,25 @@ export class StarMapScene extends Phaser.Scene {
       sigs.set(sig, sys.id)
     }
     // eslint-disable-next-line no-console
-    console.log(`[StarMap] texture signatures: ${sigs.size}/${bgCount} unique BG, ${conflicts} unresolved`)
+    console.log(
+      `[StarMap] texture signatures: ${sigs.size}/${bgCount} unique BG, ${conflicts} unresolved`,
+    )
   }
 
   // === PHASE 7: НОВЫЕ КОМПОНЕНТЫ 54-63 ===
 
   // 54. Atom shells — 3 концентрические орбиты с точками (mineral, energy, mechano)
-  private compAtomShells(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compAtomShells(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const shells = 3
     const dur = 700 + rng() * 250
     for (let s = 0; s < shells; s++) {
       const r = sys.size * (1.0 + s * 0.4)
       const dotsOnShell = 3 + s
-      const direction = (s % 2 === 0 ? 1 : -1)
+      const direction = s % 2 === 0 ? 1 : -1
       const baseAng = rng() * Math.PI * 2
       const color = this.pickColor(rng, sys)
       // Орбита-кольцо
@@ -2745,8 +3682,10 @@ export class StarMapScene extends Phaser.Scene {
       ring.strokeCircle(0, 0, r)
       sprite.add(ring)
       this.tweens.add({
-        targets: ring, alpha: 0,
-        duration: dur, ease: 'Sine.easeOut',
+        targets: ring,
+        alpha: 0,
+        duration: dur,
+        ease: 'Sine.easeOut',
         onComplete: () => ring.destroy(),
       })
       // Точки на орбите
@@ -2756,9 +3695,16 @@ export class StarMapScene extends Phaser.Scene {
         sprite.add(dot)
         const startTime = this.time.now
         const update = () => {
-          if (!dot.active) { this.events.off('update', update); return }
+          if (!dot.active) {
+            this.events.off('update', update)
+            return
+          }
           const t = (this.time.now - startTime) / dur
-          if (t >= 1) { dot.destroy(); this.events.off('update', update); return }
+          if (t >= 1) {
+            dot.destroy()
+            this.events.off('update', update)
+            return
+          }
           const a = baseAng + phase + direction * t * Math.PI * 2
           dot.x = Math.cos(a) * r
           dot.y = Math.sin(a) * r
@@ -2770,14 +3716,21 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 55. Supernova — яркая вспышка → ударная волна → разлёт следов (dead, plasma, destroyed)
-  private compSupernova(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compSupernova(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const color = this.pickColor(rng, sys)
     // Этап 1: яркое ядро
     const core = this.add.circle(0, 0, sys.size * 0.6, 0xffffff, 1)
     sprite.add(core)
     this.tweens.add({
-      targets: core, scale: 2.5, alpha: 0,
-      duration: 250, ease: 'Cubic.easeOut',
+      targets: core,
+      scale: 2.5,
+      alpha: 0,
+      duration: 250,
+      ease: 'Cubic.easeOut',
       onComplete: () => core.destroy(),
     })
     // Этап 2: ударная волна (после короткой задержки)
@@ -2788,8 +3741,12 @@ export class StarMapScene extends Phaser.Scene {
       shock.strokeCircle(0, 0, sys.size * 1.0)
       sprite.add(shock)
       this.tweens.add({
-        targets: shock, scaleX: 3.5, scaleY: 3.5, alpha: 0,
-        duration: 600, ease: 'Cubic.easeOut',
+        targets: shock,
+        scaleX: 3.5,
+        scaleY: 3.5,
+        alpha: 0,
+        duration: 600,
+        ease: 'Cubic.easeOut',
         onComplete: () => shock.destroy(),
       })
     })
@@ -2803,9 +3760,12 @@ export class StarMapScene extends Phaser.Scene {
       sprite.add(trail)
       this.tweens.add({
         targets: trail,
-        x: Math.cos(ang) * dist, y: Math.sin(ang) * dist,
-        alpha: 0, scale: 0.3,
-        duration: 700 + rng() * 200, ease: 'Cubic.easeOut',
+        x: Math.cos(ang) * dist,
+        y: Math.sin(ang) * dist,
+        alpha: 0,
+        scale: 0.3,
+        duration: 700 + rng() * 200,
+        ease: 'Cubic.easeOut',
         delay: 80 + rng() * 100,
         onComplete: () => trail.destroy(),
       })
@@ -2813,7 +3773,11 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 56. Accretion disk — плоский эллиптический диск с вращением (gas_giant, gas_ringed)
-  private compAccretionDisk(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compAccretionDisk(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const tilt = (rng() - 0.5) * 80
     const dur = 700 + rng() * 250
     const color = this.pickColor(rng, sys)
@@ -2831,12 +3795,19 @@ export class StarMapScene extends Phaser.Scene {
     disk.scale = 0.3
     sprite.add(disk)
     this.tweens.add({
-      targets: disk, scale: 1, angle: tilt + (rng() < 0.5 ? 60 : -60),
-      duration: dur * 0.5, ease: 'Cubic.easeOut',
+      targets: disk,
+      scale: 1,
+      angle: tilt + (rng() < 0.5 ? 60 : -60),
+      duration: dur * 0.5,
+      ease: 'Cubic.easeOut',
       onComplete: () => {
         this.tweens.add({
-          targets: disk, alpha: 0, scale: 1.2, angle: tilt + 120,
-          duration: dur * 0.5, ease: 'Cubic.easeIn',
+          targets: disk,
+          alpha: 0,
+          scale: 1.2,
+          angle: tilt + 120,
+          duration: dur * 0.5,
+          ease: 'Cubic.easeIn',
           onComplete: () => disk.destroy(),
         })
       },
@@ -2844,23 +3815,36 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 57. Flicker stars — 15-25 мини-точек загораются и тухнут (mystic, mist, ancient)
-  private compFlickerStars(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compFlickerStars(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 15 + Math.floor(rng() * 11)
     for (let i = 0; i < N; i++) {
       const ang = rng() * Math.PI * 2
       const r = sys.size * (1.0 + rng() * 0.8)
       const color = this.pickColor(rng, sys)
-      const dot = this.add.circle(Math.cos(ang) * r, Math.sin(ang) * r, (0.8 + rng()) * DPR, color, 0)
+      const dot = this.add.circle(
+        Math.cos(ang) * r,
+        Math.sin(ang) * r,
+        (0.8 + rng()) * DPR,
+        color,
+        0,
+      )
       sprite.add(dot)
       this.tweens.add({
-        targets: dot, alpha: 0.95,
+        targets: dot,
+        alpha: 0.95,
         duration: 100 + rng() * 100,
         delay: rng() * 600,
         ease: 'Sine.easeOut',
         onComplete: () => {
           this.tweens.add({
-            targets: dot, alpha: 0,
-            duration: 200 + rng() * 200, ease: 'Sine.easeIn',
+            targets: dot,
+            alpha: 0,
+            duration: 200 + rng() * 200,
+            ease: 'Sine.easeIn',
             onComplete: () => dot.destroy(),
           })
         },
@@ -2869,7 +3853,11 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 58. Light dance — 3 луча кружатся вокруг (energy, plasma, mechano)
-  private compLightDance(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compLightDance(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 3
     const dur = 700 + rng() * 200
     const baseAng = rng() * Math.PI * 2
@@ -2887,9 +3875,16 @@ export class StarMapScene extends Phaser.Scene {
       sprite.add(beam)
       const startTime = this.time.now
       const update = () => {
-        if (!beam.active) { this.events.off('update', update); return }
+        if (!beam.active) {
+          this.events.off('update', update)
+          return
+        }
         const t = (this.time.now - startTime) / dur
-        if (t >= 1) { beam.destroy(); this.events.off('update', update); return }
+        if (t >= 1) {
+          beam.destroy()
+          this.events.off('update', update)
+          return
+        }
         const a = baseAng + phaseOffset + direction * t * Math.PI * 2 * turns
         beam.x = Math.cos(a) * radius
         beam.y = Math.sin(a) * radius
@@ -2901,15 +3896,21 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 59. Dimension rift — длинный зигзаг-разлом (shadow, destroyed, mystic)
-  private compDimensionRift(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compDimensionRift(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const ang = rng() * Math.PI * 2
     const len = sys.size * (3 + rng())
     const segments = 6 + Math.floor(rng() * 4)
     const color = this.pickColor(rng, sys)
     const rift = this.add.graphics()
     rift.lineStyle((2 + rng() * 1.5) * DPR, color, 0.95)
-    const cosA = Math.cos(ang), sinA = Math.sin(ang)
-    let px = -len / 2 * cosA, py = -len / 2 * sinA
+    const cosA = Math.cos(ang),
+      sinA = Math.sin(ang)
+    let px = (-len / 2) * cosA,
+      py = (-len / 2) * sinA
     for (let s = 1; s <= segments; s++) {
       const t = s / segments
       const along = -len / 2 + len * t
@@ -2917,11 +3918,13 @@ export class StarMapScene extends Phaser.Scene {
       const x = along * cosA - offset * sinA
       const y = along * sinA + offset * cosA
       rift.lineBetween(px, py, x, y)
-      px = x; py = y
+      px = x
+      py = y
     }
     // Тонкое свечение второй линией
     rift.lineStyle(0.8 * DPR, 0xffffff, 0.7)
-    px = -len / 2 * cosA; py = -len / 2 * sinA
+    px = (-len / 2) * cosA
+    py = (-len / 2) * sinA
     for (let s = 1; s <= segments; s++) {
       const t = s / segments
       const along = -len / 2 + len * t
@@ -2929,19 +3932,27 @@ export class StarMapScene extends Phaser.Scene {
       const x = along * cosA - offset * sinA
       const y = along * sinA + offset * cosA
       rift.lineBetween(px, py, x, y)
-      px = x; py = y
+      px = x
+      py = y
     }
     rift.scale = 0.5
     sprite.add(rift)
     this.tweens.add({
-      targets: rift, scale: 1.2, alpha: 0,
-      duration: 500 + rng() * 250, ease: 'Cubic.easeOut',
+      targets: rift,
+      scale: 1.2,
+      alpha: 0,
+      duration: 500 + rng() * 250,
+      ease: 'Cubic.easeOut',
       onComplete: () => rift.destroy(),
     })
   }
 
   // 60. Frost explode — взрыв ледяных осколков с blue tint (ice, crystal, aerial)
-  private compFrostExplode(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compFrostExplode(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 8 + Math.floor(rng() * 6)
     const dur = 600 + rng() * 250
     for (let i = 0; i < N; i++) {
@@ -2962,10 +3973,14 @@ export class StarMapScene extends Phaser.Scene {
       sprite.add(shard)
       this.tweens.add({
         targets: shard,
-        x: Math.cos(ang) * dist, y: Math.sin(ang) * dist,
+        x: Math.cos(ang) * dist,
+        y: Math.sin(ang) * dist,
         rotation: shard.rotation + (rng() - 0.5) * Math.PI * 3,
-        alpha: 0, scaleX: 0.3, scaleY: 0.3,
-        duration: dur + rng() * 200, ease: 'Cubic.easeOut',
+        alpha: 0,
+        scaleX: 0.3,
+        scaleY: 0.3,
+        duration: dur + rng() * 200,
+        ease: 'Cubic.easeOut',
         onComplete: () => shard.destroy(),
       })
     }
@@ -2973,14 +3988,21 @@ export class StarMapScene extends Phaser.Scene {
     const flash = this.add.circle(0, 0, sys.size * 0.7, 0xa5f3fc, 0.7)
     sprite.add(flash)
     this.tweens.add({
-      targets: flash, scale: 2.5, alpha: 0,
-      duration: 350, ease: 'Cubic.easeOut',
+      targets: flash,
+      scale: 2.5,
+      alpha: 0,
+      duration: 350,
+      ease: 'Cubic.easeOut',
       onComplete: () => flash.destroy(),
     })
   }
 
   // 61. Time wave — расходящееся искажение (3-4 концентрических ring с offset) (mystic, ancient)
-  private compTimeWave(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compTimeWave(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const rings = 3 + Math.floor(rng() * 2)
     const offsetMag = sys.size * 0.15
     const baseAng = rng() * Math.PI * 2
@@ -2991,13 +4013,16 @@ export class StarMapScene extends Phaser.Scene {
       const ring = this.add.graphics()
       ring.lineStyle((1 + rng()) * DPR, baseColor, 0.8 - i * 0.15)
       ring.strokeCircle(0, 0, sys.size * 1.05)
-      ring.x = ox; ring.y = oy
+      ring.x = ox
+      ring.y = oy
       sprite.add(ring)
       this.tweens.add({
         targets: ring,
-        scaleX: 2.0 + i * 0.3, scaleY: 2.0 + i * 0.3,
+        scaleX: 2.0 + i * 0.3,
+        scaleY: 2.0 + i * 0.3,
         alpha: 0,
-        duration: 700 + i * 100, ease: 'Cubic.easeOut',
+        duration: 700 + i * 100,
+        ease: 'Cubic.easeOut',
         delay: i * 80,
         onComplete: () => ring.destroy(),
       })
@@ -3005,7 +4030,11 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 62. Glyph flash — стилизованная руна на момент (ancient, mystic, crystal_bio)
-  private compGlyphFlash(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compGlyphFlash(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const glyph = this.add.graphics()
     const color = this.pickColor(rng, sys)
     const accent = this.pickColor(rng, sys)
@@ -3017,7 +4046,8 @@ export class StarMapScene extends Phaser.Scene {
       glyph.beginPath()
       for (let i = 0; i <= 3; i++) {
         const a = (i / 3) * Math.PI * 2 - Math.PI / 2
-        const x = Math.cos(a) * r, y = Math.sin(a) * r
+        const x = Math.cos(a) * r,
+          y = Math.sin(a) * r
         if (i === 0) glyph.moveTo(x, y)
         else glyph.lineTo(x, y)
       }
@@ -3027,7 +4057,8 @@ export class StarMapScene extends Phaser.Scene {
       glyph.beginPath()
       for (let i = 0; i <= 3; i++) {
         const a = (i / 3) * Math.PI * 2 + Math.PI / 2
-        const x = Math.cos(a) * r * 0.5, y = Math.sin(a) * r * 0.5
+        const x = Math.cos(a) * r * 0.5,
+          y = Math.sin(a) * r * 0.5
         if (i === 0) glyph.moveTo(x, y)
         else glyph.lineTo(x, y)
       }
@@ -3041,7 +4072,8 @@ export class StarMapScene extends Phaser.Scene {
       glyph.beginPath()
       for (let i = 0; i <= 6; i++) {
         const a = (i / 6) * Math.PI * 2
-        const x = Math.cos(a) * r, y = Math.sin(a) * r
+        const x = Math.cos(a) * r,
+          y = Math.sin(a) * r
         if (i === 0) glyph.moveTo(x, y)
         else glyph.lineTo(x, y)
       }
@@ -3055,12 +4087,18 @@ export class StarMapScene extends Phaser.Scene {
     glyph.alpha = 0
     sprite.add(glyph)
     this.tweens.add({
-      targets: glyph, scale: 1, alpha: 1,
-      duration: 200, ease: 'Back.easeOut',
+      targets: glyph,
+      scale: 1,
+      alpha: 1,
+      duration: 200,
+      ease: 'Back.easeOut',
       onComplete: () => {
         this.tweens.add({
-          targets: glyph, scale: 1.4, alpha: 0,
-          duration: 350 + rng() * 200, ease: 'Cubic.easeIn',
+          targets: glyph,
+          scale: 1.4,
+          alpha: 0,
+          duration: 350 + rng() * 200,
+          ease: 'Cubic.easeIn',
           onComplete: () => glyph.destroy(),
         })
       },
@@ -3068,8 +4106,14 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 63. Prism shift — 7 разноцветных лучей радуги расходятся (crystal_bio, plasma, energy)
-  private compPrismShift(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
-    const colors = [0xfca5a5, 0xfdba74, 0xfde047, 0x86efac, 0x67e8f9, 0xa5f3fc, 0xc4b5fd]
+  private compPrismShift(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
+    const colors = [
+      0xfca5a5, 0xfdba74, 0xfde047, 0x86efac, 0x67e8f9, 0xa5f3fc, 0xc4b5fd,
+    ]
     const baseAng = rng() * Math.PI * 2
     const span = Math.PI * (0.5 + rng() * 0.8)
     const len = sys.size * (1.6 + rng() * 0.5)
@@ -3086,12 +4130,18 @@ export class StarMapScene extends Phaser.Scene {
       beam.alpha = 0
       sprite.add(beam)
       this.tweens.add({
-        targets: beam, alpha: 0.9,
-        duration: 100, delay: i * 25, ease: 'Sine.easeOut',
+        targets: beam,
+        alpha: 0.9,
+        duration: 100,
+        delay: i * 25,
+        ease: 'Sine.easeOut',
         onComplete: () => {
           this.tweens.add({
-            targets: beam, alpha: 0, scaleX: 1.3,
-            duration: dur, ease: 'Cubic.easeOut',
+            targets: beam,
+            alpha: 0,
+            scaleX: 1.3,
+            duration: dur,
+            ease: 'Cubic.easeOut',
             onComplete: () => beam.destroy(),
           })
         },
@@ -3102,7 +4152,11 @@ export class StarMapScene extends Phaser.Scene {
   // === РАСШИРЕНИЕ 3 (компоненты 64-75) ===
 
   // 64. Charge burst — точки сходятся к центру, потом explode наружу
-  private compChargeBurst(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compChargeBurst(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 8 + Math.floor(rng() * 6)
     const startR = sys.size * (1.8 + rng() * 0.5)
     const collapseDur = 250 + rng() * 100
@@ -3110,19 +4164,31 @@ export class StarMapScene extends Phaser.Scene {
     for (let i = 0; i < N; i++) {
       const ang = (i / N) * Math.PI * 2
       const color = this.pickColor(rng, sys)
-      const dot = this.add.circle(Math.cos(ang) * startR, Math.sin(ang) * startR, (1.5 + rng()) * DPR, color, 1)
+      const dot = this.add.circle(
+        Math.cos(ang) * startR,
+        Math.sin(ang) * startR,
+        (1.5 + rng()) * DPR,
+        color,
+        1,
+      )
       sprite.add(dot)
       this.tweens.add({
-        targets: dot, x: 0, y: 0, scale: 0.4,
-        duration: collapseDur, ease: 'Cubic.easeIn',
+        targets: dot,
+        x: 0,
+        y: 0,
+        scale: 0.4,
+        duration: collapseDur,
+        ease: 'Cubic.easeIn',
         onComplete: () => {
           const newAng = ang + Math.PI + (rng() - 0.5) * 0.5
           this.tweens.add({
             targets: dot,
             x: Math.cos(newAng) * sys.size * (2.5 + rng() * 0.5),
             y: Math.sin(newAng) * sys.size * (2.5 + rng() * 0.5),
-            alpha: 0, scale: 1.5,
-            duration: burstDur, ease: 'Cubic.easeOut',
+            alpha: 0,
+            scale: 1.5,
+            duration: burstDur,
+            ease: 'Cubic.easeOut',
             onComplete: () => dot.destroy(),
           })
         },
@@ -3131,24 +4197,46 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 65. Infinity trail — точка обходит ∞-форму с trail
-  private compInfinityTrail(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compInfinityTrail(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const dur = 700 + rng() * 250
     const sz = sys.size * (1.4 + rng() * 0.4)
     const angle = rng() * Math.PI * 2
-    const cosA = Math.cos(angle), sinA = Math.sin(angle)
-    const head = this.add.circle(0, 0, (2.5 + rng()) * DPR, this.pickColor(rng, sys), 1)
+    const cosA = Math.cos(angle),
+      sinA = Math.sin(angle)
+    const head = this.add.circle(
+      0,
+      0,
+      (2.5 + rng()) * DPR,
+      this.pickColor(rng, sys),
+      1,
+    )
     const trail: Phaser.GameObjects.Arc[] = []
     sprite.add(head)
     for (let i = 0; i < 5; i++) {
-      const t = this.add.circle(0, 0, (2 - i * 0.3) * DPR, this.pickColor(rng, sys), 0.6 - i * 0.1)
-      sprite.add(t); trail.push(t)
+      const t = this.add.circle(
+        0,
+        0,
+        (2 - i * 0.3) * DPR,
+        this.pickColor(rng, sys),
+        0.6 - i * 0.1,
+      )
+      sprite.add(t)
+      trail.push(t)
     }
     const startTime = this.time.now
     const update = () => {
-      if (!head.active) { this.events.off('update', update); return }
+      if (!head.active) {
+        this.events.off('update', update)
+        return
+      }
       const t = (this.time.now - startTime) / dur
       if (t >= 1) {
-        head.destroy(); trail.forEach(d => d.destroy())
+        head.destroy()
+        trail.forEach((d) => d.destroy())
         this.events.off('update', update)
         return
       }
@@ -3160,17 +4248,24 @@ export class StarMapScene extends Phaser.Scene {
         const ly = sz * Math.sin(θ) * Math.cos(θ)
         return { x: lx * cosA - ly * sinA, y: lx * sinA + ly * cosA }
       }
-      const h = path(0); head.x = h.x; head.y = h.y
+      const h = path(0)
+      head.x = h.x
+      head.y = h.y
       trail.forEach((d, i) => {
         const p = path((i + 1) * 0.04)
-        d.x = p.x; d.y = p.y
+        d.x = p.x
+        d.y = p.y
       })
     }
     this.events.on('update', update)
   }
 
   // 66. Shield ripple — гексагональный shield с расходящимися волнами
-  private compShieldRipple(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compShieldRipple(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const layers = 3
     const baseR = sys.size * 1.2
     const color = this.pickColor(rng, sys)
@@ -3182,16 +4277,21 @@ export class StarMapScene extends Phaser.Scene {
         hex.beginPath()
         for (let j = 0; j <= 6; j++) {
           const a = (j / 6) * Math.PI * 2
-          const x = Math.cos(a) * baseR, y = Math.sin(a) * baseR
-          if (j === 0) hex.moveTo(x, y); else hex.lineTo(x, y)
+          const x = Math.cos(a) * baseR,
+            y = Math.sin(a) * baseR
+          if (j === 0) hex.moveTo(x, y)
+          else hex.lineTo(x, y)
         }
         hex.strokePath()
-        hex.rotation = i * Math.PI / 12
+        hex.rotation = (i * Math.PI) / 12
         sprite.add(hex)
         this.tweens.add({
-          targets: hex, scale: 1.8 + i * 0.2, alpha: 0,
+          targets: hex,
+          scale: 1.8 + i * 0.2,
+          alpha: 0,
           rotation: hex.rotation + Math.PI / 6,
-          duration: 600, ease: 'Cubic.easeOut',
+          duration: 600,
+          ease: 'Cubic.easeOut',
           onComplete: () => hex.destroy(),
         })
       })
@@ -3199,7 +4299,11 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 67. Fireworks — взрыв с точками которые дополнительно взрываются
-  private compFireworks(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compFireworks(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const primary = 6 + Math.floor(rng() * 4)
     const dur = 400 + rng() * 200
     for (let i = 0; i < primary; i++) {
@@ -3208,22 +4312,33 @@ export class StarMapScene extends Phaser.Scene {
       const color = this.pickColor(rng, sys)
       const dot = this.add.circle(0, 0, (2 + rng()) * DPR, color, 1)
       sprite.add(dot)
-      const tx = Math.cos(ang) * dist, ty = Math.sin(ang) * dist
+      const tx = Math.cos(ang) * dist,
+        ty = Math.sin(ang) * dist
       this.tweens.add({
-        targets: dot, x: tx, y: ty,
-        duration: dur, ease: 'Cubic.easeOut',
+        targets: dot,
+        x: tx,
+        y: ty,
+        duration: dur,
+        ease: 'Cubic.easeOut',
         onComplete: () => {
           // Sub-explosion: 3 мини-точки
           for (let k = 0; k < 3; k++) {
-            const subAng = ang + (rng() - 0.5) * Math.PI / 2
-            const sub = this.add.circle(tx, ty, (1 + rng()) * DPR, this.pickColor(rng, sys), 0.9)
+            const subAng = ang + ((rng() - 0.5) * Math.PI) / 2
+            const sub = this.add.circle(
+              tx,
+              ty,
+              (1 + rng()) * DPR,
+              this.pickColor(rng, sys),
+              0.9,
+            )
             sprite.add(sub)
             this.tweens.add({
               targets: sub,
               x: tx + Math.cos(subAng) * sys.size * 0.6,
               y: ty + Math.sin(subAng) * sys.size * 0.6,
               alpha: 0,
-              duration: 280 + rng() * 100, ease: 'Cubic.easeOut',
+              duration: 280 + rng() * 100,
+              ease: 'Cubic.easeOut',
               onComplete: () => sub.destroy(),
             })
           }
@@ -3234,28 +4349,39 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 68. Scanline — горизонтальная полоса проходит сверху вниз через планету
-  private compScanline(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compScanline(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const line = this.add.graphics()
     const color = this.pickColor(rng, sys)
     const w = sys.size * 2.4
     const h = (1.5 + rng()) * DPR
     line.fillStyle(color, 0.7)
-    line.fillRect(-w/2, -h/2, w, h)
+    line.fillRect(-w / 2, -h / 2, w, h)
     line.fillStyle(0xffffff, 0.5)
-    line.fillRect(-w/2, -h/4, w, h/2)
+    line.fillRect(-w / 2, -h / 4, w, h / 2)
     line.x = 0
     line.y = -sys.size * 1.5
     line.rotation = (rng() - 0.5) * 0.3 // лёгкий tilt
     sprite.add(line)
     this.tweens.add({
-      targets: line, y: sys.size * 1.5, alpha: { from: 1, to: 0 },
-      duration: 500 + rng() * 200, ease: 'Sine.easeInOut',
+      targets: line,
+      y: sys.size * 1.5,
+      alpha: { from: 1, to: 0 },
+      duration: 500 + rng() * 200,
+      ease: 'Sine.easeInOut',
       onComplete: () => line.destroy(),
     })
   }
 
   // 69. Liquid pool — жидкая капля растекается из центра
-  private compLiquidPool(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compLiquidPool(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const pool = this.add.graphics()
     const color = this.pickColor(rng, sys)
     const blobs = 4 + Math.floor(rng() * 3)
@@ -3263,20 +4389,32 @@ export class StarMapScene extends Phaser.Scene {
       const ang = (i / blobs) * Math.PI * 2 + rng() * 0.4
       const r = sys.size * (0.4 + rng() * 0.4)
       pool.fillStyle(color, 0.5 + rng() * 0.3)
-      pool.fillEllipse(Math.cos(ang) * r * 0.4, Math.sin(ang) * r * 0.4, r * 1.5, r * 0.8)
+      pool.fillEllipse(
+        Math.cos(ang) * r * 0.4,
+        Math.sin(ang) * r * 0.4,
+        r * 1.5,
+        r * 0.8,
+      )
     }
     pool.scale = 0.2
     sprite.add(pool)
     this.tweens.add({
-      targets: pool, scale: 1.5 + rng() * 0.4, alpha: 0,
+      targets: pool,
+      scale: 1.5 + rng() * 0.4,
+      alpha: 0,
       rotation: (rng() - 0.5) * Math.PI,
-      duration: 600 + rng() * 200, ease: 'Cubic.easeOut',
+      duration: 600 + rng() * 200,
+      ease: 'Cubic.easeOut',
       onComplete: () => pool.destroy(),
     })
   }
 
   // 70. Gravity knot — точки скручиваются в спиральный узел и распадаются
-  private compGravityKnot(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compGravityKnot(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 10 + Math.floor(rng() * 6)
     const dur = 700 + rng() * 200
     const knotPhase = rng() * Math.PI * 2
@@ -3287,13 +4425,21 @@ export class StarMapScene extends Phaser.Scene {
       sprite.add(dot)
       const startTime = this.time.now
       const update = () => {
-        if (!dot.active) { this.events.off('update', update); return }
+        if (!dot.active) {
+          this.events.off('update', update)
+          return
+        }
         const t = (this.time.now - startTime) / dur
-        if (t >= 1) { dot.destroy(); this.events.off('update', update); return }
+        if (t >= 1) {
+          dot.destroy()
+          this.events.off('update', update)
+          return
+        }
         // r oscillates; angle grows
         const r = sys.size * (1.0 + 0.5 * Math.sin(t * Math.PI * 3))
         const a = phase + t * Math.PI * 4
-        dot.x = Math.cos(a) * r; dot.y = Math.sin(a) * r
+        dot.x = Math.cos(a) * r
+        dot.y = Math.sin(a) * r
         dot.alpha = 1 - t * 0.7
       }
       this.events.on('update', update)
@@ -3301,7 +4447,11 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 71. Cosmic web — паутина из точек соединённых линиями
-  private compCosmicWeb(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compCosmicWeb(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 6 + Math.floor(rng() * 3)
     const points: { x: number; y: number }[] = []
     const dots: Phaser.GameObjects.Arc[] = []
@@ -3309,37 +4459,60 @@ export class StarMapScene extends Phaser.Scene {
     for (let i = 0; i < N; i++) {
       const ang = rng() * Math.PI * 2
       const r = sys.size * (1.2 + rng() * 0.6)
-      const x = Math.cos(ang) * r, y = Math.sin(ang) * r
+      const x = Math.cos(ang) * r,
+        y = Math.sin(ang) * r
       points.push({ x, y })
-      const dot = this.add.circle(x, y, (1.5 + rng()) * DPR, this.pickColor(rng, sys), 1)
-      sprite.add(dot); dots.push(dot)
+      const dot = this.add.circle(
+        x,
+        y,
+        (1.5 + rng()) * DPR,
+        this.pickColor(rng, sys),
+        1,
+      )
+      sprite.add(dot)
+      dots.push(dot)
     }
     // линии из каждой точки к 2 ближайшим
     const lines = this.add.graphics()
     lines.lineStyle(0.7 * DPR, color, 0.5)
     for (let i = 0; i < N; i++) {
-      const dists = points.map((p, j) => ({ j, d: i === j ? 9999 : Math.hypot(p.x - points[i].x, p.y - points[i].y) }))
-        .sort((a, b) => a.d - b.d).slice(0, 2)
+      const dists = points
+        .map((p, j) => ({
+          j,
+          d: i === j ? 9999 : Math.hypot(p.x - points[i].x, p.y - points[i].y),
+        }))
+        .sort((a, b) => a.d - b.d)
+        .slice(0, 2)
       for (const { j } of dists) {
         lines.lineBetween(points[i].x, points[i].y, points[j].x, points[j].y)
       }
     }
     sprite.add(lines)
     this.tweens.add({
-      targets: [...dots, lines], alpha: 0,
+      targets: [...dots, lines],
+      alpha: 0,
       scale: 1.2,
-      duration: 700 + rng() * 200, ease: 'Sine.easeOut',
+      duration: 700 + rng() * 200,
+      ease: 'Sine.easeOut',
       delay: 200,
-      onComplete: () => { dots.forEach(d => d.destroy()); lines.destroy() },
+      onComplete: () => {
+        dots.forEach((d) => d.destroy())
+        lines.destroy()
+      },
     })
   }
 
   // 72. Particle fountain — частицы вылетают вверх и падают обратно с гравитацией
-  private compParticleFountain(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compParticleFountain(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 12 + Math.floor(rng() * 8)
     const dur = 800 + rng() * 250
     const upDir = rng() * Math.PI * 2
-    const cosD = Math.cos(upDir), sinD = Math.sin(upDir)
+    const cosD = Math.cos(upDir),
+      sinD = Math.sin(upDir)
     for (let i = 0; i < N; i++) {
       const speed = sys.size * (1.5 + rng() * 0.8)
       const spread = (rng() - 0.5) * 1.0
@@ -3347,15 +4520,23 @@ export class StarMapScene extends Phaser.Scene {
       const dot = this.add.circle(0, 0, (1.5 + rng()) * DPR, color, 1)
       sprite.add(dot)
       // velocity по upDir + spread perp
-      const perpX = -sinD, perpY = cosD
+      const perpX = -sinD,
+        perpY = cosD
       const vx = cosD * speed + perpX * spread * speed * 0.5
       const vy = sinD * speed + perpY * spread * speed * 0.5
       const g = -sys.size * 4 // gravity отталкивает обратно (по противоположному направлению)
       const startTime = this.time.now
       const update = () => {
-        if (!dot.active) { this.events.off('update', update); return }
+        if (!dot.active) {
+          this.events.off('update', update)
+          return
+        }
         const t = (this.time.now - startTime) / dur
-        if (t >= 1) { dot.destroy(); this.events.off('update', update); return }
+        if (t >= 1) {
+          dot.destroy()
+          this.events.off('update', update)
+          return
+        }
         // motion: vx*t, vy*t + 0.5 * g * t² (g flipped sign vs upDir)
         const fall = -0.5 * g * t * t
         dot.x = vx * t + cosD * fall
@@ -3367,18 +4548,31 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // 73. Echo spawn — фантомные копии планеты появляются и исчезают вокруг
-  private compEchoSpawn(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compEchoSpawn(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 4 + Math.floor(rng() * 3)
     for (let i = 0; i < N; i++) {
       this.time.delayedCall(i * 80, () => {
         if (!sprite.active) return
         const ang = (i / N) * Math.PI * 2 + rng() * 0.4
         const dist = sys.size * (1.0 + rng() * 0.5)
-        const ghost = this.add.circle(Math.cos(ang) * dist, Math.sin(ang) * dist, sys.size * 0.55, sys.color, 0.5)
+        const ghost = this.add.circle(
+          Math.cos(ang) * dist,
+          Math.sin(ang) * dist,
+          sys.size * 0.55,
+          sys.color,
+          0.5,
+        )
         sprite.add(ghost)
         this.tweens.add({
-          targets: ghost, alpha: 0, scale: 1.4,
-          duration: 400 + rng() * 200, ease: 'Cubic.easeOut',
+          targets: ghost,
+          alpha: 0,
+          scale: 1.4,
+          duration: 400 + rng() * 200,
+          ease: 'Cubic.easeOut',
           onComplete: () => ghost.destroy(),
         })
       })
@@ -3388,7 +4582,11 @@ export class StarMapScene extends Phaser.Scene {
   // 74. compIceWisps — extracted в effects/anim/shared/compIceWisps.ts (Phase 9).
 
   // 75. Rip blade — острый «разрез» прорезает планету диагонально
-  private compRipBlade(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compRipBlade(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const blade = this.add.graphics()
     const color = this.pickColor(rng, sys)
     const len = sys.size * (3 + rng() * 0.6)
@@ -3401,8 +4599,12 @@ export class StarMapScene extends Phaser.Scene {
     blade.scale = 0.1
     sprite.add(blade)
     this.tweens.add({
-      targets: blade, scaleX: 1.2, scaleY: 1, alpha: 0,
-      duration: 350 + rng() * 200, ease: 'Cubic.easeOut',
+      targets: blade,
+      scaleX: 1.2,
+      scaleY: 1,
+      alpha: 0,
+      duration: 350 + rng() * 200,
+      ease: 'Cubic.easeOut',
       onComplete: () => blade.destroy(),
     })
   }
@@ -3414,20 +4616,40 @@ export class StarMapScene extends Phaser.Scene {
 
   // 77. Earthquake shake — sound-style: rumble-shake (тряска земли)
   // 6-10 точек в случайных местах резко дрожат
-  private compEarthquakeShake(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compEarthquakeShake(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 6 + Math.floor(rng() * 5)
     for (let i = 0; i < N; i++) {
       const ang = rng() * Math.PI * 2
       const r = sys.size * (0.7 + rng() * 0.4)
-      const x = Math.cos(ang) * r, y = Math.sin(ang) * r
-      const dot = this.add.circle(x, y, (1.5 + rng() * 1.5) * DPR, this.pickColor(rng, sys), 1)
+      const x = Math.cos(ang) * r,
+        y = Math.sin(ang) * r
+      const dot = this.add.circle(
+        x,
+        y,
+        (1.5 + rng() * 1.5) * DPR,
+        this.pickColor(rng, sys),
+        1,
+      )
       sprite.add(dot)
       this.tweens.add({
-        targets: dot, x: x + (rng() - 0.5) * sys.size * 0.5, y: y + (rng() - 0.5) * sys.size * 0.5,
-        yoyo: true, repeat: 3,
-        duration: 60 + rng() * 40, ease: 'Sine.easeInOut',
+        targets: dot,
+        x: x + (rng() - 0.5) * sys.size * 0.5,
+        y: y + (rng() - 0.5) * sys.size * 0.5,
+        yoyo: true,
+        repeat: 3,
+        duration: 60 + rng() * 40,
+        ease: 'Sine.easeInOut',
         onComplete: () => {
-          this.tweens.add({ targets: dot, alpha: 0, duration: 200, onComplete: () => dot.destroy() })
+          this.tweens.add({
+            targets: dot,
+            alpha: 0,
+            duration: 200,
+            onComplete: () => dot.destroy(),
+          })
         },
       })
     }
@@ -3435,7 +4657,11 @@ export class StarMapScene extends Phaser.Scene {
 
   // 78. Kaleidoscope — sound-style: symmetry-spin (симметричное вращение)
   // 6/8-секторная симметричная картина с вращением
-  private compKaleidoscope(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compKaleidoscope(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const sectors = rng() < 0.5 ? 6 : 8
     const kaleido = this.add.graphics()
     const c1 = this.pickColor(rng, sys)
@@ -3444,33 +4670,60 @@ export class StarMapScene extends Phaser.Scene {
       const ang = (i / sectors) * Math.PI * 2
       kaleido.fillStyle(i % 2 === 0 ? c1 : c2, 0.6)
       const r = sys.size * (1.3 + rng() * 0.3)
-      kaleido.fillTriangle(0, 0, Math.cos(ang) * r, Math.sin(ang) * r, Math.cos(ang + Math.PI / sectors) * r, Math.sin(ang + Math.PI / sectors) * r)
+      kaleido.fillTriangle(
+        0,
+        0,
+        Math.cos(ang) * r,
+        Math.sin(ang) * r,
+        Math.cos(ang + Math.PI / sectors) * r,
+        Math.sin(ang + Math.PI / sectors) * r,
+      )
     }
     kaleido.scale = 0.3
     sprite.add(kaleido)
     this.tweens.add({
-      targets: kaleido, scale: 1.3 + rng() * 0.3, alpha: 0,
-      rotation: (rng() < 0.5 ? 1 : -1) * Math.PI / 2,
-      duration: 600 + rng() * 200, ease: 'Cubic.easeOut',
+      targets: kaleido,
+      scale: 1.3 + rng() * 0.3,
+      alpha: 0,
+      rotation: ((rng() < 0.5 ? 1 : -1) * Math.PI) / 2,
+      duration: 600 + rng() * 200,
+      ease: 'Cubic.easeOut',
       onComplete: () => kaleido.destroy(),
     })
   }
 
   // 79. Drone hum — sound-style: bass-drone (низкий тяжелый дрон)
   // Большой круг медленно пульсирует с низкой частотой
-  private compDroneHum(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
-    const drone = this.add.circle(0, 0, sys.size * 1.4, this.pickColor(rng, sys), 0.4)
+  private compDroneHum(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
+    const drone = this.add.circle(
+      0,
+      0,
+      sys.size * 1.4,
+      this.pickColor(rng, sys),
+      0.4,
+    )
     sprite.add(drone)
     this.tweens.add({
-      targets: drone, scale: 1.3, alpha: 0,
-      duration: 800 + rng() * 200, ease: 'Sine.easeInOut',
+      targets: drone,
+      scale: 1.3,
+      alpha: 0,
+      duration: 800 + rng() * 200,
+      ease: 'Sine.easeInOut',
       onComplete: () => drone.destroy(),
     })
   }
 
   // 80. Glitch stutter — sound-style: glitch-stutter (цифровое заикание)
   // Повторяющиеся быстрые offset+colorshift
-  private compGlitchStutter(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compGlitchStutter(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const stutters = 4 + Math.floor(rng() * 3)
     const colors = [0xff0066, 0x00ff66, 0x0066ff, 0xfde047]
     for (let i = 0; i < stutters; i++) {
@@ -3478,12 +4731,20 @@ export class StarMapScene extends Phaser.Scene {
         if (!sprite.active) return
         const shift = sys.size * (0.1 + rng() * 0.15)
         const ang = rng() * Math.PI * 2
-        const ghost = this.add.circle(Math.cos(ang) * shift, Math.sin(ang) * shift, sys.size * 0.85, colors[i % colors.length], 0.55)
+        const ghost = this.add.circle(
+          Math.cos(ang) * shift,
+          Math.sin(ang) * shift,
+          sys.size * 0.85,
+          colors[i % colors.length],
+          0.55,
+        )
         ghost.setBlendMode(Phaser.BlendModes.SCREEN)
         sprite.add(ghost)
         this.tweens.add({
-          targets: ghost, alpha: 0,
-          duration: 100, ease: 'Cubic.easeOut',
+          targets: ghost,
+          alpha: 0,
+          duration: 100,
+          ease: 'Cubic.easeOut',
           onComplete: () => ghost.destroy(),
         })
       })
@@ -3492,7 +4753,11 @@ export class StarMapScene extends Phaser.Scene {
 
   // 81. Doppler wave — sound-style: doppler-shift (волна со сдвигом)
   // Эллиптическая волна расширяется с asymmetric color tint
-  private compDopplerWave(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compDopplerWave(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const wave = this.add.graphics()
     const angle = rng() * Math.PI * 2
     const c1 = this.pickColor(rng, sys)
@@ -3504,28 +4769,43 @@ export class StarMapScene extends Phaser.Scene {
     wave.rotation = angle
     sprite.add(wave)
     this.tweens.add({
-      targets: wave, scale: 1.7 + rng() * 0.3, alpha: 0,
+      targets: wave,
+      scale: 1.7 + rng() * 0.3,
+      alpha: 0,
       x: Math.cos(angle) * sys.size,
       y: Math.sin(angle) * sys.size,
-      duration: 600 + rng() * 200, ease: 'Cubic.easeOut',
+      duration: 600 + rng() * 200,
+      ease: 'Cubic.easeOut',
       onComplete: () => wave.destroy(),
     })
   }
 
   // 82. Morse flash — sound-style: dit-dah-dit (азбука морзе)
   // Серия коротких + длинных вспышек, как сигнал
-  private compMorseFlash(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compMorseFlash(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     // Pattern: dot-dot-dash-dot (каждый = blink с alpha)
     const pattern = [80, 80, 200, 80] // ms
     let totalDelay = 0
     for (const dur of pattern) {
       this.time.delayedCall(totalDelay, () => {
         if (!sprite.active) return
-        const flash = this.add.circle(0, 0, sys.size * 1.05, this.pickColor(rng, sys), 0.7)
+        const flash = this.add.circle(
+          0,
+          0,
+          sys.size * 1.05,
+          this.pickColor(rng, sys),
+          0.7,
+        )
         sprite.add(flash)
         this.tweens.add({
-          targets: flash, alpha: 0,
-          duration: dur, ease: 'Sine.easeOut',
+          targets: flash,
+          alpha: 0,
+          duration: dur,
+          ease: 'Sine.easeOut',
           onComplete: () => flash.destroy(),
         })
       })
@@ -3535,7 +4815,11 @@ export class StarMapScene extends Phaser.Scene {
 
   // 83. Crystal bell — sound-style: clink-resonate (хрустальный звон)
   // Гексагон + расходящиеся круги-резонансы
-  private compCrystalBell(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compCrystalBell(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const hex = this.add.graphics()
     const color = this.pickColor(rng, sys)
     hex.lineStyle(2 * DPR, color, 0.85)
@@ -3544,7 +4828,8 @@ export class StarMapScene extends Phaser.Scene {
       const a = (i / 6) * Math.PI * 2 - Math.PI / 2
       const x = Math.cos(a) * sys.size * 1.1
       const y = Math.sin(a) * sys.size * 1.1
-      if (i === 0) hex.moveTo(x, y); else hex.lineTo(x, y)
+      if (i === 0) hex.moveTo(x, y)
+      else hex.lineTo(x, y)
     }
     hex.strokePath()
     sprite.add(hex)
@@ -3556,36 +4841,58 @@ export class StarMapScene extends Phaser.Scene {
         ring.lineStyle(0.8 * DPR, color, 0.5)
         ring.strokeCircle(0, 0, sys.size * 1.1)
         sprite.add(ring)
-        this.tweens.add({ targets: ring, scale: 2.2, alpha: 0, duration: 500, onComplete: () => ring.destroy() })
+        this.tweens.add({
+          targets: ring,
+          scale: 2.2,
+          alpha: 0,
+          duration: 500,
+          onComplete: () => ring.destroy(),
+        })
       })
     }
     this.tweens.add({
-      targets: hex, scale: 1.2, alpha: 0, rotation: Math.PI / 6,
-      duration: 600, ease: 'Cubic.easeOut',
+      targets: hex,
+      scale: 1.2,
+      alpha: 0,
+      rotation: Math.PI / 6,
+      duration: 600,
+      ease: 'Cubic.easeOut',
       onComplete: () => hex.destroy(),
     })
   }
 
   // 84. Wind rustle — sound-style: wind-whisper (шёпот ветра)
   // Мелкие точки сдуваются в одну сторону
-  private compWindRustle(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compWindRustle(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 14 + Math.floor(rng() * 8)
     const windAng = rng() * Math.PI * 2
-    const cosW = Math.cos(windAng), sinW = Math.sin(windAng)
+    const cosW = Math.cos(windAng),
+      sinW = Math.sin(windAng)
     for (let i = 0; i < N; i++) {
       const startAng = rng() * Math.PI * 2
       const startR = sys.size * (0.7 + rng() * 0.5)
       const sx = Math.cos(startAng) * startR
       const sy = Math.sin(startAng) * startR
       const dist = sys.size * (1.5 + rng() * 0.6)
-      const dot = this.add.circle(sx, sy, (0.8 + rng()) * DPR, this.pickColor(rng, sys), 0.85)
+      const dot = this.add.circle(
+        sx,
+        sy,
+        (0.8 + rng()) * DPR,
+        this.pickColor(rng, sys),
+        0.85,
+      )
       sprite.add(dot)
       this.tweens.add({
         targets: dot,
         x: sx + cosW * dist + (rng() - 0.5) * sys.size * 0.3,
         y: sy + sinW * dist + (rng() - 0.5) * sys.size * 0.3,
         alpha: 0,
-        duration: 600 + rng() * 250, ease: 'Sine.easeOut',
+        duration: 600 + rng() * 250,
+        ease: 'Sine.easeOut',
         delay: rng() * 200,
         onComplete: () => dot.destroy(),
       })
@@ -3594,7 +4901,11 @@ export class StarMapScene extends Phaser.Scene {
 
   // 85. Clock gears — sound-style: clockwork-tick (часовой ход)
   // 2 концентрические шестерни с зубцами вращаются
-  private compClockGears(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compClockGears(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     for (let g = 0; g < 2; g++) {
       const gear = this.add.graphics()
       const color = g === 0 ? sys.color : sys.accent
@@ -3607,14 +4918,19 @@ export class StarMapScene extends Phaser.Scene {
         const rr = i % 2 === 0 ? r : r * 0.92
         const x = Math.cos(a) * rr
         const y = Math.sin(a) * rr
-        if (i === 0) gear.moveTo(x, y); else gear.lineTo(x, y)
+        if (i === 0) gear.moveTo(x, y)
+        else gear.lineTo(x, y)
       }
       gear.strokePath()
       sprite.add(gear)
       const direction = g === 0 ? 1 : -1
       this.tweens.add({
-        targets: gear, rotation: direction * Math.PI / 4, alpha: 0, scale: 1.15,
-        duration: 700 + rng() * 200, ease: 'Cubic.easeOut',
+        targets: gear,
+        rotation: (direction * Math.PI) / 4,
+        alpha: 0,
+        scale: 1.15,
+        duration: 700 + rng() * 200,
+        ease: 'Cubic.easeOut',
         onComplete: () => gear.destroy(),
       })
     }
@@ -3630,8 +4946,18 @@ export class StarMapScene extends Phaser.Scene {
 
   // 88. Bouncing ball — sound-style: rubber-thump (резиновый отскок)
   // Мяч прыгает над планетой, отскоки с затуханием по высоте.
-  private compBouncingBall(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
-    const ball = this.add.circle(0, 0, (3 + rng() * 2) * DPR, this.pickColor(rng, sys), 1)
+  private compBouncingBall(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
+    const ball = this.add.circle(
+      0,
+      0,
+      (3 + rng() * 2) * DPR,
+      this.pickColor(rng, sys),
+      1,
+    )
     sprite.add(ball)
     const bounces = 3 + Math.floor(rng() * 3) // 3..5
     const baseY = sys.size * 0.6
@@ -3649,23 +4975,29 @@ export class StarMapScene extends Phaser.Scene {
       // Подъём
       this.tweens.add({
         targets: ball,
-        x: xMid, y: apexY,
-        duration: bounceDur, ease: 'Quad.easeOut',
+        x: xMid,
+        y: apexY,
+        duration: bounceDur,
+        ease: 'Quad.easeOut',
         delay: elapsed,
       })
       // Падение
       this.tweens.add({
         targets: ball,
-        x: xEnd, y: baseY,
-        duration: bounceDur, ease: 'Quad.easeIn',
+        x: xEnd,
+        y: baseY,
+        duration: bounceDur,
+        ease: 'Quad.easeIn',
         delay: elapsed + bounceDur,
       })
       elapsed += bounceDur * 2
     }
     // Финальный fade и destroy
     this.tweens.add({
-      targets: ball, alpha: 0,
-      duration: 200, ease: 'Cubic.easeOut',
+      targets: ball,
+      alpha: 0,
+      duration: 200,
+      ease: 'Cubic.easeOut',
       delay: elapsed,
       onComplete: () => ball.destroy(),
     })
@@ -3673,7 +5005,11 @@ export class StarMapScene extends Phaser.Scene {
 
   // 89. Digital glitch — sound-style: glitch-tear (RGB-shift искажения)
   // Пиксельные клоны разных RGB-цветов с stutter offset.
-  private compDigitalGlitch(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compDigitalGlitch(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const channels = [0xff0066, 0x00ff66, 0x0066ff]
     const stutters = 4 + Math.floor(rng() * 3) // 4..6
     const stepDelay = 70 + rng() * 30
@@ -3684,13 +5020,22 @@ export class StarMapScene extends Phaser.Scene {
         for (let c = 0; c < 3; c++) {
           const offX = (rng() - 0.5) * sys.size * 0.6
           const offY = (rng() - 0.5) * sys.size * 0.3
-          const rect = this.add.rectangle(offX, offY, sys.size * 1.4, sys.size * 0.18, channels[c], 0.55)
+          const rect = this.add.rectangle(
+            offX,
+            offY,
+            sys.size * 1.4,
+            sys.size * 0.18,
+            channels[c],
+            0.55,
+          )
           rect.setBlendMode(Phaser.BlendModes.SCREEN)
           sprite.add(rect)
           ghosts.push(rect)
           this.tweens.add({
-            targets: rect, alpha: 0,
-            duration: 100 + rng() * 50, ease: 'Cubic.easeOut',
+            targets: rect,
+            alpha: 0,
+            duration: 100 + rng() * 50,
+            ease: 'Cubic.easeOut',
             onComplete: () => rect.destroy(),
           })
         }
@@ -3706,7 +5051,11 @@ export class StarMapScene extends Phaser.Scene {
 
   // 90. Ring pulsar — sound-style: heartbeat (lub-DUB пульсация)
   // Двойной удар: короткая пульсация → сильная пульсация.
-  private compRingPulsar(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compRingPulsar(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const ring = this.add.graphics()
     const color = this.pickColor(rng, sys)
     ring.lineStyle(2 * DPR, color, 0.85)
@@ -3715,20 +5064,27 @@ export class StarMapScene extends Phaser.Scene {
     sprite.add(ring)
     // Lub: короткая пульсация
     this.tweens.add({
-      targets: ring, scale: 1.15,
-      duration: 120, ease: 'Sine.easeOut',
+      targets: ring,
+      scale: 1.15,
+      duration: 120,
+      ease: 'Sine.easeOut',
       yoyo: true,
     })
     // DUB: сильная пульсация (через delay)
     this.tweens.add({
-      targets: ring, scale: 1.4, alpha: 0,
-      duration: 200, ease: 'Cubic.easeOut',
+      targets: ring,
+      scale: 1.4,
+      alpha: 0,
+      duration: 200,
+      ease: 'Cubic.easeOut',
       delay: 280,
     })
     // Финальное затухание + destroy
     this.tweens.add({
-      targets: ring, alpha: 0,
-      duration: 350, ease: 'Cubic.easeOut',
+      targets: ring,
+      alpha: 0,
+      duration: 350,
+      ease: 'Cubic.easeOut',
       delay: 480,
       onComplete: () => ring.destroy(),
     })
@@ -3736,15 +5092,30 @@ export class StarMapScene extends Phaser.Scene {
 
   // 91. Swarm particles — sound-style: buzz-swarm (рой жучков)
   // 12-20 точек огибают планету по орбите с разными угловыми скоростями.
-  private compSwarmParticles(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compSwarmParticles(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 12 + Math.floor(rng() * 9) // 12..20
     const dur = 1000
-    const particles: { obj: Phaser.GameObjects.Arc; r: number; ang: number; speed: number }[] = []
+    const particles: {
+      obj: Phaser.GameObjects.Arc
+      r: number
+      ang: number
+      speed: number
+    }[] = []
     for (let i = 0; i < N; i++) {
       const r = sys.size * (1.0 + rng() * 0.4)
       const ang = (i / N) * Math.PI * 2 + rng() * 0.3
       const speed = (rng() - 0.5) * 0.006 // ±0.003 рад/мс
-      const dot = this.add.circle(Math.cos(ang) * r, Math.sin(ang) * r, (1.2 + rng()) * DPR, this.pickColor(rng, sys), 0.85)
+      const dot = this.add.circle(
+        Math.cos(ang) * r,
+        Math.sin(ang) * r,
+        (1.2 + rng()) * DPR,
+        this.pickColor(rng, sys),
+        0.85,
+      )
       sprite.add(dot)
       particles.push({ obj: dot, r, ang, speed })
     }
@@ -3771,8 +5142,14 @@ export class StarMapScene extends Phaser.Scene {
 
   // 92. Prism refract — sound-style: spectral-shimmer (преломление радуги)
   // 7 разноцветных лучей расходятся из точки на краю планеты.
-  private compPrismRefract(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
-    const rainbow = [0xff0000, 0xff7f00, 0xffff00, 0x00ff00, 0x0000ff, 0x4b0082, 0x9400d3]
+  private compPrismRefract(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
+    const rainbow = [
+      0xff0000, 0xff7f00, 0xffff00, 0x00ff00, 0x0000ff, 0x4b0082, 0x9400d3,
+    ]
     const baseAng = rng() * Math.PI * 2
     const ox = Math.cos(baseAng) * sys.size
     const oy = Math.sin(baseAng) * sys.size
@@ -3783,20 +5160,29 @@ export class StarMapScene extends Phaser.Scene {
       const len = sys.size * (1.5 + rng() * 0.5)
       const ray = this.add.graphics()
       ray.lineStyle(1.5 * DPR, rainbow[i], 0)
-      ray.lineBetween(ox, oy, ox + Math.cos(rayAng) * len, oy + Math.sin(rayAng) * len)
+      ray.lineBetween(
+        ox,
+        oy,
+        ox + Math.cos(rayAng) * len,
+        oy + Math.sin(rayAng) * len,
+      )
       ray.alpha = 0
       sprite.add(ray)
       rays.push(ray)
       // Fade-in
       this.tweens.add({
-        targets: ray, alpha: 0.85,
-        duration: 100, ease: 'Sine.easeOut',
+        targets: ray,
+        alpha: 0.85,
+        duration: 100,
+        ease: 'Sine.easeOut',
         delay: i * 15,
       })
       // Fade-out + destroy
       this.tweens.add({
-        targets: ray, alpha: 0,
-        duration: 400, ease: 'Cubic.easeOut',
+        targets: ray,
+        alpha: 0,
+        duration: 400,
+        ease: 'Cubic.easeOut',
         delay: 200 + i * 15,
         onComplete: () => ray.destroy(),
       })
@@ -3805,7 +5191,11 @@ export class StarMapScene extends Phaser.Scene {
 
   // 93. Life bloom — sound-style: organic-grow (растущие лозы)
   // 4-6 vine-линий тянутся из центра наружу через сегменты, в конце — точка-цветок.
-  private compLifeBloom(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compLifeBloom(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const vines = 4 + Math.floor(rng() * 3) // 4..6
     const segs = 6
     const segStep = 60
@@ -3824,19 +5214,23 @@ export class StarMapScene extends Phaser.Scene {
       const endY = Math.sin(baseAng) * endR
       const ctrlX = Math.cos(ctrlAng) * ctrlR
       const ctrlY = Math.sin(ctrlAng) * ctrlR
-      let prevX = 0, prevY = 0
+      let prevX = 0,
+        prevY = 0
       for (let s = 1; s <= segs; s++) {
         const t = s / segs
         const u = 1 - t
         const nx = u * u * 0 + 2 * u * t * ctrlX + t * t * endX
         const ny = u * u * 0 + 2 * u * t * ctrlY + t * t * endY
-        const px = prevX, py = prevY
-        const nxC = nx, nyC = ny
+        const px = prevX,
+          py = prevY
+        const nxC = nx,
+          nyC = ny
         this.time.delayedCall(s * segStep + v * 30, () => {
           if (!vine.active) return
           vine.lineBetween(px, py, nxC, nyC)
         })
-        prevX = nx; prevY = ny
+        prevX = nx
+        prevY = ny
       }
       // Цветок на конце
       this.time.delayedCall(segs * segStep + v * 30 + 80, () => {
@@ -3845,15 +5239,20 @@ export class StarMapScene extends Phaser.Scene {
         sprite.add(flower)
         flowers.push(flower)
         this.tweens.add({
-          targets: flower, scale: 2, alpha: 0,
-          duration: 300, ease: 'Sine.easeOut',
+          targets: flower,
+          scale: 2,
+          alpha: 0,
+          duration: 300,
+          ease: 'Sine.easeOut',
           onComplete: () => flower.destroy(),
         })
       })
       // Финальный fade + destroy ветки
       this.tweens.add({
-        targets: vine, alpha: 0,
-        duration: 300, ease: 'Cubic.easeOut',
+        targets: vine,
+        alpha: 0,
+        duration: 300,
+        ease: 'Cubic.easeOut',
         delay: 800,
         onComplete: () => vine.destroy(),
       })
@@ -3862,10 +5261,21 @@ export class StarMapScene extends Phaser.Scene {
 
   // 94. Wind ribbons — sound-style: airy-whoosh (ленты ветра)
   // 2-3 ленты-sin-wave проносятся через планету слева направо.
-  private compWindRibbons(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compWindRibbons(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const ribbonCount = 2 + Math.floor(rng() * 2) // 2..3
     const dur = 1100
-    const ribbons: { gfx: Phaser.GameObjects.Graphics; color: number; phase: number; amp: number; yBase: number; startTime: number }[] = []
+    const ribbons: {
+      gfx: Phaser.GameObjects.Graphics
+      color: number
+      phase: number
+      amp: number
+      yBase: number
+      startTime: number
+    }[] = []
     for (let i = 0; i < ribbonCount; i++) {
       const gfx = this.add.graphics()
       sprite.add(gfx)
@@ -3886,9 +5296,14 @@ export class StarMapScene extends Phaser.Scene {
       for (const r of ribbons) {
         const localT = (elapsed - r.startTime) / dur
         if (localT < 0) continue
-        const xCenter = -sys.size + (sys.size * 2) * localT
+        const xCenter = -sys.size + sys.size * 2 * localT
         // Alpha: 0 → 0.6 → 0
-        const alpha = localT < 0.3 ? localT / 0.3 * 0.6 : (localT > 0.7 ? Math.max(0, (1 - localT) / 0.3 * 0.6) : 0.6)
+        const alpha =
+          localT < 0.3
+            ? (localT / 0.3) * 0.6
+            : localT > 0.7
+              ? Math.max(0, ((1 - localT) / 0.3) * 0.6)
+              : 0.6
         r.gfx.clear()
         r.gfx.lineStyle(1.5 * DPR, r.color, alpha)
         for (let s = 0; s < segs; s++) {
@@ -3896,8 +5311,12 @@ export class StarMapScene extends Phaser.Scene {
           const t2 = (s + 1) / segs
           const x1 = xCenter - totalLen / 2 + totalLen * t1
           const x2 = xCenter - totalLen / 2 + totalLen * t2
-          const y1 = r.yBase + Math.sin(t1 * Math.PI * 4 + r.phase + elapsed * 0.005) * r.amp
-          const y2 = r.yBase + Math.sin(t2 * Math.PI * 4 + r.phase + elapsed * 0.005) * r.amp
+          const y1 =
+            r.yBase +
+            Math.sin(t1 * Math.PI * 4 + r.phase + elapsed * 0.005) * r.amp
+          const y2 =
+            r.yBase +
+            Math.sin(t2 * Math.PI * 4 + r.phase + elapsed * 0.005) * r.amp
           r.gfx.lineBetween(x1, y1, x2, y2)
         }
       }
@@ -3913,10 +5332,20 @@ export class StarMapScene extends Phaser.Scene {
 
   // 95. Wreckage orbit — sound-style: debris-creak (обломки на орбите)
   // 6-10 крошечных треугольников вращаются вокруг планеты с разными скоростями.
-  private compWreckageOrbit(sprite: Phaser.GameObjects.Container, sys: Race | BgSystem, rng: () => number) {
+  private compWreckageOrbit(
+    sprite: Phaser.GameObjects.Container,
+    sys: Race | BgSystem,
+    rng: () => number,
+  ) {
     const N = 6 + Math.floor(rng() * 5) // 6..10
     const dur = 900
-    const debris: { gfx: Phaser.GameObjects.Graphics; r: number; ang: number; speed: number; spin: number }[] = []
+    const debris: {
+      gfx: Phaser.GameObjects.Graphics
+      r: number
+      ang: number
+      speed: number
+      spin: number
+    }[] = []
     for (let i = 0; i < N; i++) {
       const gfx = this.add.graphics()
       const color = this.pickColor(rng, sys)
@@ -3957,251 +5386,382 @@ export class StarMapScene extends Phaser.Scene {
   private renderMainPlanet(sys: Race) {
     // Sparkle над планетой — один на каждую главную расу.
     // Создаётся в world coords (НЕ child container), чтобы не зависеть от LOD-скрытия.
-    this.createSparkleAt(sys.x, sys.y, sys.size, mulberry32(sys.id.charCodeAt(0) * 7919 + 13))
+    this.createSparkleAt(
+      sys.x,
+      sys.y,
+      sys.size,
+      mulberry32(sys.id.charCodeAt(0) * 7919 + 13),
+    )
 
     const container = this.add.container(sys.x, sys.y)
     const g = this.add.graphics()
 
     if (sys.id === 'home') {
       // Phase 7: HOME — выразительные континенты + облачный покров
-      g.fillStyle(0x0c4a6e); g.fillCircle(0, 0, sys.size)
-      g.fillStyle(sys.color); g.fillCircle(-4 * DPR, -3 * DPR, sys.size * 0.95)
+      g.fillStyle(0x0c4a6e)
+      g.fillCircle(0, 0, sys.size)
+      g.fillStyle(sys.color)
+      g.fillCircle(-4 * DPR, -3 * DPR, sys.size * 0.95)
       // Континенты (зелёные)
-      g.fillStyle(sys.accent, 0.85); g.fillEllipse(-12 * DPR, 2 * DPR, 28 * DPR, 18 * DPR)
-      g.fillStyle(sys.accent, 0.7); g.fillEllipse(15 * DPR, -10 * DPR, 20 * DPR, 14 * DPR)
-      g.fillStyle(sys.accent, 0.6); g.fillCircle(8 * DPR, 18 * DPR, 10 * DPR)
+      g.fillStyle(sys.accent, 0.85)
+      g.fillEllipse(-12 * DPR, 2 * DPR, 28 * DPR, 18 * DPR)
+      g.fillStyle(sys.accent, 0.7)
+      g.fillEllipse(15 * DPR, -10 * DPR, 20 * DPR, 14 * DPR)
+      g.fillStyle(sys.accent, 0.6)
+      g.fillCircle(8 * DPR, 18 * DPR, 10 * DPR)
       // Phase 7: дополнительные мелкие острова
-      g.fillStyle(sys.accent, 0.7); g.fillEllipse(-18 * DPR, -16 * DPR, 12 * DPR, 8 * DPR)
-      g.fillStyle(sys.accent, 0.6); g.fillCircle(20 * DPR, 12 * DPR, 5 * DPR)
+      g.fillStyle(sys.accent, 0.7)
+      g.fillEllipse(-18 * DPR, -16 * DPR, 12 * DPR, 8 * DPR)
+      g.fillStyle(sys.accent, 0.6)
+      g.fillCircle(20 * DPR, 12 * DPR, 5 * DPR)
       // Phase 7: тонкие облачные слои
-      g.fillStyle(0xffffff, 0.25); g.fillEllipse(-2 * DPR, -8 * DPR, 32 * DPR, 4 * DPR)
-      g.fillStyle(0xffffff, 0.2); g.fillEllipse(2 * DPR, 14 * DPR, 28 * DPR, 3 * DPR)
+      g.fillStyle(0xffffff, 0.25)
+      g.fillEllipse(-2 * DPR, -8 * DPR, 32 * DPR, 4 * DPR)
+      g.fillStyle(0xffffff, 0.2)
+      g.fillEllipse(2 * DPR, 14 * DPR, 28 * DPR, 3 * DPR)
       // Полярные шапки
-      g.fillStyle(0xffffff, 0.8); g.fillEllipse(0, -sys.size * 0.85, sys.size * 0.4, sys.size * 0.12)
-      g.fillStyle(0xffffff, 0.7); g.fillEllipse(0, sys.size * 0.85, sys.size * 0.35, sys.size * 0.1)
+      g.fillStyle(0xffffff, 0.8)
+      g.fillEllipse(0, -sys.size * 0.85, sys.size * 0.4, sys.size * 0.12)
+      g.fillStyle(0xffffff, 0.7)
+      g.fillEllipse(0, sys.size * 0.85, sys.size * 0.35, sys.size * 0.1)
       // Атмосфера
-      g.lineStyle(2 * DPR, 0x7dd3fc, 0.4); g.strokeCircle(0, 0, sys.size + 4 * DPR)
-      g.lineStyle(1 * DPR, 0xa5f3fc, 0.2); g.strokeCircle(0, 0, sys.size + 8 * DPR)
+      g.lineStyle(2 * DPR, 0x7dd3fc, 0.4)
+      g.strokeCircle(0, 0, sys.size + 4 * DPR)
+      g.lineStyle(1 * DPR, 0xa5f3fc, 0.2)
+      g.strokeCircle(0, 0, sys.size + 8 * DPR)
     } else if (sys.id === 'relict') {
       // Phase 7: RELICT — больше шрамов и обломков
-      g.fillStyle(0x171717); g.fillCircle(0, 0, sys.size)
+      g.fillStyle(0x171717)
+      g.fillCircle(0, 0, sys.size)
       // Большие диагональные трещины
       g.lineStyle(3 * DPR, sys.color, 0.6)
-      g.lineBetween(-sys.size * 0.6, -sys.size * 0.6, sys.size * 0.6, sys.size * 0.6)
-      g.lineBetween(-sys.size * 0.6, sys.size * 0.6, sys.size * 0.6, -sys.size * 0.6)
+      g.lineBetween(
+        -sys.size * 0.6,
+        -sys.size * 0.6,
+        sys.size * 0.6,
+        sys.size * 0.6,
+      )
+      g.lineBetween(
+        -sys.size * 0.6,
+        sys.size * 0.6,
+        sys.size * 0.6,
+        -sys.size * 0.6,
+      )
       // Phase 7: дополнительные мелкие шрамы
       g.lineStyle(1.5 * DPR, sys.color, 0.5)
       g.lineBetween(-sys.size * 0.5, 0, sys.size * 0.3, sys.size * 0.4)
       g.lineBetween(0, -sys.size * 0.5, -sys.size * 0.3, sys.size * 0.3)
       // Кратеры от ударов
-      g.fillStyle(0x000000, 0.7); g.fillCircle(-sys.size * 0.3, sys.size * 0.2, sys.size * 0.12)
-      g.fillStyle(0x000000, 0.6); g.fillCircle(sys.size * 0.35, -sys.size * 0.25, sys.size * 0.1)
-      g.fillStyle(0x000000, 0.5); g.fillCircle(sys.size * 0.1, sys.size * 0.45, sys.size * 0.07)
+      g.fillStyle(0x000000, 0.7)
+      g.fillCircle(-sys.size * 0.3, sys.size * 0.2, sys.size * 0.12)
+      g.fillStyle(0x000000, 0.6)
+      g.fillCircle(sys.size * 0.35, -sys.size * 0.25, sys.size * 0.1)
+      g.fillStyle(0x000000, 0.5)
+      g.fillCircle(sys.size * 0.1, sys.size * 0.45, sys.size * 0.07)
       // Аура трагедии
-      g.lineStyle(1 * DPR, 0xfca5a5, 0.4); g.strokeCircle(0, 0, sys.size + 6 * DPR)
-      g.lineStyle(0.5 * DPR, 0xfca5a5, 0.3); g.strokeCircle(0, 0, sys.size + 11 * DPR)
+      g.lineStyle(1 * DPR, 0xfca5a5, 0.4)
+      g.strokeCircle(0, 0, sys.size + 6 * DPR)
+      g.lineStyle(0.5 * DPR, 0xfca5a5, 0.3)
+      g.strokeCircle(0, 0, sys.size + 11 * DPR)
     } else {
-      g.fillStyle(sys.accent); g.fillCircle(0, 0, sys.size)
-      g.fillStyle(sys.color, 0.95); g.fillCircle(-3 * DPR, -2 * DPR, sys.size * 0.92)
+      g.fillStyle(sys.accent)
+      g.fillCircle(0, 0, sys.size)
+      g.fillStyle(sys.color, 0.95)
+      g.fillCircle(-3 * DPR, -2 * DPR, sys.size * 0.92)
       const D = DPR
       if (sys.type === 'crystal') {
         // Phase 7: BLIKS — более яркие кристаллы + блики
         g.fillStyle(0xffffff, 0.7)
         for (let a = 0; a < 6; a++) {
-          const θ = a * Math.PI / 3
+          const θ = (a * Math.PI) / 3
           g.fillTriangle(
-            Math.cos(θ)*sys.size*0.3, Math.sin(θ)*sys.size*0.3,
-            Math.cos(θ)*sys.size*0.7-3*D, Math.sin(θ)*sys.size*0.7,
-            Math.cos(θ)*sys.size*0.7+3*D, Math.sin(θ)*sys.size*0.7
+            Math.cos(θ) * sys.size * 0.3,
+            Math.sin(θ) * sys.size * 0.3,
+            Math.cos(θ) * sys.size * 0.7 - 3 * D,
+            Math.sin(θ) * sys.size * 0.7,
+            Math.cos(θ) * sys.size * 0.7 + 3 * D,
+            Math.sin(θ) * sys.size * 0.7,
           )
         }
         // Phase 7: маленькие блики на кристаллах
         g.fillStyle(0xffffff, 0.95)
         for (let a = 0; a < 6; a++) {
-          const θ = a * Math.PI / 3
-          g.fillCircle(Math.cos(θ)*sys.size*0.55, Math.sin(θ)*sys.size*0.55, 1.5*D)
+          const θ = (a * Math.PI) / 3
+          g.fillCircle(
+            Math.cos(θ) * sys.size * 0.55,
+            Math.sin(θ) * sys.size * 0.55,
+            1.5 * D,
+          )
         }
         // Центральный кристалл
-        g.fillStyle(sys.color, 0.9); g.fillCircle(0, 0, sys.size * 0.18)
-        g.fillStyle(0xffffff, 0.8); g.fillCircle(-1.5*D, -1.5*D, sys.size * 0.08)
+        g.fillStyle(sys.color, 0.9)
+        g.fillCircle(0, 0, sys.size * 0.18)
+        g.fillStyle(0xffffff, 0.8)
+        g.fillCircle(-1.5 * D, -1.5 * D, sys.size * 0.08)
       } else if (sys.type === 'rocky') {
         // Phase 7: ROCKY — больше камней и текстуры
-        g.fillStyle(sys.accent, 0.9); g.fillCircle(-8*D, -5*D, 10*D)
-        g.fillStyle(sys.accent, 0.8); g.fillCircle(10*D, 8*D, 8*D)
-        g.fillStyle(sys.accent, 0.7); g.fillCircle(2*D, -12*D, 6*D)
-        g.fillStyle(sys.accent, 0.6); g.fillCircle(-12*D, 10*D, 5*D)
+        g.fillStyle(sys.accent, 0.9)
+        g.fillCircle(-8 * D, -5 * D, 10 * D)
+        g.fillStyle(sys.accent, 0.8)
+        g.fillCircle(10 * D, 8 * D, 8 * D)
+        g.fillStyle(sys.accent, 0.7)
+        g.fillCircle(2 * D, -12 * D, 6 * D)
+        g.fillStyle(sys.accent, 0.6)
+        g.fillCircle(-12 * D, 10 * D, 5 * D)
         // Тени-впадины
-        g.fillStyle(0x000000, 0.3); g.fillCircle(-6*D, -3*D, 6*D)
-        g.fillStyle(0x000000, 0.25); g.fillCircle(12*D, 10*D, 5*D)
+        g.fillStyle(0x000000, 0.3)
+        g.fillCircle(-6 * D, -3 * D, 6 * D)
+        g.fillStyle(0x000000, 0.25)
+        g.fillCircle(12 * D, 10 * D, 5 * D)
       } else if (sys.type === 'ancient') {
         // Phase 7: MAR — древняя раса со множеством символов
-        g.lineStyle(2*D, 0xffffff, 0.4)
+        g.lineStyle(2 * D, 0xffffff, 0.4)
         g.strokeCircle(0, 0, sys.size * 0.6)
         g.strokeCircle(0, 0, sys.size * 0.3)
         // Phase 7: внешнее кольцо рун
-        g.lineStyle(1*D, sys.accent, 0.5); g.strokeCircle(0, 0, sys.size * 0.85)
+        g.lineStyle(1 * D, sys.accent, 0.5)
+        g.strokeCircle(0, 0, sys.size * 0.85)
         // Маленькие точки-символы по 2 кругам
         g.fillStyle(0xffffff, 0.8)
         for (let a = 0; a < 8; a++) {
-          const θ = a * Math.PI / 4
-          g.fillCircle(Math.cos(θ)*sys.size*0.6, Math.sin(θ)*sys.size*0.6, 1*D)
+          const θ = (a * Math.PI) / 4
+          g.fillCircle(
+            Math.cos(θ) * sys.size * 0.6,
+            Math.sin(θ) * sys.size * 0.6,
+            1 * D,
+          )
         }
         for (let a = 0; a < 12; a++) {
-          const θ = a * Math.PI / 6 + 0.15
-          g.fillStyle(sys.accent, 0.7); g.fillCircle(Math.cos(θ)*sys.size*0.85, Math.sin(θ)*sys.size*0.85, 0.8*D)
+          const θ = (a * Math.PI) / 6 + 0.15
+          g.fillStyle(sys.accent, 0.7)
+          g.fillCircle(
+            Math.cos(θ) * sys.size * 0.85,
+            Math.sin(θ) * sys.size * 0.85,
+            0.8 * D,
+          )
         }
       } else if (sys.type === 'mystic') {
         // Phase 7: NUM — больше мистических огоньков
         g.fillStyle(0xffffff, 0.5)
-        g.fillCircle(-5*D, -8*D, 4*D); g.fillCircle(8*D, 5*D, 3*D); g.fillCircle(-2*D, 10*D, 3*D)
+        g.fillCircle(-5 * D, -8 * D, 4 * D)
+        g.fillCircle(8 * D, 5 * D, 3 * D)
+        g.fillCircle(-2 * D, 10 * D, 3 * D)
         // Phase 7: дополнительные огоньки
-        g.fillStyle(0xa5f3fc, 0.7); g.fillCircle(6*D, -4*D, 2*D)
-        g.fillStyle(0xc4b5fd, 0.6); g.fillCircle(-9*D, 4*D, 2.5*D)
-        g.fillStyle(0xfde047, 0.5); g.fillCircle(2*D, -2*D, 1.5*D)
+        g.fillStyle(0xa5f3fc, 0.7)
+        g.fillCircle(6 * D, -4 * D, 2 * D)
+        g.fillStyle(0xc4b5fd, 0.6)
+        g.fillCircle(-9 * D, 4 * D, 2.5 * D)
+        g.fillStyle(0xfde047, 0.5)
+        g.fillCircle(2 * D, -2 * D, 1.5 * D)
         // Тонкие линии-связи между огоньками (созвездие)
-        g.lineStyle(0.5*D, 0xa5f3fc, 0.4)
-        g.lineBetween(-5*D, -8*D, 6*D, -4*D)
-        g.lineBetween(6*D, -4*D, 8*D, 5*D)
-        g.lineBetween(8*D, 5*D, -2*D, 10*D)
+        g.lineStyle(0.5 * D, 0xa5f3fc, 0.4)
+        g.lineBetween(-5 * D, -8 * D, 6 * D, -4 * D)
+        g.lineBetween(6 * D, -4 * D, 8 * D, 5 * D)
+        g.lineBetween(8 * D, 5 * D, -2 * D, 10 * D)
       } else if (sys.type === 'organic') {
         // Phase 7: организм — больше форм
-        g.fillStyle(sys.accent, 0.7); g.fillEllipse(0, 0, sys.size * 1.2, sys.size * 0.5)
+        g.fillStyle(sys.accent, 0.7)
+        g.fillEllipse(0, 0, sys.size * 1.2, sys.size * 0.5)
         // Phase 7: дополнительные органические выпуклости
-        g.fillStyle(sys.accent, 0.6); g.fillEllipse(0, 0, sys.size * 0.5, sys.size * 1.2)
-        g.fillStyle(sys.color, 0.5); g.fillCircle(-sys.size * 0.3, 0, sys.size * 0.18)
-        g.fillStyle(sys.color, 0.5); g.fillCircle(sys.size * 0.3, 0, sys.size * 0.18)
-        g.fillStyle(0xffffff, 0.4); g.fillCircle(0, 0, sys.size * 0.1)
+        g.fillStyle(sys.accent, 0.6)
+        g.fillEllipse(0, 0, sys.size * 0.5, sys.size * 1.2)
+        g.fillStyle(sys.color, 0.5)
+        g.fillCircle(-sys.size * 0.3, 0, sys.size * 0.18)
+        g.fillStyle(sys.color, 0.5)
+        g.fillCircle(sys.size * 0.3, 0, sys.size * 0.18)
+        g.fillStyle(0xffffff, 0.4)
+        g.fillCircle(0, 0, sys.size * 0.1)
       } else if (sys.type === 'forge') {
         // Phase 7: VRAK — кузнецы: огонь и наковальня
-        g.lineStyle(3*D, sys.accent, 0.9)
+        g.lineStyle(3 * D, sys.accent, 0.9)
         g.beginPath()
         g.moveTo(-sys.size * 0.6, sys.size * 0.3)
         g.lineTo(sys.size * 0.6, -sys.size * 0.3)
         g.strokePath()
-        g.lineStyle(2*D, 0xfff7ed, 0.7); g.strokeCircle(-sys.size * 0.4, sys.size * 0.2, 4*D)
+        g.lineStyle(2 * D, 0xfff7ed, 0.7)
+        g.strokeCircle(-sys.size * 0.4, sys.size * 0.2, 4 * D)
         // Phase 7: горящие очаги по поверхности
-        g.fillStyle(0xef4444, 0.85); g.fillCircle(sys.size * 0.4, -sys.size * 0.2, 4*D)
-        g.fillStyle(0xfde047, 0.7); g.fillCircle(sys.size * 0.4, -sys.size * 0.2, 2.5*D)
-        g.fillStyle(0xfb923c, 0.7); g.fillCircle(-sys.size * 0.5, -sys.size * 0.4, 3*D)
+        g.fillStyle(0xef4444, 0.85)
+        g.fillCircle(sys.size * 0.4, -sys.size * 0.2, 4 * D)
+        g.fillStyle(0xfde047, 0.7)
+        g.fillCircle(sys.size * 0.4, -sys.size * 0.2, 2.5 * D)
+        g.fillStyle(0xfb923c, 0.7)
+        g.fillCircle(-sys.size * 0.5, -sys.size * 0.4, 3 * D)
         // Дым над очагами
-        g.fillStyle(0x4b5563, 0.4); g.fillEllipse(sys.size * 0.4, -sys.size * 0.45, sys.size * 0.3, sys.size * 0.1)
+        g.fillStyle(0x4b5563, 0.4)
+        g.fillEllipse(
+          sys.size * 0.4,
+          -sys.size * 0.45,
+          sys.size * 0.3,
+          sys.size * 0.1,
+        )
       } else if (sys.type === 'military') {
         // Phase 7: VEKTAR — больше техники и оружия
-        g.lineStyle(3*D, sys.accent, 1); g.strokeCircle(0, 0, sys.size + 6*D)
+        g.lineStyle(3 * D, sys.accent, 1)
+        g.strokeCircle(0, 0, sys.size + 6 * D)
         g.fillStyle(sys.accent, 0.8)
         for (let a = 0; a < 4; a++) {
-          const θ = a * Math.PI / 2
-          g.fillCircle(Math.cos(θ)*(sys.size+6*D), Math.sin(θ)*(sys.size+6*D), 4*D)
+          const θ = (a * Math.PI) / 2
+          g.fillCircle(
+            Math.cos(θ) * (sys.size + 6 * D),
+            Math.sin(θ) * (sys.size + 6 * D),
+            4 * D,
+          )
         }
         // Phase 7: дополнительные мини-турели на меньшем кольце
-        g.lineStyle(1.5*D, sys.accent, 0.7); g.strokeCircle(0, 0, sys.size * 0.7)
+        g.lineStyle(1.5 * D, sys.accent, 0.7)
+        g.strokeCircle(0, 0, sys.size * 0.7)
         g.fillStyle(sys.accent, 0.85)
         for (let a = 0; a < 8; a++) {
-          const θ = a * Math.PI / 4 + Math.PI / 8
-          g.fillRect(Math.cos(θ)*sys.size*0.7 - D, Math.sin(θ)*sys.size*0.7 - D, 2*D, 2*D)
+          const θ = (a * Math.PI) / 4 + Math.PI / 8
+          g.fillRect(
+            Math.cos(θ) * sys.size * 0.7 - D,
+            Math.sin(θ) * sys.size * 0.7 - D,
+            2 * D,
+            2 * D,
+          )
         }
         // Центральный командный пункт
-        g.fillStyle(0xef4444, 0.9); g.fillCircle(0, 0, sys.size * 0.15)
-        g.fillStyle(0xfde047, 0.85); g.fillCircle(0, 0, sys.size * 0.07)
+        g.fillStyle(0xef4444, 0.9)
+        g.fillCircle(0, 0, sys.size * 0.15)
+        g.fillStyle(0xfde047, 0.85)
+        g.fillCircle(0, 0, sys.size * 0.07)
       } else if (sys.type === 'crystal_bio') {
         // Phase 7: ШИОН — кристаллы прорастают сквозь органическую поверхность (расширено)
         g.fillStyle(sys.accent, 0.7)
         g.fillEllipse(0, 0, sys.size * 1.3, sys.size * 0.7)
         g.fillStyle(0xffffff, 0.85)
         for (let a = 0; a < 4; a++) {
-          const θ = a * Math.PI / 2 + 0.4
+          const θ = (a * Math.PI) / 2 + 0.4
           const tipR = sys.size * 0.95
           g.fillTriangle(
-            Math.cos(θ-0.15)*sys.size*0.2, Math.sin(θ-0.15)*sys.size*0.2,
-            Math.cos(θ+0.15)*sys.size*0.2, Math.sin(θ+0.15)*sys.size*0.2,
-            Math.cos(θ)*tipR, Math.sin(θ)*tipR,
+            Math.cos(θ - 0.15) * sys.size * 0.2,
+            Math.sin(θ - 0.15) * sys.size * 0.2,
+            Math.cos(θ + 0.15) * sys.size * 0.2,
+            Math.sin(θ + 0.15) * sys.size * 0.2,
+            Math.cos(θ) * tipR,
+            Math.sin(θ) * tipR,
           )
         }
         // Phase 7: малые вторичные кристаллы между большими
         g.fillStyle(sys.color, 0.85)
         for (let a = 0; a < 4; a++) {
-          const θ = a * Math.PI / 2 + 0.4 + Math.PI / 4
+          const θ = (a * Math.PI) / 2 + 0.4 + Math.PI / 4
           const tipR = sys.size * 0.55
           g.fillTriangle(
-            Math.cos(θ-0.1)*sys.size*0.15, Math.sin(θ-0.1)*sys.size*0.15,
-            Math.cos(θ+0.1)*sys.size*0.15, Math.sin(θ+0.1)*sys.size*0.15,
-            Math.cos(θ)*tipR, Math.sin(θ)*tipR,
+            Math.cos(θ - 0.1) * sys.size * 0.15,
+            Math.sin(θ - 0.1) * sys.size * 0.15,
+            Math.cos(θ + 0.1) * sys.size * 0.15,
+            Math.sin(θ + 0.1) * sys.size * 0.15,
+            Math.cos(θ) * tipR,
+            Math.sin(θ) * tipR,
           )
         }
-        g.fillStyle(sys.color, 0.6); g.fillCircle(0, 0, sys.size * 0.25)
-        g.fillStyle(0xffffff, 0.7); g.fillCircle(0, 0, sys.size * 0.12)
+        g.fillStyle(sys.color, 0.6)
+        g.fillCircle(0, 0, sys.size * 0.25)
+        g.fillStyle(0xffffff, 0.7)
+        g.fillCircle(0, 0, sys.size * 0.12)
       } else if (sys.type === 'mechano') {
         // Phase 7: ДРЕВИУС — механо-животное (расширено: больше зубцов и заклёпок)
-        g.lineStyle(2*D, sys.accent, 0.85)
+        g.lineStyle(2 * D, sys.accent, 0.85)
         g.strokeCircle(0, 0, sys.size * 0.65)
         g.strokeCircle(0, 0, sys.size * 0.35)
         for (let a = 0; a < 8; a++) {
-          const θ = a * Math.PI / 4
+          const θ = (a * Math.PI) / 4
           g.lineBetween(
-            Math.cos(θ)*sys.size*0.55, Math.sin(θ)*sys.size*0.55,
-            Math.cos(θ)*sys.size*0.85, Math.sin(θ)*sys.size*0.85,
+            Math.cos(θ) * sys.size * 0.55,
+            Math.sin(θ) * sys.size * 0.55,
+            Math.cos(θ) * sys.size * 0.85,
+            Math.sin(θ) * sys.size * 0.85,
           )
         }
         // Phase 7: внешние зубцы шестерни
         g.fillStyle(sys.accent, 0.85)
         for (let a = 0; a < 12; a++) {
-          const θ = a * Math.PI / 6
+          const θ = (a * Math.PI) / 6
           const r = sys.size * 0.92
-          g.fillRect(Math.cos(θ)*r - D, Math.sin(θ)*r - D, 2*D, 2*D)
+          g.fillRect(Math.cos(θ) * r - D, Math.sin(θ) * r - D, 2 * D, 2 * D)
         }
         // Phase 7: заклёпки
         g.fillStyle(0xffffff, 0.7)
         for (let a = 0; a < 4; a++) {
-          const θ = a * Math.PI / 2 + Math.PI / 4
-          g.fillCircle(Math.cos(θ)*sys.size*0.5, Math.sin(θ)*sys.size*0.5, 1.5*D)
+          const θ = (a * Math.PI) / 2 + Math.PI / 4
+          g.fillCircle(
+            Math.cos(θ) * sys.size * 0.5,
+            Math.sin(θ) * sys.size * 0.5,
+            1.5 * D,
+          )
         }
-        g.fillStyle(sys.accent, 0.95); g.fillCircle(0, 0, sys.size * 0.18)
-        g.fillStyle(0xfde047, 0.8); g.fillCircle(0, 0, sys.size * 0.08)
+        g.fillStyle(sys.accent, 0.95)
+        g.fillCircle(0, 0, sys.size * 0.18)
+        g.fillStyle(0xfde047, 0.8)
+        g.fillCircle(0, 0, sys.size * 0.08)
       } else if (sys.type === 'energy') {
         // Phase 7: КАЛЕБ — энергетическая раса (расширено: больше молний и обводка)
-        g.lineStyle(2*D, sys.color, 0.95)
+        g.lineStyle(2 * D, sys.color, 0.95)
         for (let i = 0; i < 5; i++) {
-          const θ = i * Math.PI * 2 / 5 + 0.2
+          const θ = (i * Math.PI * 2) / 5 + 0.2
           let x = Math.cos(θ) * sys.size * 0.3
           let y = Math.sin(θ) * sys.size * 0.3
           g.beginPath()
           g.moveTo(x, y)
           for (let j = 0; j < 3; j++) {
-            x += Math.cos(θ) * sys.size * 0.2 + (Math.random() - 0.5) * sys.size * 0.15
-            y += Math.sin(θ) * sys.size * 0.2 + (Math.random() - 0.5) * sys.size * 0.15
+            x +=
+              Math.cos(θ) * sys.size * 0.2 +
+              (Math.random() - 0.5) * sys.size * 0.15
+            y +=
+              Math.sin(θ) * sys.size * 0.2 +
+              (Math.random() - 0.5) * sys.size * 0.15
             g.lineTo(x, y)
           }
           g.strokePath()
         }
         // Phase 7: внешнее кольцо энергии
-        g.lineStyle(1.5*D, 0xfde047, 0.6); g.strokeCircle(0, 0, sys.size * 0.85)
-        g.lineStyle(0.8*D, sys.color, 0.4); g.strokeCircle(0, 0, sys.size * 1.05)
+        g.lineStyle(1.5 * D, 0xfde047, 0.6)
+        g.strokeCircle(0, 0, sys.size * 0.85)
+        g.lineStyle(0.8 * D, sys.color, 0.4)
+        g.strokeCircle(0, 0, sys.size * 1.05)
         // Точки разрядов вокруг
         g.fillStyle(0xfff7ed, 0.9)
         for (let i = 0; i < 8; i++) {
-          const θ = i * Math.PI / 4
-          g.fillCircle(Math.cos(θ)*sys.size*0.85, Math.sin(θ)*sys.size*0.85, 1.2*D)
+          const θ = (i * Math.PI) / 4
+          g.fillCircle(
+            Math.cos(θ) * sys.size * 0.85,
+            Math.sin(θ) * sys.size * 0.85,
+            1.2 * D,
+          )
         }
-        g.fillStyle(0xffffff, 0.95); g.fillCircle(0, 0, sys.size * 0.35)
-        g.fillStyle(0xfde047, 0.85); g.fillCircle(0, 0, sys.size * 0.18)
+        g.fillStyle(0xffffff, 0.95)
+        g.fillCircle(0, 0, sys.size * 0.35)
+        g.fillStyle(0xfde047, 0.85)
+        g.fillCircle(0, 0, sys.size * 0.18)
       } else if (sys.type === 'mist') {
         // Phase 7: ТЕВР — туманная раса (расширено: больше слоёв)
         for (let i = 0; i < 6; i++) {
-          const θ = i * Math.PI * 2 / 6
+          const θ = (i * Math.PI * 2) / 6
           g.fillStyle(0xffffff, 0.25 + (i % 2) * 0.1)
           g.fillEllipse(
-            Math.cos(θ) * sys.size * 0.4, Math.sin(θ) * sys.size * 0.4,
-            sys.size * 0.55, sys.size * 0.25,
+            Math.cos(θ) * sys.size * 0.4,
+            Math.sin(θ) * sys.size * 0.4,
+            sys.size * 0.55,
+            sys.size * 0.25,
           )
         }
         // Phase 7: дополнительный слой завитков
         for (let i = 0; i < 4; i++) {
-          const θ = i * Math.PI / 2 + Math.PI / 4
+          const θ = (i * Math.PI) / 2 + Math.PI / 4
           g.fillStyle(sys.color, 0.3)
-          g.fillEllipse(Math.cos(θ) * sys.size * 0.6, Math.sin(θ) * sys.size * 0.6, sys.size * 0.4, sys.size * 0.18)
+          g.fillEllipse(
+            Math.cos(θ) * sys.size * 0.6,
+            Math.sin(θ) * sys.size * 0.6,
+            sys.size * 0.4,
+            sys.size * 0.18,
+          )
         }
-        g.lineStyle(1*D, sys.accent, 0.5); g.strokeCircle(0, 0, sys.size * 0.85)
-        g.lineStyle(0.5*D, 0xc4b5fd, 0.4); g.strokeCircle(0, 0, sys.size * 0.55)
+        g.lineStyle(1 * D, sys.accent, 0.5)
+        g.strokeCircle(0, 0, sys.size * 0.85)
+        g.lineStyle(0.5 * D, 0xc4b5fd, 0.4)
+        g.strokeCircle(0, 0, sys.size * 0.55)
       } else if (sys.type === 'aquatic') {
         // Phase 7: ЮРУМ — водянистая (расширено: больше волн и капель)
         g.fillStyle(0xffffff, 0.4)
@@ -4214,33 +5774,48 @@ export class StarMapScene extends Phaser.Scene {
         g.fillEllipse(0, -sys.size * 0.1, sys.size * 1.25, sys.size * 0.07)
         g.fillEllipse(0, sys.size * 0.65, sys.size * 0.85, sys.size * 0.07)
         // Капли — много
-        g.fillStyle(sys.accent, 0.7); g.fillCircle(sys.size * 0.3, sys.size * 0.2, sys.size * 0.15)
-        g.fillStyle(sys.accent, 0.6); g.fillCircle(-sys.size * 0.4, -sys.size * 0.2, sys.size * 0.1)
-        g.fillStyle(sys.color, 0.6); g.fillCircle(sys.size * 0.5, -sys.size * 0.45, sys.size * 0.07)
+        g.fillStyle(sys.accent, 0.7)
+        g.fillCircle(sys.size * 0.3, sys.size * 0.2, sys.size * 0.15)
+        g.fillStyle(sys.accent, 0.6)
+        g.fillCircle(-sys.size * 0.4, -sys.size * 0.2, sys.size * 0.1)
+        g.fillStyle(sys.color, 0.6)
+        g.fillCircle(sys.size * 0.5, -sys.size * 0.45, sys.size * 0.07)
         // Блики на каплях
-        g.fillStyle(0xffffff, 0.85); g.fillCircle(sys.size * 0.27, sys.size * 0.17, sys.size * 0.04)
+        g.fillStyle(0xffffff, 0.85)
+        g.fillCircle(sys.size * 0.27, sys.size * 0.17, sys.size * 0.04)
       } else if (sys.type === 'shadow') {
         // Phase 7: НОКТИС — тёмная раса (расширено: больше теней)
-        g.fillStyle(0x000000, 0.7); g.fillCircle(0, 0, sys.size * 0.7)
+        g.fillStyle(0x000000, 0.7)
+        g.fillCircle(0, 0, sys.size * 0.7)
         g.fillStyle(sys.accent, 0.6)
         for (let a = 0; a < 8; a++) {
-          const θ = a * Math.PI / 4
+          const θ = (a * Math.PI) / 4
           const r = sys.size * (0.6 + Math.random() * 0.3)
-          g.fillEllipse(Math.cos(θ)*r*0.6, Math.sin(θ)*r*0.6, sys.size * 0.18, sys.size * 0.3)
+          g.fillEllipse(
+            Math.cos(θ) * r * 0.6,
+            Math.sin(θ) * r * 0.6,
+            sys.size * 0.18,
+            sys.size * 0.3,
+          )
         }
         // Phase 7: дополнительные тёмные щупальца наружу
         g.fillStyle(0x000000, 0.5)
         for (let a = 0; a < 6; a++) {
-          const θ = a * Math.PI / 3 + 0.2
+          const θ = (a * Math.PI) / 3 + 0.2
           g.fillTriangle(
-            Math.cos(θ)*sys.size*0.3, Math.sin(θ)*sys.size*0.3,
-            Math.cos(θ-0.2)*sys.size*0.85, Math.sin(θ-0.2)*sys.size*0.85,
-            Math.cos(θ+0.2)*sys.size*0.85, Math.sin(θ+0.2)*sys.size*0.85,
+            Math.cos(θ) * sys.size * 0.3,
+            Math.sin(θ) * sys.size * 0.3,
+            Math.cos(θ - 0.2) * sys.size * 0.85,
+            Math.sin(θ - 0.2) * sys.size * 0.85,
+            Math.cos(θ + 0.2) * sys.size * 0.85,
+            Math.sin(θ + 0.2) * sys.size * 0.85,
           )
         }
         // Глаз тьмы
-        g.fillStyle(0xa78bfa, 0.5); g.fillCircle(0, 0, sys.size * 0.18)
-        g.fillStyle(0x000000, 0.95); g.fillCircle(0, 0, sys.size * 0.08)
+        g.fillStyle(0xa78bfa, 0.5)
+        g.fillCircle(0, 0, sys.size * 0.18)
+        g.fillStyle(0x000000, 0.95)
+        g.fillCircle(0, 0, sys.size * 0.08)
       } else if (sys.type === 'aerial') {
         // Phase 7: АЛЬТУС — воздушная раса (расширено: больше облаков и потоков)
         g.fillStyle(0xffffff, 0.55)
@@ -4249,14 +5824,26 @@ export class StarMapScene extends Phaser.Scene {
         g.fillEllipse(0, sys.size * 0.35, sys.size * 1.3, sys.size * 0.2)
         // Phase 7: дополнительный слой пушистых облаков
         g.fillStyle(0xffffff, 0.4)
-        g.fillEllipse(-sys.size * 0.4, -sys.size * 0.15, sys.size * 0.5, sys.size * 0.12)
-        g.fillEllipse(sys.size * 0.4, sys.size * 0.2, sys.size * 0.6, sys.size * 0.12)
+        g.fillEllipse(
+          -sys.size * 0.4,
+          -sys.size * 0.15,
+          sys.size * 0.5,
+          sys.size * 0.12,
+        )
+        g.fillEllipse(
+          sys.size * 0.4,
+          sys.size * 0.2,
+          sys.size * 0.6,
+          sys.size * 0.12,
+        )
         // Лёгкие воздушные потоки (тонкие линии)
-        g.lineStyle(0.5*D, sys.accent, 0.45)
+        g.lineStyle(0.5 * D, sys.accent, 0.45)
         g.strokeEllipse(0, 0, sys.size * 1.4, sys.size * 0.4)
         g.strokeEllipse(0, sys.size * 0.2, sys.size * 1.2, sys.size * 0.35)
-        g.lineStyle(1*D, sys.accent, 0.5); g.strokeCircle(0, 0, sys.size + 5*D)
-        g.lineStyle(0.5*D, 0xa5f3fc, 0.3); g.strokeCircle(0, 0, sys.size + 11*D)
+        g.lineStyle(1 * D, sys.accent, 0.5)
+        g.strokeCircle(0, 0, sys.size + 5 * D)
+        g.lineStyle(0.5 * D, 0xa5f3fc, 0.3)
+        g.strokeCircle(0, 0, sys.size + 11 * D)
       }
     }
 
@@ -4264,12 +5851,39 @@ export class StarMapScene extends Phaser.Scene {
 
     // Idle-анимации
     if (sys.id === 'home') {
-      this.tweens.add({ targets: container, scale: { from: 1, to: 1.04 }, duration: 3500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      this.tweens.add({
+        targets: container,
+        scale: { from: 1, to: 1.04 },
+        duration: 3500,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      })
     } else if (sys.id === 'relict') {
-      this.tweens.add({ targets: g, alpha: { from: 1, to: 0.6 }, duration: 2200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      this.tweens.add({
+        targets: g,
+        alpha: { from: 1, to: 0.6 },
+        duration: 2200,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      })
     } else {
-      this.tweens.add({ targets: g, angle: 360, duration: 30000 + Math.random() * 30000, repeat: -1, ease: 'Linear' })
-      this.tweens.add({ targets: container, scale: { from: 0.97, to: 1.03 }, duration: 2500 + Math.random() * 2000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      this.tweens.add({
+        targets: g,
+        angle: 360,
+        duration: 30000 + Math.random() * 30000,
+        repeat: -1,
+        ease: 'Linear',
+      })
+      this.tweens.add({
+        targets: container,
+        scale: { from: 0.97, to: 1.03 },
+        duration: 2500 + Math.random() * 2000,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      })
     }
 
     // Подсказка пульсации для bliks (с задержкой, чтобы не вспыхивать при открытии сцены)
@@ -4284,7 +5898,9 @@ export class StarMapScene extends Phaser.Scene {
           targets: pulse,
           scale: { from: 1, to: 1.4 },
           alpha: { from: 0.7, to: 0 },
-          duration: 1200, repeat: -1, ease: 'Sine.easeOut',
+          duration: 1200,
+          repeat: -1,
+          ease: 'Sine.easeOut',
         })
       })
     }
@@ -4294,13 +5910,23 @@ export class StarMapScene extends Phaser.Scene {
     const hitArea = new Phaser.Geom.Circle(0, 0, baseR)
     container.setInteractive(hitArea, Phaser.Geom.Circle.Contains)
     let downTime = 0
-    let downX = 0, downY = 0
-    container.on('pointerdown', (p: Phaser.Input.Pointer) => { downTime = Date.now(); downX = p.x; downY = p.y })
+    let downX = 0,
+      downY = 0
+    container.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      downTime = Date.now()
+      downX = p.x
+      downY = p.y
+    })
     container.on('pointerup', (p: Phaser.Input.Pointer) => {
       const dt = Date.now() - downTime
       const moved = Math.abs(p.x - downX) + Math.abs(p.y - downY)
       if (dt < 300 && moved < 8 * DPR) {
         this.tapHandledThisFrame = true
+        eventBus.emit('starmap:planet-select', {
+          planetId: sys.id,
+          name: sys.name,
+          archetype: sys.type ?? '',
+        })
         this.handlePlanetPress(sys)
         this.selectSystem(sys)
       }
@@ -4308,7 +5934,12 @@ export class StarMapScene extends Phaser.Scene {
 
     this.systemSprites.set(sys.id, container)
     // Регистрируем для culling
-    this.cullableData.push({ obj: container, x: sys.x, y: sys.y, r: sys.size * 3 })
+    this.cullableData.push({
+      obj: container,
+      x: sys.x,
+      y: sys.y,
+      r: sys.size * 3,
+    })
     // Регистрируем для адаптивного hit-area (увеличивается при zoom-out)
     this.mainPlanetHits.push({ container, baseR, circle: hitArea })
     // Регистрируем для batch-toggle interactive по zoom (как BG)
@@ -4381,8 +6012,9 @@ export class StarMapScene extends Phaser.Scene {
           // banded — текущая логика (полосы + штормы)
           const bands = 2 + Math.floor(rng() * 5)
           for (let i = 0; i < bands; i++) {
-            const yOff = (i - bands/2 + 0.5) * sys.size * (0.25 + rng() * 0.2)
-            const w = sys.size * (1.4 + rng() * 0.4 - Math.abs(yOff/sys.size) * 0.4)
+            const yOff = (i - bands / 2 + 0.5) * sys.size * (0.25 + rng() * 0.2)
+            const w =
+              sys.size * (1.4 + rng() * 0.4 - Math.abs(yOff / sys.size) * 0.4)
             const h = sys.size * (0.08 + rng() * 0.18)
             const tint = rng() < 0.5 ? sys.accent : sys.color
             g.fillStyle(tint, 0.4 + rng() * 0.3)
@@ -4398,7 +6030,7 @@ export class StarMapScene extends Phaser.Scene {
             g.fillEllipse(ax, ay, sw, sh)
             if (rng() < 0.5) {
               g.fillStyle(0xffffff, 0.3)
-              g.fillEllipse(ax - sw*0.15, ay - sh*0.2, sw*0.4, sh*0.3)
+              g.fillEllipse(ax - sw * 0.15, ay - sh * 0.2, sw * 0.4, sh * 0.3)
             }
           }
         } else if (variant === 1) {
@@ -4409,14 +6041,19 @@ export class StarMapScene extends Phaser.Scene {
             const dist = sys.size * rng() * 0.7
             const r = sys.size * (0.08 + rng() * 0.15)
             g.fillStyle(rng() < 0.5 ? sys.color : sys.accent, 0.5 + rng() * 0.4)
-            g.fillCircle(Math.cos(ang)*dist, Math.sin(ang)*dist, r)
+            g.fillCircle(Math.cos(ang) * dist, Math.sin(ang) * dist, r)
           }
         } else {
           // storm — 1 большой ураган в центре + 2 полосы
           g.fillStyle(sys.accent, 0.85)
           g.fillEllipse(0, 0, sys.size * 0.7, sys.size * 0.45)
           g.fillStyle(0xffffff, 0.4)
-          g.fillEllipse(-sys.size * 0.1, -sys.size * 0.05, sys.size * 0.45, sys.size * 0.25)
+          g.fillEllipse(
+            -sys.size * 0.1,
+            -sys.size * 0.05,
+            sys.size * 0.45,
+            sys.size * 0.25,
+          )
           g.fillStyle(sys.color, 0.5)
           g.fillEllipse(0, -sys.size * 0.55, sys.size * 1.4, sys.size * 0.18)
           g.fillEllipse(0, sys.size * 0.55, sys.size * 1.4, sys.size * 0.18)
@@ -4428,17 +6065,31 @@ export class StarMapScene extends Phaser.Scene {
           // banded-rings — текущая логика
           const bands = 2 + Math.floor(rng() * 3)
           for (let i = 0; i < bands; i++) {
-            const yOff = (i - bands/2 + 0.5) * sys.size * (0.3 + rng() * 0.2)
+            const yOff = (i - bands / 2 + 0.5) * sys.size * (0.3 + rng() * 0.2)
             g.fillStyle(rng() < 0.5 ? sys.accent : sys.color, 0.5 + rng() * 0.2)
-            g.fillEllipse(0, yOff, sys.size * (1.4 + rng() * 0.4), sys.size * (0.12 + rng() * 0.15))
+            g.fillEllipse(
+              0,
+              yOff,
+              sys.size * (1.4 + rng() * 0.4),
+              sys.size * (0.12 + rng() * 0.15),
+            )
           }
           const ringGfx = this.add.graphics()
           const ringRotation = (rng() - 0.5) * 60
           const subRings = 1 + Math.floor(rng() * 3)
           for (let i = 0; i < subRings; i++) {
             const ringScale = 2.4 + i * 0.25 + rng() * 0.3
-            ringGfx.lineStyle((2 + rng() * 2) * D, i % 2 === 0 ? sys.color : sys.accent, 0.4 + rng() * 0.4)
-            ringGfx.strokeEllipse(0, 0, sys.size * ringScale, sys.size * (0.4 + rng() * 0.5))
+            ringGfx.lineStyle(
+              (2 + rng() * 2) * D,
+              i % 2 === 0 ? sys.color : sys.accent,
+              0.4 + rng() * 0.4,
+            )
+            ringGfx.strokeEllipse(
+              0,
+              0,
+              sys.size * ringScale,
+              sys.size * (0.4 + rng() * 0.5),
+            )
           }
           ringGfx.angle = ringRotation
           container.add(ringGfx)
@@ -4450,7 +6101,12 @@ export class StarMapScene extends Phaser.Scene {
           const ringRotation = (rng() - 0.5) * 30
           // Один очень широкий диск
           ringGfx.fillStyle(sys.color, 0.4 + rng() * 0.2)
-          ringGfx.fillEllipse(0, 0, sys.size * 3.2, sys.size * (0.7 + rng() * 0.3))
+          ringGfx.fillEllipse(
+            0,
+            0,
+            sys.size * 3.2,
+            sys.size * (0.7 + rng() * 0.3),
+          )
           ringGfx.fillStyle(sys.accent, 0.6)
           ringGfx.fillEllipse(0, 0, sys.size * 2.6, sys.size * 0.3)
           // отверстие в центре (через темнее эллипс)
@@ -4465,8 +6121,17 @@ export class StarMapScene extends Phaser.Scene {
           const N = 4 + Math.floor(rng() * 2)
           for (let i = 0; i < N; i++) {
             const rs = 1.8 + i * 0.3 + rng() * 0.2
-            ringGfx.lineStyle((1 + rng() * 1.5) * D, i % 2 === 0 ? sys.color : sys.accent, 0.5 + rng() * 0.3)
-            ringGfx.strokeEllipse(0, 0, sys.size * rs, sys.size * (0.3 + rng() * 0.3))
+            ringGfx.lineStyle(
+              (1 + rng() * 1.5) * D,
+              i % 2 === 0 ? sys.color : sys.accent,
+              0.5 + rng() * 0.3,
+            )
+            ringGfx.strokeEllipse(
+              0,
+              0,
+              sys.size * rs,
+              sys.size * (0.3 + rng() * 0.3),
+            )
           }
           ringGfx.angle = ringRotation
           container.add(ringGfx)
@@ -4482,12 +6147,22 @@ export class StarMapScene extends Phaser.Scene {
             const dist = sys.size * (0.15 + rng() * 0.55)
             const sr = sys.size * (0.06 + rng() * 0.18)
             g.fillStyle(0xffffff, 0.5 + rng() * 0.4)
-            g.fillCircle(Math.cos(ang)*dist, Math.sin(ang)*dist, sr)
+            g.fillCircle(Math.cos(ang) * dist, Math.sin(ang) * dist, sr)
           }
           if (rng() < 0.6) {
             g.fillStyle(0xffffff, 0.8)
-            g.fillEllipse(0, -sys.size * 0.7, sys.size * (0.5 + rng() * 0.4), sys.size * 0.18)
-            g.fillEllipse(0, sys.size * 0.7, sys.size * (0.4 + rng() * 0.5), sys.size * 0.16)
+            g.fillEllipse(
+              0,
+              -sys.size * 0.7,
+              sys.size * (0.5 + rng() * 0.4),
+              sys.size * 0.18,
+            )
+            g.fillEllipse(
+              0,
+              sys.size * 0.7,
+              sys.size * (0.4 + rng() * 0.5),
+              sys.size * 0.16,
+            )
           }
           g.fillStyle(0xffffff, 0.5 + rng() * 0.3)
           const bx = (rng() - 0.5) * sys.size * 0.6
@@ -4499,14 +6174,23 @@ export class StarMapScene extends Phaser.Scene {
           const facets = 5 + Math.floor(rng() * 4)
           for (let i = 0; i < facets; i++) {
             const ang = baseRotation + (i / facets) * Math.PI * 2
-            g.lineBetween(0, 0, Math.cos(ang)*sys.size*0.85, Math.sin(ang)*sys.size*0.85)
+            g.lineBetween(
+              0,
+              0,
+              Math.cos(ang) * sys.size * 0.85,
+              Math.sin(ang) * sys.size * 0.85,
+            )
           }
           // блики на гранях
           for (let i = 0; i < facets; i++) {
             const ang = baseRotation + (i / facets) * Math.PI * 2 + 0.3
             const r = sys.size * 0.55
             g.fillStyle(0xffffff, 0.4 + rng() * 0.3)
-            g.fillCircle(Math.cos(ang)*r, Math.sin(ang)*r, sys.size * (0.06 + rng() * 0.06))
+            g.fillCircle(
+              Math.cos(ang) * r,
+              Math.sin(ang) * r,
+              sys.size * (0.06 + rng() * 0.06),
+            )
           }
           g.fillStyle(0xffffff, 0.6)
           g.fillCircle(0, 0, sys.size * 0.25)
@@ -4517,13 +6201,16 @@ export class StarMapScene extends Phaser.Scene {
           for (let i = 0; i < cracks; i++) {
             const startAng = rng() * Math.PI * 2
             const startR = sys.size * 0.2
-            let px = Math.cos(startAng) * startR, py = Math.sin(startAng) * startR
+            let px = Math.cos(startAng) * startR,
+              py = Math.sin(startAng) * startR
             for (let s = 0; s < 4; s++) {
               const a = startAng + (rng() - 0.5) * 0.6
-              const r = startR + (sys.size * 0.7 - startR) * (s + 1) / 4
-              const x = Math.cos(a) * r, y = Math.sin(a) * r
+              const r = startR + ((sys.size * 0.7 - startR) * (s + 1)) / 4
+              const x = Math.cos(a) * r,
+                y = Math.sin(a) * r
               g.lineBetween(px, py, x, y)
-              px = x; py = y
+              px = x
+              py = y
             }
           }
           // Несколько снежных пятен
@@ -4532,7 +6219,11 @@ export class StarMapScene extends Phaser.Scene {
             const ang = rng() * Math.PI * 2
             const dist = sys.size * (0.2 + rng() * 0.4)
             g.fillStyle(0xffffff, 0.5 + rng() * 0.3)
-            g.fillCircle(Math.cos(ang)*dist, Math.sin(ang)*dist, sys.size * (0.07 + rng() * 0.1))
+            g.fillCircle(
+              Math.cos(ang) * dist,
+              Math.sin(ang) * dist,
+              sys.size * (0.07 + rng() * 0.1),
+            )
           }
         }
         break
@@ -4545,14 +6236,24 @@ export class StarMapScene extends Phaser.Scene {
             const ang = rng() * Math.PI * 2
             const dist = sys.size * (0.25 + rng() * 0.55)
             g.fillStyle(0xffffff, 0.3 + rng() * 0.3)
-            g.fillEllipse(Math.cos(ang)*dist, Math.sin(ang)*dist, sys.size * (0.4 + rng() * 0.5), sys.size * (0.15 + rng() * 0.2))
+            g.fillEllipse(
+              Math.cos(ang) * dist,
+              Math.sin(ang) * dist,
+              sys.size * (0.4 + rng() * 0.5),
+              sys.size * (0.15 + rng() * 0.2),
+            )
           }
           const continents = Math.floor(rng() * 4)
           for (let i = 0; i < continents; i++) {
             const ang = rng() * Math.PI * 2
             const dist = sys.size * (0.1 + rng() * 0.45)
             g.fillStyle(sys.accent, 0.55 + rng() * 0.3)
-            g.fillEllipse(Math.cos(ang)*dist, Math.sin(ang)*dist, sys.size * (0.4 + rng() * 0.4), sys.size * (0.25 + rng() * 0.3))
+            g.fillEllipse(
+              Math.cos(ang) * dist,
+              Math.sin(ang) * dist,
+              sys.size * (0.4 + rng() * 0.4),
+              sys.size * (0.25 + rng() * 0.3),
+            )
           }
         } else if (variant === 1) {
           // calm — простой синий gradient + минимум deталей
@@ -4562,7 +6263,12 @@ export class StarMapScene extends Phaser.Scene {
           g.fillEllipse(0, sys.size * 0.3, sys.size * 1.4, sys.size * 0.3)
           // Тонкий блик
           g.fillStyle(0xffffff, 0.3 + rng() * 0.2)
-          g.fillEllipse(-sys.size * 0.3, -sys.size * 0.2, sys.size * 0.4, sys.size * 0.15)
+          g.fillEllipse(
+            -sys.size * 0.3,
+            -sys.size * 0.2,
+            sys.size * 0.4,
+            sys.size * 0.15,
+          )
         } else {
           // archipelago — много маленьких островов
           const islands = 8 + Math.floor(rng() * 6)
@@ -4570,7 +6276,11 @@ export class StarMapScene extends Phaser.Scene {
             const ang = rng() * Math.PI * 2
             const dist = sys.size * (0.15 + rng() * 0.6)
             g.fillStyle(sys.accent, 0.6 + rng() * 0.3)
-            g.fillCircle(Math.cos(ang)*dist, Math.sin(ang)*dist, sys.size * (0.05 + rng() * 0.1))
+            g.fillCircle(
+              Math.cos(ang) * dist,
+              Math.sin(ang) * dist,
+              sys.size * (0.05 + rng() * 0.1),
+            )
           }
           // Тонкие следы волн
           g.fillStyle(0xffffff, 0.2)
@@ -4584,9 +6294,14 @@ export class StarMapScene extends Phaser.Scene {
           // dunes — текущая (полосы дюн + оазисы)
           const dunes = 2 + Math.floor(rng() * 4)
           for (let i = 0; i < dunes; i++) {
-            const yOff = (i - dunes/2 + 0.5) * sys.size * (0.25 + rng() * 0.2)
+            const yOff = (i - dunes / 2 + 0.5) * sys.size * (0.25 + rng() * 0.2)
             g.fillStyle(sys.accent, 0.3 + rng() * 0.3)
-            g.fillEllipse(0, yOff, sys.size * (1.3 + rng() * 0.4), sys.size * (0.08 + rng() * 0.1))
+            g.fillEllipse(
+              0,
+              yOff,
+              sys.size * (1.3 + rng() * 0.4),
+              sys.size * (0.08 + rng() * 0.1),
+            )
           }
           if (rng() < 0.4) {
             g.fillStyle(0x16a34a, 0.5)
@@ -4599,15 +6314,18 @@ export class StarMapScene extends Phaser.Scene {
           g.lineStyle((1.5 + rng() * 1) * D, 0x78350f, 0.6)
           const canyons = 3 + Math.floor(rng() * 3)
           for (let i = 0; i < canyons; i++) {
-            const ang = baseRotation + (i / canyons) * Math.PI * 2 + (rng() - 0.5) * 0.3
+            const ang =
+              baseRotation + (i / canyons) * Math.PI * 2 + (rng() - 0.5) * 0.3
             let px = Math.cos(ang) * sys.size * 0.2
             let py = Math.sin(ang) * sys.size * 0.2
             for (let s = 1; s <= 4; s++) {
               const a = ang + (rng() - 0.5) * 0.4
               const r = sys.size * (0.2 + (s / 4) * 0.65)
-              const x = Math.cos(a) * r, y = Math.sin(a) * r
+              const x = Math.cos(a) * r,
+                y = Math.sin(a) * r
               g.lineBetween(px, py, x, y)
-              px = x; py = y
+              px = x
+              py = y
             }
           }
           // Несколько песчаных пятен
@@ -4615,7 +6333,11 @@ export class StarMapScene extends Phaser.Scene {
             const a = rng() * Math.PI * 2
             const d = sys.size * rng() * 0.5
             g.fillStyle(sys.accent, 0.4 + rng() * 0.3)
-            g.fillCircle(Math.cos(a)*d, Math.sin(a)*d, sys.size * (0.08 + rng() * 0.1))
+            g.fillCircle(
+              Math.cos(a) * d,
+              Math.sin(a) * d,
+              sys.size * (0.08 + rng() * 0.1),
+            )
           }
         } else {
           // oasis — большой зелёный оазис в центре + кольцо песка
@@ -4632,32 +6354,43 @@ export class StarMapScene extends Phaser.Scene {
             const a = rng() * Math.PI * 2
             const d = sys.size * (0.55 + rng() * 0.25)
             g.fillStyle(0x16a34a, 0.5)
-            g.fillCircle(Math.cos(a)*d, Math.sin(a)*d, sys.size * (0.05 + rng() * 0.07))
+            g.fillCircle(
+              Math.cos(a) * d,
+              Math.sin(a) * d,
+              sys.size * (0.05 + rng() * 0.07),
+            )
           }
         }
         break
       }
       case 'lava': {
         // Тёмная корка — общая для всех variant'ов
-        g.fillStyle(0x171717, 0.4 + rng() * 0.3); g.fillCircle(0, 0, sys.size * 0.95)
+        g.fillStyle(0x171717, 0.4 + rng() * 0.3)
+        g.fillCircle(0, 0, sys.size * 0.95)
         if (variant === 0) {
           // cracked — текущая (трещины + очаги)
           g.lineStyle((1.5 + rng() * 1.5) * D, sys.color, 0.85 + rng() * 0.15)
           const cracks = 3 + Math.floor(rng() * 6)
           for (let i = 0; i < cracks; i++) {
-            const ang = baseRotation + (i / cracks) * Math.PI * 2 + (rng() - 0.5) * 0.5
+            const ang =
+              baseRotation + (i / cracks) * Math.PI * 2 + (rng() - 0.5) * 0.5
             const startR = sys.size * (0.1 + rng() * 0.2)
             const endR = sys.size * (0.7 + rng() * 0.25)
             if (rng() < 0.4) {
               const midR = (startR + endR) / 2
               const midAng = ang + (rng() - 0.5) * 0.3
               g.beginPath()
-              g.moveTo(Math.cos(ang)*startR, Math.sin(ang)*startR)
-              g.lineTo(Math.cos(midAng)*midR, Math.sin(midAng)*midR)
-              g.lineTo(Math.cos(ang)*endR, Math.sin(ang)*endR)
+              g.moveTo(Math.cos(ang) * startR, Math.sin(ang) * startR)
+              g.lineTo(Math.cos(midAng) * midR, Math.sin(midAng) * midR)
+              g.lineTo(Math.cos(ang) * endR, Math.sin(ang) * endR)
               g.strokePath()
             } else {
-              g.lineBetween(Math.cos(ang)*startR, Math.sin(ang)*startR, Math.cos(ang)*endR, Math.sin(ang)*endR)
+              g.lineBetween(
+                Math.cos(ang) * startR,
+                Math.sin(ang) * startR,
+                Math.cos(ang) * endR,
+                Math.sin(ang) * endR,
+              )
             }
           }
           const pools = 1 + Math.floor(rng() * 3)
@@ -4665,7 +6398,11 @@ export class StarMapScene extends Phaser.Scene {
             const ang = rng() * Math.PI * 2
             const dist = sys.size * rng() * 0.6
             g.fillStyle(sys.color, 0.8)
-            g.fillCircle(Math.cos(ang)*dist, Math.sin(ang)*dist, sys.size * (0.06 + rng() * 0.15))
+            g.fillCircle(
+              Math.cos(ang) * dist,
+              Math.sin(ang) * dist,
+              sys.size * (0.06 + rng() * 0.15),
+            )
           }
         } else if (variant === 1) {
           // volcanoes — точечные вулканы (большие очаги с выпуклым свечением)
@@ -4690,7 +6427,7 @@ export class StarMapScene extends Phaser.Scene {
             const a = rng() * Math.PI * 2
             const d = sys.size * rng() * 0.5
             g.fillStyle(sys.color, 0.4)
-            g.fillCircle(Math.cos(a)*d, Math.sin(a)*d, sys.size * 0.04)
+            g.fillCircle(Math.cos(a) * d, Math.sin(a) * d, sys.size * 0.04)
           }
         } else {
           // flowing — реки лавы (длинные изогнутые потоки)
@@ -4703,9 +6440,11 @@ export class StarMapScene extends Phaser.Scene {
             for (let s = 1; s <= 6; s++) {
               const a = startAng + Math.sin(s * 0.7) * 0.5
               const radius = sys.size * (0.1 + (s / 6) * 0.7)
-              const x = Math.cos(a) * radius, y = Math.sin(a) * radius
+              const x = Math.cos(a) * radius,
+                y = Math.sin(a) * radius
               g.lineBetween(px, py, x, y)
-              px = x; py = y
+              px = x
+              py = y
             }
           }
           // Жёлтые блики на потоках
@@ -4714,7 +6453,12 @@ export class StarMapScene extends Phaser.Scene {
             const a = rng() * Math.PI * 2
             const r1 = sys.size * (0.2 + rng() * 0.3)
             const r2 = sys.size * (0.5 + rng() * 0.3)
-            g.lineBetween(Math.cos(a)*r1, Math.sin(a)*r1, Math.cos(a)*r2, Math.sin(a)*r2)
+            g.lineBetween(
+              Math.cos(a) * r1,
+              Math.sin(a) * r1,
+              Math.cos(a) * r2,
+              Math.sin(a) * r2,
+            )
           }
         }
         break
@@ -4729,13 +6473,18 @@ export class StarMapScene extends Phaser.Scene {
             g.fillStyle(sys.accent, 0.5 + rng() * 0.3)
             const w = sys.size * (0.3 + rng() * 0.5)
             const h = sys.size * (0.2 + rng() * 0.35)
-            g.fillEllipse(Math.cos(ang)*dist, Math.sin(ang)*dist, w, h)
+            g.fillEllipse(Math.cos(ang) * dist, Math.sin(ang) * dist, w, h)
           }
           if (rng() < 0.5) {
             g.lineStyle(1.5 * D, 0x2563eb, 0.5)
             for (let i = 0; i < 2; i++) {
               const a = rng() * Math.PI * 2
-              g.lineBetween(Math.cos(a)*sys.size*0.7, Math.sin(a)*sys.size*0.7, Math.cos(a + Math.PI)*sys.size*0.4, Math.sin(a + Math.PI)*sys.size*0.4)
+              g.lineBetween(
+                Math.cos(a) * sys.size * 0.7,
+                Math.sin(a) * sys.size * 0.7,
+                Math.cos(a + Math.PI) * sys.size * 0.4,
+                Math.sin(a + Math.PI) * sys.size * 0.4,
+              )
             }
           }
         } else if (variant === 1) {
@@ -4747,14 +6496,24 @@ export class StarMapScene extends Phaser.Scene {
             const dist = sys.size * (0.25 + rng() * 0.35)
             const tint = biomeColors[Math.floor(rng() * biomeColors.length)]
             g.fillStyle(tint, 0.5 + rng() * 0.3)
-            g.fillEllipse(Math.cos(ang)*dist, Math.sin(ang)*dist, sys.size * (0.35 + rng() * 0.3), sys.size * (0.25 + rng() * 0.2))
+            g.fillEllipse(
+              Math.cos(ang) * dist,
+              Math.sin(ang) * dist,
+              sys.size * (0.35 + rng() * 0.3),
+              sys.size * (0.25 + rng() * 0.2),
+            )
           }
           // Тонкие облачка
           for (let i = 0; i < 2; i++) {
             const a = rng() * Math.PI * 2
             const d = sys.size * rng() * 0.5
             g.fillStyle(0xffffff, 0.3)
-            g.fillEllipse(Math.cos(a)*d, Math.sin(a)*d, sys.size * 0.3, sys.size * 0.1)
+            g.fillEllipse(
+              Math.cos(a) * d,
+              Math.sin(a) * d,
+              sys.size * 0.3,
+              sys.size * 0.1,
+            )
           }
         } else {
           // jungle — плотный покров с тёмными прожилками
@@ -4767,13 +6526,16 @@ export class StarMapScene extends Phaser.Scene {
             const ang = rng() * Math.PI * 2
             const r1 = sys.size * 0.1
             const r2 = sys.size * (0.6 + rng() * 0.2)
-            let px = Math.cos(ang) * r1, py = Math.sin(ang) * r1
+            let px = Math.cos(ang) * r1,
+              py = Math.sin(ang) * r1
             for (let s = 1; s <= 3; s++) {
               const a = ang + (rng() - 0.5) * 0.5
               const r = r1 + (r2 - r1) * (s / 3)
-              const x = Math.cos(a) * r, y = Math.sin(a) * r
+              const x = Math.cos(a) * r,
+                y = Math.sin(a) * r
               g.lineBetween(px, py, x, y)
-              px = x; py = y
+              px = x
+              py = y
             }
           }
           // Светлые проплешины
@@ -4781,7 +6543,11 @@ export class StarMapScene extends Phaser.Scene {
             const a = rng() * Math.PI * 2
             const d = sys.size * (0.3 + rng() * 0.3)
             g.fillStyle(0xa3e635, 0.5)
-            g.fillCircle(Math.cos(a)*d, Math.sin(a)*d, sys.size * (0.05 + rng() * 0.07))
+            g.fillCircle(
+              Math.cos(a) * d,
+              Math.sin(a) * d,
+              sys.size * (0.05 + rng() * 0.07),
+            )
           }
         }
         break
@@ -4793,14 +6559,23 @@ export class StarMapScene extends Phaser.Scene {
           const facets = 3 + Math.floor(rng() * 5)
           for (let i = 0; i < facets; i++) {
             const ang = baseRotation + (i / facets) * Math.PI * 2
-            g.lineBetween(0, 0, Math.cos(ang)*sys.size*(0.7 + rng()*0.2), Math.sin(ang)*sys.size*(0.7 + rng()*0.2))
+            g.lineBetween(
+              0,
+              0,
+              Math.cos(ang) * sys.size * (0.7 + rng() * 0.2),
+              Math.sin(ang) * sys.size * (0.7 + rng() * 0.2),
+            )
           }
           const veins = 2 + Math.floor(rng() * 3)
           for (let i = 0; i < veins; i++) {
             const ang = rng() * Math.PI * 2
             const dist = sys.size * rng() * 0.5
             g.fillStyle(sys.color, 0.7 + rng() * 0.2)
-            g.fillCircle(Math.cos(ang)*dist, Math.sin(ang)*dist, sys.size * (0.08 + rng() * 0.13))
+            g.fillCircle(
+              Math.cos(ang) * dist,
+              Math.sin(ang) * dist,
+              sys.size * (0.08 + rng() * 0.13),
+            )
           }
         } else if (variant === 1) {
           // veined — преимущественно жилы металла без граней
@@ -4809,13 +6584,16 @@ export class StarMapScene extends Phaser.Scene {
           for (let i = 0; i < veinLines; i++) {
             const a1 = rng() * Math.PI * 2
             const r1 = sys.size * 0.1
-            let px = Math.cos(a1) * r1, py = Math.sin(a1) * r1
+            let px = Math.cos(a1) * r1,
+              py = Math.sin(a1) * r1
             for (let s = 1; s <= 4; s++) {
               const a = a1 + (rng() - 0.5) * 0.7
               const r = r1 + (sys.size * 0.7 - r1) * (s / 4)
-              const x = Math.cos(a) * r, y = Math.sin(a) * r
+              const x = Math.cos(a) * r,
+                y = Math.sin(a) * r
               g.lineBetween(px, py, x, y)
-              px = x; py = y
+              px = x
+              py = y
             }
           }
           // Несколько ярких узлов на жилах
@@ -4823,7 +6601,7 @@ export class StarMapScene extends Phaser.Scene {
             const a = rng() * Math.PI * 2
             const d = sys.size * (0.2 + rng() * 0.4)
             g.fillStyle(0xfde047, 0.7)
-            g.fillCircle(Math.cos(a)*d, Math.sin(a)*d, sys.size * 0.05)
+            g.fillCircle(Math.cos(a) * d, Math.sin(a) * d, sys.size * 0.05)
           }
         } else {
           // raw — необработанная неравномерная поверхность с вкраплениями
@@ -4832,17 +6610,29 @@ export class StarMapScene extends Phaser.Scene {
             const a = rng() * Math.PI * 2
             const d = sys.size * rng() * 0.7
             g.fillStyle(0x1f2937, 0.5)
-            g.fillCircle(Math.cos(a)*d, Math.sin(a)*d, sys.size * (0.06 + rng() * 0.08))
+            g.fillCircle(
+              Math.cos(a) * d,
+              Math.sin(a) * d,
+              sys.size * (0.06 + rng() * 0.08),
+            )
           }
           // Яркие кристаллы
           const crystals = 5 + Math.floor(rng() * 4)
           for (let i = 0; i < crystals; i++) {
             const a = rng() * Math.PI * 2
             const d = sys.size * rng() * 0.65
-            const x = Math.cos(a) * d, y = Math.sin(a) * d
+            const x = Math.cos(a) * d,
+              y = Math.sin(a) * d
             const r = sys.size * (0.04 + rng() * 0.07)
             g.fillStyle(sys.color, 0.85)
-            g.fillTriangle(x, y - r, x - r * 0.7, y + r * 0.5, x + r * 0.7, y + r * 0.5)
+            g.fillTriangle(
+              x,
+              y - r,
+              x - r * 0.7,
+              y + r * 0.5,
+              x + r * 0.7,
+              y + r * 0.5,
+            )
           }
         }
         break
@@ -4856,13 +6646,21 @@ export class StarMapScene extends Phaser.Scene {
             const dist = sys.size * (0.1 + rng() * 0.7)
             const r = sys.size * (0.05 + rng() * 0.18)
             g.fillStyle(sys.accent, 0.7 + rng() * 0.3)
-            g.fillCircle(Math.cos(ang)*dist, Math.sin(ang)*dist, r)
+            g.fillCircle(Math.cos(ang) * dist, Math.sin(ang) * dist, r)
             if (rng() < 0.4) {
               g.lineStyle(1 * D, 0x000000, 0.35)
-              g.strokeCircle(Math.cos(ang)*dist, Math.sin(ang)*dist, r * 0.85)
+              g.strokeCircle(
+                Math.cos(ang) * dist,
+                Math.sin(ang) * dist,
+                r * 0.85,
+              )
             }
             g.fillStyle(0xffffff, 0.1 + rng() * 0.15)
-            g.fillCircle(Math.cos(ang)*dist - r*0.35, Math.sin(ang)*dist - r*0.35, r * 0.5)
+            g.fillCircle(
+              Math.cos(ang) * dist - r * 0.35,
+              Math.sin(ang) * dist - r * 0.35,
+              r * 0.5,
+            )
           }
         } else if (variant === 1) {
           // scarred — крупные шрамы и трещины
@@ -4872,7 +6670,12 @@ export class StarMapScene extends Phaser.Scene {
             const a1 = rng() * Math.PI * 2
             const a2 = a1 + Math.PI + (rng() - 0.5) * 0.8
             const r = sys.size * 0.65
-            g.lineBetween(Math.cos(a1)*r, Math.sin(a1)*r, Math.cos(a2)*r, Math.sin(a2)*r)
+            g.lineBetween(
+              Math.cos(a1) * r,
+              Math.sin(a1) * r,
+              Math.cos(a2) * r,
+              Math.sin(a2) * r,
+            )
           }
           // 2-3 крупных кратера
           for (let i = 0; i < 3; i++) {
@@ -4880,9 +6683,9 @@ export class StarMapScene extends Phaser.Scene {
             const d = sys.size * (0.3 + rng() * 0.3)
             const r = sys.size * (0.1 + rng() * 0.1)
             g.fillStyle(0x111827, 0.6)
-            g.fillCircle(Math.cos(a)*d, Math.sin(a)*d, r)
+            g.fillCircle(Math.cos(a) * d, Math.sin(a) * d, r)
             g.lineStyle(1 * D, 0x000000, 0.5)
-            g.strokeCircle(Math.cos(a)*d, Math.sin(a)*d, r)
+            g.strokeCircle(Math.cos(a) * d, Math.sin(a) * d, r)
           }
         } else {
           // bare — редкие мелкие кратеры, гладкая монотонная поверхность
@@ -4892,7 +6695,7 @@ export class StarMapScene extends Phaser.Scene {
             const dist = sys.size * rng() * 0.6
             const r = sys.size * (0.03 + rng() * 0.07)
             g.fillStyle(sys.accent, 0.6)
-            g.fillCircle(Math.cos(ang)*dist, Math.sin(ang)*dist, r)
+            g.fillCircle(Math.cos(ang) * dist, Math.sin(ang) * dist, r)
           }
           // Тонкая текстура
           g.fillStyle(0x000000, 0.1)
@@ -4909,7 +6712,12 @@ export class StarMapScene extends Phaser.Scene {
           const dist = sys.size * (0.2 + rng() * 0.55)
           const cloudColor = rng() < 0.5 ? 0x86efac : 0xfde68a
           g.fillStyle(cloudColor, 0.3 + rng() * 0.25)
-          g.fillEllipse(Math.cos(ang)*dist, Math.sin(ang)*dist, sys.size * (0.4 + rng() * 0.4), sys.size * (0.15 + rng() * 0.25))
+          g.fillEllipse(
+            Math.cos(ang) * dist,
+            Math.sin(ang) * dist,
+            sys.size * (0.4 + rng() * 0.4),
+            sys.size * (0.15 + rng() * 0.25),
+          )
         }
         // Пузыри разных размеров
         const bubbles = 1 + Math.floor(rng() * 4)
@@ -4917,9 +6725,17 @@ export class StarMapScene extends Phaser.Scene {
           const ang = rng() * Math.PI * 2
           const dist = sys.size * rng() * 0.55
           g.fillStyle(sys.color, 0.65 + rng() * 0.25)
-          g.fillCircle(Math.cos(ang)*dist, Math.sin(ang)*dist, sys.size * (0.08 + rng() * 0.18))
+          g.fillCircle(
+            Math.cos(ang) * dist,
+            Math.sin(ang) * dist,
+            sys.size * (0.08 + rng() * 0.18),
+          )
           g.fillStyle(0xffffff, 0.25)
-          g.fillCircle(Math.cos(ang)*dist - sys.size * 0.04, Math.sin(ang)*dist - sys.size * 0.04, sys.size * 0.05)
+          g.fillCircle(
+            Math.cos(ang) * dist - sys.size * 0.04,
+            Math.sin(ang) * dist - sys.size * 0.04,
+            sys.size * 0.05,
+          )
         }
         break
       }
@@ -4928,10 +6744,16 @@ export class StarMapScene extends Phaser.Scene {
         const rays = 4 + Math.floor(rng() * 6)
         g.lineStyle((1.5 + rng() * 2) * D, sys.color, 0.7 + rng() * 0.3)
         for (let i = 0; i < rays; i++) {
-          const ang = baseRotation + (i / rays) * Math.PI * 2 + (rng() - 0.5) * 0.4
+          const ang =
+            baseRotation + (i / rays) * Math.PI * 2 + (rng() - 0.5) * 0.4
           const innerR = sys.size * (0.4 + rng() * 0.2)
           const outerR = sys.size * (1.0 + rng() * 0.5)
-          g.lineBetween(Math.cos(ang)*innerR, Math.sin(ang)*innerR, Math.cos(ang)*outerR, Math.sin(ang)*outerR)
+          g.lineBetween(
+            Math.cos(ang) * innerR,
+            Math.sin(ang) * innerR,
+            Math.cos(ang) * outerR,
+            Math.sin(ang) * outerR,
+          )
         }
         // Многослойное ядро
         g.fillStyle(sys.color, 0.85 + rng() * 0.15)
@@ -4974,7 +6796,7 @@ export class StarMapScene extends Phaser.Scene {
       const lines = 2 + Math.floor(rng() * 3)
       for (let i = 0; i < lines; i++) {
         const yOff = (i - lines / 2 + 0.5) * sys.size * 0.35
-        const w = sys.size * Math.cos(yOff / sys.size * Math.PI / 2) * 1.6
+        const w = sys.size * Math.cos(((yOff / sys.size) * Math.PI) / 2) * 1.6
         if (w > 0) g.strokeEllipse(0, yOff, w, sys.size * 0.12)
       }
     }
@@ -5008,12 +6830,25 @@ export class StarMapScene extends Phaser.Scene {
     }
 
     // Phase 7 #4: Stacked rings — 2-3 кольца разного диаметра/наклона (8%)
-    if (sys.archetype !== 'gas_ringed' && sys.archetype !== 'binary' && rng() < 0.08) {
+    if (
+      sys.archetype !== 'gas_ringed' &&
+      sys.archetype !== 'binary' &&
+      rng() < 0.08
+    ) {
       const n = 2 + Math.floor(rng() * 2)
       for (let i = 0; i < n; i++) {
         const ringGfx = this.add.graphics()
-        ringGfx.lineStyle((0.8 + rng()) * D, i % 2 === 0 ? sys.color : sys.accent, 0.3 + rng() * 0.3)
-        ringGfx.strokeEllipse(0, 0, sys.size * (2.0 + i * 0.4), sys.size * (0.3 + rng() * 0.4))
+        ringGfx.lineStyle(
+          (0.8 + rng()) * D,
+          i % 2 === 0 ? sys.color : sys.accent,
+          0.3 + rng() * 0.3,
+        )
+        ringGfx.strokeEllipse(
+          0,
+          0,
+          sys.size * (2.0 + i * 0.4),
+          sys.size * (0.3 + rng() * 0.4),
+        )
         ringGfx.angle = (rng() - 0.5) * 90
         container.add(ringGfx)
       }
@@ -5035,7 +6870,11 @@ export class StarMapScene extends Phaser.Scene {
         const r = sys.size * Math.sqrt(rng()) * 0.85
         const tint = rng() < 0.5 ? sys.color : sys.accent
         g.fillStyle(tint, 0.4 + rng() * 0.4)
-        g.fillCircle(Math.cos(ang) * r, Math.sin(ang) * r, (0.5 + rng() * 1) * D)
+        g.fillCircle(
+          Math.cos(ang) * r,
+          Math.sin(ang) * r,
+          (0.5 + rng() * 1) * D,
+        )
       }
     }
 
@@ -5045,46 +6884,76 @@ export class StarMapScene extends Phaser.Scene {
       const dist = sys.size * (0.3 + rng() * 0.5)
       const cr = sys.size * (0.08 + rng() * 0.12)
       g.fillStyle(0x000000, 0.5)
-      g.fillCircle(Math.cos(ang)*dist, Math.sin(ang)*dist, cr)
+      g.fillCircle(Math.cos(ang) * dist, Math.sin(ang) * dist, cr)
     }
 
     // Тонкое кольцо у любой планеты (~22%) — может быть очень тонкое или толстое
-    if (sys.archetype !== 'gas_ringed' && sys.archetype !== 'binary' && rng() < 0.22) {
+    if (
+      sys.archetype !== 'gas_ringed' &&
+      sys.archetype !== 'binary' &&
+      rng() < 0.22
+    ) {
       const ringGfx = this.add.graphics()
       const ringW = (0.8 + rng() * 2.5) * D
       const ringAlpha = 0.3 + rng() * 0.5
-      const ringTint = rng() < 0.6 ? sys.color : (rng() < 0.5 ? sys.accent : 0xffffff)
+      const ringTint =
+        rng() < 0.6 ? sys.color : rng() < 0.5 ? sys.accent : 0xffffff
       ringGfx.lineStyle(ringW, ringTint, ringAlpha)
-      ringGfx.strokeEllipse(0, 0, sys.size * (2.0 + rng() * 0.8), sys.size * (0.3 + rng() * 0.6))
+      ringGfx.strokeEllipse(
+        0,
+        0,
+        sys.size * (2.0 + rng() * 0.8),
+        sys.size * (0.3 + rng() * 0.6),
+      )
       ringGfx.angle = (rng() - 0.5) * 90
       container.add(ringGfx)
       // Иногда — двойное кольцо
       if (rng() < 0.3) {
         ringGfx.lineStyle(ringW * 0.6, ringTint, ringAlpha * 0.7)
-        ringGfx.strokeEllipse(0, 0, sys.size * (2.5 + rng() * 0.5), sys.size * (0.4 + rng() * 0.4))
+        ringGfx.strokeEllipse(
+          0,
+          0,
+          sys.size * (2.5 + rng() * 0.5),
+          sys.size * (0.4 + rng() * 0.4),
+        )
       }
     }
 
     // Тёмный пояс в виде эллипса (12%)
     if (rng() < 0.12) {
       g.fillStyle(0x000000, 0.15 + rng() * 0.15)
-      g.fillEllipse(0, (rng() - 0.5) * sys.size * 0.4, sys.size * (1.3 + rng() * 0.4), sys.size * (0.06 + rng() * 0.08))
+      g.fillEllipse(
+        0,
+        (rng() - 0.5) * sys.size * 0.4,
+        sys.size * (1.3 + rng() * 0.4),
+        sys.size * (0.06 + rng() * 0.08),
+      )
     }
 
     // Яркое пятно (~12%) — бури, огни цивилизации
     if (rng() < 0.12) {
-      const spotColor = [0xfde047, 0xffffff, 0xa5f3fc, 0xfca5a5, 0xc4b5fd][Math.floor(rng() * 5)]
+      const spotColor = [0xfde047, 0xffffff, 0xa5f3fc, 0xfca5a5, 0xc4b5fd][
+        Math.floor(rng() * 5)
+      ]
       const ang = rng() * Math.PI * 2
       const dist = sys.size * rng() * 0.6
       g.fillStyle(spotColor, 0.5 + rng() * 0.3)
-      g.fillCircle(Math.cos(ang)*dist, Math.sin(ang)*dist, sys.size * (0.05 + rng() * 0.1))
+      g.fillCircle(
+        Math.cos(ang) * dist,
+        Math.sin(ang) * dist,
+        sys.size * (0.05 + rng() * 0.1),
+      )
       // Иногда — кластер огоньков
       if (rng() < 0.5) {
         for (let i = 0; i < 2 + Math.floor(rng() * 3); i++) {
           const ang2 = ang + (rng() - 0.5) * 0.6
           const dist2 = dist + (rng() - 0.5) * sys.size * 0.2
           g.fillStyle(spotColor, 0.4 + rng() * 0.3)
-          g.fillCircle(Math.cos(ang2)*dist2, Math.sin(ang2)*dist2, sys.size * (0.03 + rng() * 0.05))
+          g.fillCircle(
+            Math.cos(ang2) * dist2,
+            Math.sin(ang2) * dist2,
+            sys.size * (0.03 + rng() * 0.05),
+          )
         }
       }
     }
@@ -5123,7 +6992,13 @@ export class StarMapScene extends Phaser.Scene {
     // Спутник у некоторых планет — обновляется в общем update-loop scene,
     // чтобы один раз проверить zoom-порог и пропустить орбит-калькуляцию при отдалении.
     if (sys.hasMoon) {
-      const moon = this.add.circle(sys.size * 1.4, -sys.size * 0.3, sys.size * 0.18, 0xe5e7eb, 0.85)
+      const moon = this.add.circle(
+        sys.size * 1.4,
+        -sys.size * 0.3,
+        sys.size * 0.18,
+        0xe5e7eb,
+        0.85,
+      )
       container.add(moon)
       this.moons.push({
         obj: moon,
@@ -5141,7 +7016,9 @@ export class StarMapScene extends Phaser.Scene {
       // Значок цивилизации
       const civIcons = ['🏛', '📡', '⚙', '🛰', '🏯', '🪐']
       const icon = civIcons[Math.floor(rng() * civIcons.length)]
-      const tag = this.add.text(0, -sys.size - 14 * DPR, icon, { fontSize: 14 * DPR })
+      const tag = this.add.text(0, -sys.size - 14 * DPR, icon, {
+        fontSize: 14 * DPR,
+      })
       tag.setOrigin(0.5)
       container.add(tag)
     }
@@ -5151,7 +7028,7 @@ export class StarMapScene extends Phaser.Scene {
     // Исключение: ~4% от 1000 фоновых планет (≈40) получают очень медленное вращение
     // (60-120s/оборот). Отдельный rng от seed — не влияет на порядок rng() выше,
     // на котором завязан texture signature.
-    const rotRng = mulberry32(((sys.rngSeed ^ 0xdeadbeef) >>> 0))
+    const rotRng = mulberry32((sys.rngSeed ^ 0xdeadbeef) >>> 0)
     if (rotRng() < 0.04) {
       const dir = rotRng() < 0.5 ? -1 : 1
       const periodMs = 60000 + Math.floor(rotRng() * 60000)
@@ -5170,17 +7047,51 @@ export class StarMapScene extends Phaser.Scene {
     const hitArea = new Phaser.Geom.Circle(0, 0, baseR)
     container.setInteractive(hitArea, Phaser.Geom.Circle.Contains)
     let downTime = 0
-    let downX = 0, downY = 0
-    container.on('pointerdown', (p: Phaser.Input.Pointer) => { downTime = Date.now(); downX = p.x; downY = p.y })
+    let downX = 0,
+      downY = 0
+    let springTween: Phaser.Tweens.Tween | null = null
+    container.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      downTime = Date.now()
+      downX = p.x
+      downY = p.y
+    })
     container.on('pointerup', (p: Phaser.Input.Pointer) => {
       const dt = Date.now() - downTime
       const moved = Math.abs(p.x - downX) + Math.abs(p.y - downY)
       if (dt < 300 && moved < 8 * DPR) {
         this.tapHandledThisFrame = true
+        eventBus.emit('starmap:planet-select', {
+          planetId: sys.id,
+          name: sys.name,
+          archetype: (sys as BgSystem).archetype ?? '',
+        })
         this.handlePlanetPress(sys)
         this.selectSystem(sys)
         // BG: показать модалку с именем через 400ms
         this.scheduleBgNamePopup(sys)
+        // Spring-анимация: squish по вертикали → bounce, как у лягушек
+        if (springTween) {
+          springTween.stop()
+          springTween = null
+        }
+        container.scaleY = 1.0
+        springTween = this.tweens.add({
+          targets: container,
+          scaleY: 0.78,
+          duration: 55,
+          ease: 'Power2.easeIn',
+          onComplete: () => {
+            springTween = this.tweens.add({
+              targets: container,
+              scaleY: 1.0,
+              duration: 150,
+              ease: 'Back.easeOut',
+              onComplete: () => {
+                springTween = null
+              },
+            })
+          },
+        })
       }
     })
 
@@ -5188,7 +7099,13 @@ export class StarMapScene extends Phaser.Scene {
     // Регистрируем для batch-toggle interactive по zoom
     this.bgInteractiveContainers.push(container)
     // BG-планеты получают LOD: при zoom < BG_PLANET_MIN_ZOOM скрываются полностью
-    this.cullableData.push({ obj: container, x: sys.x, y: sys.y, r: sys.size * 2, lodMinZoom: BG_PLANET_MIN_ZOOM })
+    this.cullableData.push({
+      obj: container,
+      x: sys.x,
+      y: sys.y,
+      r: sys.size * 2,
+      lodMinZoom: BG_PLANET_MIN_ZOOM,
+    })
     // Адаптивный hit-area — растёт при zoom-out, чтобы было удобно тапать
     this.mainPlanetHits.push({ container, baseR, circle: hitArea })
   }
@@ -5238,7 +7155,7 @@ export class StarMapScene extends Phaser.Scene {
   private openBgNamePopup(sys: BgSystem) {
     const PADDING_X = 14 * DPR
     const PADDING_Y = 8 * DPR
-    const offsetY = -(sys.size + 30 * DPR) // над планетой
+    const offsetY = -(sys.size + 70 * DPR) // над планетой
 
     const container = this.add.container(sys.x, sys.y + offsetY)
     container.setDepth(1500)
@@ -5276,6 +7193,199 @@ export class StarMapScene extends Phaser.Scene {
     container.add(nameText)
     container.add(subText)
 
+    // Кнопка действия под капсулой: «Изучить» если здесь, «Лететь» иначе.
+    const shipState = useGameStore.getState().ship
+    const isCurrentPlanet =
+      shipState?.state === 'docked' && shipState.planetId === sys.id
+    const isInTransit = shipState?.state === 'transit'
+    const BTN_W = 76 * DPR
+    const BTN_H = 22 * DPR
+    const BTN_Y = h / 2 + 4 + 6 * DPR + BTN_H / 2
+
+    if (isCurrentPlanet) {
+      const canInvestigate =
+        (useGameStore.getState().crew?.missionsToday ?? 0) < DAILY_CAP
+      const btnBg = this.add.graphics()
+      btnBg.fillStyle(canInvestigate ? 0xd97706 : 0x374151, 1)
+      btnBg.fillRoundedRect(
+        -BTN_W / 2,
+        BTN_Y - BTN_H / 2,
+        BTN_W,
+        BTN_H,
+        5 * DPR,
+      )
+      if (canInvestigate) {
+        btnBg.lineStyle(1.5 * DPR, 0xfbbf24, 0.7)
+        btnBg.strokeRoundedRect(
+          -BTN_W / 2,
+          BTN_Y - BTN_H / 2,
+          BTN_W,
+          BTN_H,
+          5 * DPR,
+        )
+        btnBg.setInteractive(
+          new Phaser.Geom.Rectangle(
+            -BTN_W / 2,
+            BTN_Y - BTN_H / 2,
+            BTN_W,
+            BTN_H,
+          ),
+          Phaser.Geom.Rectangle.Contains,
+        )
+        let btnDownTime = 0
+        btnBg.on(
+          'pointerdown',
+          (
+            _p: unknown,
+            _lx: unknown,
+            _ly: unknown,
+            ev: Phaser.Types.Input.EventData,
+          ) => {
+            btnDownTime = Date.now()
+            ev.stopPropagation()
+          },
+        )
+        btnBg.on(
+          'pointerup',
+          (
+            _p: unknown,
+            _lx: unknown,
+            _ly: unknown,
+            ev: Phaser.Types.Input.EventData,
+          ) => {
+            ev.stopPropagation()
+            if (Date.now() - btnDownTime < 400) {
+              this.tapHandledThisFrame = true
+              const ok = useGameStore
+                .getState()
+                .investigatePlanet(sys.id, 'good')
+              if (ok)
+                eventBus.emit('cosmic:toast', {
+                  type: 'generic',
+                  msg: '📦 Бокс получен!',
+                })
+              this.closeBgNamePopup()
+            }
+          },
+        )
+      }
+      const btnText = this.add.text(
+        0,
+        BTN_Y,
+        canInvestigate ? '🔬 Изучить' : '⏱ Устал',
+        {
+          fontFamily: 'Nunito, system-ui, sans-serif',
+          fontSize: `${9 * DPR}px`,
+          color: canInvestigate ? '#ffffff' : '#9ca3af',
+          fontStyle: 'bold',
+        },
+      )
+      btnText.setOrigin(0.5, 0.5)
+      container.add(btnBg)
+      container.add(btnText)
+    } else if (!isInTransit) {
+      const btnBg = this.add.graphics()
+      btnBg.fillStyle(0x16a34a, 1)
+      btnBg.fillRoundedRect(
+        -BTN_W / 2,
+        BTN_Y - BTN_H / 2,
+        BTN_W,
+        BTN_H,
+        5 * DPR,
+      )
+      btnBg.lineStyle(1.5 * DPR, 0x4ade80, 0.7)
+      btnBg.strokeRoundedRect(
+        -BTN_W / 2,
+        BTN_Y - BTN_H / 2,
+        BTN_W,
+        BTN_H,
+        5 * DPR,
+      )
+      btnBg.setInteractive(
+        new Phaser.Geom.Rectangle(-BTN_W / 2, BTN_Y - BTN_H / 2, BTN_W, BTN_H),
+        Phaser.Geom.Rectangle.Contains,
+      )
+      let btnDownTime = 0
+      btnBg.on(
+        'pointerdown',
+        (
+          _p: unknown,
+          _lx: unknown,
+          _ly: unknown,
+          ev: Phaser.Types.Input.EventData,
+        ) => {
+          btnDownTime = Date.now()
+          ev.stopPropagation()
+        },
+      )
+      btnBg.on(
+        'pointerup',
+        (
+          _p: unknown,
+          _lx: unknown,
+          _ly: unknown,
+          ev: Phaser.Types.Input.EventData,
+        ) => {
+          ev.stopPropagation()
+          if (Date.now() - btnDownTime < 400) {
+            this.tapHandledThisFrame = true
+            this.closeBgNamePopup()
+            useGameStore.getState().sendShipTo(sys.id)
+          }
+        },
+      )
+      const btnText = this.add.text(0, BTN_Y, '🚀 Лететь', {
+        fontFamily: 'Nunito, system-ui, sans-serif',
+        fontSize: `${9 * DPR}px`,
+        color: '#ffffff',
+        fontStyle: 'bold',
+      })
+      btnText.setOrigin(0.5, 0.5)
+      container.add(btnBg)
+      container.add(btnText)
+    }
+
+    // Blocking zone — absorbs taps on the popup background so they don't fall
+    // through to the planet container underneath (which would re-schedule the popup).
+    // Zone at index 0 (lowest depth) → receives events AFTER buttons (buttons
+    // already call ev.stopPropagation(), so zone only fires for background taps).
+    {
+      const ZONE_TOP = -(h / 2 + PADDING_Y)
+      const ZONE_BOTTOM = BTN_Y + BTN_H / 2 + PADDING_Y
+      const blockZone = this.add.zone(
+        0,
+        (ZONE_TOP + ZONE_BOTTOM) / 2,
+        w + PADDING_X * 2,
+        ZONE_BOTTOM - ZONE_TOP,
+      )
+      blockZone.setInteractive()
+      blockZone.on(
+        'pointerdown',
+        (
+          _p: unknown,
+          _lx: unknown,
+          _ly: unknown,
+          ev: Phaser.Types.Input.EventData,
+        ) => {
+          this.tapHandledThisFrame = true
+          ev.stopPropagation()
+        },
+      )
+      blockZone.on(
+        'pointerup',
+        (
+          _p: unknown,
+          _lx: unknown,
+          _ly: unknown,
+          ev: Phaser.Types.Input.EventData,
+        ) => {
+          this.tapHandledThisFrame = true
+          ev.stopPropagation()
+        },
+      )
+      container.addAt(blockZone, 0)
+    }
+
     // Compensation zoom — popup всегда фиксированного размера на экране
     const cam = this.cameras.main
     container.setScale(Math.max(0.3, 1 / cam.zoom))
@@ -5312,9 +7422,10 @@ export class StarMapScene extends Phaser.Scene {
     const ARROW_W = 11 * DPR
     const PANEL_W = 200 * DPR
     const PANEL_H = 190 * DPR
-    const panelStart = placement === 'below'
-      ? ARROW_OFFSET + ARROW_H
-      : ARROW_OFFSET - ARROW_H - PANEL_H
+    const panelStart =
+      placement === 'below'
+        ? ARROW_OFFSET + ARROW_H
+        : ARROW_OFFSET - ARROW_H - PANEL_H
 
     // Container привязан к world-coords планеты. setScale(1/zoom) каждый кадр.
     const container = this.add.container(race.x, race.y)
@@ -5325,14 +7436,42 @@ export class StarMapScene extends Phaser.Scene {
     const arrow = this.add.graphics()
     if (placement === 'below') {
       arrow.fillStyle(0x4d6b1f, 1)
-      arrow.fillTriangle(0, ARROW_OFFSET, -ARROW_W, ARROW_OFFSET + ARROW_H, ARROW_W, ARROW_OFFSET + ARROW_H)
+      arrow.fillTriangle(
+        0,
+        ARROW_OFFSET,
+        -ARROW_W,
+        ARROW_OFFSET + ARROW_H,
+        ARROW_W,
+        ARROW_OFFSET + ARROW_H,
+      )
       arrow.fillStyle(0xf5fbe9, 1)
-      arrow.fillTriangle(0, ARROW_OFFSET + 4, -ARROW_W * 0.65, ARROW_OFFSET + ARROW_H, ARROW_W * 0.65, ARROW_OFFSET + ARROW_H)
+      arrow.fillTriangle(
+        0,
+        ARROW_OFFSET + 4,
+        -ARROW_W * 0.65,
+        ARROW_OFFSET + ARROW_H,
+        ARROW_W * 0.65,
+        ARROW_OFFSET + ARROW_H,
+      )
     } else {
       arrow.fillStyle(0x4d6b1f, 1)
-      arrow.fillTriangle(0, ARROW_OFFSET, -ARROW_W, ARROW_OFFSET - ARROW_H, ARROW_W, ARROW_OFFSET - ARROW_H)
+      arrow.fillTriangle(
+        0,
+        ARROW_OFFSET,
+        -ARROW_W,
+        ARROW_OFFSET - ARROW_H,
+        ARROW_W,
+        ARROW_OFFSET - ARROW_H,
+      )
       arrow.fillStyle(0xf5fbe9, 1)
-      arrow.fillTriangle(0, ARROW_OFFSET - 4, -ARROW_W * 0.65, ARROW_OFFSET - ARROW_H, ARROW_W * 0.65, ARROW_OFFSET - ARROW_H)
+      arrow.fillTriangle(
+        0,
+        ARROW_OFFSET - 4,
+        -ARROW_W * 0.65,
+        ARROW_OFFSET - ARROW_H,
+        ARROW_W * 0.65,
+        ARROW_OFFSET - ARROW_H,
+      )
     }
     container.add(arrow)
 
@@ -5340,16 +7479,34 @@ export class StarMapScene extends Phaser.Scene {
     const panel = this.add.graphics()
     // Глубокая тень снизу
     panel.fillStyle(0x2f4413, 1)
-    panel.fillRoundedRect(-PANEL_W/2 - 3, panelStart - 3, PANEL_W + 6, PANEL_H + 12, 14)
+    panel.fillRoundedRect(
+      -PANEL_W / 2 - 3,
+      panelStart - 3,
+      PANEL_W + 6,
+      PANEL_H + 12,
+      14,
+    )
     // Outer border
     panel.fillStyle(0x4d6b1f, 1)
-    panel.fillRoundedRect(-PANEL_W/2 - 3, panelStart - 3, PANEL_W + 6, PANEL_H + 6, 14)
+    panel.fillRoundedRect(
+      -PANEL_W / 2 - 3,
+      panelStart - 3,
+      PANEL_W + 6,
+      PANEL_H + 6,
+      14,
+    )
     // Inner panel
     panel.fillStyle(0xf5fbe9, 1)
-    panel.fillRoundedRect(-PANEL_W/2 + 1, panelStart + 1, PANEL_W - 2, PANEL_H - 2, 12)
+    panel.fillRoundedRect(
+      -PANEL_W / 2 + 1,
+      panelStart + 1,
+      PANEL_W - 2,
+      PANEL_H - 2,
+      12,
+    )
     // Inset highlight
     panel.fillStyle(0xf7ffe0, 0.5)
-    panel.fillRoundedRect(-PANEL_W/2 + 3, panelStart + 3, PANEL_W - 6, 4, 4)
+    panel.fillRoundedRect(-PANEL_W / 2 + 3, panelStart + 3, PANEL_W - 6, 4, 4)
     container.add(panel)
 
     // Заголовок
@@ -5381,28 +7538,85 @@ export class StarMapScene extends Phaser.Scene {
     const btnGap = 6 * DPR
     const btnW = PANEL_W - 18 * DPR
 
-    const btn1 = this.makePhaserButton(btnX, btnY1,                btnW, btnH, '📡', 'Связаться',  0xbef264, 0x65a30d, 0x365314, 0xffffff)
-    btn1.on('pointerdown', () => { this.tapHandledThisFrame = true })
-    btn1.on('pointerup', () => { this.tapHandledThisFrame = true; console.log('connect', race.id) })
+    const btn1 = this.makePhaserButton(
+      btnX,
+      btnY1,
+      btnW,
+      btnH,
+      '📡',
+      'Связаться',
+      0xbef264,
+      0x65a30d,
+      0x365314,
+      0xffffff,
+    )
+    btn1.on('pointerdown', () => {
+      this.tapHandledThisFrame = true
+    })
+    btn1.on('pointerup', () => {
+      this.tapHandledThisFrame = true
+      console.log('connect', race.id)
+    })
     container.add(btn1)
 
-    const btn2 = this.makePhaserButton(btnX, btnY1 + btnH + btnGap, btnW, btnH, '🚀', 'Скаут',      0xfde047, 0xd97706, 0x78350f, 0x3a2207)
-    btn2.on('pointerdown', () => { this.tapHandledThisFrame = true })
-    btn2.on('pointerup', () => { this.tapHandledThisFrame = true; console.log('send', race.id) })
+    const btn2 = this.makePhaserButton(
+      btnX,
+      btnY1 + btnH + btnGap,
+      btnW,
+      btnH,
+      '🚀',
+      'Скаут',
+      0xfde047,
+      0xd97706,
+      0x78350f,
+      0x3a2207,
+    )
+    btn2.on('pointerdown', () => {
+      this.tapHandledThisFrame = true
+    })
+    btn2.on('pointerup', () => {
+      this.tapHandledThisFrame = true
+      console.log('send', race.id)
+    })
     container.add(btn2)
 
-    const btn3 = this.makePhaserButton(btnX, btnY1 + (btnH + btnGap) * 2, btnW, btnH, '📋', 'Описание', 0xc4b5fd, 0x7c3aed, 0x3b0764, 0xffffff)
-    btn3.on('pointerdown', () => { this.tapHandledThisFrame = true })
-    btn3.on('pointerup', () => { this.tapHandledThisFrame = true; console.log('info', race.id) })
+    const btn3 = this.makePhaserButton(
+      btnX,
+      btnY1 + (btnH + btnGap) * 2,
+      btnW,
+      btnH,
+      '📋',
+      'Описание',
+      0xc4b5fd,
+      0x7c3aed,
+      0x3b0764,
+      0xffffff,
+    )
+    btn3.on('pointerdown', () => {
+      this.tapHandledThisFrame = true
+    })
+    btn3.on('pointerup', () => {
+      this.tapHandledThisFrame = true
+      console.log('info', race.id)
+    })
     container.add(btn3)
 
     // Невидимая interactive zone на всю панель — защита от закрытия при клике
     // на саму модалку (между/вокруг кнопок).
-    const panelZone = this.add.zone(0, panelStart + PANEL_H / 2, PANEL_W, PANEL_H + ARROW_H + 4)
+    const panelZone = this.add.zone(
+      0,
+      panelStart + PANEL_H / 2,
+      PANEL_W,
+      PANEL_H + ARROW_H + 4,
+    )
     panelZone.setOrigin(0.5)
     panelZone.setInteractive()
-    panelZone.on('pointerdown', () => { this.tapHandledThisFrame = true })
-    panelZone.on('pointerup', () => { this.tapHandledThisFrame = true })
+    panelZone.on('pointerdown', () => {
+      this.tapHandledThisFrame = true
+    })
+    panelZone.on('pointerup', () => {
+      this.tapHandledThisFrame = true
+    })
     container.add(panelZone)
 
     // Сразу применяем компенсацию zoom — иначе при первом рендере popover мигнёт большим
@@ -5411,44 +7625,51 @@ export class StarMapScene extends Phaser.Scene {
 
   // Phaser-кнопка в стиле ff-btn (двойной border, gradient, fontFamily Russo One)
   private makePhaserButton(
-    x: number, y: number, w: number, h: number,
-    emoji: string, label: string,
-    fromColor: number, toColor: number, borderColor: number, textColor: number,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    emoji: string,
+    label: string,
+    fromColor: number,
+    toColor: number,
+    borderColor: number,
+    textColor: number,
   ): Phaser.GameObjects.Container {
     const btn = this.add.container(x, y)
 
     // Тень снизу
     const shadow = this.add.graphics()
     shadow.fillStyle(borderColor, 1)
-    shadow.fillRoundedRect(-w/2, -h/2, w, h + 4, 10)
+    shadow.fillRoundedRect(-w / 2, -h / 2, w, h + 4, 10)
     btn.add(shadow)
 
     // Border
     const border = this.add.graphics()
     border.fillStyle(borderColor, 1)
-    border.fillRoundedRect(-w/2, -h/2, w, h, 10)
+    border.fillRoundedRect(-w / 2, -h / 2, w, h, 10)
     btn.add(border)
 
     // Заливка (имитация градиента двумя половинами)
     const fill = this.add.graphics()
     fill.fillStyle(fromColor, 1)
-    fill.fillRoundedRect(-w/2 + 2, -h/2 + 2, w - 4, h * 0.55, 8)
+    fill.fillRoundedRect(-w / 2 + 2, -h / 2 + 2, w - 4, h * 0.55, 8)
     fill.fillStyle(toColor, 1)
-    fill.fillRoundedRect(-w/2 + 2, -h/2 + h * 0.45, w - 4, h * 0.55 - 2, 8)
+    fill.fillRoundedRect(-w / 2 + 2, -h / 2 + h * 0.45, w - 4, h * 0.55 - 2, 8)
     // Highlight сверху
     fill.fillStyle(0xffffff, 0.35)
-    fill.fillRoundedRect(-w/2 + 2, -h/2 + 2, w - 4, 3, 6)
+    fill.fillRoundedRect(-w / 2 + 2, -h / 2 + 2, w - 4, 3, 6)
     btn.add(fill)
 
     // Эмодзи слева
-    const emojiText = this.add.text(-w/2 + 16 * DPR, 0, emoji, {
+    const emojiText = this.add.text(-w / 2 + 16 * DPR, 0, emoji, {
       fontSize: `${16 * DPR}px`,
     })
     emojiText.setOrigin(0.5, 0.5)
     btn.add(emojiText)
 
     // Текст
-    const labelText = this.add.text(-w/2 + 36 * DPR, 0, label, {
+    const labelText = this.add.text(-w / 2 + 36 * DPR, 0, label, {
       fontFamily: 'Russo One, system-ui, sans-serif',
       fontSize: `${13 * DPR}px`,
       color: textColor === 0xffffff ? '#ffffff' : '#3a2207',
@@ -5458,22 +7679,34 @@ export class StarMapScene extends Phaser.Scene {
 
     // Interactive
     btn.setSize(w, h)
-    btn.setInteractive(new Phaser.Geom.Rectangle(-w/2, -h/2, w, h), Phaser.Geom.Rectangle.Contains)
+    btn.setInteractive(
+      new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h),
+      Phaser.Geom.Rectangle.Contains,
+    )
     return btn
   }
 
   private selectSystem(sys: Race | BgSystem) {
     if (this.selectionMarker) this.selectionMarker.destroy()
     const m = this.add.graphics()
-    const sz = (sys.size || 14 * DPR)
-    m.lineStyle(2 * DPR, 0xffd700, 1); m.strokeCircle(sys.x, sys.y, sz + 14 * DPR)
-    m.lineStyle(1 * DPR, 0xffd700, 0.5); m.strokeCircle(sys.x, sys.y, sz + 22 * DPR)
+    const sz = sys.size || 14 * DPR
+    m.lineStyle(2 * DPR, 0xffd700, 1)
+    m.strokeCircle(sys.x, sys.y, sz + 14 * DPR)
+    m.lineStyle(1 * DPR, 0xffd700, 0.5)
+    m.strokeCircle(sys.x, sys.y, sz + 22 * DPR)
     m.setDepth(15)
     this.selectionMarker = m
-    this.tweens.add({ targets: m, alpha: { from: 1, to: 0.4 }, yoyo: true, repeat: -1, duration: 700, ease: 'Sine.easeInOut' })
+    this.tweens.add({
+      targets: m,
+      alpha: { from: 1, to: 0.4 },
+      yoyo: true,
+      repeat: -1,
+      duration: 700,
+      ease: 'Sine.easeInOut',
+    })
 
     // Для главной расы — открываем Phaser-popover (внутри scene, в world coords).
-    const isMain = MAIN_RACES.some(r => r.id === sys.id)
+    const isMain = MAIN_RACES.some((r) => r.id === sys.id)
     if (isMain) {
       this.selectedMainRaceId = sys.id
       // Placement: предпочитаем 'below', но если снизу не помещается — пробуем 'above'.
@@ -5486,9 +7719,13 @@ export class StarMapScene extends Phaser.Scene {
       const spaceBelow = canvasRect.bottom - planetCenter.y - SAFE_MARGIN
       const spaceAbove = planetCenter.y - canvasRect.top - SAFE_MARGIN
       const placement: 'below' | 'above' =
-        spaceBelow >= POPOVER_HEIGHT ? 'below'
-        : spaceAbove >= POPOVER_HEIGHT ? 'above'
-        : (spaceBelow >= spaceAbove ? 'below' : 'above')
+        spaceBelow >= POPOVER_HEIGHT
+          ? 'below'
+          : spaceAbove >= POPOVER_HEIGHT
+            ? 'above'
+            : spaceBelow >= spaceAbove
+              ? 'below'
+              : 'above'
       this.openPhaserPopover(sys as Race, placement)
       // Если открыли main popover — закрываем BG name popup (не наслаиваем)
       this.closeBgNamePopup()
@@ -5501,12 +7738,27 @@ export class StarMapScene extends Phaser.Scene {
     if (sprite) {
       this.tweens.killTweensOf(sprite)
       this.tweens.add({
-        targets: sprite, scaleY: 0.85, scaleX: 1.15, duration: 100, yoyo: true, ease: 'Power2',
+        targets: sprite,
+        scaleY: 0.85,
+        scaleX: 1.15,
+        duration: 100,
+        yoyo: true,
+        ease: 'Power2',
         onComplete: () => {
           this.tweens.add({
-            targets: sprite, scale: { from: 1.05, to: 1 }, duration: 200, ease: 'Back.easeOut',
+            targets: sprite,
+            scale: { from: 1.05, to: 1 },
+            duration: 200,
+            ease: 'Back.easeOut',
             onComplete: () => {
-              this.tweens.add({ targets: sprite, scale: { from: 0.97, to: 1.03 }, duration: 2500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+              this.tweens.add({
+                targets: sprite,
+                scale: { from: 0.97, to: 1.03 },
+                duration: 2500,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+              })
             },
           })
         },
@@ -5516,24 +7768,51 @@ export class StarMapScene extends Phaser.Scene {
     // Главные расы — по их type, фоновые — по архетипу
     const emojiMap: Record<string, string> = {
       // Главные первичные
-      home: '🐸', crystal: '💎', rocky: '🪨', ancient: '⏳', mystic: '🔮',
-      organic: '🌿', forge: '🔥', military: '⚔️', destroyed: '💔',
+      home: '🐸',
+      crystal: '💎',
+      rocky: '🪨',
+      ancient: '⏳',
+      mystic: '🔮',
+      organic: '🌿',
+      forge: '🔥',
+      military: '⚔️',
+      destroyed: '💔',
       // Расширение — 7 новых рас
-      crystal_bio: '🌸', mechano: '⚙️', energy: '⚡', mist: '🌫️',
-      aquatic: '🌊', shadow: '🌑', aerial: '☁️',
+      crystal_bio: '🌸',
+      mechano: '⚙️',
+      energy: '⚡',
+      mist: '🌫️',
+      aquatic: '🌊',
+      shadow: '🌑',
+      aerial: '☁️',
       // Архетипы фоновых
-      gas_giant: '🌀', gas_ringed: '🪐', ice: '❄️', ocean: '🌊',
-      desert: '🏜️', lava: '🌋', forest: '🌲', mineral: '⛏️',
-      dead: '💀', toxic: '☠️', plasma: '☀️', binary: '⚡',
+      gas_giant: '🌀',
+      gas_ringed: '🪐',
+      ice: '❄️',
+      ocean: '🌊',
+      desert: '🏜️',
+      lava: '🌋',
+      forest: '🌲',
+      mineral: '⛏️',
+      dead: '💀',
+      toxic: '☠️',
+      plasma: '☀️',
+      binary: '⚡',
     }
     const archKey = (sys as BgSystem).archetype
     const emoji = emojiMap[archKey] || emojiMap[sys.type] || '?'
-    const float = this.add.text(sys.x, sys.y - sz - 8 * DPR, emoji, { fontSize: 22 * DPR })
+    const float = this.add.text(sys.x, sys.y - sz - 8 * DPR, emoji, {
+      fontSize: 22 * DPR,
+    })
     float.setOrigin(0.5)
     float.setDepth(80)
     this.tweens.add({
-      targets: float, y: sys.y - sz - 50 * DPR, alpha: { from: 1, to: 0 },
-      duration: 1400, ease: 'Sine.easeOut', onComplete: () => float.destroy(),
+      targets: float,
+      y: sys.y - sz - 50 * DPR,
+      alpha: { from: 1, to: 0 },
+      duration: 1400,
+      ease: 'Sine.easeOut',
+      onComplete: () => float.destroy(),
     })
   }
 
@@ -5543,46 +7822,64 @@ export class StarMapScene extends Phaser.Scene {
     this.input.setTopOnly(false)
 
     let isDragging = false
-    let lastX = 0, lastY = 0
+    let lastX = 0,
+      lastY = 0
     let initialPinchDist: number | null = null
     let initialZoom = 1
     // Инерция камеры: сохраняем velocity при drag, применяем после pointerup
-    let velX = 0, velY = 0
+    let velX = 0,
+      velY = 0
     let lastMoveTime = 0
     const VEL_THRESHOLD = 0.005 // px/ms — ниже считаем что остановились
     const FRICTION_PER_16MS = 0.92 // насколько velocity сохраняется за ~кадр
-    let tapDownX = 0, tapDownY = 0
+    let tapDownX = 0,
+      tapDownY = 0
     let tapDownTime = 0
 
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       isDragging = true
-      lastX = p.x; lastY = p.y
-      velX = 0; velY = 0
+      lastX = p.x
+      lastY = p.y
+      velX = 0
+      velY = 0
+      // Drag cancels follow mode
+      if (this.followingShip) {
+        this.followingShip = false
+        eventBus.emit('starmap:follow-changed', { following: false })
+      }
       lastMoveTime = Date.now()
       initialPinchDist = null
       // Сброс tap-флага. Если планета его не выставит до pointerup и не было drag —
       // на pointerup закроем popover (тап в пустое место карты).
       this.tapHandledThisFrame = false
-      tapDownX = p.x; tapDownY = p.y
+      tapDownX = p.x
+      tapDownY = p.y
       tapDownTime = Date.now()
     })
 
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
-      const ps = this.input.manager.pointers.filter(pt => pt.active && pt.isDown)
+      const ps = this.input.manager.pointers.filter(
+        (pt) => pt.active && pt.isDown,
+      )
       const cam = this.cameras.main
       if (ps.length === 2) {
         const dx = ps[0].x - ps[1].x
         const dy = ps[0].y - ps[1].y
-        const d = Math.sqrt(dx*dx + dy*dy)
-        if (initialPinchDist == null) { initialPinchDist = d; initialZoom = cam.zoom }
-        else {
+        const d = Math.sqrt(dx * dx + dy * dy)
+        if (initialPinchDist == null) {
+          initialPinchDist = d
+          initialZoom = cam.zoom
+        } else {
           const ratio = d / initialPinchDist
-          cam.setZoom(Phaser.Math.Clamp(initialZoom * ratio, this.getMinZoom(), 1.8))
+          cam.setZoom(
+            Phaser.Math.Clamp(initialZoom * ratio, this.getMinZoom(), 1.8),
+          )
           // Re-clamp center после изменения zoom
           this.setCameraCenter(this.camCenterX, this.camCenterY)
           this.scheduleBoundsUpdate()
         }
-        velX = 0; velY = 0
+        velX = 0
+        velY = 0
       } else if (isDragging && ps.length === 1) {
         const dx = p.x - lastX
         const dy = p.y - lastY
@@ -5595,10 +7892,14 @@ export class StarMapScene extends Phaser.Scene {
         velY = velY * 0.6 + instantVY * 0.4
         const dxWorld = dx / cam.zoom
         const dyWorld = dy / cam.zoom
-        const result = this.setCameraCenter(this.camCenterX - dxWorld, this.camCenterY - dyWorld)
+        const result = this.setCameraCenter(
+          this.camCenterX - dxWorld,
+          this.camCenterY - dyWorld,
+        )
         if (result.hitX) velX = 0
         if (result.hitY) velY = 0
-        lastX = p.x; lastY = p.y
+        lastX = p.x
+        lastY = p.y
         lastMoveTime = now
         initialPinchDist = null
       }
@@ -5628,6 +7929,13 @@ export class StarMapScene extends Phaser.Scene {
     // Дополнительный «hard re-center» каждый кадр: на всякий случай, если что-то снаружи
     // меняет scroll (Phaser internals, resize и т.п.) — заявляем целевую позицию заново.
     this.events.on('update', (_t: number, dt: number) => {
+      // Ship follow mode — overrides inertia/drag
+      if (this.followingShip && this.shipSprite) {
+        velX = 0
+        velY = 0
+        this.setCameraCenter(this.shipSprite.worldX, this.shipSprite.worldY)
+        return
+      }
       // Inertia только когда не идёт активный drag
       if (!isDragging) {
         const speed = Math.sqrt(velX * velX + velY * velY)
@@ -5635,14 +7943,18 @@ export class StarMapScene extends Phaser.Scene {
           const cam = this.cameras.main
           const dxWorld = (velX * dt) / cam.zoom
           const dyWorld = (velY * dt) / cam.zoom
-          const result = this.setCameraCenter(this.camCenterX - dxWorld, this.camCenterY - dyWorld)
+          const result = this.setCameraCenter(
+            this.camCenterX - dxWorld,
+            this.camCenterY - dyWorld,
+          )
           if (result.hitX) velX = 0
           if (result.hitY) velY = 0
           const decay = Math.pow(FRICTION_PER_16MS, dt / 16)
           velX *= decay
           velY *= decay
         } else {
-          velX = 0; velY = 0
+          velX = 0
+          velY = 0
           // Жёсткий re-center каждый кадр — гарантия что Phaser не "уехал" сам.
           // Это идемпотентная операция: если уже на месте — ничего не меняет.
           this.setCameraCenter(this.camCenterX, this.camCenterY)
@@ -5650,14 +7962,24 @@ export class StarMapScene extends Phaser.Scene {
       }
     })
 
-    this.input.on('wheel', (_p: any, _gos: any, _dx: number, dy: number) => {
-      const cam = this.cameras.main
-      const factor = dy > 0 ? 0.9 : 1.1
-      cam.setZoom(Phaser.Math.Clamp(cam.zoom * factor, this.getMinZoom(), 1.8))
-      // Re-clamp center: пределы изменились с zoom, текущая позиция могла стать невалидной
-      this.setCameraCenter(this.camCenterX, this.camCenterY)
-      this.scheduleBoundsUpdate()
-    })
+    this.input.on(
+      'wheel',
+      (
+        _p: Phaser.Input.Pointer,
+        _gos: Phaser.GameObjects.GameObject[],
+        _dx: number,
+        dy: number,
+      ) => {
+        const cam = this.cameras.main
+        const factor = dy > 0 ? 0.9 : 1.1
+        cam.setZoom(
+          Phaser.Math.Clamp(cam.zoom * factor, this.getMinZoom(), 1.8),
+        )
+        // Re-clamp center: пределы изменились с zoom, текущая позиция могла стать невалидной
+        this.setCameraCenter(this.camCenterX, this.camCenterY)
+        this.scheduleBoundsUpdate()
+      },
+    )
   }
 
   // ============== ЖИВЫЕ АНИМАЦИИ ==============
@@ -5666,7 +7988,8 @@ export class StarMapScene extends Phaser.Scene {
   // аккреционный диск + лучи света + гало.
   // @ts-expect-error temporarily unused — раскомментируй вызов в create() если нужна обратно
   private setupBlackHole() {
-    const cx = 0, cy = 0
+    const cx = 0,
+      cy = 0
     const coreR = 220 * DPR
 
     // Гало убрано по запросу — было слишком расплывчато (блюрило экран)
@@ -5675,13 +7998,19 @@ export class StarMapScene extends Phaser.Scene {
 
     // Аккреционный диск — наклонённый эллипс с градиентными полосами, вращается
     const disk = this.add.graphics()
-    disk.fillStyle(0xfbbf24, 0.7); disk.fillEllipse(0, 0, coreR * 5.2, coreR * 1.4)
-    disk.fillStyle(0xf97316, 0.65); disk.fillEllipse(0, 0, coreR * 4.6, coreR * 1.1)
-    disk.fillStyle(0xfff7ed, 0.5); disk.fillEllipse(0, 0, coreR * 3.8, coreR * 0.8)
-    disk.fillStyle(0xa78bfa, 0.4); disk.fillEllipse(0, 0, coreR * 3.0, coreR * 0.55)
+    disk.fillStyle(0xfbbf24, 0.7)
+    disk.fillEllipse(0, 0, coreR * 5.2, coreR * 1.4)
+    disk.fillStyle(0xf97316, 0.65)
+    disk.fillEllipse(0, 0, coreR * 4.6, coreR * 1.1)
+    disk.fillStyle(0xfff7ed, 0.5)
+    disk.fillEllipse(0, 0, coreR * 3.8, coreR * 0.8)
+    disk.fillStyle(0xa78bfa, 0.4)
+    disk.fillEllipse(0, 0, coreR * 3.0, coreR * 0.55)
     // Прорезь в центре диска (чтобы ядро было видно как тёмная точка)
-    disk.fillStyle(0x000000, 1); disk.fillEllipse(0, 0, coreR * 2, coreR * 0.4)
-    disk.x = cx; disk.y = cy
+    disk.fillStyle(0x000000, 1)
+    disk.fillEllipse(0, 0, coreR * 2, coreR * 0.4)
+    disk.x = cx
+    disk.y = cy
     disk.angle = -22
     disk.setDepth(-60)
     // Вращение диска убрано по запросу
@@ -5690,10 +8019,12 @@ export class StarMapScene extends Phaser.Scene {
     const rays = this.add.graphics()
     rays.lineStyle(3 * DPR, 0xfde047, 0.35)
     for (let i = 0; i < 8; i++) {
-      const θ = i * Math.PI / 4
+      const θ = (i * Math.PI) / 4
       rays.lineBetween(
-        cx + Math.cos(θ) * coreR * 1.6, cy + Math.sin(θ) * coreR * 1.6,
-        cx + Math.cos(θ) * coreR * 6, cy + Math.sin(θ) * coreR * 6,
+        cx + Math.cos(θ) * coreR * 1.6,
+        cy + Math.sin(θ) * coreR * 1.6,
+        cx + Math.cos(θ) * coreR * 6,
+        cy + Math.sin(θ) * coreR * 6,
       )
     }
     rays.setDepth(-65)
@@ -5701,10 +8032,13 @@ export class StarMapScene extends Phaser.Scene {
 
     // Чёрное ядро (event horizon) — над диском
     const core = this.add.graphics()
-    core.fillStyle(0x000000, 1); core.fillCircle(cx, cy, coreR * 0.7)
+    core.fillStyle(0x000000, 1)
+    core.fillCircle(cx, cy, coreR * 0.7)
     // Тонкое внутреннее свечение по краю
-    core.lineStyle(2 * DPR, 0xfff7ed, 0.7); core.strokeCircle(cx, cy, coreR * 0.72)
-    core.lineStyle(1 * DPR, 0xfde047, 0.5); core.strokeCircle(cx, cy, coreR * 0.82)
+    core.lineStyle(2 * DPR, 0xfff7ed, 0.7)
+    core.strokeCircle(cx, cy, coreR * 0.72)
+    core.lineStyle(1 * DPR, 0xfde047, 0.5)
+    core.strokeCircle(cx, cy, coreR * 0.82)
     core.setDepth(-55)
 
     // Пульсации ядра/гало убраны — чёрная дыра полностью статична
@@ -5716,20 +8050,31 @@ export class StarMapScene extends Phaser.Scene {
     this.cullableData.push({ obj: core, x: cx, y: cy, r: coreR })
   }
 
-
   // @ts-expect-error temporarily unused — раскомментируй вызов и привяжи к HOME world coords
   private setupHomeOrbiter() {
     const orbiter = this.add.text(0, 0, '🐸', { fontSize: 18 * DPR })
     orbiter.setOrigin(0.5)
     orbiter.setDepth(50)
     // Интерактивность лягушки — тап даёт сердечко
-    orbiter.setInteractive(new Phaser.Geom.Rectangle(-12 * DPR, -12 * DPR, 24 * DPR, 24 * DPR), Phaser.Geom.Rectangle.Contains)
-    let dt0 = 0, dx0 = 0, dy0 = 0
-    orbiter.on('pointerdown', (p: Phaser.Input.Pointer) => { dt0 = Date.now(); dx0 = p.x; dy0 = p.y })
+    orbiter.setInteractive(
+      new Phaser.Geom.Rectangle(-12 * DPR, -12 * DPR, 24 * DPR, 24 * DPR),
+      Phaser.Geom.Rectangle.Contains,
+    )
+    let dt0 = 0,
+      dx0 = 0,
+      dy0 = 0
+    orbiter.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      dt0 = Date.now()
+      dx0 = p.x
+      dy0 = p.y
+    })
     orbiter.on('pointerup', (p: Phaser.Input.Pointer) => {
       const elapsed = Date.now() - dt0
       const moved = Math.abs(p.x - dx0) + Math.abs(p.y - dy0)
-      if (elapsed < 300 && moved < 8 * DPR) { this.tapHandledThisFrame = true; this.popEmojiAt(orbiter.x, orbiter.y, '💚', orbiter) }
+      if (elapsed < 300 && moved < 8 * DPR) {
+        this.tapHandledThisFrame = true
+        this.popEmojiAt(orbiter.x, orbiter.y, '💚', orbiter)
+      }
     })
     let angle = 0
     const radius = 95 * DPR
@@ -5751,8 +8096,10 @@ export class StarMapScene extends Phaser.Scene {
     })
 
     const rings = this.add.graphics()
-    rings.lineStyle(1 * DPR, 0x7dd3fc, 0.2); rings.strokeCircle(0, 0, radius)
-    rings.lineStyle(1 * DPR, 0xfde047, 0.15); rings.strokeCircle(0, 0, radius2)
+    rings.lineStyle(1 * DPR, 0x7dd3fc, 0.2)
+    rings.strokeCircle(0, 0, radius)
+    rings.lineStyle(1 * DPR, 0xfde047, 0.15)
+    rings.strokeCircle(0, 0, radius2)
     rings.setDepth(40)
   }
 
@@ -5765,13 +8112,25 @@ export class StarMapScene extends Phaser.Scene {
       const dx = (dustRng() - 0.5) * 200 * DPR
       const dy = (dustRng() - 0.5) * 200 * DPR
       const alpha = 0.2 + dustRng() * 0.4
-      const color = [0xa5f3fc, 0xfde047, 0xc4b5fd, 0xfecaca][Math.floor(dustRng() * 4)]
-      const dust = this.add.circle(startX, startY, (0.8 + dustRng() * 1.2) * DPR, color, alpha)
+      const color = [0xa5f3fc, 0xfde047, 0xc4b5fd, 0xfecaca][
+        Math.floor(dustRng() * 4)
+      ]
+      const dust = this.add.circle(
+        startX,
+        startY,
+        (0.8 + dustRng() * 1.2) * DPR,
+        color,
+        alpha,
+      )
       dust.setDepth(-50)
       this.tweens.add({
-        targets: dust, x: startX + dx, y: startY + dy,
+        targets: dust,
+        x: startX + dx,
+        y: startY + dy,
         duration: 18000 + dustRng() * 18000,
-        yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
       })
       // Радиус culling-сферы должен охватывать tween-движение
       this.cullableData.push({ obj: dust, x: startX, y: startY, r: 300 * DPR })
@@ -5780,11 +8139,11 @@ export class StarMapScene extends Phaser.Scene {
 
   // @ts-expect-error temporarily unused — re-enable in create() when planet dialogues land
   private setupSignalPulses() {
-    const links: [{x:number,y:number},Race][] = [
-      [{x:0,y:0}, this.findRace('bliks')!],
-      [{x:0,y:0}, this.findRace('drave')!],
-      [{x:0,y:0}, this.findRace('cairn')!],
-      [{x:0,y:0}, this.findRace('lyor')!],
+    const links: [{ x: number; y: number }, Race][] = [
+      [{ x: 0, y: 0 }, this.findRace('bliks')!],
+      [{ x: 0, y: 0 }, this.findRace('drave')!],
+      [{ x: 0, y: 0 }, this.findRace('cairn')!],
+      [{ x: 0, y: 0 }, this.findRace('lyor')!],
       [this.findRace('bliks')!, this.findRace('cairn')!],
       [this.findRace('drave')!, this.findRace('veran')!],
       [this.findRace('cairn')!, this.findRace('tor')!],
@@ -5802,13 +8161,20 @@ export class StarMapScene extends Phaser.Scene {
         halo.setDepth(19)
         this.tweens.add({
           targets: [dot, halo],
-          x: to.x, y: to.y,
+          x: to.x,
+          y: to.y,
           duration: 1800 + Math.random() * 800,
           ease: 'Sine.easeInOut',
           onComplete: () => {
             this.tweens.add({
-              targets: [dot, halo], alpha: 0, scale: 3, duration: 300,
-              onComplete: () => { dot.destroy(); halo.destroy() },
+              targets: [dot, halo],
+              alpha: 0,
+              scale: 3,
+              duration: 300,
+              onComplete: () => {
+                dot.destroy()
+                halo.destroy()
+              },
             })
           },
         })
@@ -5816,13 +8182,19 @@ export class StarMapScene extends Phaser.Scene {
       // Базовая задержка 1000мс + ступенчато по индексу — чтобы не вспыхнуть при открытии сцены
       this.time.delayedCall(1000 + idx * 600, () => {
         sendSignal()
-        this.time.addEvent({ delay: 4000 + Math.random() * 5000, loop: true, callback: sendSignal })
+        this.time.addEvent({
+          delay: 4000 + Math.random() * 5000,
+          loop: true,
+          callback: sendSignal,
+        })
       })
     })
   }
 
   private setupRandomSignals() {
-    const interactive = MAIN_RACES.filter(r => r.id !== 'home' && r.id !== 'relict')
+    const interactive = MAIN_RACES.filter(
+      (r) => r.id !== 'home' && r.id !== 'relict',
+    )
     const signal = () => {
       const race = interactive[Math.floor(Math.random() * interactive.length)]
       for (let i = 0; i < 3; i++) {
@@ -5830,25 +8202,35 @@ export class StarMapScene extends Phaser.Scene {
           const ring = this.add.graphics()
           ring.lineStyle(2 * DPR, race.color, 0.7)
           ring.strokeCircle(0, 0, race.size + 10 * DPR)
-          ring.x = race.x; ring.y = race.y
+          ring.x = race.x
+          ring.y = race.y
           ring.setDepth(15)
           this.tweens.add({
-            targets: ring, scale: 2.4, alpha: 0,
-            duration: 1400, ease: 'Quad.easeOut',
+            targets: ring,
+            scale: 2.4,
+            alpha: 0,
+            duration: 1400,
+            ease: 'Quad.easeOut',
             onComplete: () => ring.destroy(),
           })
         })
       }
-      const tag = this.add.text(race.x, race.y - race.size - 18 * DPR, '📡', { fontSize: 16 * DPR })
-      tag.setOrigin(0.5); tag.setDepth(70)
+      const tag = this.add.text(race.x, race.y - race.size - 18 * DPR, '📡', {
+        fontSize: 16 * DPR,
+      })
+      tag.setOrigin(0.5)
+      tag.setDepth(70)
       this.tweens.add({
-        targets: tag, y: race.y - race.size - 36 * DPR,
-        alpha: { from: 1, to: 0 }, duration: 1500,
+        targets: tag,
+        y: race.y - race.size - 36 * DPR,
+        alpha: { from: 1, to: 0 },
+        duration: 1500,
         onComplete: () => tag.destroy(),
       })
     }
     this.time.addEvent({
-      delay: 6000, loop: true,
+      delay: 6000,
+      loop: true,
       callback: () => {
         signal()
         if (Math.random() < 0.25) this.time.delayedCall(800, signal)
@@ -5862,11 +8244,19 @@ export class StarMapScene extends Phaser.Scene {
     const container = this.systemSprites.get('tor')
     if (!container) return
     const ring = this.add.graphics()
-    ring.lineStyle(2 * DPR, 0xfca5a5, 0.6); ring.strokeCircle(0, 0, tor.size + 18 * DPR)
-    ring.lineStyle(1 * DPR, 0xfca5a5, 0.3); ring.strokeCircle(0, 0, tor.size + 24 * DPR)
+    ring.lineStyle(2 * DPR, 0xfca5a5, 0.6)
+    ring.strokeCircle(0, 0, tor.size + 18 * DPR)
+    ring.lineStyle(1 * DPR, 0xfca5a5, 0.3)
+    ring.strokeCircle(0, 0, tor.size + 24 * DPR)
     ring.setDepth(5)
     container.add(ring)
-    this.tweens.add({ targets: ring, angle: 360, duration: 18000, repeat: -1, ease: 'Linear' })
+    this.tweens.add({
+      targets: ring,
+      angle: 360,
+      duration: 18000,
+      repeat: -1,
+      ease: 'Linear',
+    })
   }
 
   private setupVeranLightning() {
@@ -5889,12 +8279,19 @@ export class StarMapScene extends Phaser.Scene {
         }
         lightning.strokePath()
       }
-      lightning.x = veran.x; lightning.y = veran.y
+      lightning.x = veran.x
+      lightning.y = veran.y
       lightning.setDepth(12)
-      this.tweens.add({ targets: lightning, alpha: 0, duration: 250, onComplete: () => lightning.destroy() })
+      this.tweens.add({
+        targets: lightning,
+        alpha: 0,
+        duration: 250,
+        onComplete: () => lightning.destroy(),
+      })
     }
     this.time.addEvent({
-      delay: 4500, loop: true,
+      delay: 4500,
+      loop: true,
       callback: () => {
         if (Math.random() < 0.55) {
           flash()
@@ -5908,26 +8305,33 @@ export class StarMapScene extends Phaser.Scene {
     const relict = this.findRace('relict')
     if (!relict) return
     this.time.addEvent({
-      delay: 1800, loop: true,
+      delay: 1800,
+      loop: true,
       callback: () => {
         const particle = this.add.circle(
           relict.x + (Math.random() - 0.5) * relict.size,
           relict.y + relict.size * 0.3,
-          1.5 * DPR, 0xa5f3fc, 0.7,
+          1.5 * DPR,
+          0xa5f3fc,
+          0.7,
         )
         particle.setDepth(11)
         this.tweens.add({
           targets: particle,
           y: relict.y - (60 + Math.random() * 30) * DPR,
           x: particle.x + (Math.random() - 0.5) * 20 * DPR,
-          alpha: 0, duration: 3500, ease: 'Sine.easeOut',
+          alpha: 0,
+          duration: 3500,
+          ease: 'Sine.easeOut',
           onComplete: () => particle.destroy(),
         })
       },
     })
   }
 
-  private findRace(id: string) { return MAIN_RACES.find(r => r.id === id) }
+  private findRace(id: string) {
+    return MAIN_RACES.find((r) => r.id === id)
+  }
 
   shutdown() {
     this.closePhaserPopover()
@@ -5936,13 +8340,21 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   // Лёгкая реакция на тап по второстепенному объекту (звезда, лягушка-спутник)
-  private popEmojiAt(x: number, y: number, emoji: string, target?: Phaser.GameObjects.GameObject) {
+  private popEmojiAt(
+    x: number,
+    y: number,
+    emoji: string,
+    target?: Phaser.GameObjects.GameObject,
+  ) {
     if (target) {
       this.tweens.killTweensOf(target)
       this.tweens.add({
         targets: target,
-        scaleY: 0.85, scaleX: 1.15,
-        duration: 100, yoyo: true, ease: 'Power2',
+        scaleY: 0.85,
+        scaleX: 1.15,
+        duration: 100,
+        yoyo: true,
+        ease: 'Power2',
       })
     }
     const t = this.add.text(x, y, emoji, { fontSize: 22 * DPR })

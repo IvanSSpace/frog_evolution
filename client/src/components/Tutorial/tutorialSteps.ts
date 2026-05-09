@@ -16,5 +16,9 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   { id: 'first-box', contentKey: 'tutorial.first_box', priority: 1 },
   { id: 'first-serum', contentKey: 'tutorial.first_serum', priority: 2 },
   { id: 'first-feed', contentKey: 'tutorial.first_feed', priority: 3 },
-  { id: 'first-stabilize', contentKey: 'tutorial.first_stabilize', priority: 4 },
+  {
+    id: 'first-stabilize',
+    contentKey: 'tutorial.first_stabilize',
+    priority: 4,
+  },
 ]

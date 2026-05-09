@@ -28,7 +28,9 @@ if (!fs.existsSync(distDir)) {
 const allFiles = fs.readdirSync(distDir).filter((f) => f.endsWith('.js'))
 const indexFiles = allFiles.filter((f) => /^index-.+\.js$/.test(f))
 if (indexFiles.length !== 1) {
-  console.error('expected 1 index-*.js, found ' + indexFiles.length + ': ' + indexFiles)
+  console.error(
+    'expected 1 index-*.js, found ' + indexFiles.length + ': ' + indexFiles,
+  )
   process.exit(1)
 }
 
@@ -71,7 +73,9 @@ console.log(JSON.stringify(report, null, 2))
 
 const errors = []
 if (!capPassed) {
-  errors.push('Bundle delta ' + report.delta_kb + 'KB exceeds cap ' + cap / 1024 + 'KB')
+  errors.push(
+    'Bundle delta ' + report.delta_kb + 'KB exceeds cap ' + cap / 1024 + 'KB',
+  )
 }
 if (missingChunks.length > 0) {
   errors.push('Missing expected lazy chunks: ' + missingChunks.join(', '))
@@ -82,5 +86,11 @@ if (errors.length > 0) {
   for (const e of errors) console.error('  -', e)
   process.exit(1)
 }
-console.error('\nOK: Bundle delta ' + report.delta_kb + 'KB within cap ' + cap / 1024 + 'KB')
+console.error(
+  '\nOK: Bundle delta ' +
+    report.delta_kb +
+    'KB within cap ' +
+    cap / 1024 +
+    'KB',
+)
 console.error('OK: Lazy chunks present: ' + expectedChunks.join(', '))

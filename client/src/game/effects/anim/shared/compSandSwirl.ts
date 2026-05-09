@@ -24,12 +24,20 @@ export function compSandSwirl(
     const startTime = scene.time.now
     const localDur = dur + rng() * 200
     const update = () => {
-      if (!dot.active) { scene.events.off('update', update); return }
+      if (!dot.active) {
+        scene.events.off('update', update)
+        return
+      }
       const t = (scene.time.now - startTime) / localDur
-      if (t >= 1) { dot.destroy(); scene.events.off('update', update); return }
+      if (t >= 1) {
+        dot.destroy()
+        scene.events.off('update', update)
+        return
+      }
       const r = startR * (1 + t * 0.5)
       const a = startAng + direction * t * Math.PI * 1.5
-      dot.x = Math.cos(a) * r; dot.y = Math.sin(a) * r
+      dot.x = Math.cos(a) * r
+      dot.y = Math.sin(a) * r
       dot.alpha = 0.8 * (1 - t)
     }
     scene.events.on('update', update)

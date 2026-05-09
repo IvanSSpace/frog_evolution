@@ -1,10 +1,9 @@
 import mitt from 'mitt'
 import type { CosmicToastPayload, Element, Rarity } from './cosmic/types'
-import type { MissionResult } from '../game/data/missionConfig'
 import type { Bucket } from '../utils/carrierEvolution'
 
 type Events = {
-  'poop:collected': { value: number }
+  'goo:collected': { value: number }
   'frog:tapped': { frogId: string }
   'merge:happened': { level: number }
   'frog:pickup': { level: number }
@@ -14,15 +13,43 @@ type Events = {
   'location:changed': { id: number }
   'location:transitionStart': { from: number; to: number }
   'location:transitionEnd': { id: number }
-  'rareCrate:opened': { x: number; y: number; minLevel: number; maxLevel: number }
+  'rareCrate:opened': {
+    x: number
+    y: number
+    minLevel: number
+    maxLevel: number
+  }
   'rareCrate:claim': { level: number }
   'starmap:open': void
   'starmap:close': void
-  'starmap:planet-selected': { raceId: string; raceName: string; raceType: string; domX: number; domY: number; placement: 'below' | 'above' }
-  'starmap:planet-tapped': { id: string; type: string; archetype?: string; durationMs: number; seed: number }
-  'starmap:planet-moved': { raceId: string; bottomX: number; bottomY: number; topX: number; topY: number }
+  'starmap:planet-selected': {
+    raceId: string
+    raceName: string
+    raceType: string
+    domX: number
+    domY: number
+    placement: 'below' | 'above'
+  }
+  'starmap:planet-select': { planetId: string; name: string; archetype: string }
+  'starmap:request-fly': { planetId: string }
+  'starmap:planet-tapped': {
+    id: string
+    type: string
+    archetype?: string
+    durationMs: number
+    seed: number
+  }
+  'starmap:planet-moved': {
+    raceId: string
+    bottomX: number
+    bottomY: number
+    topX: number
+    topY: number
+  }
   'starmap:popover-close': void
   'starmap:centerHome': void
+  'starmap:follow-ship': { enable: boolean }
+  'starmap:follow-changed': { following: boolean }
   'dev:clearAllFrogs': void
   // Cosmic Frogs System (Phase 11+)
   'cosmic:toast': CosmicToastPayload
@@ -36,9 +63,6 @@ type Events = {
   'cosmic:flight-confirm': { planetId: string }
   'cosmic:flight-cancel': void
   'cosmic:ship-arrived': { planetId: string }
-  'cosmic:start-mission': { planetId: string }
-  'cosmic:mission-complete': { planetId: string; result: MissionResult }
-  'cosmic:mission-cancel': void
   // Phase 17 — carrier evolution
   'cosmic:carrier-stabilized': {
     frogId: string

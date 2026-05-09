@@ -22,8 +22,11 @@ export function compChimeRing(
       ring.strokeCircle(0, 0, sys.size * (1.0 + i * 0.18))
       sprite.add(ring)
       scene.tweens.add({
-        targets: ring, scale: 1.5, alpha: 0,
-        duration: 600, ease: 'Sine.easeOut',
+        targets: ring,
+        scale: 1.5,
+        alpha: 0,
+        duration: 600,
+        ease: 'Sine.easeOut',
         onComplete: () => ring.destroy(),
       })
     })

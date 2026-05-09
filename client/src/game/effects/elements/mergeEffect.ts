@@ -6,9 +6,7 @@
 
 import type Phaser from 'phaser'
 import type { Element } from '../../../store/cosmic/types'
-import {
-  compRing, compSparkle, compFlash, compRipple,
-} from '../anim/shared'
+import { compRing, compSparkle, compFlash, compRipple } from '../anim/shared'
 import type { SharedBgSystem } from '../anim/shared/types'
 import { ELEMENT_TINTS } from './elementTints'
 import { archetypeForElement } from './elementMapping'
@@ -42,7 +40,8 @@ export function mergeEffect(
   const fakeSys: SharedBgSystem = {
     id: `merge-${element}`,
     name: element,
-    x: cx, y: cy,
+    x: cx,
+    y: cy,
     type: 'resource',
     archetype: archetypeForElement(element),
     color: tint,

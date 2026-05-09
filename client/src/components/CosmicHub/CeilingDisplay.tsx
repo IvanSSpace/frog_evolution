@@ -51,10 +51,7 @@ export function CeilingDisplay({ carrier }: Props) {
   const tintHex = ELEMENT_TINTS[carrier.element]
   const tintCss = `#${tintHex.toString(16).padStart(6, '0')}`
   return (
-    <span
-      className="text-sm font-bold"
-      style={{ color: tintCss }}
-    >
+    <span className="text-sm font-bold" style={{ color: tintCss }}>
       L{carrier.ceiling}
     </span>
   )

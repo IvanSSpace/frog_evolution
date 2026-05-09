@@ -16,6 +16,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           phaser: ['phaser'],
+          tone: ['tone'],
           vendor: ['react', 'react-dom', 'zustand', '@tanstack/react-query'],
         },
         assetFileNames: (assetInfo) => {

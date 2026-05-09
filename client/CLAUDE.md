@@ -7,6 +7,7 @@
 Refer to `/Users/shar/Documents/frog_evolution/frog_obsidian/Index.md` for accumulated patterns and decisions from previous sessions.
 
 Key memory folders:
+
 - `frog_obsidian/Patterns/` — code and workflow patterns worth repeating
 - `frog_obsidian/Decisions/` — past architectural choices with reasoning
 - `frog_obsidian/Mistakes/` — known pitfalls to avoid

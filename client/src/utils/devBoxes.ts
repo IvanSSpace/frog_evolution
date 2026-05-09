@@ -12,7 +12,8 @@
 
 import { useGameStore } from '../store/gameStore'
 import {
-  ARCHETYPE_TO_ELEMENT, MAIN_RACE_TO_ELEMENT,
+  ARCHETYPE_TO_ELEMENT,
+  MAIN_RACE_TO_ELEMENT,
 } from '../game/effects/elements/elementMapping'
 import type { Element } from '../store/cosmic/types'
 
@@ -31,9 +32,9 @@ declare global {
 if (import.meta.env.DEV) {
   window.__addBox = (archetype = 'lava', bonusRarity, count = 1) => {
     const element: Element =
-      ARCHETYPE_TO_ELEMENT[archetype]
-      ?? MAIN_RACE_TO_ELEMENT[archetype]
-      ?? 'fire'
+      ARCHETYPE_TO_ELEMENT[archetype] ??
+      MAIN_RACE_TO_ELEMENT[archetype] ??
+      'fire'
     const store = useGameStore.getState()
     for (let i = 0; i < count; i++) {
       store.addBox({
@@ -44,7 +45,14 @@ if (import.meta.env.DEV) {
         bonusRarity,
       })
     }
-    console.log('[dev Phase 15]', count, 'box(es) added of element', element, 'archetype', archetype)
+    console.log(
+      '[dev Phase 15]',
+      count,
+      'box(es) added of element',
+      element,
+      'archetype',
+      archetype,
+    )
   }
 
   window.__listBoxes = () => {
@@ -53,14 +61,16 @@ if (import.meta.env.DEV) {
       console.log('[dev] inventory empty')
       return
     }
-    console.table(boxes.map((b) => ({
-      id: b.id.slice(0, 8),
-      element: b.element,
-      archetype: b.archetype,
-      planetName: b.planetName,
-      bonus: b.bonusRarity ?? '-',
-      opened: b.opened,
-    })))
+    console.table(
+      boxes.map((b) => ({
+        id: b.id.slice(0, 8),
+        element: b.element,
+        archetype: b.archetype,
+        planetName: b.planetName,
+        bonus: b.bonusRarity ?? '-',
+        opened: b.opened,
+      })),
+    )
   }
 
   window.__clearBoxes = () => {

@@ -20,7 +20,9 @@ export function CarriersTab() {
       <div className="p-6 text-center text-white/50">
         <div className="text-4xl mb-2">🐸</div>
         <div className="text-sm">{t('cosmic_hub.carrier.empty_state')}</div>
-        <div className="text-xs mt-1 text-white/30">{t('cosmic_hub.carrier.empty_hint')}</div>
+        <div className="text-xs mt-1 text-white/30">
+          {t('cosmic_hub.carrier.empty_hint')}
+        </div>
       </div>
     )
   }

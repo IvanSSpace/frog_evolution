@@ -67,18 +67,26 @@ export async function loadGameState(): Promise<boolean> {
         crateQuality: data.upgrades?.crateQuality ?? 0,
         rareBoxSpeed: data.upgrades?.rareBoxSpeed ?? 0,
       },
-      frogPurchases: Array.isArray(data.frogPurchases) ? data.frogPurchases : store.frogPurchases,
-      discoveredLevels: Array.isArray(data.discoveredLevels) ? data.discoveredLevels : store.discoveredLevels,
+      frogPurchases: Array.isArray(data.frogPurchases)
+        ? data.frogPurchases
+        : store.frogPurchases,
+      discoveredLevels: Array.isArray(data.discoveredLevels)
+        ? data.discoveredLevels
+        : store.discoveredLevels,
       magnetEnabled: data.magnetEnabled ?? true,
       currentLocation: data.currentLocation ?? 1,
-      locationFrogs: Array.isArray(data.locationFrogs) && data.locationFrogs.length === 4
-        ? data.locationFrogs
-        : store.locationFrogs,
+      locationFrogs:
+        Array.isArray(data.locationFrogs) && data.locationFrogs.length === 4
+          ? data.locationFrogs
+          : store.locationFrogs,
     })
     console.log('[gameSync] loaded state from server')
     return true
   } catch (err) {
-    console.warn('[gameSync] failed to load state — продолжаем с локальным', err)
+    console.warn(
+      '[gameSync] failed to load state — продолжаем с локальным',
+      err,
+    )
     return false
   }
 }

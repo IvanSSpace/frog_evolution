@@ -46,13 +46,18 @@ function buildTextureSignature(bg) {
   const rng = mulberry32(bg.rngSeed)
   rng() // sparkle
   const showAura =
-    bg.archetype !== 'dead' && bg.archetype !== 'mineral' && bg.archetype !== 'desert'
+    bg.archetype !== 'dead' &&
+    bg.archetype !== 'mineral' &&
+    bg.archetype !== 'desert'
   if (showAura) {
     rng()
     rng()
     if (rng() < 0.3) rng()
   }
-  rng(); rng(); rng(); rng()
+  rng()
+  rng()
+  rng()
+  rng()
   rng()
   const variant = Math.floor(rng() * 3)
   const c1 = Math.floor(rng() * 5)
@@ -73,7 +78,10 @@ function quantize(value, thresholds) {
   let bestDist = Math.abs(value - thresholds[0])
   for (let i = 1; i < thresholds.length; i++) {
     const d = Math.abs(value - thresholds[i])
-    if (d < bestDist) { bestDist = d; bestIdx = i }
+    if (d < bestDist) {
+      bestDist = d
+      bestIdx = i
+    }
   }
   return bestIdx
 }
@@ -92,7 +100,10 @@ function buildAnimSignature(sys) {
   const components = []
   while (components.length < compCount) {
     const c = pool[Math.floor(rng() * pool.length)]
-    if (!used.has(c)) { used.add(c); components.push(c) }
+    if (!used.has(c)) {
+      used.add(c)
+      components.push(c)
+    }
   }
 
   // (2) modifier flag + rotation/scale
@@ -101,11 +112,14 @@ function buildAnimSignature(sys) {
   const modScale = useModifier ? 0.7 + rng() * 0.6 : 1
 
   const rotationBin = useModifier
-    ? quantize(modRotation, [-Math.PI / 2, -Math.PI / 4, Math.PI / 4, Math.PI / 2])
+    ? quantize(modRotation, [
+        -Math.PI / 2,
+        -Math.PI / 4,
+        Math.PI / 4,
+        Math.PI / 2,
+      ])
     : -1
-  const scaleBin = useModifier
-    ? quantize(modScale, [0.7, 0.85, 1.15, 1.3])
-    : -1
+  const scaleBin = useModifier ? quantize(modScale, [0.7, 0.85, 1.15, 1.3]) : -1
 
   // (3) hue_bin from raw seed (НЕ дёргает rng — точно как в source)
   const hueBin = (seed >>> 5) & 0x7
@@ -229,7 +243,9 @@ if (collisions.size > 0) {
     .sort((a, b) => b[1].length - a[1].length)
     .slice(0, 5)
   for (const [sig, ids] of top) {
-    console.log(`  ${ids.length}x ${sig} → [${ids.slice(0, 3).join(', ')}${ids.length > 3 ? ', ...' : ''}]`)
+    console.log(
+      `  ${ids.length}x ${sig} → [${ids.slice(0, 3).join(', ')}${ids.length > 3 ? ', ...' : ''}]`,
+    )
   }
 } else {
   console.log(`OK — no collisions`)

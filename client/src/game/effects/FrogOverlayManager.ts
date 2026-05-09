@@ -8,7 +8,12 @@
 
 import type Phaser from 'phaser'
 import { useGameStore } from '../../store/gameStore'
-import { ELEMENTS, RARITIES, type CarrierData, type Element } from '../../store/cosmic/types'
+import {
+  ELEMENTS,
+  RARITIES,
+  type CarrierData,
+  type Element,
+} from '../../store/cosmic/types'
 import { elementOverlayPool } from './elementOverlayPool'
 import type { FrogElementOverlay } from './FrogElementOverlay'
 import type { ElementTier } from './elements/types'
@@ -27,7 +32,10 @@ const VALID_RARITIES: ReadonlySet<string> = new Set<string>(RARITIES)
 /** Resolve carrier.rarity → ElementTier с защитой от tampered store. */
 function tierFromCarrier(carrier: CarrierData): ElementTier {
   if (VALID_RARITIES.has(carrier.rarity)) return carrier.rarity as ElementTier
-  console.warn('[FrogOverlayManager] invalid rarity in carrier (tampered?)', carrier)
+  console.warn(
+    '[FrogOverlayManager] invalid rarity in carrier (tampered?)',
+    carrier,
+  )
   return 'dormant'
 }
 
@@ -100,7 +108,10 @@ export class FrogOverlayManager {
     const live: { carrier: CarrierData; frog: FrogLike }[] = []
     for (const c of carriers) {
       if (!VALID_ELEMENTS.has(c.element)) {
-        console.warn('[FrogOverlayManager] invalid element in carrier (tampered?)', c)
+        console.warn(
+          '[FrogOverlayManager] invalid element in carrier (tampered?)',
+          c,
+        )
         continue
       }
       const f = frogById.get(c.frogId)
@@ -139,7 +150,11 @@ export class FrogOverlayManager {
         const tierChanged = existing.tier !== tier
         // Phase 17 (CARRIER-09): если carrier.stabilized & overlay.locked — НЕ
         // пересоздаём overlay. Tier и element считаются финализированными.
-        if (existing.locked && carrier.stabilized && existing.element === carrier.element) {
+        if (
+          existing.locked &&
+          carrier.stabilized &&
+          existing.element === carrier.element
+        ) {
           continue
         }
         if (existing.element !== carrier.element || tierChanged) {
@@ -173,6 +188,19 @@ export class FrogOverlayManager {
     }
   }
 
+  /**
+   * Освобождает overlay для конкретной лягушки перед её уничтожением.
+   * Вызывается из removeFrog() ДО frog.container.destroy() — это гарантирует
+   * что overlay-контейнер отсоединяется от родителя и возвращается в pool
+   * живым (а не уничтожается вместе с frog-контейнером как дочерний элемент).
+   */
+  releaseForFrog(frogId: string): void {
+    const overlay = this.active.get(frogId)
+    if (!overlay) return
+    elementOverlayPool.release(overlay)
+    this.active.delete(frogId)
+  }
+
   /** Cleanup при scene shutdown / destroy. */
   dispose(): void {
     if (this.disposed) return
@@ -187,8 +215,13 @@ export class FrogOverlayManager {
   }
 
   // ============ Dev/test introspection ============
-  get activeCount(): number { return this.active.size }
+  get activeCount(): number {
+    return this.active.size
+  }
   get poolStats(): { active: number; pooled: number } {
-    return { active: elementOverlayPool.totalActive, pooled: elementOverlayPool.totalPooled }
+    return {
+      active: elementOverlayPool.totalActive,
+      pooled: elementOverlayPool.totalPooled,
+    }
   }
 }

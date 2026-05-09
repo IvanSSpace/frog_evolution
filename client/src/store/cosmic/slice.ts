@@ -2,28 +2,46 @@
 // Phase 11: каркас + actions stubs. Реальная логика наполняется в Phase 14-19.
 
 import {
-  type CosmicSlice, type CosmicTab, type Element, type Rarity,
-  type BoxData, type ScoutData, type CarrierData, type RollResult,
+  type CosmicSlice,
+  type CosmicTab,
+  type Element,
+  type Rarity,
+  type BoxData,
+  type ScoutData,
+  type CarrierData,
+  type RollResult,
   type TutorialStepId,
   ELEMENTS,
   makeInitialCosmicSlice,
 } from './types'
 import { eventBus } from '../eventBus'
 import {
-  travelTimeMs, planetDistance, findPlanetById, getLocalDateString,
-  DAILY_CAP, bonusRarityForResult, planetElementInputs,
+  travelTimeMs,
+  planetDistance,
+  findPlanetById,
+  getLocalDateString,
+  DAILY_CAP,
+  bonusRarityForResult,
+  planetElementInputs,
   type MissionResult,
 } from '../../game/data/missionConfig'
 import { elementFromPlanet } from '../../game/effects/elements/elementMapping'
 import { rollRarity, updatePity, type PityState } from '../../utils/rarityRoll'
 // Phase 17 (CARRIER-04..12, BALANCE-06/09):
 import {
-  rollCeilingForCarrier, rollFeedOutcome, ceilingForBucket,
-  bucketOfCeiling, type FeedOutcome, type Bucket,
+  rollCeilingForCarrier,
+  rollFeedOutcome,
+  ceilingForBucket,
+  bucketOfCeiling,
+  type FeedOutcome,
+  type Bucket,
 } from '../../utils/carrierEvolution'
 import {
-  bestiaryIndex, setBit, isBitSet,
-  countUnlocked, milestonesCrossed,
+  bestiaryIndex,
+  setBit,
+  isBitSet,
+  countUnlocked,
+  milestonesCrossed,
 } from './bestiary'
 import { MAX_LEVEL } from '../../game/config/frogs'
 
@@ -40,7 +58,12 @@ export interface CosmicSliceActions {
   ) => void
 
   // Phase 14: atomic apply (decrement serum + addCarrier + clear selection)
-  applySerum: (frogId: string, element: Element, rarity: Rarity, level: number) => void
+  applySerum: (
+    frogId: string,
+    element: Element,
+    rarity: Rarity,
+    level: number,
+  ) => void
 
   // Box actions (Phase 15)
   addBox: (params: {
@@ -108,7 +131,11 @@ export interface CosmicSliceActions {
    *   - addCarrier(new) с feedCount=0, stabilized=false, ceiling=S-bucket
    *   - setBestiaryBit(element, rarity, newLevel)
    */
-  mergeCarriers: (aFrogId: string, bFrogId: string, newFrogId: string) => CarrierData | null
+  mergeCarriers: (
+    aFrogId: string,
+    bFrogId: string,
+    newFrogId: string,
+  ) => CarrierData | null
 
   /**
    * Phase 17 (CARRIER-11, UX-11): dispose carrier — 30% chance return 1 серум
@@ -134,7 +161,7 @@ export interface CosmicSliceActions {
   setLastActiveTab: (tab: CosmicTab) => void
 
   // Crew (Phase 16)
-  consumeMissionCredit: () => boolean  // false если cap достигнут
+  consumeMissionCredit: () => boolean // false если cap достигнут
   resetCrewIfNewDay: () => void
 
   // Phase 16: Ship navigation (REQ SHIP-01..06)
@@ -241,9 +268,10 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
 
     // Phase 15 (REQ BOX-01/02): create box с auto-generated id, push в inventory.
     addBox: (params) => {
-      const id = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
-        ? crypto.randomUUID()
-        : `box-${Date.now()}-${Math.floor(Math.random() * 1e9)}`
+      const id =
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : `box-${Date.now()}-${Math.floor(Math.random() * 1e9)}`
       const box: BoxData = {
         id,
         planetId: params.planetId,
@@ -286,14 +314,18 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
       }
       const nextBoxes = s.boxes.filter((b) => b.id !== id)
       const nextPity = updatePity(
-        { rare: s.pityCounters.rare, epic: s.pityCounters.epic, legendary: s.pityCounters.legendary },
+        {
+          rare: s.pityCounters.rare,
+          epic: s.pityCounters.epic,
+          legendary: s.pityCounters.legendary,
+        },
         rarity,
       )
       set({
         serums: nextSerums,
         boxes: nextBoxes,
         pityCounters: {
-          common: s.pityCounters.common,  // unchanged placeholder
+          common: s.pityCounters.common, // unchanged placeholder
           rare: nextPity.rare,
           epic: nextPity.epic,
           legendary: nextPity.legendary,
@@ -315,7 +347,7 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
     openBox: (id) => {
       const s = get()
       const box = s.boxes.find((b) => b.id === id)
-      if (!box || box.opened) return  // idempotent guard
+      if (!box || box.opened) return // idempotent guard
 
       const pity: PityState = {
         rare: s.pityCounters.rare,
@@ -337,16 +369,18 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
         boxes: s.boxes.map((b) => (b.id === id ? { ...b, opened: true } : b)),
         serums: nextSerums,
         pityCounters: {
-          common: 0,  // placeholder (always 0)
+          common: 0, // placeholder (always 0)
           rare: newPity.rare,
           epic: newPity.epic,
           legendary: newPity.legendary,
         },
-        hasOpenedAnyBox: true,  // REQ UX-09 + tutorial first-box trigger
+        hasOpenedAnyBox: true, // REQ UX-09 + tutorial first-box trigger
       })
 
       eventBus.emit('cosmic:box-opened', {
-        boxId: id, rarity: rolled, element: box.element,
+        boxId: id,
+        rarity: rolled,
+        element: box.element,
       })
     },
 
@@ -390,7 +424,10 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
 
       // Defensive: если ceiling всё ещё undefined (corrupted state), abort.
       if (ceiling === undefined) {
-        console.warn('[feedCarrier] carrier missing ceiling after feedCount > 0', carrier)
+        console.warn(
+          '[feedCarrier] carrier missing ceiling after feedCount > 0',
+          carrier,
+        )
         return null
       }
 
@@ -403,7 +440,7 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
 
       const now = Date.now()
       const roll: RollResult = { type: outcome.result, timestamp: now }
-      const nextHistory = (carrier.rollHistory ?? []).slice(-23).concat(roll)  // T-17-03: clamp 24
+      const nextHistory = (carrier.rollHistory ?? []).slice(-23).concat(roll) // T-17-03: clamp 24
 
       const updatedCarrier: CarrierData = {
         ...carrier,
@@ -420,7 +457,11 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
       // Bestiary write-through на success / stabilize (новый combo unlocked).
       let nextBitset = s.bestiaryBitset
       if (outcome.result === 'success' || outcome.result === 'stabilize') {
-        const bIdx = bestiaryIndex(carrier.element, carrier.rarity, outcome.newLevel)
+        const bIdx = bestiaryIndex(
+          carrier.element,
+          carrier.rarity,
+          outcome.newLevel,
+        )
         if (bIdx >= 0) nextBitset = setBit(s.bestiaryBitset, bIdx)
       }
 
@@ -456,10 +497,12 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
       const bLevel = b.level ?? 1
       if (aLevel !== bLevel) return null
 
-      const newLevel = Math.min(aLevel + 1, MAX_LEVEL)  // T-17-07 clamp
+      const newLevel = Math.min(aLevel + 1, MAX_LEVEL) // T-17-07 clamp
       const newCeiling = ceilingForBucket(a.rarity, 'S')
 
-      const remaining = s.carriers.filter((c) => c.frogId !== aFrogId && c.frogId !== bFrogId)
+      const remaining = s.carriers.filter(
+        (c) => c.frogId !== aFrogId && c.frogId !== bFrogId,
+      )
       const newCarrier: CarrierData = {
         frogId: newFrogId,
         element: a.element,
@@ -472,7 +515,8 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
       }
 
       const idx = bestiaryIndex(a.element, a.rarity, newLevel)
-      const nextBitset = idx >= 0 ? setBit(s.bestiaryBitset, idx) : s.bestiaryBitset
+      const nextBitset =
+        idx >= 0 ? setBit(s.bestiaryBitset, idx) : s.bestiaryBitset
 
       set({
         carriers: [...remaining, newCarrier],
@@ -497,7 +541,8 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
           ...s.serums,
           [carrier.element]: {
             ...s.serums[carrier.element],
-            [carrier.rarity]: (s.serums[carrier.element][carrier.rarity] ?? 0) + 1,
+            [carrier.rarity]:
+              (s.serums[carrier.element][carrier.rarity] ?? 0) + 1,
           },
         }
       }
@@ -532,7 +577,9 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
           coinsToAdd += reward.amount
         } else if (reward.type === 'serum') {
           // Random element для milestone-granted serum (REQ BESTIARY-07).
-          const randElem = ELEMENTS[Math.floor(Math.random() * ELEMENTS.length)] as Element
+          const randElem = ELEMENTS[
+            Math.floor(Math.random() * ELEMENTS.length)
+          ] as Element
           const cur = nextSerums[randElem][reward.rarity]
           nextSerums = {
             ...nextSerums,
@@ -551,7 +598,10 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
 
       // Coins grant via root slice (gameStore composit).
       if (coinsToAdd > 0) {
-        const root = get() as unknown as { addGold?: (n: number) => void; addCoins?: (n: number) => void }
+        const root = get() as unknown as {
+          addGold?: (n: number) => void
+          addCoins?: (n: number) => void
+        }
         // gameStore использует addGold (Phase 1.0) — fallback на addCoins для совместимости.
         if (typeof root.addGold === 'function') {
           root.addGold(coinsToAdd)
@@ -580,7 +630,9 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
     consumeMissionCredit: () => {
       const state = get()
       if (state.crew.missionsToday >= DAILY_CAP) return false
-      set({ crew: { ...state.crew, missionsToday: state.crew.missionsToday + 1 } })
+      set({
+        crew: { ...state.crew, missionsToday: state.crew.missionsToday + 1 },
+      })
       return true
     },
 
@@ -611,7 +663,7 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
       if (s.ship === null) {
         set({ ship: { state: 'docked', planetId: 'home' } })
       }
-      const ship = get().ship!  // non-null после ensure
+      const ship = get().ship! // non-null после ensure
 
       // No-op: уже docked у этой planet (UI должен предотвратить — но slice idempotent)
       if (ship.state === 'docked' && ship.planetId === toPlanetId) return
@@ -621,7 +673,7 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
 
       if (ship.state === 'docked') {
         const fromPlanet = findPlanetById(ship.planetId)
-        if (!fromPlanet) return  // corrupt — bail
+        if (!fromPlanet) return // corrupt — bail
         fromPos = { x: fromPlanet.x, y: fromPlanet.y }
         fromPlanetIdForUi = ship.planetId
       } else {
@@ -634,7 +686,7 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
           if (!fp) return
           fromPos = { x: fp.x, y: fp.y }
         }
-        fromPlanetIdForUi = ship.fromPlanetId  // сохраняем UI «откуда летели изначально»
+        fromPlanetIdForUi = ship.fromPlanetId // сохраняем UI «откуда летели изначально»
       }
 
       const dist = planetDistance(fromPos, { x: target.x, y: target.y })
@@ -653,7 +705,7 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
 
     arriveShipAt: (planetId) => {
       const target = findPlanetById(planetId)
-      if (!target) return  // защита от mismatch
+      if (!target) return // защита от mismatch
       set({ ship: { state: 'docked', planetId } })
       // Notify subscribers (ShipTab, MissionOverlay enabler).
       eventBus.emit('cosmic:ship-arrived', { planetId })
@@ -687,7 +739,11 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
     investigatePlanet: (planetId, result) => {
       const s = get()
       // Guard 1: ship docked at this planet?
-      if (!s.ship || s.ship.state !== 'docked' || s.ship.planetId !== planetId) {
+      if (
+        !s.ship ||
+        s.ship.state !== 'docked' ||
+        s.ship.planetId !== planetId
+      ) {
         return false
       }
       // Guard 2: cap reached? (CREW-04 — pity растёт ТОЛЬКО при consume)
@@ -699,7 +755,7 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
 
       // Resolve element (MISSION-06)
       const { archetype, mainRaceType } = planetElementInputs(planet)
-      const element = elementFromPlanet(archetype, mainRaceType) ?? 'fire'  // fallback
+      const element = elementFromPlanet(archetype, mainRaceType) ?? 'fire' // fallback
 
       // Phase 15 update: bonusRarity now enum 'rare'|'epic'|'legendary'|undefined
       // (was number 0..0.15). Map: perfect → 'epic', good → 'rare', fail → undefined.
@@ -727,7 +783,7 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
             bonusRarity: bonusRarityEnum,
           },
         ],
-        hasFirstMission: true,  // unlock Боксы tab (REQ UX-09)
+        hasFirstMission: true, // unlock Боксы tab (REQ UX-09)
       })
 
       // Side-effect: toast (вне set, в том же tick).

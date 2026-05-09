@@ -11,9 +11,9 @@ import type { CarrierData, RollResult, Rarity } from '../store/cosmic/types'
 
 /** Range уровней внутри каждого rarity tier (locked, REQ CARRIER-05). */
 export const TIER_RANGES: Record<Rarity, { min: number; max: number }> = {
-  common:    { min: 1,  max: 6  },
-  rare:      { min: 7,  max: 12 },
-  epic:      { min: 13, max: 18 },
+  common: { min: 1, max: 6 },
+  rare: { min: 7, max: 12 },
+  epic: { min: 13, max: 18 },
   legendary: { min: 19, max: 24 },
 }
 
@@ -21,7 +21,10 @@ export const TIER_RANGES: Record<Rarity, { min: number; max: number }> = {
 export type Bucket = 'S' | 'A' | 'B' | 'C'
 
 export const TIER_BUCKET_WEIGHTS: Record<Bucket, number> = {
-  S: 5, A: 15, B: 30, C: 50,
+  S: 5,
+  A: 15,
+  B: 30,
+  C: 50,
 }
 
 /** Concrete level из bucket. C → uniform random в нижних 3 уровнях tier. */
@@ -32,9 +35,12 @@ export function ceilingForBucket(
 ): number {
   const { min, max } = TIER_RANGES[rarity]
   switch (bucket) {
-    case 'S': return max
-    case 'A': return max - 1
-    case 'B': return max - 2
+    case 'S':
+      return max
+    case 'A':
+      return max - 1
+    case 'B':
+      return max - 2
     case 'C': {
       const lo = min
       const hi = max - 3
@@ -50,7 +56,7 @@ export function bucketOfCeiling(rarity: Rarity, ceiling: number): Bucket {
   if (ceiling === max - 1) return 'A'
   if (ceiling === max - 2) return 'B'
   if (ceiling >= min && ceiling <= max - 3) return 'C'
-  return 'C'  // defensive — tampered/invalid ceiling treated as worst
+  return 'C' // defensive — tampered/invalid ceiling treated as worst
 }
 
 /** Weighted random bucket S/A/B/C with bias 5/15/30/50. */
@@ -58,7 +64,8 @@ export function rollBucket(rng: () => number = Math.random): Bucket {
   const r = rng() * 100
   if (r < TIER_BUCKET_WEIGHTS.S) return 'S'
   if (r < TIER_BUCKET_WEIGHTS.S + TIER_BUCKET_WEIGHTS.A) return 'A'
-  if (r < TIER_BUCKET_WEIGHTS.S + TIER_BUCKET_WEIGHTS.A + TIER_BUCKET_WEIGHTS.B) return 'B'
+  if (r < TIER_BUCKET_WEIGHTS.S + TIER_BUCKET_WEIGHTS.A + TIER_BUCKET_WEIGHTS.B)
+    return 'B'
   return 'C'
 }
 
@@ -75,19 +82,26 @@ export function shouldForceS(
   rarity: Rarity,
 ): boolean {
   const stabilized = carriers
-    .filter((c) => c.stabilized && c.rarity === rarity && c.ceiling !== undefined)
+    .filter(
+      (c) => c.stabilized && c.rarity === rarity && c.ceiling !== undefined,
+    )
     .map((c) => {
       const lastStab = (c.rollHistory ?? [])
-        .filter((r): r is RollResult & { type: 'stabilize' } => r.type === 'stabilize')
+        .filter(
+          (r): r is RollResult & { type: 'stabilize' } =>
+            r.type === 'stabilize',
+        )
         .pop()
       return { c, ts: lastStab?.timestamp ?? 0 }
     })
-    .filter((entry) => entry.ts > 0)  // exclude stabilized без recorded timestamp
+    .filter((entry) => entry.ts > 0) // exclude stabilized без recorded timestamp
     .sort((a, b) => a.ts - b.ts)
 
   if (stabilized.length < 3) return false
   const lastThree = stabilized.slice(-3)
-  return lastThree.every(({ c }) => bucketOfCeiling(c.rarity, c.ceiling!) === 'C')
+  return lastThree.every(
+    ({ c }) => bucketOfCeiling(c.rarity, c.ceiling!) === 'C',
+  )
 }
 
 /** Pre-determine ceiling для нового carrier при первом feed. */
@@ -128,7 +142,11 @@ export function rollFeedOutcome(
     return { result: 'stabilize', newLevel: carrier.level, newStabilized: true }
   }
   if (rng() < SUCCESS_RATE_BASE) {
-    return { result: 'success', newLevel: carrier.level + 1, newStabilized: false }
+    return {
+      result: 'success',
+      newLevel: carrier.level + 1,
+      newStabilized: false,
+    }
   }
   return { result: 'fail', newLevel: carrier.level, newStabilized: false }
 }

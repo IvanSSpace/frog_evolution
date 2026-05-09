@@ -14,7 +14,7 @@ const CascadeRevealModal = lazy(() => import('./CascadeRevealModal'))
 const BulkOpenSummary = lazy(() => import('./BulkOpenSummary'))
 
 interface Props {
-  onClose: () => void  // Закрыть Cosmic Hub при tap на box / open-all
+  onClose: () => void // Закрыть Cosmic Hub при tap на box / open-all
 }
 
 export function BoxesTab({ onClose }: Props) {
@@ -34,7 +34,7 @@ export function BoxesTab({ onClose }: Props) {
 
   const handleTapBox = (box: BoxData) => {
     setActiveBox(box)
-    onClose()  // close Cosmic Hub чтобы CascadeRevealModal видна на full screen
+    onClose() // close Cosmic Hub чтобы CascadeRevealModal видна на full screen
   }
 
   const handleCascadeComplete = () => {
@@ -59,7 +59,7 @@ export function BoxesTab({ onClose }: Props) {
     }
 
     setBulkResults(results)
-    onClose()  // close Hub чтобы BulkOpenSummary видна fullscreen
+    onClose() // close Hub чтобы BulkOpenSummary видна fullscreen
   }
 
   const handleBulkClose = () => {
@@ -128,9 +128,7 @@ interface BoxCardProps {
 function BoxCard({ box, onTap }: BoxCardProps) {
   const { t } = useTranslation()
   const tint = ELEMENT_TINT[box.element] ?? '#888'
-  const bonusBadge = box.bonusRarity
-    ? t(`rarity.${box.bonusRarity}`)
-    : null
+  const bonusBadge = box.bonusRarity ? t(`rarity.${box.bonusRarity}`) : null
 
   return (
     <button
@@ -143,7 +141,9 @@ function BoxCard({ box, onTap }: BoxCardProps) {
       <div
         className="flex-shrink-0 flex items-center justify-center"
         style={{
-          width: 40, height: 40, borderRadius: '50%',
+          width: 40,
+          height: 40,
+          borderRadius: '50%',
           backgroundColor: tint,
           boxShadow: `0 0 12px ${tint}aa`,
         }}
@@ -184,8 +184,11 @@ function BoxCard({ box, onTap }: BoxCardProps) {
 
 function bonusBadgeColor(rarity: 'rare' | 'epic' | 'legendary'): string {
   switch (rarity) {
-    case 'rare': return '#3b82f6'
-    case 'epic': return '#a855f7'
-    case 'legendary': return '#f59e0b'
+    case 'rare':
+      return '#3b82f6'
+    case 'epic':
+      return '#a855f7'
+    case 'legendary':
+      return '#f59e0b'
   }
 }

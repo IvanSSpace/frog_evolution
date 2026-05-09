@@ -8,7 +8,12 @@
 //   __clearSerums()
 
 import { useGameStore } from '../store/gameStore'
-import { ELEMENTS, RARITIES, type Element, type Rarity } from '../store/cosmic/types'
+import {
+  ELEMENTS,
+  RARITIES,
+  type Element,
+  type Rarity,
+} from '../store/cosmic/types'
 
 declare global {
   interface Window {
@@ -20,7 +25,8 @@ declare global {
 
 if (import.meta.env.DEV) {
   window.__addSerum = (element, rarity, count = 1) => {
-    const e: Element = element ?? ELEMENTS[Math.floor(Math.random() * ELEMENTS.length)]
+    const e: Element =
+      element ?? ELEMENTS[Math.floor(Math.random() * ELEMENTS.length)]
     const r: Rarity = rarity ?? 'common'
     useGameStore.getState().addSerum(e, r, count)
     console.log('[dev] serum added', { element: e, rarity: r, count })
@@ -54,5 +60,7 @@ if (import.meta.env.DEV) {
     else console.table(rows)
   }
 
-  console.log('[dev Phase 14] helpers: __addSerum(element?, rarity?, count?), __clearSerums, __listSerums')
+  console.log(
+    '[dev Phase 14] helpers: __addSerum(element?, rarity?, count?), __clearSerums, __listSerums',
+  )
 }

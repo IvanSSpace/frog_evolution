@@ -15,9 +15,14 @@ export function WelcomeBackModal({ earned, hours, onClose }: Props) {
       onClick={onClose}
       className="ff-backdrop ff-fade"
       style={{
-        position: 'fixed', inset: 0, zIndex: 200,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        pointerEvents: 'auto', padding: 16,
+        position: 'fixed',
+        inset: 0,
+        zIndex: 200,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        pointerEvents: 'auto',
+        padding: 16,
       }}
     >
       <div
@@ -36,8 +41,10 @@ export function WelcomeBackModal({ earned, hours, onClose }: Props) {
             🚜
           </div>
 
-          <h2 className="ff-display ff-stroke-white mt-3 text-2xl"
-              style={{ color: '#15803d', letterSpacing: 1 }}>
+          <h2
+            className="ff-display ff-stroke-white mt-3 text-2xl"
+            style={{ color: '#15803d', letterSpacing: 1 }}
+          >
             {t('welcome_back.title')}
           </h2>
           <p className="ff-body mt-2 text-sm font-bold text-emerald-800">
@@ -55,10 +62,20 @@ export function WelcomeBackModal({ earned, hours, onClose }: Props) {
               fontSize: 26,
               letterSpacing: 0.5,
               textShadow: '0 2px 0 rgba(255,255,255,0.45)',
-              boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.5), 0 6px 0 rgba(0,0,0,0.25)',
+              boxShadow:
+                'inset 0 2px 0 rgba(255,255,255,0.5), 0 6px 0 rgba(0,0,0,0.25)',
             }}
           >
-            <span>💩</span>
+            <img
+              src="/goo.svg"
+              style={{
+                width: '1.3em',
+                height: '1.3em',
+                display: 'inline-block',
+                verticalAlign: 'middle',
+              }}
+              alt=""
+            />
             <span>+{fmt(earned)}</span>
           </div>
 

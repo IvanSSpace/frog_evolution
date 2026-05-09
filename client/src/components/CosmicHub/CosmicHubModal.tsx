@@ -5,12 +5,12 @@
 // sentinel флаги hasFirstFeed/hasFirstMission. DEV-mode unlocks all.
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import type { CosmicTab } from '../../store/cosmic/types'
 import { useGameStore } from '../../store/gameStore'
 import { ShipTab } from './ShipTab'
-import { BoxesTab } from './BoxesTab'
-import { SerumsTab } from './SerumsTab'
+import { SerumInventoryTab } from './SerumInventoryTab'
 import { BestiaryTab } from './BestiaryTab'
 import { CarriersTab } from './CarriersTab'
 import { PityCounterDisplay } from './PityCounterDisplay'
@@ -21,13 +21,16 @@ function getInitialTab(): CosmicTab {
   try {
     const saved = sessionStorage.getItem(SESSION_KEY)
     if (
-      saved === 'scouts' || saved === 'boxes' ||
-      saved === 'serums' || saved === 'bestiary' ||
+      saved === 'scouts' ||
+      saved === 'boxes' ||
+      saved === 'bestiary' ||
       saved === 'carriers'
     ) {
       return saved
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return 'scouts'
 }
 
@@ -36,7 +39,7 @@ interface Tab {
   label: string
   icon: string
   enabled: boolean
-  lockReason?: string  // i18n key для tooltip
+  lockReason?: string // i18n key для tooltip
 }
 
 interface Props {
@@ -65,16 +68,10 @@ export default function CosmicHubModal({ onClose }: Props) {
     },
     {
       id: 'boxes',
-      label: t('cosmic_hub.tab_boxes'),
-      icon: '🎁',
+      label: t('cosmic_hub.tab_station'),
+      icon: '🏭',
       enabled: isDev || hasFirstMission,
       lockReason: 'cosmic_hub.lock_first_mission',
-    },
-    {
-      id: 'serums',
-      label: t('cosmic_hub.tab_serums'),
-      icon: '🧪',
-      enabled: true,  // всегда unlock'ed
     },
     {
       id: 'bestiary',
@@ -104,39 +101,46 @@ export default function CosmicHubModal({ onClose }: Props) {
 
   // Сохраняем активный таб в sessionStorage при каждом переключении (COSMIC-HUB-07)
   useEffect(() => {
-    try { sessionStorage.setItem(SESSION_KEY, activeTab) } catch { /* ignore */ }
+    try {
+      sessionStorage.setItem(SESSION_KEY, activeTab)
+    } catch {
+      /* ignore */
+    }
   }, [activeTab])
-
-  // Блокировать скролл body пока modal открыт
-  useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
-  }, [])
 
   const renderTab = () => {
     switch (activeTab) {
       // Phase 16: ShipTab заменил ScoutsTab. Pass onClose чтобы «Открыть карту» / «Изучить» закрывали Hub.
-      case 'scouts':   return <ShipTab onClose={onClose} />
+      case 'scouts':
+        return <ShipTab onClose={onClose} />
       // Phase 15: BoxesTab закрывает Hub при tap на box / open-all чтобы
-       // CascadeRevealModal / BulkOpenSummary показывались на full screen.
-      case 'boxes':    return <BoxesTab onClose={onClose} />
-      // Phase 14: SerumsTab закрывает modal на select / drag-start, чтобы юзер
-      // мог видеть ферму с halos.
-      case 'serums':   return <SerumsTab onClose={onClose} />
-      case 'bestiary': return <BestiaryTab />
-      case 'carriers': return <CarriersTab />
+      // CascadeRevealModal / BulkOpenSummary показывались на full screen.
+      case 'boxes':
+        return <SerumInventoryTab onClose={onClose} />
+      case 'bestiary':
+        return <BestiaryTab />
+      case 'carriers':
+        return <CarriersTab />
     }
   }
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-gray-950"
-      style={{ touchAction: 'none' }}
+      className="fixed z-50 flex flex-col bg-gray-950"
+      style={{
+        top: '12%',
+        bottom: '13%',
+        left: 0,
+        right: 0,
+        touchAction: 'manipulation',
+        pointerEvents: 'auto',
+      }}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2 flex-shrink-0">
-        <span className="text-white font-bold text-lg">🧬 {t('cosmic_hub.title')}</span>
+        <span className="text-white font-bold text-lg">
+          🧬 {t('cosmic_hub.title')}
+        </span>
         <button
           onClick={onClose}
           className="text-white/60 text-2xl leading-none px-2"
@@ -153,7 +157,9 @@ export default function CosmicHubModal({ onClose }: Props) {
             key={tab.id}
             onClick={() => tab.enabled && setActiveTab(tab.id)}
             disabled={!tab.enabled}
-            title={!tab.enabled && tab.lockReason ? t(tab.lockReason) : undefined}
+            title={
+              !tab.enabled && tab.lockReason ? t(tab.lockReason) : undefined
+            }
             className={[
               'flex-1 py-2 text-xs font-medium transition-colors',
               !tab.enabled
@@ -163,19 +169,20 @@ export default function CosmicHubModal({ onClose }: Props) {
                   : 'text-white/40',
             ].join(' ')}
           >
-            <span className="block text-base">{tab.enabled ? tab.icon : '🔒'}</span>
+            <span className="block text-base">
+              {tab.enabled ? tab.icon : '🔒'}
+            </span>
             <span>{tab.label}</span>
           </button>
         ))}
       </div>
 
       {/* Tab content */}
-      <div className="flex-1 overflow-y-auto">
-        {renderTab()}
-      </div>
+      <div className="flex-1 overflow-y-auto">{renderTab()}</div>
 
       {/* Phase 19-03 (UX-01): progressive pity counter footer */}
       <PityCounterDisplay />
-    </div>
+    </div>,
+    document.body,
   )
 }

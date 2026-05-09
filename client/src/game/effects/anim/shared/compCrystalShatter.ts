@@ -27,10 +27,14 @@ export function compCrystalShatter(
     sprite.add(shard)
     scene.tweens.add({
       targets: shard,
-      x: Math.cos(ang) * dist, y: Math.sin(ang) * dist,
+      x: Math.cos(ang) * dist,
+      y: Math.sin(ang) * dist,
       rotation: shard.rotation + (rng() - 0.5) * Math.PI * 2,
-      alpha: 0, scaleX: 0.4, scaleY: 0.4,
-      duration: dur + rng() * 200, ease: pickEase(rng),
+      alpha: 0,
+      scaleX: 0.4,
+      scaleY: 0.4,
+      duration: dur + rng() * 200,
+      ease: pickEase(rng),
       onComplete: () => shard.destroy(),
     })
   }

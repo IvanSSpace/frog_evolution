@@ -76,7 +76,10 @@ export function DiscoveryModal({ level, onClose }: Props) {
         }}
       />
 
-      <div className="relative flex flex-col items-center" style={{ zIndex: 1 }}>
+      <div
+        className="relative flex flex-col items-center"
+        style={{ zIndex: 1 }}
+      >
         <div
           className="ff-display text-center leading-[0.95] ff-pop"
           style={{
@@ -97,7 +100,8 @@ export function DiscoveryModal({ level, onClose }: Props) {
           alt={frogName}
           className="w-44 h-44 object-contain mt-6"
           style={{
-            filter: 'drop-shadow(0 0 32px rgba(255,230,100,0.85)) drop-shadow(0 8px 12px rgba(0,0,0,0.45))',
+            filter:
+              'drop-shadow(0 0 32px rgba(255,230,100,0.85)) drop-shadow(0 8px 12px rgba(0,0,0,0.45))',
             animation: 'discFloat 2.4s ease-in-out infinite',
           }}
         />
@@ -112,8 +116,10 @@ export function DiscoveryModal({ level, onClose }: Props) {
             border: '4px solid #064e3b',
             borderBottomWidth: 7,
             borderRadius: 18,
-            boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.4), 0 6px 0 rgba(0,0,0,0.35), 0 10px 24px rgba(0,0,0,0.45)',
-            textShadow: '0 3px 0 rgba(0,0,0,0.4), 0 0 16px rgba(255,255,255,0.3)',
+            boxShadow:
+              'inset 0 2px 0 rgba(255,255,255,0.4), 0 6px 0 rgba(0,0,0,0.35), 0 10px 24px rgba(0,0,0,0.45)',
+            textShadow:
+              '0 3px 0 rgba(0,0,0,0.4), 0 0 16px rgba(255,255,255,0.3)',
           }}
         >
           {frogName}
@@ -122,7 +128,12 @@ export function DiscoveryModal({ level, onClose }: Props) {
         <button
           onClick={onClose}
           className="ff-btn ff-btn-yellow mt-8 text-lg"
-          style={{ paddingLeft: 28, paddingRight: 28, paddingTop: 12, paddingBottom: 12 }}
+          style={{
+            paddingLeft: 28,
+            paddingRight: 28,
+            paddingTop: 12,
+            paddingBottom: 12,
+          }}
         >
           {t('discovery.continue')}
         </button>

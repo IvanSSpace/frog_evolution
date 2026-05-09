@@ -5,16 +5,17 @@
 
 import type Phaser from 'phaser'
 import type { Element } from '../../../store/cosmic/types'
-import {
-  compRing, compSparkle, compFlash, compStarBurst,
-} from '../anim/shared'
+import { compRing, compSparkle, compFlash, compStarBurst } from '../anim/shared'
 import type { SharedBgSystem } from '../anim/shared/types'
 import { ELEMENT_TINTS } from './elementTints'
 import { archetypeForElement } from './elementMapping'
 
 // Elements которые получают дополнительный compStarBurst — "magical" feel.
 const STAR_BURST_ELEMENTS: ReadonlySet<Element> = new Set<Element>([
-  'arcane', 'war', 'void', 'plasma',
+  'arcane',
+  'war',
+  'void',
+  'plasma',
 ])
 
 const BURST_SIZE = 14
@@ -39,7 +40,8 @@ export function burstEffect(
   const fakeSys: SharedBgSystem = {
     id: `burst-${element}`,
     name: element,
-    x: 0, y: 0,
+    x: 0,
+    y: 0,
     type: 'resource',
     archetype: archetypeForElement(element),
     color: tint,

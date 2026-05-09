@@ -26,9 +26,30 @@ export const ELEMENT_TINT: Record<Element, string> = {
   void: '#1f2937',
 }
 
+// SVG бутылочка genBottle.svg изначально зелёная (~hue 130°).
+// hue-rotate сдвигает цвет жидкости под каждый элемент.
+export const ELEMENT_BOTTLE_FILTER: Record<Element, string> = {
+  fire: 'hue-rotate(-106deg) saturate(1.6)',
+  ice: 'hue-rotate(61deg) saturate(0.9) brightness(1.1)',
+  water: 'hue-rotate(69deg) saturate(1.1)',
+  forest: 'hue-rotate(12deg)',
+  toxic: 'hue-rotate(15deg) brightness(1.1)',
+  plasma: 'hue-rotate(-82deg) saturate(1.8)',
+  shadow: 'saturate(0) brightness(0.8)',
+  crystal: 'hue-rotate(120deg) saturate(0.5) brightness(1.3)',
+  desert: 'hue-rotate(-82deg) brightness(1.2)',
+  gas: 'hue-rotate(-100deg) saturate(1.1) brightness(1.15)',
+  ring: 'hue-rotate(122deg) saturate(0.7) brightness(1.2)',
+  binary: 'hue-rotate(-130deg) saturate(0.8) brightness(1.25)',
+  arcane: 'hue-rotate(130deg) saturate(1.2)',
+  mechanical: 'hue-rotate(-82deg) saturate(0.9) brightness(1.2)',
+  war: 'hue-rotate(-130deg) saturate(2) brightness(0.9)',
+  void: 'saturate(0) brightness(0.25)',
+}
+
 interface Props {
   rarity: Rarity
-  counts: Record<Element, number>  // serums[element][rarity] для всех 16 elements
+  counts: Record<Element, number> // serums[element][rarity] для всех 16 elements
   onSelect: (element: Element, rarity: Rarity) => void
   // Phase 14 (SERUM-11): desktop drag-start callback. Mobile (touch) → ignored.
   onPointerDragStart?: (
@@ -39,7 +60,12 @@ interface Props {
   ) => void
 }
 
-export function ElementGrid({ rarity, counts, onSelect, onPointerDragStart }: Props) {
+export function ElementGrid({
+  rarity,
+  counts,
+  onSelect,
+  onPointerDragStart,
+}: Props) {
   const { t } = useTranslation()
   return (
     <div className="grid grid-cols-4 gap-2">
@@ -54,7 +80,7 @@ export function ElementGrid({ rarity, counts, onSelect, onPointerDragStart }: Pr
               if (!active) return
               // Mobile / touch → tap path (onClick) handles это.
               if (e.pointerType === 'touch') return
-              e.preventDefault()  // отменяет text-selection
+              e.preventDefault() // отменяет text-selection
               onPointerDragStart?.(el, rarity, e.clientX, e.clientY)
             }}
             onClick={() => {
@@ -62,26 +88,32 @@ export function ElementGrid({ rarity, counts, onSelect, onPointerDragStart }: Pr
               hapticImpact('light')
               onSelect(el, rarity)
             }}
-            className={
-              `relative aspect-square rounded-lg border-2 flex items-center justify-center
-               ${active
-                 ? 'bg-white/5 hover:bg-white/10 active:scale-95 transition'
-                 : 'border-white/10 bg-white/5 opacity-30 cursor-default'
-              }`
-            }
+            className={`relative aspect-square rounded-lg border-2 flex items-center justify-center
+               ${
+                 active
+                   ? 'bg-white/5 hover:bg-white/10 active:scale-95 transition'
+                   : 'border-white/10 bg-white/5 opacity-30 cursor-default'
+               }`}
             style={{ borderColor: active ? ELEMENT_TINT[el] : undefined }}
             aria-label={t(`cosmic_hub.elements.${el}`)}
             title={t(`cosmic_hub.elements.${el}`)}
           >
-            {/* Tint dot — основной visual */}
-            <div
-              className="w-6 h-6 rounded-full"
-              style={{ backgroundColor: ELEMENT_TINT[el] }}
+            <img
+              src="/genBottle.svg"
+              alt={el}
+              style={{
+                height: 36,
+                width: 'auto',
+                filter: ELEMENT_BOTTLE_FILTER[el],
+                pointerEvents: 'none',
+              }}
             />
             {count > 0 && (
-              <span className="absolute -top-1 -right-1 bg-emerald-500 text-white
+              <span
+                className="absolute -top-1 -right-1 bg-emerald-500 text-white
                              text-xs font-bold rounded-full min-w-[1.25rem] h-5
-                             flex items-center justify-center px-1">
+                             flex items-center justify-center px-1"
+              >
                 {count > 99 ? '99+' : count}
               </span>
             )}

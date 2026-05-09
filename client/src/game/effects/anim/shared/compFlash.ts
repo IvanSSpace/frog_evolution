@@ -22,9 +22,13 @@ export function compFlash(
       scene.tweens.add({
         targets: sprite,
         alpha: { from: 1, to: 1 - depth },
-        yoyo: true, duration: localDur,
+        yoyo: true,
+        duration: localDur,
         ease: 'Sine.easeInOut',
-        onComplete: () => { cur++; doBlink() },
+        onComplete: () => {
+          cur++
+          doBlink()
+        },
       })
     }
     doBlink()
@@ -32,7 +36,8 @@ export function compFlash(
     scene.tweens.add({
       targets: sprite,
       alpha: { from: 1, to: 1 - depth },
-      yoyo: true, duration: dur,
+      yoyo: true,
+      duration: dur,
       ease: 'Sine.easeInOut',
       repeat: blinks - 1,
     })

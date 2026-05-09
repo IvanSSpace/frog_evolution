@@ -21,22 +21,29 @@ export const UPGRADE_CONFIG = {
   dropSpeed: {
     maxLevel: 8,
     intervalMs: [10000, 7000, 5500, 4500, 3500, 2800, 2200, 1800, 1500],
-    costs: [99, 3_000, 20_000, 130_000, 900_000, 5_800_000, 58_000_000, 580_000_000],
+    costs: [
+      99, 3_000, 20_000, 130_000, 900_000, 5_800_000, 58_000_000, 580_000_000,
+    ],
   },
   tractor: {
     maxLevel: 8,
     capHours: [0, 2, 3, 3.5, 4, 4.5, 5, 5.5, 6],
-    costs: [550, 3_500, 23_000, 250_000, 2_500_000, 25_000_000, 250_000_000, 2_500_000_000],
+    costs: [
+      550, 3_500, 23_000, 250_000, 2_500_000, 25_000_000, 250_000_000,
+      2_500_000_000,
+    ],
     // incomePerSec масштабируется с уровнем (×3 за уровень)
     incomePerSecByLevel: [0, 30, 100, 300, 1000, 3000, 10000, 30000, 100000],
   },
   magnet: {
     maxLevel: 6,
     spawnIntervalMs: [Infinity, 10000, 8000, 7000, 6000, 5000, 4000],
-    durationMs:      [0,        5000,  5500,  6000,  6500,  7000,  8000],
-    radiusPx:        [0,        120,   140,   160,   180,   200,   220],
-    mergesPerCycle:  [0,        1,     1,     2,     2,     3,     3],
-    costs: [300_000, 1_000_000, 5_000_000, 50_000_000, 500_000_000, 5_000_000_000],
+    durationMs: [0, 5000, 5500, 6000, 6500, 7000, 8000],
+    radiusPx: [0, 120, 140, 160, 180, 200, 220],
+    mergesPerCycle: [0, 1, 1, 2, 2, 3, 3],
+    costs: [
+      300_000, 1_000_000, 5_000_000, 50_000_000, 500_000_000, 5_000_000_000,
+    ],
   },
   crateQuality: {
     maxLevel: 5,
@@ -50,16 +57,8 @@ export const UPGRADE_CONFIG = {
     // 30 - 1.5*level, округлено: 30→15 за 10 уровней
     counts: [30, 29, 27, 26, 24, 23, 21, 20, 18, 17, 15],
     costs: [
-      50_000,
-      150_000,
-      750_000,
-      3_800_000,
-      18_000_000,
-      90_000_000,
-      450_000_000,
-      1_500_000_000,
-      6_000_000_000,
-      20_000_000_000,
+      50_000, 150_000, 750_000, 3_800_000, 18_000_000, 90_000_000, 450_000_000,
+      1_500_000_000, 6_000_000_000, 20_000_000_000,
     ],
   },
 } as const
@@ -123,15 +122,15 @@ export function getTractorIncomePerSec(level: number): number {
 export interface LocationConfig {
   id: number
   name: string
-  minLevel: number      // первый уровень лягушек
-  maxLevel: number      // последний уровень
+  minLevel: number // первый уровень лягушек
+  maxLevel: number // последний уровень
   magnetEnabled: boolean // работает ли магнит на этой локации
 }
 
 export const LOCATIONS: readonly LocationConfig[] = [
-  { id: 1, name: 'Болото', minLevel: 1,  maxLevel: 6,  magnetEnabled: true  },
-  { id: 2, name: 'Лес',    minLevel: 7,  maxLevel: 12, magnetEnabled: false },
-  { id: 3, name: 'Земля',  minLevel: 13, maxLevel: 18, magnetEnabled: false },
+  { id: 1, name: 'Болото', minLevel: 1, maxLevel: 6, magnetEnabled: true },
+  { id: 2, name: 'Лес', minLevel: 7, maxLevel: 12, magnetEnabled: false },
+  { id: 3, name: 'Земля', minLevel: 13, maxLevel: 18, magnetEnabled: false },
   { id: 4, name: 'Космос', minLevel: 19, maxLevel: 24, magnetEnabled: false },
 ] as const
 
@@ -160,7 +159,13 @@ const COSMIC_KEY = 'frog_evolution_cosmic'
 const STORAGE_VERSION = 19
 
 function loadUpgrades(): Upgrades {
-  const defaults: Upgrades = { dropSpeed: 0, tractor: 0, magnet: 0, crateQuality: 0, rareBoxSpeed: 0 }
+  const defaults: Upgrades = {
+    dropSpeed: 0,
+    tractor: 0,
+    magnet: 0,
+    crateQuality: 0,
+    rareBoxSpeed: 0,
+  }
   try {
     const ver = parseInt(localStorage.getItem(VERSION_KEY) ?? '0', 10)
     if (ver !== STORAGE_VERSION) {
@@ -170,26 +175,41 @@ function loadUpgrades(): Upgrades {
       localStorage.removeItem(DISCOVERED_KEY)
       localStorage.removeItem(LOCATION_FROGS_KEY)
       localStorage.removeItem(LOCATION_KEY)
-      localStorage.removeItem(COSMIC_KEY)  // Phase 11: cosmic slice
+      localStorage.removeItem(COSMIC_KEY) // Phase 11: cosmic slice
       return defaults
     }
     const raw = localStorage.getItem(UPGRADES_KEY)
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Upgrades>
       return {
-        dropSpeed:    Math.min(parsed.dropSpeed    ?? 0, UPGRADE_CONFIG.dropSpeed.maxLevel),
-        tractor:      Math.min(parsed.tractor      ?? 0, UPGRADE_CONFIG.tractor.maxLevel),
-        magnet:       Math.min(parsed.magnet       ?? 0, UPGRADE_CONFIG.magnet.maxLevel),
-        crateQuality: Math.min(parsed.crateQuality ?? 0, UPGRADE_CONFIG.crateQuality.maxLevel),
-        rareBoxSpeed: Math.min(parsed.rareBoxSpeed ?? 0, UPGRADE_CONFIG.rareBoxSpeed.maxLevel),
+        dropSpeed: Math.min(
+          parsed.dropSpeed ?? 0,
+          UPGRADE_CONFIG.dropSpeed.maxLevel,
+        ),
+        tractor: Math.min(parsed.tractor ?? 0, UPGRADE_CONFIG.tractor.maxLevel),
+        magnet: Math.min(parsed.magnet ?? 0, UPGRADE_CONFIG.magnet.maxLevel),
+        crateQuality: Math.min(
+          parsed.crateQuality ?? 0,
+          UPGRADE_CONFIG.crateQuality.maxLevel,
+        ),
+        rareBoxSpeed: Math.min(
+          parsed.rareBoxSpeed ?? 0,
+          UPGRADE_CONFIG.rareBoxSpeed.maxLevel,
+        ),
       }
     }
-  } catch {/* ignore */}
+  } catch {
+    /* ignore */
+  }
   return defaults
 }
 
 function saveUpgrades(u: Upgrades) {
-  try { localStorage.setItem(UPGRADES_KEY, JSON.stringify(u)) } catch {/* ignore */}
+  try {
+    localStorage.setItem(UPGRADES_KEY, JSON.stringify(u))
+  } catch {
+    /* ignore */
+  }
 }
 
 function loadFrogPurchases(): number[] {
@@ -205,24 +225,38 @@ function loadFrogPurchases(): number[] {
         return arr
       }
     }
-  } catch {/* ignore */}
+  } catch {
+    /* ignore */
+  }
   return new Array(MAX_LEVEL).fill(0)
 }
 
 function saveFrogPurchases(arr: number[]) {
-  try { localStorage.setItem(PURCHASES_KEY, JSON.stringify(arr)) } catch {/* ignore */}
+  try {
+    localStorage.setItem(PURCHASES_KEY, JSON.stringify(arr))
+  } catch {
+    /* ignore */
+  }
 }
 
 function loadDiscovered(): number[] {
   // ТЕСТ-РЕЖИМ: при каждой загрузке возвращаем [1..5] игнорируя сохранения,
   // чтобы можно было повторно проверять модалки 6 и 7 на каждом рефреше.
   // Также чистим сохранение чтобы не накапливалось.
-  try { localStorage.removeItem(DISCOVERED_KEY) } catch {/* ignore */}
+  try {
+    localStorage.removeItem(DISCOVERED_KEY)
+  } catch {
+    /* ignore */
+  }
   return [1, 2, 3, 4, 5]
 }
 
 function saveDiscovered(arr: number[]) {
-  try { localStorage.setItem(DISCOVERED_KEY, JSON.stringify(arr)) } catch {/* ignore */}
+  try {
+    localStorage.setItem(DISCOVERED_KEY, JSON.stringify(arr))
+  } catch {
+    /* ignore */
+  }
 }
 
 const LOCATION_KEY = 'frog_evolution_current_location'
@@ -236,10 +270,16 @@ function loadLocationFrogs(): number[][] {
     if (raw) {
       const parsed = JSON.parse(raw)
       if (Array.isArray(parsed) && parsed.length === LOCATIONS.length) {
-        return parsed.map((arr) => Array.isArray(arr) ? arr.filter((n) => Number.isFinite(n) && n > 0) : [])
+        return parsed.map((arr) =>
+          Array.isArray(arr)
+            ? arr.filter((n) => Number.isFinite(n) && n > 0)
+            : [],
+        )
       }
     }
-  } catch {/* ignore */}
+  } catch {
+    /* ignore */
+  }
   // Дефолт: Болото — L1..L6 по одной, остальные пустые
   const arr: number[][] = LOCATIONS.map(() => [])
   arr[0] = [1, 2, 3, 4, 5, 6]
@@ -247,7 +287,11 @@ function loadLocationFrogs(): number[][] {
 }
 
 function saveLocationFrogsArr(arr: number[][]) {
-  try { localStorage.setItem(LOCATION_FROGS_KEY, JSON.stringify(arr)) } catch {/* ignore */}
+  try {
+    localStorage.setItem(LOCATION_FROGS_KEY, JSON.stringify(arr))
+  } catch {
+    /* ignore */
+  }
 }
 
 function loadCurrentLocation(): number {
@@ -255,24 +299,36 @@ function loadCurrentLocation(): number {
     const raw = localStorage.getItem(LOCATION_KEY)
     const n = parseInt(raw ?? '1', 10)
     if (Number.isFinite(n) && LOCATIONS.some((l) => l.id === n)) return n
-  } catch {/* ignore */}
+  } catch {
+    /* ignore */
+  }
   return 1
 }
 
 function saveCurrentLocation(id: number) {
-  try { localStorage.setItem(LOCATION_KEY, String(id)) } catch {/* ignore */}
+  try {
+    localStorage.setItem(LOCATION_KEY, String(id))
+  } catch {
+    /* ignore */
+  }
 }
 
 function loadMagnetEnabled(): boolean {
   try {
     const raw = localStorage.getItem(MAGNET_ENABLED_KEY)
     if (raw === 'false') return false
-  } catch {/* ignore */}
+  } catch {
+    /* ignore */
+  }
   return true // по умолчанию включён
 }
 
 function saveMagnetEnabled(v: boolean) {
-  try { localStorage.setItem(MAGNET_ENABLED_KEY, String(v)) } catch {/* ignore */}
+  try {
+    localStorage.setItem(MAGNET_ENABLED_KEY, String(v))
+  } catch {
+    /* ignore */
+  }
 }
 
 // ============== COSMIC SLICE PERSIST ==============
@@ -293,7 +349,10 @@ function loadCosmicSlice(): CosmicPersist {
     // fromPlanetId+toPlanetId+startedAt+arrivesAt. Any mismatch → null (re-init).
     let ship: CosmicPersist['ship'] = null
     if (parsed.ship && typeof parsed.ship === 'object' && parsed.ship.state) {
-      if (parsed.ship.state === 'docked' && typeof parsed.ship.planetId === 'string') {
+      if (
+        parsed.ship.state === 'docked' &&
+        typeof parsed.ship.planetId === 'string'
+      ) {
         ship = { state: 'docked', planetId: parsed.ship.planetId }
       } else if (
         parsed.ship.state === 'transit' &&
@@ -319,26 +378,39 @@ function loadCosmicSlice(): CosmicPersist {
     // soft migration (хотя STORAGE_VERSION bump 17→18 already wipes COSMIC_KEY).
     const boxesRaw = Array.isArray(parsed.boxes) ? parsed.boxes : []
     const boxes = boxesRaw
-      .filter((b: unknown): b is Record<string, unknown> =>
-        typeof b === 'object' && b !== null
-        && typeof (b as Record<string, unknown>).id === 'string'
-        && typeof (b as Record<string, unknown>).element === 'string'
-        && typeof (b as Record<string, unknown>).opened === 'boolean')
+      .filter(
+        (b: unknown): b is Record<string, unknown> =>
+          typeof b === 'object' &&
+          b !== null &&
+          typeof (b as Record<string, unknown>).id === 'string' &&
+          typeof (b as Record<string, unknown>).element === 'string' &&
+          typeof (b as Record<string, unknown>).opened === 'boolean',
+      )
       .map((b: Record<string, unknown>) => ({
         id: b.id as string,
         planetId: typeof b.planetId === 'string' ? (b.planetId as string) : '',
-        planetName: typeof b.planetName === 'string' ? (b.planetName as string) : '',
-        archetype: typeof b.archetype === 'string'
-          ? (b.archetype as string)
-          : (typeof b.sourceArchetype === 'string' ? (b.sourceArchetype as string) : ''),
+        planetName:
+          typeof b.planetName === 'string' ? (b.planetName as string) : '',
+        archetype:
+          typeof b.archetype === 'string'
+            ? (b.archetype as string)
+            : typeof b.sourceArchetype === 'string'
+              ? (b.sourceArchetype as string)
+              : '',
         // Trust persisted element string — Element type is a union of 16 lowercase keys.
         // Invalid values cleaned by STORAGE_VERSION wipe; runtime fallback в UI (ELEMENT_TINT default).
         element: b.element as BoxData['element'],
         opened: b.opened as boolean,
-        createdAt: typeof b.createdAt === 'number' ? (b.createdAt as number) : Date.now(),
-        bonusRarity: (b.bonusRarity === 'rare' || b.bonusRarity === 'epic' || b.bonusRarity === 'legendary')
-          ? (b.bonusRarity as 'rare' | 'epic' | 'legendary')
-          : undefined,
+        createdAt:
+          typeof b.createdAt === 'number'
+            ? (b.createdAt as number)
+            : Date.now(),
+        bonusRarity:
+          b.bonusRarity === 'rare' ||
+          b.bonusRarity === 'epic' ||
+          b.bonusRarity === 'legendary'
+            ? (b.bonusRarity as 'rare' | 'epic' | 'legendary')
+            : undefined,
       })) as CosmicPersist['boxes']
 
     return {
@@ -349,33 +421,60 @@ function loadCosmicSlice(): CosmicPersist {
       carriers: Array.isArray(parsed.carriers) ? parsed.carriers : [],
       // Phase 17: bitset extended 24 → 192 bytes (1536 bits). Pad-only migration.
       bestiaryBitset: (() => {
-        if (!Array.isArray(parsed.bestiaryBitset)) return defaults.bestiaryBitset
+        if (!Array.isArray(parsed.bestiaryBitset))
+          return defaults.bestiaryBitset
         const arr = parsed.bestiaryBitset.slice()
         while (arr.length < 192) arr.push(0)
         return arr.slice(0, 192)
       })(),
       pityCounters: parsed.pityCounters ?? defaults.pityCounters,
-      lastActiveTab: (
-        parsed.lastActiveTab === 'scouts' || parsed.lastActiveTab === 'boxes' ||
-        parsed.lastActiveTab === 'serums' || parsed.lastActiveTab === 'bestiary' ||
+      lastActiveTab:
+        parsed.lastActiveTab === 'scouts' ||
+        parsed.lastActiveTab === 'boxes' ||
+        parsed.lastActiveTab === 'bestiary' ||
         parsed.lastActiveTab === 'carriers'
-      ) ? parsed.lastActiveTab : 'scouts',
+          ? parsed.lastActiveTab
+          : 'scouts',
       crew: parsed.crew ?? defaults.crew,
       // Phase 14: transient UI state — всегда defaults на load (НЕ из persisted state).
       serumDragActive: false,
       selectedSerum: null,
       // Phase 16: progressive disclosure flags (REQ UX-09)
-      hasFirstFeed: typeof parsed.hasFirstFeed === 'boolean' ? parsed.hasFirstFeed : defaults.hasFirstFeed,
-      hasFirstMission: typeof parsed.hasFirstMission === 'boolean' ? parsed.hasFirstMission : defaults.hasFirstMission,
-      hasOpenedAnyBox: typeof parsed.hasOpenedAnyBox === 'boolean' ? parsed.hasOpenedAnyBox : defaults.hasOpenedAnyBox,
+      hasFirstFeed:
+        typeof parsed.hasFirstFeed === 'boolean'
+          ? parsed.hasFirstFeed
+          : defaults.hasFirstFeed,
+      hasFirstMission:
+        typeof parsed.hasFirstMission === 'boolean'
+          ? parsed.hasFirstMission
+          : defaults.hasFirstMission,
+      hasOpenedAnyBox:
+        typeof parsed.hasOpenedAnyBox === 'boolean'
+          ? parsed.hasOpenedAnyBox
+          : defaults.hasOpenedAnyBox,
       // Phase 18 (REQ BESTIARY-07): 576-cells visual unlock placeholder.
-      frogExclusiveUnlocked: typeof parsed.frogExclusiveUnlocked === 'boolean' ? parsed.frogExclusiveUnlocked : defaults.frogExclusiveUnlocked,
+      frogExclusiveUnlocked:
+        typeof parsed.frogExclusiveUnlocked === 'boolean'
+          ? parsed.frogExclusiveUnlocked
+          : defaults.frogExclusiveUnlocked,
       // Phase 19-05 (UX-08): tutorial seen-flags. Each field optional → fallback на default false.
       tutorialState: {
-        seenFirstBox: typeof parsed.tutorialState?.seenFirstBox === 'boolean' ? parsed.tutorialState.seenFirstBox : false,
-        seenFirstSerum: typeof parsed.tutorialState?.seenFirstSerum === 'boolean' ? parsed.tutorialState.seenFirstSerum : false,
-        seenFirstFeed: typeof parsed.tutorialState?.seenFirstFeed === 'boolean' ? parsed.tutorialState.seenFirstFeed : false,
-        seenFirstStabilize: typeof parsed.tutorialState?.seenFirstStabilize === 'boolean' ? parsed.tutorialState.seenFirstStabilize : false,
+        seenFirstBox:
+          typeof parsed.tutorialState?.seenFirstBox === 'boolean'
+            ? parsed.tutorialState.seenFirstBox
+            : false,
+        seenFirstSerum:
+          typeof parsed.tutorialState?.seenFirstSerum === 'boolean'
+            ? parsed.tutorialState.seenFirstSerum
+            : false,
+        seenFirstFeed:
+          typeof parsed.tutorialState?.seenFirstFeed === 'boolean'
+            ? parsed.tutorialState.seenFirstFeed
+            : false,
+        seenFirstStabilize:
+          typeof parsed.tutorialState?.seenFirstStabilize === 'boolean'
+            ? parsed.tutorialState.seenFirstStabilize
+            : false,
       },
       // Phase 16: latestShipPos НЕ persisted — всегда null на load.
       latestShipPos: null,
@@ -399,19 +498,29 @@ function loadNumberFormat(): NumberFormat {
   try {
     const raw = localStorage.getItem(FORMAT_KEY)
     if (raw === 'short') return 'short'
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return 'full'
 }
 
 function saveNumberFormat(f: NumberFormat) {
-  try { localStorage.setItem(FORMAT_KEY, f) } catch { /* ignore */ }
+  try {
+    localStorage.setItem(FORMAT_KEY, f)
+  } catch {
+    /* ignore */
+  }
 }
 
 const _initialFormat = loadNumberFormat()
 setGlobalFormat(_initialFormat)
 
 export function saveSessionTimestamp() {
-  try { localStorage.setItem(SESSION_KEY, Date.now().toString()) } catch {/* ignore */}
+  try {
+    localStorage.setItem(SESSION_KEY, Date.now().toString())
+  } catch {
+    /* ignore */
+  }
 }
 
 export function getOfflineElapsedMs(): number {
@@ -421,12 +530,16 @@ export function getOfflineElapsedMs(): number {
     const last = parseInt(raw, 10)
     if (!Number.isFinite(last)) return 0
     return Math.max(0, Date.now() - last)
-  } catch { return 0 }
+  } catch {
+    return 0
+  }
 }
 
 // ============== STORE ==============
 
-export type BuyFrogResult = { ok: true } | { ok: false; reason: 'noGold' | 'capFull' | 'invalid' }
+export type BuyFrogResult =
+  | { ok: true }
+  | { ok: false; reason: 'noGold' | 'capFull' | 'invalid' }
 
 interface GameStateBase {
   gold: number
@@ -495,7 +608,13 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   upgrades: loadUpgrades(),
   devResetUpgrades: () => {
-    const defaults: Upgrades = { dropSpeed: 0, tractor: 0, magnet: 0, crateQuality: 0, rareBoxSpeed: 0 }
+    const defaults: Upgrades = {
+      dropSpeed: 0,
+      tractor: 0,
+      magnet: 0,
+      crateQuality: 0,
+      rareBoxSpeed: 0,
+    }
     saveUpgrades(defaults)
     set({ upgrades: defaults })
   },
@@ -535,11 +654,12 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   magnetEnabled: loadMagnetEnabled(),
-  toggleMagnet: () => set((s) => {
-    const next = !s.magnetEnabled
-    saveMagnetEnabled(next)
-    return { magnetEnabled: next }
-  }),
+  toggleMagnet: () =>
+    set((s) => {
+      const next = !s.magnetEnabled
+      saveMagnetEnabled(next)
+      return { magnetEnabled: next }
+    }),
 
   currentLocation: loadCurrentLocation(),
   setCurrentLocation: (id) => {
@@ -550,25 +670,29 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   locationFrogs: loadLocationFrogs(),
-  addFrogToLocation: (locationId, level) => set((s) => {
-    const idx = locationId - 1
-    if (idx < 0 || idx >= s.locationFrogs.length) return {}
-    const next = s.locationFrogs.map((arr, i) => i === idx ? [...arr, level] : arr)
-    saveLocationFrogsArr(next)
-    return { locationFrogs: next }
-  }),
-  removeFrogFromLocation: (locationId, level) => set((s) => {
-    const idx = locationId - 1
-    if (idx < 0 || idx >= s.locationFrogs.length) return {}
-    const i = s.locationFrogs[idx].indexOf(level)
-    if (i < 0) return {}
-    const next = s.locationFrogs.map((arr, j) => {
-      if (j !== idx) return arr
-      return [...arr.slice(0, i), ...arr.slice(i + 1)]
-    })
-    saveLocationFrogsArr(next)
-    return { locationFrogs: next }
-  }),
+  addFrogToLocation: (locationId, level) =>
+    set((s) => {
+      const idx = locationId - 1
+      if (idx < 0 || idx >= s.locationFrogs.length) return {}
+      const next = s.locationFrogs.map((arr, i) =>
+        i === idx ? [...arr, level] : arr,
+      )
+      saveLocationFrogsArr(next)
+      return { locationFrogs: next }
+    }),
+  removeFrogFromLocation: (locationId, level) =>
+    set((s) => {
+      const idx = locationId - 1
+      if (idx < 0 || idx >= s.locationFrogs.length) return {}
+      const i = s.locationFrogs[idx].indexOf(level)
+      if (i < 0) return {}
+      const next = s.locationFrogs.map((arr, j) => {
+        if (j !== idx) return arr
+        return [...arr.slice(0, i), ...arr.slice(i + 1)]
+      })
+      saveLocationFrogsArr(next)
+      return { locationFrogs: next }
+    }),
 
   frogPurchases: loadFrogPurchases(),
   buyFrog: (level) => {
@@ -578,7 +702,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (!cfg.availableInShop) return { ok: false, reason: 'invalid' }
     // Cap проверяем на родной локации лягушки, а не на текущей сцене
     const targetLocFrogs = state.locationFrogs[cfg.location - 1] ?? []
-    if (targetLocFrogs.length >= ENTITY_CAP) return { ok: false, reason: 'capFull' }
+    if (targetLocFrogs.length >= ENTITY_CAP)
+      return { ok: false, reason: 'capFull' }
     const purchases = state.frogPurchases[level - 1] ?? 0
     const cost = getFrogPrice(level, purchases)
     if (state.gold < cost) return { ok: false, reason: 'noGold' }

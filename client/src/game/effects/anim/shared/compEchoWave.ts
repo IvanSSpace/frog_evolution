@@ -21,8 +21,12 @@ export function compEchoWave(
       ring.strokeCircle(0, 0, sys.size * 1.05)
       sprite.add(ring)
       scene.tweens.add({
-        targets: ring, scaleX: 2.5 + rng() * 0.5, scaleY: 2.5 + rng() * 0.5, alpha: 0,
-        duration: 700, ease: 'Sine.easeOut',
+        targets: ring,
+        scaleX: 2.5 + rng() * 0.5,
+        scaleY: 2.5 + rng() * 0.5,
+        alpha: 0,
+        duration: 700,
+        ease: 'Sine.easeOut',
         onComplete: () => ring.destroy(),
       })
     })

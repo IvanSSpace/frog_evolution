@@ -17,7 +17,11 @@ interface Props {
 }
 
 export function BestiaryDetailModal({
-  element, rarity, level, unlocked, onClose,
+  element,
+  rarity,
+  level,
+  unlocked,
+  onClose,
 }: Props) {
   const { t } = useTranslation()
 
@@ -34,11 +38,15 @@ export function BestiaryDetailModal({
   useEffect(() => {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
+    return () => {
+      document.body.style.overflow = prev
+    }
   }, [])
 
   // Element label key — `cosmic_hub.elements.{element}` (existing namespace).
-  const elementLabel = t(`cosmic_hub.elements.${element}`, { defaultValue: element })
+  const elementLabel = t(`cosmic_hub.elements.${element}`, {
+    defaultValue: element,
+  })
 
   return (
     <div
@@ -66,17 +74,20 @@ export function BestiaryDetailModal({
           <>
             {/* Preview canvas */}
             <div className="flex justify-center mb-4 mt-2">
-              <AwakenedPreviewCanvas element={element} rarity={rarity} size={160} />
+              <AwakenedPreviewCanvas
+                element={element}
+                rarity={rarity}
+                size={160}
+              />
             </div>
 
             {/* Element + rarity + level header */}
             <div className="text-center mb-3">
               <div className="text-xs uppercase tracking-wide text-white/50">
-                {t(RARITY_LABEL_KEY[rarity])} · {t('cosmic_hub.bestiary.level_label', { level })}
+                {t(RARITY_LABEL_KEY[rarity])} ·{' '}
+                {t('cosmic_hub.bestiary.level_label', { level })}
               </div>
-              <div className="text-xl font-bold mt-1">
-                {elementLabel}
-              </div>
+              <div className="text-xl font-bold mt-1">{elementLabel}</div>
             </div>
 
             {/* Sound-style label (REQ BESTIARY-09) */}
@@ -118,7 +129,8 @@ export function BestiaryDetailModal({
 
             <div className="text-center mb-2">
               <div className="text-xs uppercase tracking-wide text-white/40">
-                {t(RARITY_LABEL_KEY[rarity])} · {t('cosmic_hub.bestiary.level_label', { level })}
+                {t(RARITY_LABEL_KEY[rarity])} ·{' '}
+                {t('cosmic_hub.bestiary.level_label', { level })}
               </div>
               <div className="text-lg font-bold mt-1 text-white/50">
                 {t('cosmic_hub.bestiary.locked_title')}

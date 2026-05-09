@@ -10,8 +10,10 @@
 
 const RARITIES = ['common', 'rare', 'epic', 'legendary']
 const TIER_RANGES = {
-  common: { min: 1, max: 6 }, rare: { min: 7, max: 12 },
-  epic: { min: 13, max: 18 }, legendary: { min: 19, max: 24 },
+  common: { min: 1, max: 6 },
+  rare: { min: 7, max: 12 },
+  epic: { min: 13, max: 18 },
+  legendary: { min: 19, max: 24 },
 }
 const WEIGHTS = { S: 5, A: 15, B: 30, C: 50 }
 
@@ -35,7 +37,10 @@ function bucketOfCeiling(rarity, ceiling) {
 function shouldForceS(history, rarity) {
   // history = array of { rarity, ceiling, stabilized, ts }
   const stab = history
-    .filter((h) => h.stabilized && h.rarity === rarity && h.ceiling != null && h.ts > 0)
+    .filter(
+      (h) =>
+        h.stabilized && h.rarity === rarity && h.ceiling != null && h.ts > 0,
+    )
     .sort((a, b) => a.ts - b.ts)
   if (stab.length < 3) return false
   const last = stab.slice(-3)
@@ -48,13 +53,20 @@ function testDistribution() {
   const N = 10_000
   const counts = { S: 0, A: 0, B: 0, C: 0 }
   for (let i = 0; i < N; i++) counts[rollBucket(Math.random)]++
-  const pct = { S: counts.S / N * 100, A: counts.A / N * 100, B: counts.B / N * 100, C: counts.C / N * 100 }
+  const pct = {
+    S: (counts.S / N) * 100,
+    A: (counts.A / N) * 100,
+    B: (counts.B / N) * 100,
+    C: (counts.C / N) * 100,
+  }
   console.log('[distribution] over', N, 'rolls:', pct)
   const expected = WEIGHTS
-  const tol = 5  // ±5% absolute (≈ √N standard error * margin)
+  const tol = 5 // ±5% absolute (≈ √N standard error * margin)
   for (const k of ['S', 'A', 'B', 'C']) {
     if (Math.abs(pct[k] - expected[k]) > tol) {
-      throw new Error(`bucket ${k} drift: ${pct[k]}% vs expected ${expected[k]}% (tol ${tol}%)`)
+      throw new Error(
+        `bucket ${k} drift: ${pct[k]}% vs expected ${expected[k]}% (tol ${tol}%)`,
+      )
     }
   }
   console.log('[distribution] PASS — all buckets within ±' + tol + '%')
@@ -67,9 +79,9 @@ function testStreak() {
   let forcedSCount = 0
   for (let i = 0; i < RUNS; i++) {
     const history = [
-      { rarity: 'common', ceiling: 1, stabilized: true, ts: 1 },  // C
-      { rarity: 'common', ceiling: 2, stabilized: true, ts: 2 },  // C
-      { rarity: 'common', ceiling: 3, stabilized: true, ts: 3 },  // C
+      { rarity: 'common', ceiling: 1, stabilized: true, ts: 1 }, // C
+      { rarity: 'common', ceiling: 2, stabilized: true, ts: 2 }, // C
+      { rarity: 'common', ceiling: 3, stabilized: true, ts: 3 }, // C
     ]
     if (!shouldForceS(history, 'common')) {
       throw new Error('expected force S after 3xC')
@@ -81,7 +93,7 @@ function testStreak() {
   // Negative: 2C+1A → no force
   const mixed = [
     { rarity: 'common', ceiling: 1, stabilized: true, ts: 1 },
-    { rarity: 'common', ceiling: 5, stabilized: true, ts: 2 },  // A
+    { rarity: 'common', ceiling: 5, stabilized: true, ts: 2 }, // A
     { rarity: 'common', ceiling: 3, stabilized: true, ts: 3 },
   ]
   if (shouldForceS(mixed, 'common')) {
@@ -94,16 +106,33 @@ function testStreak() {
 
 function testBestiaryIndex() {
   const ELEMENTS = [
-    'fire','ice','water','forest','toxic','plasma','shadow','crystal',
-    'desert','gas','ring','binary','arcane','mechanical','war','void',
+    'fire',
+    'ice',
+    'water',
+    'forest',
+    'toxic',
+    'plasma',
+    'shadow',
+    'crystal',
+    'desert',
+    'gas',
+    'ring',
+    'binary',
+    'arcane',
+    'mechanical',
+    'war',
+    'void',
   ]
   const seen = new Set()
   for (const e of ELEMENTS) {
     for (const r of RARITIES) {
       for (let lvl = 1; lvl <= 24; lvl++) {
-        const idx = (lvl - 1) * 64 + ELEMENTS.indexOf(e) * 4 + RARITIES.indexOf(r)
-        if (idx < 0 || idx >= 1536) throw new Error(`oob: ${e}/${r}/L${lvl} → ${idx}`)
-        if (seen.has(idx)) throw new Error(`collision at ${e}/${r}/L${lvl} → idx ${idx}`)
+        const idx =
+          (lvl - 1) * 64 + ELEMENTS.indexOf(e) * 4 + RARITIES.indexOf(r)
+        if (idx < 0 || idx >= 1536)
+          throw new Error(`oob: ${e}/${r}/L${lvl} → ${idx}`)
+        if (seen.has(idx))
+          throw new Error(`collision at ${e}/${r}/L${lvl} → idx ${idx}`)
         seen.add(idx)
       }
     }
@@ -120,7 +149,7 @@ function testDisposeRate() {
   for (let i = 0; i < N; i++) {
     if (Math.random() < 0.3) recovered++
   }
-  const rate = recovered / N * 100
+  const rate = (recovered / N) * 100
   console.log('[dispose] over', N, 'trials:', rate.toFixed(1) + '%')
   const tol = 5
   if (Math.abs(rate - 30) > tol) {

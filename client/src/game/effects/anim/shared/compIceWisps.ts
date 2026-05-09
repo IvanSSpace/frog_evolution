@@ -24,17 +24,22 @@ export function compIceWisps(
     for (let s = 0; s <= segs; s++) {
       const t = s / segs
       const r = sys.size * (1.2 + t * 0.4)
-      const a = phase + direction * t * Math.PI / 2
-      const x = Math.cos(a) * r, y = Math.sin(a) * r
-      if (s === 0) wisp.moveTo(x, y); else wisp.lineTo(x, y)
+      const a = phase + (direction * t * Math.PI) / 2
+      const x = Math.cos(a) * r,
+        y = Math.sin(a) * r
+      if (s === 0) wisp.moveTo(x, y)
+      else wisp.lineTo(x, y)
     }
     wisp.strokePath()
     wisp.scale = 0.5
     sprite.add(wisp)
     scene.tweens.add({
-      targets: wisp, scale: 1.2, alpha: 0,
-      rotation: direction * Math.PI / 4,
-      duration: dur + rng() * 150, ease: 'Sine.easeOut',
+      targets: wisp,
+      scale: 1.2,
+      alpha: 0,
+      rotation: (direction * Math.PI) / 4,
+      duration: dur + rng() * 150,
+      ease: 'Sine.easeOut',
       onComplete: () => wisp.destroy(),
     })
   }

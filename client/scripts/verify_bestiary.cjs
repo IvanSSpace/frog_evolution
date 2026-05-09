@@ -4,9 +4,22 @@
 // Run: node client/scripts/verify_bestiary.cjs
 
 const ELEMENTS = [
-  'fire', 'ice', 'water', 'forest', 'toxic', 'plasma',
-  'shadow', 'crystal', 'desert', 'gas', 'ring', 'binary',
-  'arcane', 'mechanical', 'war', 'void',
+  'fire',
+  'ice',
+  'water',
+  'forest',
+  'toxic',
+  'plasma',
+  'shadow',
+  'crystal',
+  'desert',
+  'gas',
+  'ring',
+  'binary',
+  'arcane',
+  'mechanical',
+  'war',
+  'void',
 ]
 const RARITIES = ['common', 'rare', 'epic', 'legendary']
 const BESTIARY_BIT_COUNT = 1536
@@ -40,7 +53,10 @@ function countUnlocked(bitset) {
   const limit = Math.min(bitset.length, BESTIARY_BYTE_COUNT)
   for (let i = 0; i < limit; i++) {
     let b = bitset[i] ?? 0
-    while (b) { b &= b - 1; count++ }
+    while (b) {
+      b &= b - 1
+      count++
+    }
   }
   return count
 }
@@ -67,16 +83,21 @@ const BESTIARY_MILESTONES = [
 
 function milestonesCrossed(prev, next) {
   if (next <= prev) return []
-  return BESTIARY_MILESTONES.filter((m) => prev < m.threshold && next >= m.threshold)
+  return BESTIARY_MILESTONES.filter(
+    (m) => prev < m.threshold && next >= m.threshold,
+  )
 }
 
 // =================== TESTS ===================
 
 function testCountUnlocked() {
-  if (countUnlocked(new Array(192).fill(0)) !== 0) throw new Error('empty count != 0')
-  if (countUnlocked(new Array(192).fill(0xff)) !== 1536) throw new Error('full count != 1536')
+  if (countUnlocked(new Array(192).fill(0)) !== 0)
+    throw new Error('empty count != 0')
+  if (countUnlocked(new Array(192).fill(0xff)) !== 1536)
+    throw new Error('full count != 1536')
   // Legacy Phase 11 size (24 bytes): 24 × 8 = 192 bits
-  if (countUnlocked(new Array(24).fill(0xff)) !== 192) throw new Error('legacy 24×8 != 192')
+  if (countUnlocked(new Array(24).fill(0xff)) !== 192)
+    throw new Error('legacy 24×8 != 192')
   let bs = new Array(192).fill(0)
   bs = setBit(bs, 0)
   if (countUnlocked(bs) !== 1) throw new Error('single bit count != 1')
@@ -92,23 +113,31 @@ function testUnlockedInLocation() {
   for (let i = 0; i < 5; i++) {
     bs = setBit(bs, bestiaryIndex(ELEMENTS[i], 'common', 1))
   }
-  if (unlockedInLocation(bs, 'common') !== 5) throw new Error('common count != 5')
+  if (unlockedInLocation(bs, 'common') !== 5)
+    throw new Error('common count != 5')
   if (unlockedInLocation(bs, 'rare') !== 0) throw new Error('rare count != 0')
   for (let i = 0; i < 3; i++) {
     bs = setBit(bs, bestiaryIndex(ELEMENTS[i], 'legendary', 24))
   }
-  if (unlockedInLocation(bs, 'legendary') !== 3) throw new Error('legendary count != 3')
-  if (unlockedInLocation(bs, 'common') !== 5) throw new Error('common changed unexpectedly')
+  if (unlockedInLocation(bs, 'legendary') !== 3)
+    throw new Error('legendary count != 3')
+  if (unlockedInLocation(bs, 'common') !== 5)
+    throw new Error('common changed unexpectedly')
   console.log('[unlockedInLocation] PASS')
 }
 
 function testMilestones() {
   // Cross 10 only
   let crossed = milestonesCrossed(9, 10)
-  if (crossed.length !== 1 || crossed[0].threshold !== 10) throw new Error('cross 10 fail')
+  if (crossed.length !== 1 || crossed[0].threshold !== 10)
+    throw new Error('cross 10 fail')
   // Cross 10 + 24 in one jump
   crossed = milestonesCrossed(9, 25)
-  if (crossed.length !== 2 || crossed[0].threshold !== 10 || crossed[1].threshold !== 24) {
+  if (
+    crossed.length !== 2 ||
+    crossed[0].threshold !== 10 ||
+    crossed[1].threshold !== 24
+  ) {
     throw new Error('multi-cross fail')
   }
   // No cross
@@ -120,9 +149,11 @@ function testMilestones() {
   crossed = milestonesCrossed(0, 600)
   if (crossed.length !== 4) throw new Error('all-4 cross fail')
   // Boundary: prev exactly at threshold should not retrigger
-  if (milestonesCrossed(10, 11).length !== 0) throw new Error('boundary retrigger fail')
+  if (milestonesCrossed(10, 11).length !== 0)
+    throw new Error('boundary retrigger fail')
   // No-op when next < prev
-  if (milestonesCrossed(100, 50).length !== 0) throw new Error('reverse direction fail')
+  if (milestonesCrossed(100, 50).length !== 0)
+    throw new Error('reverse direction fail')
   console.log('[milestones] PASS')
 }
 
@@ -130,7 +161,8 @@ function testBitsetSize() {
   // setBit auto-pads legacy 24 → 192
   let bs = new Array(24).fill(0)
   bs = setBit(bs, 1500)
-  if (bs.length !== 192) throw new Error(`setBit didn't pad to 192: got ${bs.length}`)
+  if (bs.length !== 192)
+    throw new Error(`setBit didn't pad to 192: got ${bs.length}`)
   if (countUnlocked(bs) !== 1) throw new Error('after pad, count wrong')
   // Boundary: idx 1535 (last valid)
   bs = new Array(192).fill(0)
@@ -138,7 +170,8 @@ function testBitsetSize() {
   if (!readBit(bs, 1535)) throw new Error('bit 1535 not set')
   // Boundary: idx 1536 (out of range) — should be no-op
   bs = setBit(bs, 1536)
-  if (countUnlocked(bs) !== 1) throw new Error('out-of-range idx affected count')
+  if (countUnlocked(bs) !== 1)
+    throw new Error('out-of-range idx affected count')
   console.log('[bitset size] PASS')
 }
 

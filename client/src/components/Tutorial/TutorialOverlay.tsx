@@ -9,26 +9,39 @@
 //   first-feed       → hasFirstFeed && !seenFirstFeed
 //   first-stabilize  → carriers.some(c => c.stabilized) && !seenFirstStabilize
 
+import { createPortal } from 'react-dom'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useGameStore } from '../../store/gameStore'
+import { eventBus } from '../../store/eventBus'
 import { TUTORIAL_STEPS, type TutorialStep } from './tutorialSteps'
 import type { TutorialStepId } from '../../store/cosmic/types'
 
 export function TutorialOverlay() {
   const { t } = useTranslation()
 
-  // Sentinel флаги
+  const [starMapOpen, setStarMapOpen] = useState(false)
+  useEffect(() => {
+    const onOpen = () => setStarMapOpen(true)
+    const onClose = () => setStarMapOpen(false)
+    eventBus.on('starmap:open', onOpen)
+    eventBus.on('starmap:close', onClose)
+    return () => {
+      eventBus.off('starmap:open', onOpen)
+      eventBus.off('starmap:close', onClose)
+    }
+  }, [])
+
   const hasOpenedAnyBox = useGameStore((s) => s.hasOpenedAnyBox)
   const serumDragActive = useGameStore((s) => s.serumDragActive)
   const hasFirstFeed = useGameStore((s) => s.hasFirstFeed)
   const hasFirstStabilize = useGameStore((s) =>
     s.carriers.some((c) => c.stabilized),
   )
-
-  // Seen flags
   const tutorialState = useGameStore((s) => s.tutorialState)
-
   const markSeen = useGameStore((s) => s.markTutorialSeen)
+
+  if (starMapOpen) return null
 
   const activeStep = pickActiveStep({
     hasOpenedAnyBox,
@@ -43,56 +56,107 @@ export function TutorialOverlay() {
   const titleKey = `${activeStep.contentKey}.title`
   const bodyKey = `${activeStep.contentKey}.body`
 
-  return (
+  const close = () => markSeen(activeStep.id)
+
+  const overlay = (
     <div
-      className="ff-fade"
       role="dialog"
       aria-modal="true"
       aria-labelledby="tutorial-title"
       style={{
         position: 'fixed',
-        inset: 0,
-        zIndex: 200,
+        top: '12%',
+        bottom: '13%',
+        left: 0,
+        right: 0,
+        zIndex: 9999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         background: 'rgba(0, 0, 0, 0.65)',
         padding: 16,
+        touchAction: 'manipulation',
       }}
-      onClick={() => markSeen(activeStep.id)}
+      onClick={close}
     >
       <div
-        className="ff-card p-4 max-w-sm"
         style={{
           background: '#1f2937',
           border: '2px solid #7e22ce',
           borderRadius: 12,
           boxShadow: '0 8px 32px rgba(126, 34, 206, 0.4)',
+          padding: 16,
+          maxWidth: 360,
+          width: '100%',
+          position: 'relative',
         }}
         onClick={(e) => e.stopPropagation()}
       >
+        <button
+          type="button"
+          onClick={close}
+          aria-label={t('tutorial.cta_understood')}
+          style={{
+            position: 'absolute',
+            top: 4,
+            right: 6,
+            background: 'transparent',
+            border: 'none',
+            color: 'rgba(255,255,255,0.7)',
+            fontSize: 24,
+            lineHeight: 1,
+            cursor: 'pointer',
+            padding: 8,
+            touchAction: 'manipulation',
+          }}
+        >
+          ×
+        </button>
         <div
           id="tutorial-title"
-          className="ff-display text-base font-bold mb-2"
-          style={{ color: '#e9d5ff' }}
+          style={{
+            color: '#e9d5ff',
+            fontWeight: 700,
+            fontSize: 16,
+            marginBottom: 8,
+            paddingRight: 28,
+          }}
         >
           {t(titleKey)}
         </div>
         <div
-          className="ff-body text-sm leading-snug mb-3"
-          style={{ color: '#d1d5db' }}
+          style={{
+            color: '#d1d5db',
+            fontSize: 14,
+            lineHeight: 1.4,
+            marginBottom: 12,
+          }}
         >
           {t(bodyKey)}
         </div>
         <button
-          onClick={() => markSeen(activeStep.id)}
-          className="ff-btn ff-btn-green text-sm w-full"
+          type="button"
+          onClick={close}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            borderRadius: 12,
+            border: 'none',
+            background: 'linear-gradient(180deg, #4ade80 0%, #16a34a 100%)',
+            color: '#fff',
+            fontSize: 15,
+            fontWeight: 700,
+            cursor: 'pointer',
+            touchAction: 'manipulation',
+          }}
         >
           {t('tutorial.cta_understood')}
         </button>
       </div>
     </div>
   )
+
+  return createPortal(overlay, document.body)
 }
 
 interface PickArgs {
@@ -116,7 +180,6 @@ function pickActiveStep(a: PickArgs): TutorialStep | null {
     'first-stabilize':
       a.hasFirstStabilize && !a.tutorialState.seenFirstStabilize,
   }
-  // Priority order (TUTORIAL_STEPS уже sorted by priority).
   for (const step of TUTORIAL_STEPS) {
     if (conditions[step.id]) return step
   }

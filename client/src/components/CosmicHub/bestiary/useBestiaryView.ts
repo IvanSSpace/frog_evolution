@@ -7,7 +7,10 @@
 
 import { useMemo, useState } from 'react'
 import {
-  ELEMENTS, RARITIES, type Element, type Rarity,
+  ELEMENTS,
+  RARITIES,
+  type Element,
+  type Rarity,
 } from '../../../store/cosmic/types'
 import { bestiaryIndex, readBit } from '../../../store/cosmic/bestiary'
 
@@ -54,7 +57,8 @@ const COLS = 6
 export const BESTIARY_GRID_COLS = COLS
 
 export function useBestiaryView({
-  location, bitset,
+  location,
+  bitset,
 }: UseBestiaryViewArgs): UseBestiaryViewResult {
   // Default: showLocked=true если в этой локации НЕТ unlocked (empty state — показать все locked).
   // showLocked=false если уже есть прогресс (REQ BESTIARY-05 «Discovered only» по умолчанию).
@@ -84,7 +88,7 @@ export function useBestiaryView({
     for (let level = 1; level <= 24; level++) {
       for (let e = 0; e < ELEMENTS.length; e++) {
         const element = ELEMENTS[e]
-        const rarity = location  // tab = rarity
+        const rarity = location // tab = rarity
 
         // Filter: rarityFilter
         if (rarityFilter !== 'all' && rarityFilter !== rarity) continue
@@ -99,7 +103,10 @@ export function useBestiaryView({
         if (!showLocked && !unlocked) continue
 
         out.push({
-          element, rarity, level, unlocked,
+          element,
+          rarity,
+          level,
+          unlocked,
           key: `${element}|${rarity}|${level}`,
         })
       }
@@ -111,21 +118,27 @@ export function useBestiaryView({
         // Already in level-asc order (insertion order)
         break
       case 'level-desc':
-        out.sort((a, b) =>
-          b.level - a.level ||
-          ELEMENTS.indexOf(a.element) - ELEMENTS.indexOf(b.element))
+        out.sort(
+          (a, b) =>
+            b.level - a.level ||
+            ELEMENTS.indexOf(a.element) - ELEMENTS.indexOf(b.element),
+        )
         break
       case 'element':
-        out.sort((a, b) =>
-          ELEMENTS.indexOf(a.element) - ELEMENTS.indexOf(b.element) ||
-          a.level - b.level)
+        out.sort(
+          (a, b) =>
+            ELEMENTS.indexOf(a.element) - ELEMENTS.indexOf(b.element) ||
+            a.level - b.level,
+        )
         break
       case 'rarity':
         // В single-location tab все cells имеют одну rarity → fallback на element/level
-        out.sort((a, b) =>
-          RARITIES.indexOf(a.rarity) - RARITIES.indexOf(b.rarity) ||
-          a.level - b.level ||
-          ELEMENTS.indexOf(a.element) - ELEMENTS.indexOf(b.element))
+        out.sort(
+          (a, b) =>
+            RARITIES.indexOf(a.rarity) - RARITIES.indexOf(b.rarity) ||
+            a.level - b.level ||
+            ELEMENTS.indexOf(a.element) - ELEMENTS.indexOf(b.element),
+        )
         break
     }
 
@@ -133,7 +146,7 @@ export function useBestiaryView({
   }, [bitset, location, rarityFilter, elementSearch, showLocked, sortBy])
 
   // Totals (для badge)
-  const totalInLocation = ELEMENTS.length * 24  // 384
+  const totalInLocation = ELEMENTS.length * 24 // 384
   const unlockedInLocationVal = useMemo(() => {
     let count = 0
     for (let level = 1; level <= 24; level++) {
@@ -149,9 +162,13 @@ export function useBestiaryView({
     cells,
     totalInLocation,
     unlockedInLocation: unlockedInLocationVal,
-    rarityFilter, setRarityFilter,
-    elementSearch, setElementSearch,
-    showLocked, setShowLocked,
-    sortBy, setSortBy,
+    rarityFilter,
+    setRarityFilter,
+    elementSearch,
+    setElementSearch,
+    showLocked,
+    setShowLocked,
+    sortBy,
+    setSortBy,
   }
 }

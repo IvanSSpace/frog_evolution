@@ -43,6 +43,7 @@ export default [
       ...jsxA11yPlugin.configs.recommended.rules,
       'jsx-a11y/control-has-associated-label': 'off',
       'jsx-a11y/no-static-element-interactions': 'off',
+      'jsx-a11y/no-noninteractive-element-interactions': 'off',
       'jsx-a11y/click-events-have-key-events': 'off',
       'jsx-a11y/anchor-is-valid': 'off',
       /* -- react rules -- */
@@ -61,6 +62,13 @@ export default [
       'react/react-in-jsx-scope': 'off', // Отключает необходимость импортировать React
       'react-hooks/rules-of-hooks': 'error', // Checks rules of Hooks
       'react-hooks/exhaustive-deps': 'warn', // Checks effect dependencies,
+      /* -- unused vars: allow _-prefixed intentionally-unused params -- */
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
+      'no-unused-vars': 'off', // defer to @typescript-eslint/no-unused-vars
+      'no-undef': 'off', // TypeScript handles undefined references more accurately than ESLint
       /* -- prettier -- */
       'prettier/prettier': 'error',
     },

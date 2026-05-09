@@ -2,19 +2,50 @@
 // Pure types + constants. Не импортирует из gameStore (избегаем циклов).
 
 export type Element =
-  | 'fire' | 'ice' | 'water' | 'forest' | 'toxic' | 'plasma'
-  | 'shadow' | 'crystal' | 'desert' | 'gas' | 'ring' | 'binary'
-  | 'arcane' | 'mechanical' | 'war' | 'void'
+  | 'fire'
+  | 'ice'
+  | 'water'
+  | 'forest'
+  | 'toxic'
+  | 'plasma'
+  | 'shadow'
+  | 'crystal'
+  | 'desert'
+  | 'gas'
+  | 'ring'
+  | 'binary'
+  | 'arcane'
+  | 'mechanical'
+  | 'war'
+  | 'void'
 
 export type Rarity = 'common' | 'rare' | 'epic' | 'legendary'
 
 export const ELEMENTS: readonly Element[] = [
-  'fire', 'ice', 'water', 'forest', 'toxic', 'plasma',
-  'shadow', 'crystal', 'desert', 'gas', 'ring', 'binary',
-  'arcane', 'mechanical', 'war', 'void',
+  'fire',
+  'ice',
+  'water',
+  'forest',
+  'toxic',
+  'plasma',
+  'shadow',
+  'crystal',
+  'desert',
+  'gas',
+  'ring',
+  'binary',
+  'arcane',
+  'mechanical',
+  'war',
+  'void',
 ]
 
-export const RARITIES: readonly Rarity[] = ['common', 'rare', 'epic', 'legendary']
+export const RARITIES: readonly Rarity[] = [
+  'common',
+  'rare',
+  'epic',
+  'legendary',
+]
 
 // Phase 15 (REQ BOX-01): полный shape для inventory + cascade reveal flow.
 // Phase 11 stub имел { id, element, opened, sourceArchetype? } — расширено
@@ -22,13 +53,13 @@ export const RARITIES: readonly Rarity[] = ['common', 'rare', 'epic', 'legendary
 // STORAGE_VERSION 17 wipes Phase 11 boxes на load (clean migration).
 export interface BoxData {
   id: string
-  planetId: string                              // origin planet (Phase 16 source)
-  planetName: string                            // отображается в BoxesTab («С KEPLER»)
-  archetype: string                             // BG archetype или main race key
-  element: Element                              // computed at addBox via elementFromPlanet
-  opened: boolean                               // marked true при slot-machine reveal start
-  createdAt: number                             // unix ms — sortable «недавно полученные»
-  bonusRarity?: 'rare' | 'epic' | 'legendary'   // optional mission perfect-bonus floor (REQ MISSION-03)
+  planetId: string // origin planet (Phase 16 source)
+  planetName: string // отображается в BoxesTab («С KEPLER»)
+  archetype: string // BG archetype или main race key
+  element: Element // computed at addBox via elementFromPlanet
+  opened: boolean // marked true при slot-machine reveal start
+  createdAt: number // unix ms — sortable «недавно полученные»
+  bonusRarity?: 'rare' | 'epic' | 'legendary' // optional mission perfect-bonus floor (REQ MISSION-03)
   // Legacy Phase 11 поле — оставлено для backward compat parsing; deprecated.
   sourceArchetype?: string
 }
@@ -36,7 +67,7 @@ export interface BoxData {
 export interface ScoutData {
   id: string
   missionId: string
-  returnsAt: number  // unix ms
+  returnsAt: number // unix ms
   planetId: string
 }
 
@@ -70,28 +101,28 @@ export interface CarrierData {
 // ===== Phase 16: ShipState discriminated union (REQ SHIP-01) =====
 export interface ShipStateDocked {
   state: 'docked'
-  planetId: string  // unique idx в planetMap.json (e.g. 'home')
+  planetId: string // unique idx в planetMap.json (e.g. 'home')
 }
 
 export interface ShipStateTransit {
   state: 'transit'
-  fromPlanetId: string  // для UI «В пути от X к Y»
+  fromPlanetId: string // для UI «В пути от X к Y»
   toPlanetId: string
-  startedAt: number     // unix ms (Date.now())
-  arrivesAt: number     // unix ms
+  startedAt: number // unix ms (Date.now())
+  arrivesAt: number // unix ms
 }
 
 export type ShipState = ShipStateDocked | ShipStateTransit
 
 export interface PityCounters {
-  common: number    // боксов без гарантии common (всегда 0, placeholder)
-  rare: number      // боксов подряд без rare+
-  epic: number      // боксов подряд без epic+
+  common: number // боксов без гарантии common (всегда 0, placeholder)
+  rare: number // боксов подряд без rare+
+  epic: number // боксов подряд без epic+
   legendary: number // боксов подряд без legendary
 }
 
 // Phase 17: добавлен carriers tab.
-export type CosmicTab = 'scouts' | 'boxes' | 'serums' | 'bestiary' | 'carriers'
+export type CosmicTab = 'scouts' | 'boxes' | 'bestiary' | 'carriers'
 
 // Phase 19-05 (UX-08): tutorial overlay step IDs.
 export type TutorialStepId =
@@ -127,7 +158,7 @@ export interface CosmicSlice {
   // Бестиарий bitset: Phase 17 расширен до 192 байт = 1536 битов.
   // Layout: 16 elements × 4 rarities × 24 levels = 1536 уникальных combos.
   // Хранится как number[] (JSON-serializable).
-  bestiaryBitset: number[]  // length = 192
+  bestiaryBitset: number[] // length = 192
 
   // Pity counters (Phase 19)
   pityCounters: PityCounters
@@ -138,7 +169,7 @@ export interface CosmicSlice {
   // Crew (Phase 16)
   crew: {
     missionsToday: number
-    lastResetDay: string  // ISO date 'YYYY-MM-DD' (LOCAL — Phase 16 fix CREW-03)
+    lastResetDay: string // ISO date 'YYYY-MM-DD' (LOCAL — Phase 16 fix CREW-03)
   }
 
   // Phase 14: serum tap-to-select / drag selection mode (transient UI state, НЕ persisted)
@@ -167,8 +198,12 @@ export interface CosmicSlice {
 
 export interface CosmicToastPayload {
   type:
-    | 'scout-returned' | 'box-received' | 'mission-complete'
-    | 'serum-applied' | 'serum-mistap' | 'generic'
+    | 'scout-returned'
+    | 'box-received'
+    | 'mission-complete'
+    | 'serum-applied'
+    | 'serum-mistap'
+    | 'generic'
   msg: string
   action?: {
     label: string
@@ -193,7 +228,7 @@ export function makeInitialCosmicSlice(): CosmicSlice {
     scouts: [],
     ship: null,
     carriers: [],
-    bestiaryBitset: new Array(192).fill(0),  // Phase 17: full 1536 bits = 192 bytes
+    bestiaryBitset: new Array(192).fill(0), // Phase 17: full 1536 bits = 192 bytes
     pityCounters: { common: 0, rare: 0, epic: 0, legendary: 0 },
     lastActiveTab: 'scouts',
     crew: { missionsToday: 0, lastResetDay: '' },

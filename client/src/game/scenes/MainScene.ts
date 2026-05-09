@@ -1,16 +1,39 @@
 import Phaser from 'phaser'
-import { useGameStore, getDropIntervalMs, getMagnetSpawnInterval, getMagnetDuration, getMagnetMergesPerCycle, getCrateLevel, getLocationById, getRareBoxThreshold } from '../../store/gameStore'
+import {
+  useGameStore,
+  getDropIntervalMs,
+  getMagnetSpawnInterval,
+  getMagnetDuration,
+  getMagnetMergesPerCycle,
+  getCrateLevel,
+  getLocationById,
+  getRareBoxThreshold,
+} from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
-import { FROG_LEVELS, MAX_LEVEL, textureKeyForLevel, rollPoopType, POOP_INTERVAL_MS, getTargetIncomePerSec, getPoopValueExact, stochasticRound, type PoopType } from '../config/frogs'
+import {
+  FROG_LEVELS,
+  MAX_LEVEL,
+  textureKeyForLevel,
+  rollPoopType,
+  POOP_INTERVAL_MS,
+  getTargetIncomePerSec,
+  getPoopValueExact,
+  stochasticRound,
+  type PoopType,
+} from '../config/frogs'
 import { hapticImpact, hapticNotification } from '../../utils/telegram'
 import { FrogOverlayManager } from '../effects/FrogOverlayManager'
 import { burstEffect } from '../effects/elements/burstEffect'
 import { mergeEffect } from '../effects/elements/mergeEffect'
 import { SerumSelectionLayer } from '../effects/SerumSelectionLayer'
+import { ELEMENT_TINT } from '../../components/CosmicHub/ElementGrid'
 import { isEligible, getEligibilityHint } from '../../utils/serumEligibility'
 import { classifyDropTarget } from '../../utils/carrierFeed'
 import i18next from 'i18next'
 import type { Element, Rarity } from '../../store/cosmic/types'
+
+const tintToHex = (cssHex: string): number =>
+  parseInt(cssHex.replace('#', ''), 16)
 
 const mapKeyForLocation = (locId: number): string => {
   if (locId === 2) return 'map2'
@@ -25,17 +48,17 @@ const DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 3))
 
 const DASH_RADIUS = 70 * DPR
 const FIELD_PAD_X = 48 * DPR
-const FIELD_PAD_Y = 60 * DPR        // верхний отступ от верха канваса
+const FIELD_PAD_Y = 60 * DPR // верхний отступ от верха канваса
 const FIELD_PAD_Y_BOTTOM = 90 * DPR // нижний отступ — крупнее, чтобы лягушки не уходили слишком вниз
 const MERGE_RADIUS = 50 * DPR
 
 // Бокс-дропы
-const MAX_ENTITIES = 16            // суммарный лимит лягушки + коробки
-const MAX_PENDING_BOXES = 8        // cap «отложенных» коробок при отсутствии на болоте
-const BOX_FALL_DURATION = 380      // длительность падения (быстрее)
-const BOX_DISPLAY_SIZE = 56 * DPR  // размер коробки на экране
-const BOX_IDLE_INTERVAL = 5500     // период подпрыгивания
-const BOX_OPEN_RADIUS = 80 * DPR   // радиус разлёта тапа — открывает все коробки рядом
+const MAX_ENTITIES = 16 // суммарный лимит лягушки + коробки
+const MAX_PENDING_BOXES = 8 // cap «отложенных» коробок при отсутствии на болоте
+const BOX_FALL_DURATION = 380 // длительность падения (быстрее)
+const BOX_DISPLAY_SIZE = 56 * DPR // размер коробки на экране
+const BOX_IDLE_INTERVAL = 5500 // период подпрыгивания
+const BOX_OPEN_RADIUS = 80 * DPR // радиус разлёта тапа — открывает все коробки рядом
 
 // RARE_BOX_INTERVAL_MS теперь динамический (getRareBoxIntervalMs), база 30с
 const RARE_BOX_TINT = 0xffd700
@@ -43,7 +66,7 @@ const RARE_BOX_SCALE_MULT = 1.25
 
 // SVG грузится в физических пикселях (CSS * DPR), плюс +50% для запаса
 const TEXTURE_QUALITY = DPR * 1.5
-const BASE_SCALE = DPR / TEXTURE_QUALITY  // = 1/1.5 ≈ 0.667
+const BASE_SCALE = DPR / TEXTURE_QUALITY // = 1/1.5 ≈ 0.667
 
 interface BoxData {
   img: Phaser.GameObjects.Image
@@ -132,7 +155,10 @@ export class MainScene extends Phaser.Scene {
       })
     })
 
-    this.load.svg('poop', '/poop.svg', { width: 18 * TEXTURE_QUALITY, height: 18 * TEXTURE_QUALITY })
+    this.load.svg('goo', '/goo.svg', {
+      width: 18 * TEXTURE_QUALITY,
+      height: 18 * TEXTURE_QUALITY,
+    })
     this.load.image('map', '/map.png')
     this.load.image('map2', '/map2.webp')
     this.load.image('map3', '/map3.webp')
@@ -148,7 +174,11 @@ export class MainScene extends Phaser.Scene {
     this.prevLocation = useGameStore.getState().currentLocation
     this.cameras.main.setZoom(1)
 
-    this.bg = this.add.image(width / 2, height / 2, mapKeyForLocation(this.prevLocation))
+    this.bg = this.add.image(
+      width / 2,
+      height / 2,
+      mapKeyForLocation(this.prevLocation),
+    )
     this.bg.setDisplaySize(width, height)
     this.bg.setDepth(-1) // фон всегда под лягушками
 
@@ -156,7 +186,8 @@ export class MainScene extends Phaser.Scene {
     const fieldW = width - FIELD_PAD_X * 2
     const fieldH = height - FIELD_PAD_Y - FIELD_PAD_Y_BOTTOM
     const fieldCenterY = (FIELD_PAD_Y + (height - FIELD_PAD_Y_BOTTOM)) / 2
-    this.add.rectangle(width / 2, fieldCenterY, fieldW, fieldH)
+    this.add
+      .rectangle(width / 2, fieldCenterY, fieldW, fieldH)
       .setStrokeStyle(2, 0xffffff, 0.35)
       .setFillStyle(0x000000, 0)
 
@@ -252,7 +283,12 @@ export class MainScene extends Phaser.Scene {
           ),
         )
         this.selectionLayer?.show(
-          eligible.map((f) => ({ id: f.id, container: f.container, body: f.body })),
+          eligible.map((f) => ({
+            id: f.id,
+            container: f.container,
+            body: f.body,
+          })),
+          tintToHex(ELEMENT_TINT[sel.element]),
         )
       } else if (dragChanged) {
         // Just deactivated — hide halos.
@@ -279,8 +315,14 @@ export class MainScene extends Phaser.Scene {
   private randomFieldPos(): { x: number; y: number } {
     const { width, height } = this.scale
     const margin = 40 * DPR
-    const x = Phaser.Math.Between(FIELD_PAD_X + margin, width - FIELD_PAD_X - margin)
-    const y = Phaser.Math.Between(FIELD_PAD_Y + margin, height - FIELD_PAD_Y_BOTTOM - margin)
+    const x = Phaser.Math.Between(
+      FIELD_PAD_X + margin,
+      width - FIELD_PAD_X - margin,
+    )
+    const y = Phaser.Math.Between(
+      FIELD_PAD_Y + margin,
+      height - FIELD_PAD_Y_BOTTOM - margin,
+    )
     return { x, y }
   }
 
@@ -413,7 +455,10 @@ export class MainScene extends Phaser.Scene {
     // Сами img коробок улетают вместе с oldContainer (см. ниже), так что юзер видит
     // их анимирующимися с локацией, а не пропадающими внезапно.
     if (oldLoc === 1 && this.boxes.length > 0) {
-      this.pendingBoxCount = Math.min(this.pendingBoxCount + this.boxes.length, MAX_PENDING_BOXES)
+      this.pendingBoxCount = Math.min(
+        this.pendingBoxCount + this.boxes.length,
+        MAX_PENDING_BOXES,
+      )
     }
 
     // Phase 12: dispose overlay manager ДО reparent старых лягушек.
@@ -586,7 +631,9 @@ export class MainScene extends Phaser.Scene {
         // переводя их в мировые координаты.
         const children = [...newContainer.list]
         for (const child of children) {
-          const c = child as Phaser.GameObjects.Container | Phaser.GameObjects.Image
+          const c = child as
+            | Phaser.GameObjects.Container
+            | Phaser.GameObjects.Image
           const lx = c.x
           const ly = c.y
           newContainer.remove(c, false)
@@ -642,7 +689,8 @@ export class MainScene extends Phaser.Scene {
     container.add(body)
 
     const frog: FrogData = {
-      container, body,
+      container,
+      body,
       facingRight: true,
       isMoving: false,
       isDragging: false,
@@ -664,10 +712,20 @@ export class MainScene extends Phaser.Scene {
       if (state.serumDragActive && state.selectedSerum) {
         const sel = state.selectedSerum
         const eligible = this.frogs.filter((f) =>
-          isEligible({ id: f.id, level: f.level }, sel.element, sel.rarity, state.carriers),
+          isEligible(
+            { id: f.id, level: f.level },
+            sel.element,
+            sel.rarity,
+            state.carriers,
+          ),
         )
         this.selectionLayer?.show(
-          eligible.map((f) => ({ id: f.id, container: f.container, body: f.body })),
+          eligible.map((f) => ({
+            id: f.id,
+            container: f.container,
+            body: f.body,
+          })),
+          tintToHex(ELEMENT_TINT[sel.element]),
         )
       }
     }
@@ -731,7 +789,14 @@ export class MainScene extends Phaser.Scene {
     })
 
     body.on('drag', (pointer: Phaser.Input.Pointer) => {
-      if (Phaser.Math.Distance.Between(dragStartX, dragStartY, pointer.x, pointer.y) > 8) {
+      if (
+        Phaser.Math.Distance.Between(
+          dragStartX,
+          dragStartY,
+          pointer.x,
+          pointer.y,
+        ) > 8
+      ) {
         dragMoved = true
       }
 
@@ -760,7 +825,12 @@ export class MainScene extends Phaser.Scene {
 
       // Сначала проверяем мердж в позиции отпускания пальца
       if (!serumActive && frog.level < MAX_LEVEL) {
-        const target = this.findMergeTarget(pointer.x, pointer.y, frog.level, frog)
+        const target = this.findMergeTarget(
+          pointer.x,
+          pointer.y,
+          frog.level,
+          frog,
+        )
         if (target) {
           eventBus.emit('frog:drop', { level: frog.level, merged: true })
           this.performMerge(frog, target, pointer.x, pointer.y)
@@ -784,7 +854,8 @@ export class MainScene extends Phaser.Scene {
       const maxY = height - FIELD_PAD_Y_BOTTOM - margin
       const clampedX = Phaser.Math.Clamp(frog.container.x, minX, maxX)
       const clampedY = Phaser.Math.Clamp(frog.container.y, minY, maxY)
-      const outOfBounds = clampedX !== frog.container.x || clampedY !== frog.container.y
+      const outOfBounds =
+        clampedX !== frog.container.x || clampedY !== frog.container.y
 
       const playDropSquish = () => {
         this.tweens.killTweensOf(frog.body)
@@ -870,8 +941,16 @@ export class MainScene extends Phaser.Scene {
 
     const fromX = frog.container.x
     const fromY = frog.container.y
-    const toX = Phaser.Math.Clamp(fromX + Math.cos(angle) * dist, FIELD_PAD_X + 10 * DPR, width - FIELD_PAD_X - 10 * DPR)
-    const toY = Phaser.Math.Clamp(fromY + Math.sin(angle) * dist, FIELD_PAD_Y + 10 * DPR, height - FIELD_PAD_Y_BOTTOM - 10 * DPR)
+    const toX = Phaser.Math.Clamp(
+      fromX + Math.cos(angle) * dist,
+      FIELD_PAD_X + 10 * DPR,
+      width - FIELD_PAD_X - 10 * DPR,
+    )
+    const toY = Phaser.Math.Clamp(
+      fromY + Math.sin(angle) * dist,
+      FIELD_PAD_Y + 10 * DPR,
+      height - FIELD_PAD_Y_BOTTOM - 10 * DPR,
+    )
 
     const movingRight = toX >= fromX
     if (movingRight !== frog.facingRight) {
@@ -940,7 +1019,11 @@ export class MainScene extends Phaser.Scene {
     })
   }
 
-  private onFrogTapped(frog: FrogData, tapX: number = frog.container.x, tapY: number = frog.container.y) {
+  private onFrogTapped(
+    frog: FrogData,
+    tapX: number = frog.container.x,
+    tapY: number = frog.container.y,
+  ) {
     // Phase 14: serum selection mode переопределяет normal tap behavior
     // (apply / mis-tap вместо merge / coin / burst).
     if (useGameStore.getState().serumDragActive) {
@@ -962,7 +1045,12 @@ export class MainScene extends Phaser.Scene {
 
     // Тап = +1 монета (не зависит от уровня), отдельно от какашек
     useGameStore.getState().addGold(1)
-    this.spawnFloatingText(frog.container.x, frog.container.y - 20 * DPR, '+1', 'regular')
+    this.spawnFloatingText(
+      frog.container.x,
+      frog.container.y - 20 * DPR,
+      '+1',
+      'regular',
+    )
 
     // ELEMENT-10: element-burst при тапе на carrier-лягушку.
     // Читаем из store — не зависим от overlayManager internals.
@@ -975,10 +1063,11 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.tweens.killTweensOf(frog.body)
+    frog.body.scaleY = 1.0
     this.tweens.add({
       targets: frog.body,
-      scaleY: 0.8,
-      duration: 60,
+      scaleY: 0.78,
+      duration: 55,
       ease: 'Power2.easeIn',
       onComplete: () => {
         this.tweens.add({
@@ -1016,7 +1105,11 @@ export class MainScene extends Phaser.Scene {
     if (!eligible) {
       // SERUM-07: mis-tap → red flash + error toast + haptic error.
       // Selection остаётся active — юзер может попробовать другую лягушку.
-      this.selectionLayer?.flashRed({ id: frog.id, container: frog.container, body: frog.body })
+      this.selectionLayer?.flashRed({
+        id: frog.id,
+        container: frog.container,
+        body: frog.body,
+      })
       hapticNotification('error')
       this.emitMisTapToast(sel.rarity)
       return
@@ -1029,7 +1122,8 @@ export class MainScene extends Phaser.Scene {
   /** Helper: build mis-tap toast message via i18next + emit. */
   private emitMisTapToast(rarity: Rarity) {
     const hint = getEligibilityHint(rarity)
-    const locKey = ['swamp', 'forest', 'continent', 'planet'][hint.locationId - 1] ?? 'swamp'
+    const locKey =
+      ['swamp', 'forest', 'continent', 'planet'][hint.locationId - 1] ?? 'swamp'
     const locationLabel = i18next.t(`cosmic_hub.serums.location_${locKey}`)
     eventBus.emit('cosmic:toast', {
       type: 'serum-mistap',
@@ -1058,13 +1152,14 @@ export class MainScene extends Phaser.Scene {
       onComplete: () => {
         frog.isMerging = false
         // Возобновить idle, если frog ещё на сцене.
-        if (this.frogs.includes(frog) && !frog.isMoving) this.startIdleAnim(frog)
+        if (this.frogs.includes(frog) && !frog.isMoving)
+          this.startIdleAnim(frog)
       },
     })
 
     // Burst effect at midpoint (1с) — драматичность apply (ELEMENT-10 reuse).
     this.time.delayedCall(1000, () => {
-      if (!this.frogs.includes(frog)) return  // killed mid-anim
+      if (!this.frogs.includes(frog)) return // killed mid-anim
       burstEffect(this, frog.container, element)
     })
 
@@ -1105,7 +1200,12 @@ export class MainScene extends Phaser.Scene {
     let hit: FrogData | null = null
     let bestDist = SNAP
     for (const f of this.frogs) {
-      const d = Phaser.Math.Distance.Between(worldX, worldY, f.container.x, f.container.y)
+      const d = Phaser.Math.Distance.Between(
+        worldX,
+        worldY,
+        f.container.x,
+        f.container.y,
+      )
       if (d <= bestDist) {
         hit = f
         bestDist = d
@@ -1126,7 +1226,9 @@ export class MainScene extends Phaser.Scene {
     if (hit) {
       const eligible = isEligible(
         { id: hit.id, level: hit.level },
-        sel.element, sel.rarity, state.carriers,
+        sel.element,
+        sel.rarity,
+        state.carriers,
       )
       if (eligible && !this.lastHaptiHover) {
         hapticImpact('medium')
@@ -1159,14 +1261,20 @@ export class MainScene extends Phaser.Scene {
 
     const eligible = isEligible(
       { id: hit.id, level: hit.level },
-      sel.element, sel.rarity, state.carriers,
+      sel.element,
+      sel.rarity,
+      state.carriers,
     )
 
     if (eligible) {
       this.applySerumToFrog(hit, sel.element, sel.rarity)
     } else {
       // Mis-tap — red flash + error toast, selection остаётся (как в tap-flow).
-      this.selectionLayer?.flashRed({ id: hit.id, container: hit.container, body: hit.body })
+      this.selectionLayer?.flashRed({
+        id: hit.id,
+        container: hit.container,
+        body: hit.body,
+      })
       hapticNotification('error')
       this.emitMisTapToast(sel.rarity)
     }
@@ -1182,11 +1290,6 @@ export class MainScene extends Phaser.Scene {
     // округляется стохастически — среднее за время точно матчит target.
     const value = stochasticRound(getPoopValueExact(frog.level))
 
-    const tintByType: Record<PoopType, number> = {
-      regular: 0x8b5a2b, // тёмно-коричневый
-      big: 0xc88b4c,     // светло-золотисто-коричневый
-      huge: 0xc0c0c0,    // серебряный
-    }
     // Размер у всех типов одинаковый, но крупнее базы
     const finalScale = BASE_SCALE * 1.3
 
@@ -1196,15 +1299,16 @@ export class MainScene extends Phaser.Scene {
     const horizDistByLevel = [20, 26, 34, 40, 42, 42] // L1..L6
     const vertOffsetByLevel = [14, 16, 16, 20, 10, 26] // L1..L6
 
-    const horizDist = (horizDistByLevel[Math.min(frog.level - 1, 5)] ?? 28) * DPR
-    const vertOffset = (vertOffsetByLevel[Math.min(frog.level - 1, 5)] ?? 16) * DPR
+    const horizDist =
+      (horizDistByLevel[Math.min(frog.level - 1, 5)] ?? 28) * DPR
+    const vertOffset =
+      (vertOffsetByLevel[Math.min(frog.level - 1, 5)] ?? 16) * DPR
 
     const behindX = x + (facingRight ? -10 * DPR : 10 * DPR)
     const startY = y + 6 * DPR
-    const img = this.add.image(behindX, startY, 'poop')
+    const img = this.add.image(behindX, startY, 'goo')
     img.setAlpha(0)
     img.setScale(0.4 * finalScale)
-    img.setTint(tintByType[type])
     this.poops.push(img)
 
     // Phase 1: какашка появляется сзади и приземляется на (landX, landY)
@@ -1225,7 +1329,7 @@ export class MainScene extends Phaser.Scene {
         // визуал какашки всё равно показываем.
         if (value > 0) {
           useGameStore.getState().addGold(value)
-          eventBus.emit('poop:collected', { value })
+          eventBus.emit('goo:collected', { value })
           this.spawnFloatingText(landX, landY - 22 * DPR, `+${value}`, type)
         }
 
@@ -1243,7 +1347,12 @@ export class MainScene extends Phaser.Scene {
     })
   }
 
-  private spawnFloatingText(x: number, y: number, text: string, _type: PoopType) {
+  private spawnFloatingText(
+    x: number,
+    y: number,
+    text: string,
+    _type: PoopType,
+  ) {
     // Все цифры — золотые, очень мелкие, медленно поднимаются
     const t = this.add.text(x, y, text, {
       fontFamily: 'Russo One, sans-serif',
@@ -1275,14 +1384,24 @@ export class MainScene extends Phaser.Scene {
 
   // ============== МЕРДЖ ==============
 
-  private findMergeTarget(x: number, y: number, level: number, exclude: FrogData): FrogData | null {
+  private findMergeTarget(
+    x: number,
+    y: number,
+    level: number,
+    exclude: FrogData,
+  ): FrogData | null {
     let best: FrogData | null = null
     let bestDist = MERGE_RADIUS
     for (const other of this.frogs) {
       if (other === exclude) continue
       if (other.isMerging || other.isDragging) continue
       if (other.level !== level) continue
-      const d = Phaser.Math.Distance.Between(x, y, other.container.x, other.container.y)
+      const d = Phaser.Math.Distance.Between(
+        x,
+        y,
+        other.container.x,
+        other.container.y,
+      )
       if (d <= bestDist) {
         bestDist = d
         best = other
@@ -1436,7 +1555,12 @@ export class MainScene extends Phaser.Scene {
    *   - 'fail': sacrifice consumed; carrier resumes idle на месте
    *   - 'stabilize': StabilizationModal triggered через eventBus (Plan 17-04)
    */
-  private performFeed(carrier: FrogData, sacrifice: FrogData, cx: number, cy: number) {
+  private performFeed(
+    carrier: FrogData,
+    sacrifice: FrogData,
+    cx: number,
+    cy: number,
+  ) {
     carrier.isMerging = true
     sacrifice.isMerging = true
     carrier.isMoving = true
@@ -1507,12 +1631,14 @@ export class MainScene extends Phaser.Scene {
           this.tweens.add({
             targets: newFrog.container,
             scale: BASE_SCALE * 1.2,
-            duration: 160, ease: 'Back.easeOut',
+            duration: 160,
+            ease: 'Back.easeOut',
             onComplete: () => {
               this.tweens.add({
                 targets: newFrog.container,
                 scale: BASE_SCALE,
-                duration: 100, ease: 'Power2.easeOut',
+                duration: 100,
+                ease: 'Power2.easeOut',
               })
             },
           })
@@ -1561,7 +1687,12 @@ export class MainScene extends Phaser.Scene {
    * Phase 17 (CARRIER-10): merge two stabilized same-element same-level carriers
    * → 1 new carrier на level+1 с S-bucket guaranteed ceiling. Plays mergeEffect.
    */
-  private performCarrierMerge(a: FrogData, b: FrogData, cx: number, cy: number) {
+  private performCarrierMerge(
+    a: FrogData,
+    b: FrogData,
+    cx: number,
+    cy: number,
+  ) {
     a.isMerging = true
     b.isMerging = true
     a.isMoving = true
@@ -1625,21 +1756,27 @@ export class MainScene extends Phaser.Scene {
         this.tweens.add({
           targets: newFrog.container,
           scale: BASE_SCALE * 1.2,
-          duration: 160, ease: 'Back.easeOut',
+          duration: 160,
+          ease: 'Back.easeOut',
           onComplete: () => {
             this.tweens.add({
               targets: newFrog.container,
               scale: BASE_SCALE,
-              duration: 100, ease: 'Power2.easeOut',
+              duration: 100,
+              ease: 'Power2.easeOut',
             })
           },
         })
 
         // Atomic store merge — removes both old carriers, adds new with S-bucket
         // ceiling, sets bestiary bit.
-        const merged = useGameStore.getState().mergeCarriers(a.id, b.id, newFrog.id)
+        const merged = useGameStore
+          .getState()
+          .mergeCarriers(a.id, b.id, newFrog.id)
         if (!merged) {
-          console.warn('[performCarrierMerge] mergeCarriers returned null — defensive')
+          console.warn(
+            '[performCarrierMerge] mergeCarriers returned null — defensive',
+          )
         }
 
         this.overlayManager?.markDirty()
@@ -1670,24 +1807,42 @@ export class MainScene extends Phaser.Scene {
     })
 
     // Плавающий текст с именем локации
-    this.spawnFloatingText(x, y - 40 * DPR, `→ ${this.locationName(cfg.location)}`, 'huge' as PoopType)
+    this.spawnFloatingText(
+      x,
+      y - 40 * DPR,
+      `→ ${this.locationName(cfg.location)}`,
+      'huge' as PoopType,
+    )
   }
 
   private locationName(id: number): string {
     switch (id) {
-      case 1: return 'Болото'
-      case 2: return 'Лес'
-      case 3: return 'Земля'
-      case 4: return 'Космос'
-      default: return ''
+      case 1:
+        return 'Болото'
+      case 2:
+        return 'Лес'
+      case 3:
+        return 'Земля'
+      case 4:
+        return 'Космос'
+      default:
+        return ''
     }
   }
 
-  private spiralFrogTo(frog: FrogData, cx: number, cy: number, duration: number) {
+  private spiralFrogTo(
+    frog: FrogData,
+    cx: number,
+    cy: number,
+    duration: number,
+  ) {
     const startX = frog.container.x
     const startY = frog.container.y
     const startAngle = Math.atan2(startY - cy, startX - cx)
-    const startRadius = Math.max(Phaser.Math.Distance.Between(startX, startY, cx, cy), 1)
+    const startRadius = Math.max(
+      Phaser.Math.Distance.Between(startX, startY, cx, cy),
+      1,
+    )
 
     const obj = { p: 0 }
     this.tweens.add({
@@ -1759,6 +1914,7 @@ export class MainScene extends Phaser.Scene {
     this.frogs = this.frogs.filter((f) => f !== frog)
     frog.poopTimer?.remove()
     frog.poopTimer = null
+    this.overlayManager?.releaseForFrog(frog.id)
     frog.container.destroy()
     this.syncEntityCount()
   }
@@ -1771,8 +1927,14 @@ export class MainScene extends Phaser.Scene {
 
   private spawnBox(isRare = false, preLanded = false) {
     const { width, height } = this.scale
-    const x = Phaser.Math.Between(FIELD_PAD_X + 40 * DPR, width - FIELD_PAD_X - 40 * DPR)
-    const targetY = Phaser.Math.Between(FIELD_PAD_Y + 40 * DPR, height - FIELD_PAD_Y_BOTTOM - 40 * DPR)
+    const x = Phaser.Math.Between(
+      FIELD_PAD_X + 40 * DPR,
+      width - FIELD_PAD_X - 40 * DPR,
+    )
+    const targetY = Phaser.Math.Between(
+      FIELD_PAD_Y + 40 * DPR,
+      height - FIELD_PAD_Y_BOTTOM - 40 * DPR,
+    )
 
     // Стартуем выше канваса — коробка просто влетает в кадр без fade.
     // Если preLanded — стартуем сразу на целевой Y, без анимации падения.
@@ -1782,11 +1944,21 @@ export class MainScene extends Phaser.Scene {
     img.setDepth(targetY) // сразу высокий depth чтобы не перекрывалось лягушками
     if (isRare) {
       img.setTint(RARE_BOX_TINT)
-      img.setDisplaySize(BOX_DISPLAY_SIZE * RARE_BOX_SCALE_MULT, BOX_DISPLAY_SIZE * RARE_BOX_SCALE_MULT)
+      img.setDisplaySize(
+        BOX_DISPLAY_SIZE * RARE_BOX_SCALE_MULT,
+        BOX_DISPLAY_SIZE * RARE_BOX_SCALE_MULT,
+      )
     }
     const baseScale = img.scaleX
 
-    const box: BoxData = { img, isLanding: !preLanded, baseScale, baseY: targetY, idleTween: null, isRare }
+    const box: BoxData = {
+      img,
+      isLanding: !preLanded,
+      baseScale,
+      baseY: targetY,
+      idleTween: null,
+      isRare,
+    }
     this.boxes.push(box)
     this.syncEntityCount()
 
@@ -1937,7 +2109,12 @@ export class MainScene extends Phaser.Scene {
     this.flashAt(x, y)
 
     if (box.isRare) {
-      eventBus.emit('rareCrate:opened', { x, y, minLevel: 1, maxLevel: MAX_LEVEL })
+      eventBus.emit('rareCrate:opened', {
+        x,
+        y,
+        minLevel: 1,
+        maxLevel: MAX_LEVEL,
+      })
       return
     }
 
@@ -1951,7 +2128,9 @@ export class MainScene extends Phaser.Scene {
         this.boxOpenCount = 0
         storeForCount.setRareBoxProgress(0)
       } else {
-        storeForCount.setRareBoxProgress(Math.min(this.boxOpenCount / threshold, 1))
+        storeForCount.setRareBoxProgress(
+          Math.min(this.boxOpenCount / threshold, 1),
+        )
       }
     }
 
@@ -1959,9 +2138,8 @@ export class MainScene extends Phaser.Scene {
     this.time.delayedCall(0, () => {
       const state = useGameStore.getState()
       const loc = getLocationById(state.currentLocation)
-      const frogLevel = loc.id === 1
-        ? getCrateLevel(state.upgrades.crateQuality)
-        : loc.minLevel
+      const frogLevel =
+        loc.id === 1 ? getCrateLevel(state.upgrades.crateQuality) : loc.minLevel
       const newFrog = this.spawnFrog(x, y, frogLevel)
       state.addFrogToLocation(loc.id, frogLevel)
       newFrog.container.setScale(0)
@@ -2005,7 +2183,12 @@ export class MainScene extends Phaser.Scene {
         for (let j = i + 1; j < frogs.length; j++) {
           const a = frogs[i]
           const b = frogs[j]
-          const d = Phaser.Math.Distance.Between(a.container.x, a.container.y, b.container.x, b.container.y)
+          const d = Phaser.Math.Distance.Between(
+            a.container.x,
+            a.container.y,
+            b.container.x,
+            b.container.y,
+          )
           if (d < bestDist) {
             bestDist = d
             bestPair = [a, b]
@@ -2063,7 +2246,10 @@ export class MainScene extends Phaser.Scene {
     })
 
     const magnet: MagnetData = {
-      container, emoji, x, y,
+      container,
+      emoji,
+      x,
+      y,
       expiresAt: Date.now() + duration,
       pair,
       mergesDone: 0,
@@ -2102,8 +2288,12 @@ export class MainScene extends Phaser.Scene {
 
       // Если кто-то из пары уничтожен / в drag / merge — отменяем магнит
       if (
-        !this.frogs.includes(a) || !this.frogs.includes(b) ||
-        a.isDragging || a.isMerging || b.isDragging || b.isMerging
+        !this.frogs.includes(a) ||
+        !this.frogs.includes(b) ||
+        a.isDragging ||
+        a.isMerging ||
+        b.isDragging ||
+        b.isMerging
       ) {
         this.removeMagnet(m)
         continue
@@ -2119,7 +2309,12 @@ export class MainScene extends Phaser.Scene {
       b.isAttracted = true
 
       // Когда сошлись — мерджим в точке магнита
-      const d = Phaser.Math.Distance.Between(a.container.x, a.container.y, b.container.x, b.container.y)
+      const d = Phaser.Math.Distance.Between(
+        a.container.x,
+        a.container.y,
+        b.container.x,
+        b.container.y,
+      )
       if (d < MERGE_RADIUS * 0.7) {
         this.performMerge(a, b, m.x, m.y)
         m.mergesDone += 1
@@ -2178,8 +2373,14 @@ export class MainScene extends Phaser.Scene {
     }
 
     // На своей локации — обычный спавн на случайной позиции с pop-in
-    const x = Phaser.Math.Between(FIELD_PAD_X + 30 * DPR, width - FIELD_PAD_X - 30 * DPR)
-    const y = Phaser.Math.Between(FIELD_PAD_Y + 30 * DPR, height - FIELD_PAD_Y_BOTTOM - 30 * DPR)
+    const x = Phaser.Math.Between(
+      FIELD_PAD_X + 30 * DPR,
+      width - FIELD_PAD_X - 30 * DPR,
+    )
+    const y = Phaser.Math.Between(
+      FIELD_PAD_Y + 30 * DPR,
+      height - FIELD_PAD_Y_BOTTOM - 30 * DPR,
+    )
     const newFrog = this.spawnFrog(x, y, level)
     newFrog.container.setScale(0)
     this.tweens.add({
@@ -2199,7 +2400,9 @@ export class MainScene extends Phaser.Scene {
   }
 
   private syncEntityCount() {
-    useGameStore.getState().setEntityCount(this.frogs.length + this.boxes.length)
+    useGameStore
+      .getState()
+      .setEntityCount(this.frogs.length + this.boxes.length)
     this.syncIncomePerSec()
   }
 
@@ -2256,7 +2459,9 @@ export class MainScene extends Phaser.Scene {
     }
 
     // Заполнен ли «выходной канал»: на болоте — лимит entity, иначе — cap pending
-    const outputBlocked = isBoloto ? !this.canSpawnBox() : this.pendingBoxCount >= MAX_PENDING_BOXES
+    const outputBlocked = isBoloto
+      ? !this.canSpawnBox()
+      : this.pendingBoxCount >= MAX_PENDING_BOXES
 
     // Таймер боксов тикает всегда, спавн только на локации 1
     this.boxProgressMs = Math.min(this.boxProgressMs + delta, intervalMs)
@@ -2289,7 +2494,12 @@ export class MainScene extends Phaser.Scene {
     const location = getLocationById(store.currentLocation)
     const magnetLevel = store.upgrades.magnet
     const serumPaused = store.serumDragActive
-    if (!serumPaused && location.magnetEnabled && magnetLevel > 0 && store.magnetEnabled) {
+    if (
+      !serumPaused &&
+      location.magnetEnabled &&
+      magnetLevel > 0 &&
+      store.magnetEnabled
+    ) {
       this.magnetSpawnMs += delta
       const spawnInt = getMagnetSpawnInterval(magnetLevel)
       if (this.magnetSpawnMs >= spawnInt) {

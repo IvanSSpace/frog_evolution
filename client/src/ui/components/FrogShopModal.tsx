@@ -2,7 +2,11 @@ import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TintedFrog } from './TintedFrog'
 import { useGameStore, ENTITY_CAP } from '../../store/gameStore'
-import { FROG_LEVELS, getFrogPrice, getTargetIncomePerSec } from '../../game/config/frogs'
+import {
+  FROG_LEVELS,
+  getFrogPrice,
+  getTargetIncomePerSec,
+} from '../../game/config/frogs'
 import { hapticNotification } from '../../utils/telegram'
 import { fmt } from '../../utils/formatting'
 
@@ -29,20 +33,35 @@ export function FrogShopModal({ onClose }: Props) {
       onClick={onClose}
       className="ff-backdrop ff-fade"
       style={{
-        position: 'fixed', inset: 0, zIndex: 100,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        pointerEvents: 'auto', padding: 16,
+        position: 'fixed',
+        inset: 0,
+        zIndex: 100,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        pointerEvents: 'auto',
+        padding: 16,
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         className="ff-panel ff-pop relative"
-        style={{ width: '100%', maxWidth: 380, maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}
+        style={{
+          width: '100%',
+          maxWidth: 380,
+          maxHeight: '88vh',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
       >
-        <div className="flex items-center justify-between px-5 pt-4 pb-3"
-             style={{ borderBottom: '3px dashed rgba(77,107,31,0.4)' }}>
-          <h2 className="ff-display ff-stroke-white text-3xl"
-              style={{ color: '#15803d', letterSpacing: 1.5 }}>
+        <div
+          className="flex items-center justify-between px-5 pt-4 pb-3"
+          style={{ borderBottom: '3px dashed rgba(77,107,31,0.4)' }}
+        >
+          <h2
+            className="ff-display ff-stroke-white text-3xl"
+            style={{ color: '#15803d', letterSpacing: 1.5 }}
+          >
             {t('frog_shop.title')}
           </h2>
           <button
@@ -60,12 +79,15 @@ export function FrogShopModal({ onClose }: Props) {
           </button>
         </div>
 
-        <div ref={scrollRef} className="flex flex-col gap-1.5 p-3 overflow-y-auto">
+        <div
+          ref={scrollRef}
+          className="flex flex-col gap-1.5 p-3 overflow-y-auto"
+        >
           {[...FROG_LEVELS].reverse().map((cfg, idx) => {
             const level = FROG_LEVELS.length - idx
-            return cfg.availableInShop
-              ? <FrogCard key={level} level={level} onResult={showToast} />
-              : null
+            return cfg.availableInShop ? (
+              <FrogCard key={level} level={level} onResult={showToast} />
+            ) : null
           })}
         </div>
 
@@ -78,7 +100,8 @@ export function FrogShopModal({ onClose }: Props) {
               border: '3px solid #7f1d1d',
               borderBottomWidth: 5,
               borderRadius: 14,
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35), 0 4px 0 rgba(0,0,0,0.3)',
+              boxShadow:
+                'inset 0 1px 0 rgba(255,255,255,0.35), 0 4px 0 rgba(0,0,0,0.3)',
               textShadow: '0 2px 0 rgba(0,0,0,0.45)',
               animation: 'ffPop 220ms cubic-bezier(0.34,1.56,0.64,1) both',
             }}
@@ -91,8 +114,13 @@ export function FrogShopModal({ onClose }: Props) {
   )
 }
 
-
-function FrogCard({ level, onResult }: { level: number; onResult: (msg: string) => void }) {
+function FrogCard({
+  level,
+  onResult,
+}: {
+  level: number
+  onResult: (msg: string) => void
+}) {
   const { t } = useTranslation()
   const purchases = useGameStore((s) => s.frogPurchases[level - 1] ?? 0)
   const gold = useGameStore((s) => s.gold)
@@ -112,7 +140,8 @@ function FrogCard({ level, onResult }: { level: number; onResult: (msg: string) 
       hapticNotification('success')
     } else {
       hapticNotification('error')
-      if (r.reason === 'capFull') onResult(t('frog_shop.cap_full', { cap: ENTITY_CAP }))
+      if (r.reason === 'capFull')
+        onResult(t('frog_shop.cap_full', { cap: ENTITY_CAP }))
       else if (r.reason === 'noGold') onResult(t('frog_shop.no_gold'))
     }
   }
@@ -127,15 +156,35 @@ function FrogCard({ level, onResult }: { level: number; onResult: (msg: string) 
           boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.6)',
         }}
       >
-        <TintedFrog path={cfg.path} tint={cfg.tint} alt={frogName} className="max-w-full max-h-full object-contain" />
+        <TintedFrog
+          path={cfg.path}
+          tint={cfg.tint}
+          alt={frogName}
+          className="max-w-full max-h-full object-contain"
+        />
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="ff-display text-sm text-emerald-900 leading-tight">{frogName}</div>
+        <div className="ff-display text-sm text-emerald-900 leading-tight">
+          {frogName}
+        </div>
         <div className="ff-body text-[10px] text-emerald-800 font-bold leading-tight">
-          {t('frog_shop.bought')} <span className="tabular-nums">{purchases}</span>
+          {t('frog_shop.bought')}{' '}
+          <span className="tabular-nums">{purchases}</span>
           {' · '}
-          {t('frog_shop.income')} <span className="tabular-nums">{getTargetIncomePerSec(level)}</span> 💩/s
+          {t('frog_shop.income')}{' '}
+          <span className="tabular-nums">{getTargetIncomePerSec(level)}</span>{' '}
+          <img
+            src="/goo.svg"
+            style={{
+              width: '1em',
+              height: '1em',
+              display: 'inline-block',
+              verticalAlign: 'middle',
+            }}
+            alt=""
+          />
+          /s
         </div>
       </div>
 
@@ -145,9 +194,24 @@ function FrogCard({ level, onResult }: { level: number; onResult: (msg: string) 
         className={`ff-btn text-xs flex-shrink-0 ${
           capFull ? 'ff-btn-grey' : canAfford ? 'ff-btn-yellow' : 'ff-btn-red'
         }`}
-        style={{ paddingLeft: 10, paddingRight: 10, paddingTop: 6, paddingBottom: 6 }}
+        style={{
+          paddingLeft: 10,
+          paddingRight: 10,
+          paddingTop: 6,
+          paddingBottom: 6,
+        }}
       >
-        {fmt(cost)} 💩
+        {fmt(cost)}{' '}
+        <img
+          src="/goo.svg"
+          style={{
+            width: '1.1em',
+            height: '1.1em',
+            display: 'inline-block',
+            verticalAlign: 'middle',
+          }}
+          alt=""
+        />
       </button>
     </div>
   )

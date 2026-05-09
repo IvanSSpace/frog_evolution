@@ -7,12 +7,12 @@ import planetMapJson from './planetMap.json'
 // WORLD_SIZE согласован с client/src/game/scenes/StarMapScene.ts:38 (DPR=1).
 // Travel формула использует diagonal of "extended" world (×2): worst-case полёт
 // от ~south-west до ~north-east bound.
-export const WORLD_SIZE = 7000  // в DPR-units (planetMap.json уже в DPR=1)
-export const WORLD_DIAGONAL = Math.SQRT2 * WORLD_SIZE * 2  // ≈ 19_798
+export const WORLD_SIZE = 7000 // в DPR-units (planetMap.json уже в DPR=1)
+export const WORLD_DIAGONAL = Math.SQRT2 * WORLD_SIZE * 2 // ≈ 19_798
 
 // === Travel time formula (REQ SHIP-03) ===
-export const TRAVEL_MS_FOR_DIAGONAL = 120_000  // 2 минуты для самого далёкого
-export const TRAVEL_MS_MIN = 1_500             // floor для близких полётов
+export const TRAVEL_MS_FOR_DIAGONAL = 120_000 // 2 минуты для самого далёкого
+export const TRAVEL_MS_MIN = 1_500 // floor для близких полётов
 
 /** Travel time в ms для заданной distance (DPR-units). Линейная интерполяция,
  * clamped в [TRAVEL_MS_MIN, TRAVEL_MS_FOR_DIAGONAL]. */
@@ -32,34 +32,20 @@ export function planetDistance(
 }
 
 // === Crew (REQ CREW-02) ===
-export const DAILY_CAP = 4  // максимум миссий в день
+export const DAILY_CAP = 4 // максимум миссий в день
 
-// === Mission types (REQ MISSION-02) ===
-export type MissionType = 'rhythm' | 'defend' | 'hotspot'
-export const MISSION_TYPES: readonly MissionType[] = ['rhythm', 'defend', 'hotspot']
-
-/** Random mission type (helper для MissionOverlay). Tested через __forceMissionType. */
-export function pickRandomMissionType(): MissionType {
-  const i = Math.floor(Math.random() * MISSION_TYPES.length)
-  return MISSION_TYPES[i]
-}
-
-// === Mission scoring → bonusRarity (REQ MISSION-03) ===
+// === Mission result type ===
 export type MissionResult = 'perfect' | 'good' | 'fail'
 
-/** Score [0..1] → result bucket. */
-export function scoreToResult(score: number): MissionResult {
-  if (score >= 1.0) return 'perfect'
-  if (score >= 0.6) return 'good'
-  return 'fail'
-}
-
-/** Result → bonusRarity multiplier (additive к base rarity roll в Phase 15). */
+/** Result → bonusRarity multiplier (additive к base rarity roll). */
 export function bonusRarityForResult(result: MissionResult): number {
   switch (result) {
-    case 'perfect': return 0.15
-    case 'good': return 0.05
-    case 'fail': return 0
+    case 'perfect':
+      return 0.15
+    case 'good':
+      return 0.05
+    case 'fail':
+      return 0
   }
 }
 
@@ -76,7 +62,15 @@ export function getLocalDateString(now: Date = new Date()): string {
 /** Время до следующей локальной полночи (ms). Используется в crew tooltip
  * countdown. */
 export function msUntilLocalMidnight(now: Date = new Date()): number {
-  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0)
+  const next = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() + 1,
+    0,
+    0,
+    0,
+    0,
+  )
   return next.getTime() - now.getTime()
 }
 

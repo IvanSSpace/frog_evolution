@@ -25,7 +25,8 @@ export function compBubbleStream(
       bubble.fillCircle(0, 0, r)
       bubble.lineStyle(0.5 * DPR, 0xffffff, 0.7)
       bubble.strokeCircle(0, 0, r)
-      bubble.x = startX; bubble.y = startY
+      bubble.x = startX
+      bubble.y = startY
       sprite.add(bubble)
       const dist = sys.size * (1.0 + rng() * 0.6)
       scene.tweens.add({
@@ -34,7 +35,8 @@ export function compBubbleStream(
         y: startY + Math.sin(upAng) * dist,
         alpha: 0,
         scale: 1.4,
-        duration: 600 + rng() * 200, ease: 'Sine.easeOut',
+        duration: 600 + rng() * 200,
+        ease: 'Sine.easeOut',
         onComplete: () => bubble.destroy(),
       })
     })

@@ -11,12 +11,19 @@ export type ElementTier = 'dormant' | 'common' | 'rare' | 'epic' | 'legendary'
 
 // Полный список tiers (для итерации в pool/manager).
 export const ELEMENT_TIERS: readonly ElementTier[] = [
-  'dormant', 'common', 'rare', 'epic', 'legendary',
+  'dormant',
+  'common',
+  'rare',
+  'epic',
+  'legendary',
 ]
 
 // Только awakened tiers — Rarity ⊂ awakened.
 export const AWAKENED_TIERS: readonly Exclude<ElementTier, 'dormant'>[] = [
-  'common', 'rare', 'epic', 'legendary',
+  'common',
+  'rare',
+  'epic',
+  'legendary',
 ]
 
 export interface OverlayPresetParams {

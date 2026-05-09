@@ -7,12 +7,12 @@ import { CeilingDisplay } from './CeilingDisplay'
 import { ELEMENT_TINTS } from '../../game/effects/elements/elementTints'
 import type { CarrierData, Rarity } from '../../store/cosmic/types'
 
-const ESTIMATED_FEEDS_TO_STABILIZE = 8  // empirical with SUCCESS_RATE_BASE=0.7
+const ESTIMATED_FEEDS_TO_STABILIZE = 8 // empirical with SUCCESS_RATE_BASE=0.7
 
 const RARITY_BADGE_CLASS: Record<Rarity, string> = {
-  common:    'bg-emerald-700/40 text-emerald-300',
-  rare:      'bg-blue-700/40    text-blue-300',
-  epic:      'bg-purple-700/40  text-purple-300',
+  common: 'bg-emerald-700/40 text-emerald-300',
+  rare: 'bg-blue-700/40    text-blue-300',
+  epic: 'bg-purple-700/40  text-purple-300',
   legendary: 'bg-amber-600/40   text-amber-200',
 }
 
@@ -58,7 +58,9 @@ export function CarrierInfoCard({ carrier, onDispose }: Props) {
       {/* Row 2: ceiling display + dispose button stub */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-white/50 text-xs">{t('cosmic_hub.carrier.ceiling_label')}:</span>
+          <span className="text-white/50 text-xs">
+            {t('cosmic_hub.carrier.ceiling_label')}:
+          </span>
           <CeilingDisplay carrier={carrier} />
         </div>
         {onDispose ? (

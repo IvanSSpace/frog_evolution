@@ -17,7 +17,7 @@ export function RareCrateModal({ minLevel, maxLevel, onClose }: Props) {
   const { t } = useTranslation()
   const [phase, setPhase] = useState<'spinning' | 'result'>('spinning')
   const wonLevelRef = useRef<number>(
-    Math.floor(Math.random() * (maxLevel - minLevel + 1)) + minLevel
+    Math.floor(Math.random() * (maxLevel - minLevel + 1)) + minLevel,
   )
   const wonLevel = wonLevelRef.current
 
@@ -55,24 +55,38 @@ export function RareCrateModal({ minLevel, maxLevel, onClose }: Props) {
     <div
       className="ff-fade"
       style={{
-        position: 'fixed', inset: 0, zIndex: 200,
+        position: 'fixed',
+        inset: 0,
+        zIndex: 200,
         pointerEvents: 'auto',
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        background: 'radial-gradient(ellipse at 50% 30%, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.93) 70%)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background:
+          'radial-gradient(ellipse at 50% 30%, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.93) 70%)',
       }}
     >
-      <div style={{
-        position: 'absolute', top: 0, left: '50%',
-        transform: 'translateX(-50%)',
-        width: '80%', height: '80%',
-        background: 'linear-gradient(180deg, rgba(255,215,0,0.3) 0%, rgba(255,215,0,0.05) 60%, transparent 100%)',
-        clipPath: 'polygon(40% 0%, 60% 0%, 100% 100%, 0% 100%)',
-        pointerEvents: 'none',
-        filter: 'blur(12px)',
-      }} />
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '80%',
+          height: '80%',
+          background:
+            'linear-gradient(180deg, rgba(255,215,0,0.3) 0%, rgba(255,215,0,0.05) 60%, transparent 100%)',
+          clipPath: 'polygon(40% 0%, 60% 0%, 100% 100%, 0% 100%)',
+          pointerEvents: 'none',
+          filter: 'blur(12px)',
+        }}
+      />
 
-      <div className="relative flex flex-col items-center gap-4" style={{ zIndex: 1 }}>
+      <div
+        className="relative flex flex-col items-center gap-4"
+        style={{ zIndex: 1 }}
+      >
         <div
           className="ff-display text-center"
           style={{
@@ -87,25 +101,41 @@ export function RareCrateModal({ minLevel, maxLevel, onClose }: Props) {
 
         <div
           style={{
-            width: 100, height: ITEM_HEIGHT * 2 + 4,
+            width: 100,
+            height: ITEM_HEIGHT * 2 + 4,
             overflow: 'hidden',
             border: '4px solid #b8860b',
             borderRadius: 16,
             background: 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)',
-            boxShadow: '0 0 24px rgba(255,215,0,0.4), inset 0 0 12px rgba(0,0,0,0.5)',
+            boxShadow:
+              '0 0 24px rgba(255,215,0,0.4), inset 0 0 12px rgba(0,0,0,0.5)',
             position: 'relative',
           }}
         >
-          <div style={{
-            position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none',
-            background: 'linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.7) 100%)',
-          }} />
-          <div style={{
-            position: 'absolute', top: '50%', left: 0, right: 0,
-            height: ITEM_HEIGHT, transform: 'translateY(-50%)',
-            border: '2px solid rgba(255,215,0,0.5)',
-            zIndex: 3, pointerEvents: 'none', borderRadius: 4,
-          }} />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 2,
+              pointerEvents: 'none',
+              background:
+                'linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.7) 100%)',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: 0,
+              right: 0,
+              height: ITEM_HEIGHT,
+              transform: 'translateY(-50%)',
+              border: '2px solid rgba(255,215,0,0.5)',
+              zIndex: 3,
+              pointerEvents: 'none',
+              borderRadius: 4,
+            }}
+          />
 
           <div ref={reelRef} style={{ willChange: 'transform' }}>
             {reelLevels.map((level, i) => {
@@ -114,8 +144,11 @@ export function RareCrateModal({ minLevel, maxLevel, onClose }: Props) {
                 <div
                   key={i}
                   style={{
-                    width: 100, height: ITEM_HEIGHT,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 100,
+                    height: ITEM_HEIGHT,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     padding: 8,
                   }}
                 >
@@ -134,9 +167,13 @@ export function RareCrateModal({ minLevel, maxLevel, onClose }: Props) {
         <div
           style={{
             opacity: phase === 'result' ? 1 : 0,
-            transform: phase === 'result' ? 'translateY(0)' : 'translateY(12px)',
+            transform:
+              phase === 'result' ? 'translateY(0)' : 'translateY(12px)',
             transition: 'opacity 0.4s ease, transform 0.4s ease',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 12,
           }}
         >
           <div
@@ -148,7 +185,8 @@ export function RareCrateModal({ minLevel, maxLevel, onClose }: Props) {
               border: '3px solid #92400e',
               borderBottomWidth: 5,
               borderRadius: 14,
-              boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.3), 0 4px 0 rgba(0,0,0,0.3)',
+              boxShadow:
+                'inset 0 2px 0 rgba(255,255,255,0.3), 0 4px 0 rgba(0,0,0,0.3)',
               textShadow: '0 2px 0 rgba(0,0,0,0.3)',
             }}
           >
@@ -159,8 +197,10 @@ export function RareCrateModal({ minLevel, maxLevel, onClose }: Props) {
             onClick={() => phase === 'result' && onClose(wonLevel)}
             className="ff-btn ff-btn-green text-lg"
             style={{
-              paddingLeft: 32, paddingRight: 32,
-              paddingTop: 12, paddingBottom: 12,
+              paddingLeft: 32,
+              paddingRight: 32,
+              paddingTop: 12,
+              paddingBottom: 12,
               opacity: phase === 'result' ? 1 : 0.3,
               cursor: phase === 'result' ? 'pointer' : 'default',
             }}

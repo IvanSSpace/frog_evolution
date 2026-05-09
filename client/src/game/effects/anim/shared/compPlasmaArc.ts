@@ -20,26 +20,33 @@ export function compPlasmaArc(
     const color = pickColor(rng, sys)
     arc.lineStyle(1.5 * DPR, color, 0.9)
     // Bezier-кривая через 2 узла
-    const x1 = Math.cos(ang1) * r, y1 = Math.sin(ang1) * r
-    const x2 = Math.cos(ang2) * r, y2 = Math.sin(ang2) * r
+    const x1 = Math.cos(ang1) * r,
+      y1 = Math.sin(ang1) * r
+    const x2 = Math.cos(ang2) * r,
+      y2 = Math.sin(ang2) * r
     const cx = (x1 + x2) / 2 + (rng() - 0.5) * sys.size * 0.6
     const cy = (y1 + y2) / 2 + (rng() - 0.5) * sys.size * 0.6
     const segs = 12
-    let px = x1, py = y1
+    let px = x1,
+      py = y1
     for (let s = 1; s <= segs; s++) {
-      const t = s / segs; const u = 1 - t
-      const x = u*u*x1 + 2*u*t*cx + t*t*x2
-      const y = u*u*y1 + 2*u*t*cy + t*t*y2
+      const t = s / segs
+      const u = 1 - t
+      const x = u * u * x1 + 2 * u * t * cx + t * t * x2
+      const y = u * u * y1 + 2 * u * t * cy + t * t * y2
       // jitter — молниевый эффект
       const jx = x + (rng() - 0.5) * 1.5 * DPR
       const jy = y + (rng() - 0.5) * 1.5 * DPR
       arc.lineBetween(px, py, jx, jy)
-      px = jx; py = jy
+      px = jx
+      py = jy
     }
     sprite.add(arc)
     scene.tweens.add({
-      targets: arc, alpha: 0,
-      duration: 350 + rng() * 150, ease: 'Cubic.easeOut',
+      targets: arc,
+      alpha: 0,
+      duration: 350 + rng() * 150,
+      ease: 'Cubic.easeOut',
       onComplete: () => arc.destroy(),
     })
   }

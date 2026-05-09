@@ -20,10 +20,14 @@ interface Props {
 export function FilterPills(props: Props) {
   const { t } = useTranslation()
   const {
-    rarityFilter, onRarityFilter,
-    elementSearch, onElementSearch,
-    showLocked, onToggleLocked,
-    sortBy, onSortBy,
+    rarityFilter,
+    onRarityFilter,
+    elementSearch,
+    onElementSearch,
+    showLocked,
+    onToggleLocked,
+    sortBy,
+    onSortBy,
   } = props
 
   return (
@@ -72,9 +76,15 @@ export function FilterPills(props: Props) {
           onChange={(ev) => onSortBy(ev.target.value as SortKey)}
           className="px-2 py-1 rounded text-xs bg-white/5 border border-white/10 text-white focus:outline-none focus:border-emerald-400"
         >
-          <option value="level-asc">{t('cosmic_hub.bestiary.sort_level_asc')}</option>
-          <option value="level-desc">{t('cosmic_hub.bestiary.sort_level_desc')}</option>
-          <option value="element">{t('cosmic_hub.bestiary.sort_element')}</option>
+          <option value="level-asc">
+            {t('cosmic_hub.bestiary.sort_level_asc')}
+          </option>
+          <option value="level-desc">
+            {t('cosmic_hub.bestiary.sort_level_desc')}
+          </option>
+          <option value="element">
+            {t('cosmic_hub.bestiary.sort_element')}
+          </option>
           <option value="rarity">{t('cosmic_hub.bestiary.sort_rarity')}</option>
         </select>
 

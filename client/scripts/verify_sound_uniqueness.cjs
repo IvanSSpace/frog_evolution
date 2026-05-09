@@ -40,12 +40,18 @@ function buildTextureSignature(bg) {
   const rng = mulberry32(bg.rngSeed)
   rng()
   const showAura =
-    bg.archetype !== 'dead' && bg.archetype !== 'mineral' && bg.archetype !== 'desert'
+    bg.archetype !== 'dead' &&
+    bg.archetype !== 'mineral' &&
+    bg.archetype !== 'desert'
   if (showAura) {
-    rng(); rng()
+    rng()
+    rng()
     if (rng() < 0.3) rng()
   }
-  rng(); rng(); rng(); rng()
+  rng()
+  rng()
+  rng()
+  rng()
   rng()
   const variant = Math.floor(rng() * 3)
   const c1 = Math.floor(rng() * 5)
@@ -66,7 +72,10 @@ function quantize(value, thresholds) {
   let bestDist = Math.abs(value - thresholds[0])
   for (let i = 1; i < thresholds.length; i++) {
     const d = Math.abs(value - thresholds[i])
-    if (d < bestDist) { bestDist = d; bestIdx = i }
+    if (d < bestDist) {
+      bestDist = d
+      bestIdx = i
+    }
   }
   return bestIdx
 }
@@ -83,17 +92,23 @@ function buildAnimSignature(sys) {
   const components = []
   while (components.length < compCount) {
     const c = pool[Math.floor(rng() * pool.length)]
-    if (!used.has(c)) { used.add(c); components.push(c) }
+    if (!used.has(c)) {
+      used.add(c)
+      components.push(c)
+    }
   }
   const useModifier = rng() < 0.25
   const modRotation = useModifier ? (rng() - 0.5) * Math.PI : 0
   const modScale = useModifier ? 0.7 + rng() * 0.6 : 1
   const rotationBin = useModifier
-    ? quantize(modRotation, [-Math.PI / 2, -Math.PI / 4, Math.PI / 4, Math.PI / 2])
+    ? quantize(modRotation, [
+        -Math.PI / 2,
+        -Math.PI / 4,
+        Math.PI / 4,
+        Math.PI / 2,
+      ])
     : -1
-  const scaleBin = useModifier
-    ? quantize(modScale, [0.7, 0.85, 1.15, 1.3])
-    : -1
+  const scaleBin = useModifier ? quantize(modScale, [0.7, 0.85, 1.15, 1.3]) : -1
   const hueBin = (seed >>> 5) & 0x7
   const delayBins = []
   for (let i = 1; i < components.length; i++) {
@@ -188,7 +203,9 @@ for (const sys of systems) {
   initialPerArchetype[arch].add(sig)
   if (!initialSigs.has(sig)) initialSigs.set(sig, sys.id)
 }
-console.log(`[sound] initial: ${initialSigs.size}/${systems.length} unique signatures (pre-refine)`)
+console.log(
+  `[sound] initial: ${initialSigs.size}/${systems.length} unique signatures (pre-refine)`,
+)
 
 // ─── Run pipeline (texture → anim → sound → texture-stabilize) ───
 refineTextureSeeds()
@@ -216,12 +233,18 @@ for (const sys of systems) {
 
 const total = systems.length
 const unique = finalSigs.size
-console.log(`[sound] ${unique}/${total} unique sound signatures after full pipeline (${refineConflicts} unresolved during sound refine)`)
+console.log(
+  `[sound] ${unique}/${total} unique sound signatures after full pipeline (${refineConflicts} unresolved during sound refine)`,
+)
 
 if (collisions.size > 0) {
   console.log(`Collisions (top 5):`)
-  for (const [sig, ids] of [...collisions.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, 5)) {
-    console.log(`  ${ids.length}x ${sig} → [${ids.slice(0, 3).join(', ')}${ids.length > 3 ? ', ...' : ''}]`)
+  for (const [sig, ids] of [...collisions.entries()]
+    .sort((a, b) => b[1].length - a[1].length)
+    .slice(0, 5)) {
+    console.log(
+      `  ${ids.length}x ${sig} → [${ids.slice(0, 3).join(', ')}${ids.length > 3 ? ', ...' : ''}]`,
+    )
   }
 } else {
   console.log(`OK — no collisions`)

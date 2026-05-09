@@ -19,7 +19,11 @@ interface Props {
 const SIZE = 64
 
 export const BestiaryCell = memo(function BestiaryCell({
-  element, rarity, level, unlocked, onTap,
+  element,
+  rarity,
+  level,
+  unlocked,
+  onTap,
 }: Props) {
   const { t } = useTranslation()
 
@@ -34,7 +38,9 @@ export const BestiaryCell = memo(function BestiaryCell({
         title={t('cosmic_hub.bestiary.locked_tooltip')}
         aria-label={t('cosmic_hub.bestiary.locked_aria', { level })}
       >
-        <span className="text-slate-500 text-2xl font-bold select-none">???</span>
+        <span className="text-slate-500 text-2xl font-bold select-none">
+          ???
+        </span>
       </button>
     )
   }
@@ -54,10 +60,16 @@ export const BestiaryCell = memo(function BestiaryCell({
         height: SIZE,
         background: `linear-gradient(135deg, ${bgColor}cc 0%, ${bgColor}88 100%)`,
       }}
-      aria-label={t('cosmic_hub.bestiary.cell_aria', { element, rarity, level })}
+      aria-label={t('cosmic_hub.bestiary.cell_aria', {
+        element,
+        rarity,
+        level,
+      })}
     >
       {/* Mini frog icon — простая emoji 🐸; реальный sprite optional Phase 19+ */}
-      <span className="text-3xl filter drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]">🐸</span>
+      <span className="text-3xl filter drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]">
+        🐸
+      </span>
 
       {/* Level badge — bottom-right corner */}
       <span

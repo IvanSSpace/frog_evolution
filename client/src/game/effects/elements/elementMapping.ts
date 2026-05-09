@@ -46,8 +46,10 @@ export function elementFromPlanet(
   archetype: string | undefined,
   mainRaceType: string | undefined,
 ): Element | null {
-  if (mainRaceType && MAIN_RACE_TO_ELEMENT[mainRaceType]) return MAIN_RACE_TO_ELEMENT[mainRaceType]
-  if (archetype && ARCHETYPE_TO_ELEMENT[archetype]) return ARCHETYPE_TO_ELEMENT[archetype]
+  if (mainRaceType && MAIN_RACE_TO_ELEMENT[mainRaceType])
+    return MAIN_RACE_TO_ELEMENT[mainRaceType]
+  if (archetype && ARCHETYPE_TO_ELEMENT[archetype])
+    return ARCHETYPE_TO_ELEMENT[archetype]
   return null
 }
 
@@ -58,21 +60,37 @@ export function elementFromPlanet(
  */
 export function archetypeForElement(element: Element): string {
   switch (element) {
-    case 'fire': return 'lava'
-    case 'ice': return 'ice'
-    case 'water': return 'ocean'
-    case 'forest': return 'forest'
-    case 'toxic': return 'toxic'
-    case 'plasma': return 'plasma'
-    case 'shadow': return 'dead'
-    case 'crystal': return 'mineral'
-    case 'desert': return 'desert'
-    case 'gas': return 'gas_giant'
-    case 'ring': return 'gas_ringed'
-    case 'binary': return 'binary'
-    case 'arcane': return 'mystic'
-    case 'mechanical': return 'mechano'
-    case 'war': return 'military'
-    case 'void': return 'shadow'
+    case 'fire':
+      return 'lava'
+    case 'ice':
+      return 'ice'
+    case 'water':
+      return 'ocean'
+    case 'forest':
+      return 'forest'
+    case 'toxic':
+      return 'toxic'
+    case 'plasma':
+      return 'plasma'
+    case 'shadow':
+      return 'dead'
+    case 'crystal':
+      return 'mineral'
+    case 'desert':
+      return 'desert'
+    case 'gas':
+      return 'gas_giant'
+    case 'ring':
+      return 'gas_ringed'
+    case 'binary':
+      return 'binary'
+    case 'arcane':
+      return 'mystic'
+    case 'mechanical':
+      return 'mechano'
+    case 'war':
+      return 'military'
+    case 'void':
+      return 'shadow'
   }
 }

@@ -22,13 +22,18 @@ export function compChromaShift(
     sprite.add(ghost)
     ghosts.push(ghost)
     scene.tweens.add({
-      targets: ghost, x: dx, y: dy,
-      yoyo: true, duration: 200 + rng() * 100,
+      targets: ghost,
+      x: dx,
+      y: dy,
+      yoyo: true,
+      duration: 200 + rng() * 100,
       ease: 'Sine.easeInOut',
       onComplete: () => {
         scene.tweens.add({
-          targets: ghost, alpha: 0,
-          duration: 200, ease: 'Cubic.easeOut',
+          targets: ghost,
+          alpha: 0,
+          duration: 200,
+          ease: 'Cubic.easeOut',
           onComplete: () => ghost.destroy(),
         })
       },

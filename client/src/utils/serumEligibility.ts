@@ -38,12 +38,12 @@ export function isEligible(
 }
 
 /** Helper для UI / mis-tap toast: required level + locationId for hint. */
-export function getEligibilityHint(rarity: Rarity): { level: number; locationId: number } {
+export function getEligibilityHint(rarity: Rarity): {
+  level: number
+  locationId: number
+} {
   const level = RARITY_TO_STARTING_LEVEL[rarity]
   // Локация определяется по level: 1-6 → Болото, 7-12 → Лес, 13-18 → Континент, 19-24 → Планета.
-  const locationId =
-    level <= 6 ? 1 :
-    level <= 12 ? 2 :
-    level <= 18 ? 3 : 4
+  const locationId = level <= 6 ? 1 : level <= 12 ? 2 : level <= 18 ? 3 : 4
   return { level, locationId }
 }

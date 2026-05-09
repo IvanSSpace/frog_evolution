@@ -10,15 +10,16 @@ import type { BoxData, Rarity, Element } from '../../store/cosmic/types'
 import { useGameStore } from '../../store/gameStore'
 import { ELEMENT_TINT } from './ElementGrid'
 import { getInstantBoxes } from '../../utils/cosmicSettings'
+import { sfx } from '../../audio/sfx'
 
 // Lazy chunk — SerumSlotMachine (Plan 15-04). Отдельный файл в bundle.
 const SerumSlotMachine = lazy(() => import('./SerumSlotMachine'))
 
 // REQ BOX-05: cascade timing.
-const T_OPENING_FLASH = 200    // ms
-const T_COINS_REVEAL = 200     // ms
+const T_OPENING_FLASH = 200 // ms
+const T_COINS_REVEAL = 200 // ms
 const T_RESOURCES_REVEAL = 200 // ms
-const T_PAUSE = 400            // ms
+const T_PAUSE = 400 // ms
 // instant total ≈ slot's INSTANT_MODE_DURATION_MS (400) — handled в SerumSlotMachine.
 
 type Phase =
@@ -35,7 +36,10 @@ export interface CascadeRevealModalProps {
   onComplete: () => void
 }
 
-export default function CascadeRevealModal({ box, onComplete }: CascadeRevealModalProps) {
+export default function CascadeRevealModal({
+  box,
+  onComplete,
+}: CascadeRevealModalProps) {
   const { t } = useTranslation()
 
   // Pre-roll rarity на mount (REQ: rolling до анимации, fairness).
@@ -60,20 +64,40 @@ export default function CascadeRevealModal({ box, onComplete }: CascadeRevealMod
     }
   }, [onComplete])
 
+  // Звук открытия бокса при маунте.
+  useEffect(() => {
+    void sfx.ensureReady()
+    sfx.play('boxOpen')
+  }, [])
+
   // Cascade timeline (skip if instantMode).
   useEffect(() => {
     if (instantMode || rolledRef.current === null) return
     const timeouts: ReturnType<typeof setTimeout>[] = []
 
     timeouts.push(setTimeout(() => setPhase('coins-reveal'), T_OPENING_FLASH))
-    timeouts.push(setTimeout(() => setPhase('resources-reveal'),
-      T_OPENING_FLASH + T_COINS_REVEAL))
-    timeouts.push(setTimeout(() => setPhase('pause'),
-      T_OPENING_FLASH + T_COINS_REVEAL + T_RESOURCES_REVEAL))
-    timeouts.push(setTimeout(() => setPhase('slot-spinning'),
-      T_OPENING_FLASH + T_COINS_REVEAL + T_RESOURCES_REVEAL + T_PAUSE))
+    timeouts.push(
+      setTimeout(
+        () => setPhase('resources-reveal'),
+        T_OPENING_FLASH + T_COINS_REVEAL,
+      ),
+    )
+    timeouts.push(
+      setTimeout(
+        () => setPhase('pause'),
+        T_OPENING_FLASH + T_COINS_REVEAL + T_RESOURCES_REVEAL,
+      ),
+    )
+    timeouts.push(
+      setTimeout(
+        () => setPhase('slot-spinning'),
+        T_OPENING_FLASH + T_COINS_REVEAL + T_RESOURCES_REVEAL + T_PAUSE,
+      ),
+    )
 
-    return () => { for (const t of timeouts) clearTimeout(t) }
+    return () => {
+      for (const t of timeouts) clearTimeout(t)
+    }
   }, [instantMode])
 
   // SerumSlotMachine onComplete handler — переходим к reveal phase + commit.
@@ -88,7 +112,7 @@ export default function CascadeRevealModal({ box, onComplete }: CascadeRevealMod
   // Phase 'slot-reveal' → tap НЕ закрывает (юзер должен жмякнуть «Забрать»).
   const handleTapAnywhere = useCallback(() => {
     if (phase !== 'slot-spinning') return
-    if (Date.now() - tapStartTime.current < 600) return  // anti-misclick 600ms
+    if (Date.now() - tapStartTime.current < 600) return // anti-misclick 600ms
     setSkipRequested(true)
   }, [phase])
 
@@ -106,9 +130,15 @@ export default function CascadeRevealModal({ box, onComplete }: CascadeRevealMod
       data-phase={phase}
       onPointerDown={handleTapAnywhere}
       style={{
-        position: 'fixed', inset: 0, zIndex: 200,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        background: 'radial-gradient(ellipse at 50% 30%, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.95) 70%)',
+        position: 'fixed',
+        inset: 0,
+        zIndex: 200,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background:
+          'radial-gradient(ellipse at 50% 30%, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.95) 70%)',
         cursor: phase === 'slot-spinning' ? 'pointer' : 'default',
       }}
     >
@@ -133,7 +163,10 @@ export default function CascadeRevealModal({ box, onComplete }: CascadeRevealMod
           style={{ animation: 'cascadeSlideUp 200ms ease-out forwards' }}
         >
           <span style={{ fontSize: 30 }}>🪙</span>
-          <span className="ff-display" style={{ fontSize: 24, color: '#fde047' }}>
+          <span
+            className="ff-display"
+            style={{ fontSize: 24, color: '#fde047' }}
+          >
             {t('cosmic_hub.cascade.coins', { count: 100 })}
           </span>
         </div>
@@ -147,7 +180,10 @@ export default function CascadeRevealModal({ box, onComplete }: CascadeRevealMod
           style={{ animation: 'cascadeSlideUp 200ms ease-out forwards' }}
         >
           <span style={{ fontSize: 30 }}>⚙️</span>
-          <span className="ff-display" style={{ fontSize: 24, color: '#67e8f9' }}>
+          <span
+            className="ff-display"
+            style={{ fontSize: 24, color: '#67e8f9' }}
+          >
             {t('cosmic_hub.cascade.resources', { count: 25 })}
           </span>
         </div>
@@ -155,14 +191,19 @@ export default function CascadeRevealModal({ box, onComplete }: CascadeRevealMod
 
       {/* Phase: pause — empty 400ms breath */}
       {phase === 'pause' && (
-        <div data-testid="cascade-pause" style={{ color: 'rgba(255,255,255,0.3)', fontSize: 14 }}>
+        <div
+          data-testid="cascade-pause"
+          style={{ color: 'rgba(255,255,255,0.3)', fontSize: 14 }}
+        >
           {t('cosmic_hub.cascade.serum_incoming')}
         </div>
       )}
 
       {/* Phase: slot-spinning — SerumSlotMachine takes over (Plan 15-04) */}
       {phase === 'slot-spinning' && (
-        <Suspense fallback={<div style={{ color: 'rgba(255,255,255,0.4)' }}>…</div>}>
+        <Suspense
+          fallback={<div style={{ color: 'rgba(255,255,255,0.4)' }}>…</div>}
+        >
           <SerumSlotMachine
             element={rolled.element}
             rolledRarity={rolled.rarity}
@@ -219,7 +260,8 @@ function RevealResult({ element, rarity, onClaim }: RevealResultProps) {
       <div
         className="flex items-center justify-center"
         style={{
-          width: 128, height: 128,
+          width: 128,
+          height: 128,
           borderRadius: '50%',
           backgroundColor: tint,
           boxShadow: `0 0 64px ${tint}, 0 0 128px ${tint}aa`,
@@ -252,8 +294,10 @@ function RevealResult({ element, rarity, onClaim }: RevealResultProps) {
         onClick={onClaim}
         className="ff-btn ff-btn-green text-lg"
         style={{
-          paddingLeft: 32, paddingRight: 32,
-          paddingTop: 12, paddingBottom: 12,
+          paddingLeft: 32,
+          paddingRight: 32,
+          paddingTop: 12,
+          paddingBottom: 12,
         }}
       >
         {t('cosmic_hub.slot.claim')}

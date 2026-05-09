@@ -2,7 +2,12 @@
 // Подключаются в App.tsx через `if (import.meta.env.DEV) installBestiaryDevHelpers()`.
 
 import { useGameStore } from '../store/gameStore'
-import { ELEMENTS, RARITIES, type Element, type Rarity } from '../store/cosmic/types'
+import {
+  ELEMENTS,
+  RARITIES,
+  type Element,
+  type Rarity,
+} from '../store/cosmic/types'
 
 declare global {
   interface Window {
@@ -16,7 +21,10 @@ function bitCount(bitset: ReadonlyArray<number>): number {
   let c = 0
   for (let i = 0; i < bitset.length; i++) {
     let b = bitset[i] ?? 0
-    while (b) { b &= b - 1; c++ }
+    while (b) {
+      b &= b - 1
+      c++
+    }
   }
   return c
 }
@@ -34,12 +42,16 @@ function unlockRandomCells(count: number): void {
 
   let unlocked = 0
   let attempts = 0
-  const maxAttempts = count * 20  // защита от infinite loop когда bitset почти полный
+  const maxAttempts = count * 20 // защита от infinite loop когда bitset почти полный
 
   while (unlocked < count && attempts < maxAttempts) {
     attempts++
-    const element = ELEMENTS[Math.floor(Math.random() * ELEMENTS.length)] as Element
-    const rarity = RARITIES[Math.floor(Math.random() * RARITIES.length)] as Rarity
+    const element = ELEMENTS[
+      Math.floor(Math.random() * ELEMENTS.length)
+    ] as Element
+    const rarity = RARITIES[
+      Math.floor(Math.random() * RARITIES.length)
+    ] as Rarity
     const level = Math.floor(Math.random() * 24) + 1
 
     const before = bitCount(useGameStore.getState().bestiaryBitset)
@@ -48,7 +60,9 @@ function unlockRandomCells(count: number): void {
     if (after > before) unlocked++
   }
 
-  console.log(`[bestiary-dev] unlocked ${unlocked} cells (attempts: ${attempts})`)
+  console.log(
+    `[bestiary-dev] unlocked ${unlocked} cells (attempts: ${attempts})`,
+  )
 }
 
 export function installBestiaryDevHelpers(): void {
@@ -63,5 +77,7 @@ export function installBestiaryDevHelpers(): void {
     })
     console.log('[bestiary-dev] bitset reset')
   }
-  console.log('[bestiary-dev] helpers installed: __unlockBestiaryCells(N), __bestiaryCount(), __resetBestiary()')
+  console.log(
+    '[bestiary-dev] helpers installed: __unlockBestiaryCells(N), __bestiaryCount(), __resetBestiary()',
+  )
 }

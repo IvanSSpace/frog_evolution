@@ -28,24 +28,46 @@ class ElementOverlayPool {
     this.scene = scene
   }
 
-  acquire(scene: Phaser.Scene, element: Element, tier: ElementTier = 'dormant'): FrogElementOverlay {
+  acquire(
+    scene: Phaser.Scene,
+    element: Element,
+    tier: ElementTier = 'dormant',
+  ): FrogElementOverlay {
     this.bindScene(scene)
     const key = `${element}:${tier}`
     const bucket = this.pool.get(key) ?? []
-    const overlay = bucket.pop() ?? new FrogElementOverlay(scene)
+
+    // Пропускаем уничтоженные overlays (их container мог быть destroy'd вместе с frog-контейнером)
+    let overlay: FrogElementOverlay | undefined
+    while (bucket.length > 0) {
+      const candidate = bucket.pop()!
+      if (candidate.container.active) {
+        overlay = candidate
+        break
+      }
+      // destroyed — просто дропаем (GC возьмёт)
+    }
     if (bucket.length === 0) this.pool.delete(key)
     else this.pool.set(key, bucket)
-    this.active.add(overlay)
-    return overlay
+
+    const result = overlay ?? new FrogElementOverlay(scene)
+    this.active.add(result)
+    return result
   }
 
   release(overlay: FrogElementOverlay): void {
     if (!this.active.has(overlay)) return
-    // Считываем element/tier ДО detach — внутри detach() значения не сбрасываются,
-    // но порядок важен на случай будущего изменения семантики.
+    this.active.delete(overlay)
+
+    // Если container уничтожен Phaser (frog merge destroyed host container) —
+    // не добавляем в pool: orb.geom уже null, attach() упадёт.
+    if (!overlay.container.active) {
+      overlay.detach() // noop-safe: detach проверяет container.active внутри
+      return
+    }
+
     const key = `${overlay.element}:${overlay.tier}`
     overlay.detach()
-    this.active.delete(overlay)
     const bucket = this.pool.get(key) ?? []
     bucket.push(overlay)
     this.pool.set(key, bucket)
@@ -61,7 +83,9 @@ class ElementOverlayPool {
     this.scene = null
   }
 
-  get totalActive(): number { return this.active.size }
+  get totalActive(): number {
+    return this.active.size
+  }
   get totalPooled(): number {
     let n = 0
     for (const b of this.pool.values()) n += b.length

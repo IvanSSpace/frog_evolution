@@ -1,14 +1,14 @@
 {
   "frogs": {
-    "1":  "Froggy",
-    "2":  "Frog",
-    "3":  "Ribbette",
-    "4":  "Croacus",
-    "5":  "Croaker",
-    "6":  "Croakosaur",
-    "7":  "Bulgy",
-    "8":  "Thumper",
-    "9":  "Frogzilla",
+    "1": "Froggy",
+    "2": "Frog",
+    "3": "Ribbette",
+    "4": "Croacus",
+    "5": "Croaker",
+    "6": "Croakosaur",
+    "7": "Bulgy",
+    "8": "Thumper",
+    "9": "Frogzilla",
     "10": "Crocmoose",
     "11": "Longlegs",
     "12": "Swampwitch",
@@ -32,14 +32,14 @@
     "4": "Space"
   },
   "header": {
-    "per_sec": "💩/sec"
+    "per_sec": "/sec"
   },
   "frog_shop": {
     "title": "FROGS",
     "bought": "Owned:",
     "income": "Income:",
-    "income_unit": "💩 / sec",
-    "no_gold": "Not enough 💩",
+    "income_unit": "goo / sec",
+    "no_gold": "Not enough goo",
     "cap_full": "Field full ({{cap}}/{{cap}})"
   },
   "shop": {
@@ -203,6 +203,7 @@
     "tab_scouts": "Scouts",
     "tab_ship": "Ship",
     "tab_boxes": "Boxes",
+    "tab_station": "Station",
     "tab_serums": "Serums",
     "tab_bestiary": "Bestiary",
     "tab_carriers": "Carriers",

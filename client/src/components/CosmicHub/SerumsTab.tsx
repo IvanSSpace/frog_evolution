@@ -12,11 +12,16 @@
 import { useTranslation } from 'react-i18next'
 import { useGameStore } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
-import { ELEMENTS, RARITIES, type Element, type Rarity } from '../../store/cosmic/types'
+import {
+  ELEMENTS,
+  RARITIES,
+  type Element,
+  type Rarity,
+} from '../../store/cosmic/types'
 import { ElementGrid, ELEMENT_TINT } from './ElementGrid'
 
 interface Props {
-  onClose: () => void  // from CosmicHubModal — закрыть на select / drag start
+  onClose: () => void // from CosmicHubModal — закрыть на select / drag start
 }
 
 export function SerumsTab({ onClose }: Props) {
@@ -64,7 +69,7 @@ export function SerumsTab({ onClose }: Props) {
     // Включаем selection mode (highlights eligible frogs).
     setSerumDragActive(true, { element, rarity })
     eventBus.emit('cosmic:select-serum', { element, rarity })
-    onClose()  // modal закрывается — frogs visible
+    onClose() // modal закрывается — frogs visible
 
     const onMove = (ev: PointerEvent) => {
       ghost.style.left = `${ev.clientX - 16}px`
@@ -120,7 +125,10 @@ export function SerumsTab({ onClose }: Props) {
               </h3>
               <span className="text-xs text-white/40">
                 {sectionTotal > 0
-                  ? t('cosmic_hub.serums.section_count', { count: sectionTotal, kinds: discoveredCount })
+                  ? t('cosmic_hub.serums.section_count', {
+                      count: sectionTotal,
+                      kinds: discoveredCount,
+                    })
                   : t('cosmic_hub.serums.section_empty')}
               </span>
             </header>
@@ -139,9 +147,13 @@ export function SerumsTab({ onClose }: Props) {
 
 function rarityColorClass(r: Rarity): string {
   switch (r) {
-    case 'legendary': return 'text-yellow-300'
-    case 'epic': return 'text-purple-300'
-    case 'rare': return 'text-blue-300'
-    case 'common': return 'text-white/80'
+    case 'legendary':
+      return 'text-yellow-300'
+    case 'epic':
+      return 'text-purple-300'
+    case 'rare':
+      return 'text-blue-300'
+    case 'common':
+      return 'text-white/80'
   }
 }

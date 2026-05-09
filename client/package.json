@@ -14,7 +14,11 @@
     "verify-uniqueness": "node scripts/verify_anim_uniqueness_strict.cjs && node scripts/verify_texture_uniqueness.cjs && node scripts/verify_sound_uniqueness.cjs",
     "sim-balance": "node scripts/simulate_balance.cjs",
     "check-translations": "node scripts/check-translations.cjs",
-    "check-bundle": "node scripts/check-bundle-delta.cjs"
+    "check-bundle": "node scripts/check-bundle-delta.cjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.60.6",
@@ -34,11 +38,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",
+    "@playwright/test": "^1.59.1",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
     "@typescript-eslint/eslint-plugin": "^7.2.0",
     "@typescript-eslint/parser": "^7.2.0",
     "@vitejs/plugin-react": "^4.2.1",
+    "@vitest/ui": "^4.1.5",
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
@@ -49,10 +55,12 @@
     "eslint-plugin-react-hooks": "^4.6.2",
     "eslint-plugin-react-refresh": "^0.4.6",
     "globals": "^15.12.0",
+    "happy-dom": "^20.9.0",
     "postcss": "^8.4.49",
     "prettier": "^3.3.3",
     "typescript": "^5.2.2",
     "typescript-eslint": "^8.15.0",
-    "vite": "^5.2.0"
+    "vite": "^5.2.0",
+    "vitest": "^4.1.5"
   }
 }

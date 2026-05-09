@@ -1,14 +1,14 @@
 {
   "frogs": {
-    "1":  "Ranita",
-    "2":  "Rana",
-    "3":  "Croakita",
-    "4":  "Gracus",
-    "5":  "Croador",
-    "6":  "Croasaurio",
-    "7":  "Ojotes",
-    "8":  "Retumbo",
-    "9":  "Ranazilla",
+    "1": "Ranita",
+    "2": "Rana",
+    "3": "Croakita",
+    "4": "Gracus",
+    "5": "Croador",
+    "6": "Croasaurio",
+    "7": "Ojotes",
+    "8": "Retumbo",
+    "9": "Ranazilla",
     "10": "Croalce",
     "11": "Patilargo",
     "12": "Hechicera",
@@ -32,14 +32,14 @@
     "4": "Espacio"
   },
   "header": {
-    "per_sec": "💩/seg"
+    "per_sec": "/seg"
   },
   "frog_shop": {
     "title": "RANAS",
     "bought": "Compradas:",
     "income": "Ingreso:",
-    "income_unit": "💩 / seg",
-    "no_gold": "No hay suficiente 💩",
+    "income_unit": "baba / seg",
+    "no_gold": "No hay suficiente baba",
     "cap_full": "Campo lleno ({{cap}}/{{cap}})"
   },
   "shop": {
@@ -203,6 +203,7 @@
     "tab_scouts": "Exploradores",
     "tab_ship": "Nave",
     "tab_boxes": "Cajas",
+    "tab_station": "Estación",
     "tab_serums": "Sueros",
     "tab_bestiary": "Bestiario",
     "tab_carriers": "Carriers",

@@ -8,11 +8,19 @@ import assert from 'node:assert/strict'
 const store: Record<string, string> = {}
 ;(globalThis as { localStorage?: Storage }).localStorage = {
   getItem: (k: string) => (k in store ? store[k] : null),
-  setItem: (k: string, v: string) => { store[k] = v },
-  removeItem: (k: string) => { delete store[k] },
-  clear: () => { for (const k of Object.keys(store)) delete store[k] },
+  setItem: (k: string, v: string) => {
+    store[k] = v
+  },
+  removeItem: (k: string) => {
+    delete store[k]
+  },
+  clear: () => {
+    for (const k of Object.keys(store)) delete store[k]
+  },
   key: (i: number) => Object.keys(store)[i] ?? null,
-  get length() { return Object.keys(store).length },
+  get length() {
+    return Object.keys(store).length
+  },
 } as Storage
 
 const listeners = new Map<string, Set<EventListener>>()
@@ -29,11 +37,12 @@ const listeners = new Map<string, Set<EventListener>>()
     return true
   },
 } as Window
-
 ;(globalThis as { CustomEvent?: typeof CustomEvent }).CustomEvent =
   class CustomEventPolyfill {
     type: string
-    constructor(type: string) { this.type = type }
+    constructor(type: string) {
+      this.type = type
+    }
   } as unknown as typeof CustomEvent
 
 const { getInstantBoxes, setInstantBoxes, subscribeInstantBoxes } =

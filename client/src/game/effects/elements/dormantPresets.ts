@@ -6,9 +6,22 @@
 import type Phaser from 'phaser'
 import type { Element } from '../../../store/cosmic/types'
 import {
-  compFlameTongues, compIceWisps, compRipple, compBloomPetals, compToxicCloud,
-  compPlasmaArc, compHaloFlash, compCrystalShatter, compSandSwirl, compChromaShift,
-  compChimeRing, compEchoWave, compStarBurst, compConfetti, compFlash, compBubbleStream,
+  compFlameTongues,
+  compIceWisps,
+  compRipple,
+  compBloomPetals,
+  compToxicCloud,
+  compPlasmaArc,
+  compHaloFlash,
+  compCrystalShatter,
+  compSandSwirl,
+  compChromaShift,
+  compChimeRing,
+  compEchoWave,
+  compStarBurst,
+  compConfetti,
+  compFlash,
+  compBubbleStream,
 } from '../anim/shared'
 import type { SharedBgSystem } from '../anim/shared/types'
 import { ELEMENT_TINTS } from './elementTints'
@@ -39,22 +52,22 @@ interface DormantPreset {
 // 16 dormant idle presets. Подобраны так, чтобы каждый element имел свой
 // уникальный визуальный мотив через Phase 9 primitives.
 const DORMANT_PRESETS: Record<Element, DormantPreset> = {
-  fire: { fn: compFlameTongues },         // языки пламени
-  ice: { fn: compIceWisps },              // ледяные завитки
-  water: { fn: compRipple },              // расширяющиеся круги
-  forest: { fn: compBloomPetals },        // лепестки цветка
-  toxic: { fn: compToxicCloud },          // ядовитое облако
-  plasma: { fn: compPlasmaArc },          // плазменная дуга
-  shadow: { fn: compHaloFlash },          // тёмное свечение
-  crystal: { fn: compCrystalShatter },    // кристальный осколок
-  desert: { fn: compSandSwirl },          // песчаный вихрь
-  gas: { fn: compChromaShift },           // хроматический сдвиг
-  ring: { fn: compChimeRing },            // тонкое кольцо
-  binary: { fn: compEchoWave },           // эхо-волна
-  arcane: { fn: compStarBurst },          // взрыв звёзд
-  mechanical: { fn: compConfetti },       // фрагмент-конфетти
-  war: { flash: compFlash },              // короткая вспышка
-  void: { fn: compBubbleStream },         // тёмные пузыри
+  fire: { fn: compFlameTongues }, // языки пламени
+  ice: { fn: compIceWisps }, // ледяные завитки
+  water: { fn: compRipple }, // расширяющиеся круги
+  forest: { fn: compBloomPetals }, // лепестки цветка
+  toxic: { fn: compToxicCloud }, // ядовитое облако
+  plasma: { fn: compPlasmaArc }, // плазменная дуга
+  shadow: { fn: compHaloFlash }, // тёмное свечение
+  crystal: { fn: compCrystalShatter }, // кристальный осколок
+  desert: { fn: compSandSwirl }, // песчаный вихрь
+  gas: { fn: compChromaShift }, // хроматический сдвиг
+  ring: { fn: compChimeRing }, // тонкое кольцо
+  binary: { fn: compEchoWave }, // эхо-волна
+  arcane: { fn: compStarBurst }, // взрыв звёзд
+  mechanical: { fn: compConfetti }, // фрагмент-конфетти
+  war: { flash: compFlash }, // короткая вспышка
+  void: { fn: compBubbleStream }, // тёмные пузыри
 }
 
 // КРИТИЧНО: малый размер → primitives рендерят малые объекты, не перекрывают спрайт лягушки.
@@ -94,7 +107,8 @@ export function scheduleDormantIdle(
   const fakeSys: SharedBgSystem = {
     id: `dormant-${element}`,
     name: element,
-    x: 0, y: 0,
+    x: 0,
+    y: 0,
     type: 'resource',
     archetype,
     color: tint,
@@ -126,7 +140,9 @@ export function scheduleDormantIdle(
     callback: () => {
       // Защита от race condition: container мог быть destroyed/detached.
       // Phaser ставит scene=null при destroy → readonly check.
-      const ownerScene: Phaser.Scene | null = (container as { scene: Phaser.Scene | null }).scene
+      const ownerScene: Phaser.Scene | null = (
+        container as { scene: Phaser.Scene | null }
+      ).scene
       if (!ownerScene || !container.active) return
       try {
         if (preset.flash) {

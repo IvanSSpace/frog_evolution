@@ -38,8 +38,11 @@ export function compSparkle(
     }
     scene.tweens.add({
       targets: dot,
-      x: Math.cos(ang) * dist, y: Math.sin(ang) * dist,
-      alpha: 0, scaleX: 0.2 + rng() * 0.3, scaleY: 0.2 + rng() * 0.3,
+      x: Math.cos(ang) * dist,
+      y: Math.sin(ang) * dist,
+      alpha: 0,
+      scaleX: 0.2 + rng() * 0.3,
+      scaleY: 0.2 + rng() * 0.3,
       duration: dur + rng() * 200,
       ease: pickEase(rng),
       onComplete: () => dot.destroy(),

@@ -15,7 +15,9 @@
 import assert from 'node:assert/strict'
 
 // Polyfill crypto.randomUUID
-if (!(globalThis as { crypto?: { randomUUID?: () => string } }).crypto?.randomUUID) {
+if (
+  !(globalThis as { crypto?: { randomUUID?: () => string } }).crypto?.randomUUID
+) {
   ;(globalThis as { crypto?: { randomUUID: () => string } }).crypto = {
     randomUUID: () => `${Date.now()}-${Math.random()}`,
   }
@@ -75,7 +77,11 @@ function restoreRandom(): void {
 
   assert.equal(after.boxes[0].opened, true, 'Test 1: box.opened=true')
   assert.equal(after.serums.fire.common, 1, 'Test 1: fire.common=1')
-  assert.equal(after.pityCounters.rare, 1, 'Test 1: pity.rare=1 (common rolled)')
+  assert.equal(
+    after.pityCounters.rare,
+    1,
+    'Test 1: pity.rare=1 (common rolled)',
+  )
   assert.equal(after.pityCounters.epic, 1, 'Test 1: pity.epic=1')
   assert.equal(after.pityCounters.legendary, 1, 'Test 1: pity.legendary=1')
   assert.equal(after.hasOpenedAnyBox, true, 'Test 1: hasOpenedAnyBox=true')
@@ -95,7 +101,11 @@ function restoreRandom(): void {
   assert.equal(after.serums.ice.legendary, 1, 'Test 2: ice.legendary=1')
   assert.equal(after.pityCounters.rare, 0, 'Test 2: pity.rare reset to 0')
   assert.equal(after.pityCounters.epic, 0, 'Test 2: pity.epic reset to 0')
-  assert.equal(after.pityCounters.legendary, 0, 'Test 2: pity.legendary reset to 0')
+  assert.equal(
+    after.pityCounters.legendary,
+    0,
+    'Test 2: pity.legendary reset to 0',
+  )
 }
 
 // ─── Test 3: rare guarantee — pity.rare = 3 → roll cannot be common ───
@@ -111,10 +121,21 @@ function restoreRandom(): void {
   h.state().openBox('b3')
   const after = h.state()
 
-  assert.equal(after.serums.water.common, 0, 'Test 3: water.common=0 (cannot be common)')
-  assert.equal(after.pityCounters.rare, 0, 'Test 3: rare counter reset (rolled rare+)')
+  assert.equal(
+    after.serums.water.common,
+    0,
+    'Test 3: water.common=0 (cannot be common)',
+  )
+  assert.equal(
+    after.pityCounters.rare,
+    0,
+    'Test 3: rare counter reset (rolled rare+)',
+  )
   // serum awarded should be one of rare/epic/legendary
-  const total = after.serums.water.rare + after.serums.water.epic + after.serums.water.legendary
+  const total =
+    after.serums.water.rare +
+    after.serums.water.epic +
+    after.serums.water.legendary
   assert.equal(total, 1, 'Test 3: exactly one rare+ serum awarded')
   restoreRandom()
 }
@@ -150,7 +171,11 @@ function restoreRandom(): void {
   const after = h.state()
 
   assert.equal(after.serums.arcane.legendary, 1, 'Test 5: arcane.legendary=1')
-  assert.equal(after.pityCounters.legendary, 0, 'Test 5: legendary counter reset')
+  assert.equal(
+    after.pityCounters.legendary,
+    0,
+    'Test 5: legendary counter reset',
+  )
 }
 
 // ─── Test 6: bonusRarity epic floor — common roll upgraded to epic+ ───
@@ -183,14 +208,22 @@ function restoreRandom(): void {
   const after = h.state()
 
   assert.deepEqual(after.pityCounters, beforePity, 'Test 7: pity unchanged')
-  assert.equal(after.serums.fire.common, beforeFireCommon, 'Test 7: serums unchanged')
+  assert.equal(
+    after.serums.fire.common,
+    beforeFireCommon,
+    'Test 7: serums unchanged',
+  )
 }
 
 // ─── Test 8: eventBus emits cosmic:box-opened with correct payload ───
 {
   const h = makeHarness()
   let captured: { boxId: string; rarity: string; element: string } | null = null
-  const handler = (payload: { boxId: string; rarity: string; element: string }) => {
+  const handler = (payload: {
+    boxId: string
+    rarity: string
+    element: string
+  }) => {
     captured = payload
   }
   eventBus.on('cosmic:box-opened', handler)
@@ -204,9 +237,21 @@ function restoreRandom(): void {
   eventBus.off('cosmic:box-opened', handler)
 
   assert.notEqual(captured, null, 'Test 8: event captured')
-  assert.equal((captured as unknown as { boxId: string }).boxId, 'b8', 'Test 8: boxId in payload')
-  assert.equal((captured as unknown as { rarity: string }).rarity, 'legendary', 'Test 8: rarity in payload')
-  assert.equal((captured as unknown as { element: string }).element, 'shadow', 'Test 8: element in payload')
+  assert.equal(
+    (captured as unknown as { boxId: string }).boxId,
+    'b8',
+    'Test 8: boxId in payload',
+  )
+  assert.equal(
+    (captured as unknown as { rarity: string }).rarity,
+    'legendary',
+    'Test 8: rarity in payload',
+  )
+  assert.equal(
+    (captured as unknown as { element: string }).element,
+    'shadow',
+    'Test 8: element in payload',
+  )
 }
 
 // ─── Test 9: opening unknown id → no-op (no throw) ───
@@ -215,8 +260,16 @@ function restoreRandom(): void {
   const beforePity = { ...h.state().pityCounters }
   h.state().openBox('nonexistent')
   const after = h.state()
-  assert.deepEqual(after.pityCounters, beforePity, 'Test 9: unknown id is no-op')
-  assert.equal(after.hasOpenedAnyBox, false, 'Test 9: hasOpenedAnyBox stays false')
+  assert.deepEqual(
+    after.pityCounters,
+    beforePity,
+    'Test 9: unknown id is no-op',
+  )
+  assert.equal(
+    after.hasOpenedAnyBox,
+    false,
+    'Test 9: hasOpenedAnyBox stays false',
+  )
 }
 
 console.log('All slice.openBox.test.ts tests passed (9/9)')

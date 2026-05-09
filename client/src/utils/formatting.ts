@@ -1,7 +1,9 @@
 export type NumberFormat = 'short' | 'full'
 
 let _format: NumberFormat = 'full'
-export function setGlobalFormat(f: NumberFormat) { _format = f }
+export function setGlobalFormat(f: NumberFormat) {
+  _format = f
+}
 
 export function fmt(n: number): string {
   if (!Number.isFinite(n)) return '∞'
@@ -31,6 +33,9 @@ function trim(v: number): string {
   return Number.isInteger(r) ? String(r) : r.toFixed(1)
 }
 
-export function currencyFormatter(amount: number, currencySymbol = '$'): string {
+export function currencyFormatter(
+  amount: number,
+  currencySymbol = '$',
+): string {
   return `${currencySymbol}${amount.toFixed(2)}`
 }

@@ -11,7 +11,7 @@ import type { Element, Rarity } from '../../../store/cosmic/types'
 
 const CELL_SIZE = 64
 const GAP = 8
-const ROW_HEIGHT = CELL_SIZE + GAP  // 72px
+const ROW_HEIGHT = CELL_SIZE + GAP // 72px
 
 interface Props {
   cells: BestiaryCellRef[]
@@ -35,7 +35,9 @@ export function BestiaryGrid({ cells, onCellTap }: Props) {
     return (
       <div className="flex flex-col items-center justify-center flex-1 gap-2 text-white/40 px-6 py-12">
         <div className="text-4xl">🔍</div>
-        <p className="text-sm text-center">{t('cosmic_hub.bestiary.empty_state')}</p>
+        <p className="text-sm text-center">
+          {t('cosmic_hub.bestiary.empty_state')}
+        </p>
       </div>
     )
   }

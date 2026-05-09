@@ -23,12 +23,16 @@ export function compConfetti(
     rect.setRotation(rng() * Math.PI * 2)
     sprite.add(rect)
     const dx = Math.cos(ang) * speedRange * (0.6 + rng() * 0.4)
-    const dy = Math.sin(ang) * speedRange * (0.6 + rng() * 0.4) + gravity * speedRange
+    const dy =
+      Math.sin(ang) * speedRange * (0.6 + rng() * 0.4) + gravity * speedRange
     scene.tweens.add({
       targets: rect,
-      x: dx, y: dy, alpha: 0,
+      x: dx,
+      y: dy,
+      alpha: 0,
       rotation: rect.rotation + (rng() - 0.5) * Math.PI * 4,
-      duration: dur + rng() * 200, ease: pickEase(rng),
+      duration: dur + rng() * 200,
+      ease: pickEase(rng),
       onComplete: () => rect.destroy(),
     })
   }

@@ -23,9 +23,12 @@ export function compToxicCloud(
   sprite.add(cloud)
   scene.tweens.add({
     targets: cloud,
-    scaleX: 1.7 + rng() * 0.5, scaleY: 1.7 + rng() * 0.5,
-    angle: (rng() - 0.5) * 90, alpha: 0,
-    duration: 700 + rng() * 350, ease: pickEase(rng),
+    scaleX: 1.7 + rng() * 0.5,
+    scaleY: 1.7 + rng() * 0.5,
+    angle: (rng() - 0.5) * 90,
+    alpha: 0,
+    duration: 700 + rng() * 350,
+    ease: pickEase(rng),
     onComplete: () => cloud.destroy(),
   })
 }

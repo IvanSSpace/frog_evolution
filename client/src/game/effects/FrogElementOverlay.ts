@@ -11,18 +11,27 @@ import { ELEMENT_TINTS } from './elements/elementTints'
 import { scheduleDormantIdle } from './elements/dormantPresets'
 import { scheduleAwakenedIdle } from './elements/awakenedPresets'
 
-// Высота "над головой" — 32px без DPR. DPR применяется снаружи через container scale.
-const ORB_OFFSET_Y = -32
-const ORB_DEPTH = 50  // выше body, ниже UI overlay
+// ORB_DEPTH: выше body, ниже UI overlay.
+const ORB_DEPTH = 50
+
+// Запас над головой лягушки в CSS-px (scale-независимый).
+// Фактический localY = -(body.height/2 + CSS_HEAD_MARGIN / BASE_SCALE).
+// BASE_SCALE = 1/1.5 → localY = -(body.height/2 + CSS_HEAD_MARGIN * 1.5).
+const CSS_HEAD_MARGIN = 10
 
 // Tier-specific orb radius (Phase 13).
 function orbRadiusForTier(tier: ElementTier): number {
   switch (tier) {
-    case 'dormant': return 4
-    case 'common': return 5
-    case 'rare': return 6
-    case 'epic': return 7
-    case 'legendary': return 8
+    case 'dormant':
+      return 4
+    case 'common':
+      return 5
+    case 'rare':
+      return 6
+    case 'epic':
+      return 7
+    case 'legendary':
+      return 8
   }
 }
 
@@ -46,8 +55,14 @@ export class FrogElementOverlay {
     this.container.setDepth(ORB_DEPTH)
 
     // Малый круг над головой — основная "значок-носитель" метка.
-    // Default radius — dormant. attach() обновит размер по tier.
-    this.orb = scene.add.circle(0, ORB_OFFSET_Y, orbRadiusForTier('dormant'), 0xffffff, 0.85)
+    // Default radius — dormant. attach() пересчитает Y по body.height.
+    this.orb = scene.add.circle(
+      0,
+      -32,
+      orbRadiusForTier('dormant'),
+      0xffffff,
+      0.85,
+    )
     this.orb.setStrokeStyle(1, 0xffffff, 0.4)
     this.container.add(this.orb)
   }
@@ -60,9 +75,18 @@ export class FrogElementOverlay {
     this.idleLifecycle?.dispose()
     this.idleLifecycle = null
     if (tier === 'dormant') {
-      this.idleLifecycle = scheduleDormantIdle(scene, this.container, this.element)
+      this.idleLifecycle = scheduleDormantIdle(
+        scene,
+        this.container,
+        this.element,
+      )
     } else {
-      this.idleLifecycle = scheduleAwakenedIdle(scene, this.container, this.element, tier)
+      this.idleLifecycle = scheduleAwakenedIdle(
+        scene,
+        this.container,
+        this.element,
+        tier,
+      )
     }
   }
 
@@ -106,6 +130,12 @@ export class FrogElementOverlay {
     element: Element,
     tier: ElementTier = 'dormant',
   ): void {
+    // Guard: overlay container мог быть уничтожен Phaser-ом вместе с host-frog
+    // (напр. merge destroys frog container → overlay child → orb.geom=null).
+    // В этом случае нельзя работать с объектом — pool должен был отфильтровать
+    // его в acquire(), но держим здесь вторую линию обороны.
+    if (!this.container.active) return
+
     this.hostFrogId = frogId
     this.element = element
     this.tier = tier
@@ -119,12 +149,16 @@ export class FrogElementOverlay {
     this.orb.setFillStyle(tint, orbAlpha)
     this.orb.setStrokeStyle(1, tint, 0.4)
 
-    // Apply tint to frog body (preserve previous so detach can restore).
-    // Phase 12 only handles regular tint (4-corner same color via setTint).
-    // tintFill mode не используется существующим MainScene кодом, так что не сохраняем.
-    this.prevBodyTint = body.tintTopLeft
-    body.setTint(tint)
-    this.appliedTintToBody = body
+    // Позиционируем orb строго над головой: -(halfBodyHeight + margin).
+    // body.height — высота текстуры в локальных единицах контейнера.
+    // CSS_HEAD_MARGIN конвертируем в local units через BASE_SCALE = 1/1.5.
+    const orbY = -(body.height / 2 + CSS_HEAD_MARGIN * 1.5)
+    this.orb.setY(orbY)
+
+    // Тинт на тело убран — элемент показывается через орб,
+    // полный тинт менял все пиксели (включая глаза) на цвет элемента.
+    this.prevBodyTint = null
+    this.appliedTintToBody = null
 
     // Reparent overlay container into host frog container.
     // Container уже добавлен в scene root в constructor — снимаем оттуда сначала.
@@ -132,7 +166,7 @@ export class FrogElementOverlay {
       this.container.parentContainer.remove(this.container, false)
     } else {
       // Если container на корневом уровне scene — снимаем из displayList.
-      const sceneRoot = (this.container.scene as Phaser.Scene | null)
+      const sceneRoot = this.container.scene as Phaser.Scene | null
       if (sceneRoot) sceneRoot.children.remove(this.container)
     }
     host.add(this.container)
@@ -158,7 +192,8 @@ export class FrogElementOverlay {
     if (this.appliedTintToBody) {
       // Если body всё ещё активен — восстанавливаем tint. Если уже destroy'ен —
       // молча пропускаем (frog был удалён, body.destroy() забрал tint вместе с ним).
-      const stillActive = this.appliedTintToBody.active && this.appliedTintToBody.scene
+      const stillActive =
+        this.appliedTintToBody.active && this.appliedTintToBody.scene
       if (stillActive) {
         if (this.prevBodyTint != null && this.prevBodyTint !== 0xffffff) {
           this.appliedTintToBody.setTint(this.prevBodyTint)

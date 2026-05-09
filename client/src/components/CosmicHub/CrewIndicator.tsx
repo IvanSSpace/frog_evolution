@@ -31,7 +31,11 @@ export function CrewIndicator({ used, cap, msUntilReset }: Props) {
           {t('crew.indicator_label', { used, cap })}
         </span>
         <span className="text-xs text-white/60">
-          ⏱ {t('crew.until_reset', { hh: String(hh).padStart(2, '0'), mm: String(mm).padStart(2, '0') })}
+          ⏱{' '}
+          {t('crew.until_reset', {
+            hh: String(hh).padStart(2, '0'),
+            mm: String(mm).padStart(2, '0'),
+          })}
         </span>
       </div>
 

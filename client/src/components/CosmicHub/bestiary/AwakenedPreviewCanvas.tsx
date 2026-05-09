@@ -58,7 +58,9 @@ export function AwakenedPreviewCanvas({ element, rarity, size = 160 }: Props) {
       >
         <span
           className="text-5xl filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]"
-          style={{ animation: `bestiary-bob ${pulseDuration} ease-in-out infinite` }}
+          style={{
+            animation: `bestiary-bob ${pulseDuration} ease-in-out infinite`,
+          }}
         >
           🐸
         </span>

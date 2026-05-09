@@ -15,8 +15,8 @@ export const RARITY_WEIGHTS: Record<Rarity, number> = {
 }
 
 export interface PityState {
-  rare: number      // боксов подряд без rare+ (3 → guarantee rare+)
-  epic: number      // боксов подряд без epic+ (10 → guarantee epic+)
+  rare: number // боксов подряд без rare+ (3 → guarantee rare+)
+  epic: number // боксов подряд без epic+ (10 → guarantee epic+)
   legendary: number // боксов подряд без legendary (25 → hard; 15/20 → soft boost)
 }
 
@@ -55,9 +55,9 @@ export function rollRarity(
   // 2. Soft pity boost
   let weights = { ...RARITY_WEIGHTS }
   if (pity.legendary >= 20) {
-    weights = { common: 45, rare: 33, epic: 12, legendary: 10 }   // +7%
+    weights = { common: 45, rare: 33, epic: 12, legendary: 10 } // +7%
   } else if (pity.legendary >= 15) {
-    weights = { common: 48, rare: 34, epic: 12, legendary: 6 }    // +3%
+    weights = { common: 48, rare: 34, epic: 12, legendary: 6 } // +3%
   }
 
   // 3. Weighted random
@@ -97,7 +97,11 @@ function weightedRandom(w: Record<Rarity, number>, rng: () => number): Rarity {
   return 'legendary'
 }
 
-function rollWeighted(rng: () => number, options: Rarity[], weights: number[]): Rarity {
+function rollWeighted(
+  rng: () => number,
+  options: Rarity[],
+  weights: number[],
+): Rarity {
   const total = weights.reduce((s, x) => s + x, 0)
   let r = rng() * total
   for (let i = 0; i < options.length; i++) {

@@ -9,9 +9,15 @@ import { fmtRate } from '../../utils/formatting'
 import { PlayerPanel } from '../../audio/components/PlayerPanel'
 import { sfx } from '../../audio/sfx'
 import {
-  getInstantBoxes, setInstantBoxes, subscribeInstantBoxes,
-  getCalmFarmMode, setCalmFarmMode, subscribeCalmFarmMode,
-  getReducedEffects, setReducedEffects, subscribeReducedEffects,
+  getInstantBoxes,
+  setInstantBoxes,
+  subscribeInstantBoxes,
+  getCalmFarmMode,
+  setCalmFarmMode,
+  subscribeCalmFarmMode,
+  getReducedEffects,
+  setReducedEffects,
+  subscribeReducedEffects,
 } from '../../utils/cosmicSettings'
 
 type Tab = 'bestiary' | 'settings' | 'player'
@@ -25,8 +31,11 @@ export function SettingsModal({ onClose }: Props) {
     <div
       className="ff-fade"
       style={{
-        position: 'fixed', inset: 0, zIndex: 150,
-        display: 'flex', flexDirection: 'column',
+        position: 'fixed',
+        inset: 0,
+        zIndex: 150,
+        display: 'flex',
+        flexDirection: 'column',
         background: '#1a2e1a',
         pointerEvents: 'auto',
       }}
@@ -88,13 +97,21 @@ function BestiaryTab() {
       {FROG_LEVELS.map((_, idx) => {
         const level = idx + 1
         const isUnlocked = discoveredLevels.includes(level)
-        return <BestiaryCard key={level} level={level} isUnlocked={isUnlocked} />
+        return (
+          <BestiaryCard key={level} level={level} isUnlocked={isUnlocked} />
+        )
       })}
     </div>
   )
 }
 
-function BestiaryCard({ level, isUnlocked }: { level: number; isUnlocked: boolean }) {
+function BestiaryCard({
+  level,
+  isUnlocked,
+}: {
+  level: number
+  isUnlocked: boolean
+}) {
   const { t } = useTranslation()
   const cfg = FROG_LEVELS[level - 1]
   const frogName = isUnlocked ? t(`frogs.${level}`) : t('bestiary.locked')
@@ -107,7 +124,9 @@ function BestiaryCard({ level, isUnlocked }: { level: number; isUnlocked: boolea
       <div
         className="relative flex items-center justify-center rounded-xl"
         style={{
-          width: 64, height: 64, flexShrink: 0,
+          width: 64,
+          height: 64,
+          flexShrink: 0,
           background: 'linear-gradient(180deg, #ecfccb 0%, #bef264 100%)',
           border: '2px solid #4d7c0f',
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)',
@@ -132,9 +151,14 @@ function BestiaryCard({ level, isUnlocked }: { level: number; isUnlocked: boolea
         {!isUnlocked && (
           <div
             style={{
-              position: 'absolute', inset: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 18, fontWeight: 900, color: '#444',
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 18,
+              fontWeight: 900,
+              color: '#444',
               textShadow: '0 1px 0 rgba(255,255,255,0.3)',
             }}
           >
@@ -146,14 +170,22 @@ function BestiaryCard({ level, isUnlocked }: { level: number; isUnlocked: boolea
       {/* Name */}
       <div
         className="ff-display text-center leading-tight"
-        style={{ fontSize: 11, color: '#15803d', maxWidth: '100%', wordBreak: 'break-word' }}
+        style={{
+          fontSize: 11,
+          color: '#15803d',
+          maxWidth: '100%',
+          wordBreak: 'break-word',
+        }}
       >
         {frogName}
       </div>
 
       {/* Stats (unlocked only) */}
       {isUnlocked && (
-        <div className="w-full ff-body font-bold leading-snug" style={{ fontSize: 9, color: '#166534' }}>
+        <div
+          className="w-full ff-body font-bold leading-snug"
+          style={{ fontSize: 9, color: '#166534' }}
+        >
           <div className="flex justify-between">
             <span>{t('bestiary.income_label')}</span>
             <span className="tabular-nums">{income}</span>
@@ -192,6 +224,9 @@ function SettingsTab() {
   const addGold = useGameStore((s) => s.addGold)
   const devResetUpgrades = useGameStore((s) => s.devResetUpgrades)
   const devClearAllFrogs = useGameStore((s) => s.devClearAllFrogs)
+  const crew = useGameStore((s) => s.crew)
+  const resetCrew = () =>
+    useGameStore.setState((s) => ({ crew: { ...s.crew, missionsToday: 0 } }))
   const currentLang = i18n.language as Lang
   const sfxMuted = useSyncExternalStore(sfxSubscribe, getSfxMuted, getSfxMuted)
   // Phase 15 (UX-06): instant-boxes toggle reactive через cosmicSettings.
@@ -274,7 +309,11 @@ function SettingsTab() {
       {/* Phase 15 (UX-06): Cosmic section header */}
       <div
         className="ff-body text-xs font-bold text-center py-1 rounded mt-2"
-        style={{ background: '#1e3a8a', color: '#dbeafe', letterSpacing: '0.05em' }}
+        style={{
+          background: '#1e3a8a',
+          color: '#dbeafe',
+          letterSpacing: '0.05em',
+        }}
       >
         {t('settings.cosmic')}
       </div>
@@ -325,7 +364,11 @@ function SettingsTab() {
         <div className="flex flex-col gap-2 mt-2">
           <div
             className="ff-body text-xs font-bold text-center py-1 rounded"
-            style={{ background: '#7f1d1d', color: '#fca5a5', letterSpacing: '0.05em' }}
+            style={{
+              background: '#7f1d1d',
+              color: '#fca5a5',
+              letterSpacing: '0.05em',
+            }}
           >
             DEV TOOLS
           </div>
@@ -347,16 +390,30 @@ function SettingsTab() {
           >
             +500 000 000
           </button>
+          <button
+            onClick={resetCrew}
+            className="ff-btn ff-btn-green text-sm w-full"
+          >
+            Сбросить усталость экипажа ({crew.missionsToday}/4)
+          </button>
         </div>
       )}
     </div>
   )
 }
 
-function SettingsRow({ label, children }: { label: string; children: ReactNode }) {
+function SettingsRow({
+  label,
+  children,
+}: {
+  label: string
+  children: ReactNode
+}) {
   return (
     <div className="ff-card p-3 flex items-center justify-between gap-3">
-      <span className="ff-body font-bold text-emerald-900 text-sm flex-shrink-0">{label}</span>
+      <span className="ff-body font-bold text-emerald-900 text-sm flex-shrink-0">
+        {label}
+      </span>
       {children}
     </div>
   )

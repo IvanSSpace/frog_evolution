@@ -29,8 +29,12 @@ export function compFlameTongues(
     flame.scale = 0.6
     sprite.add(flame)
     scene.tweens.add({
-      targets: flame, scaleY: 1.5 + rng() * 0.4, scaleX: 0.8, alpha: 0,
-      duration: dur + rng() * 150, ease: 'Cubic.easeOut',
+      targets: flame,
+      scaleY: 1.5 + rng() * 0.4,
+      scaleX: 0.8,
+      alpha: 0,
+      duration: dur + rng() * 150,
+      ease: 'Cubic.easeOut',
       delay: i * 40,
       onComplete: () => flame.destroy(),
     })

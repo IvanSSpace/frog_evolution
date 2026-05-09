@@ -29,23 +29,30 @@ export function compRing(
     const gap = 0.3 + rng() * 0.4
     for (let i = 0; i < dashes; i++) {
       const a0 = (i / dashes) * Math.PI * 2
-      const a1 = a0 + (Math.PI * 2 / dashes) * (1 - gap)
+      const a1 = a0 + ((Math.PI * 2) / dashes) * (1 - gap)
       const segs = 4
-      let px = Math.cos(a0) * r, py = Math.sin(a0) * r
+      let px = Math.cos(a0) * r,
+        py = Math.sin(a0) * r
       for (let s = 1; s <= segs; s++) {
         const t = s / segs
         const a = a0 + (a1 - a0) * t
-        const x = Math.cos(a) * r, y = Math.sin(a) * r
+        const x = Math.cos(a) * r,
+          y = Math.sin(a) * r
         ring.lineBetween(px, py, x, y)
-        px = x; py = y
+        px = x
+        py = y
       }
     }
   }
   ring.scale = startScale
   sprite.add(ring)
   scene.tweens.add({
-    targets: ring, scaleX: endScale, scaleY: endScale, alpha: 0,
-    duration: dur, ease: pickEase(rng),
+    targets: ring,
+    scaleX: endScale,
+    scaleY: endScale,
+    alpha: 0,
+    duration: dur,
+    ease: pickEase(rng),
     onComplete: () => ring.destroy(),
   })
 }

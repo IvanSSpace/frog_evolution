@@ -34,7 +34,12 @@ function groupResults(results: BulkOpenResult[]): GroupedRow[] {
     else map.set(key, { element: r.element, rarity: r.rarity, count: 1 })
   }
   // Sort: rarity DESC (legendary first), then by count DESC.
-  const order: Record<Rarity, number> = { legendary: 0, epic: 1, rare: 2, common: 3 }
+  const order: Record<Rarity, number> = {
+    legendary: 0,
+    epic: 1,
+    rare: 2,
+    common: 3,
+  }
   return Array.from(map.values()).sort((a, b) => {
     const r = order[a.rarity] - order[b.rarity]
     if (r !== 0) return r
@@ -51,9 +56,15 @@ export default function BulkOpenSummary({ results, onClose }: Props) {
     <div
       data-testid="bulk-open-summary"
       style={{
-        position: 'fixed', inset: 0, zIndex: 200,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        background: 'radial-gradient(ellipse at 50% 30%, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.95) 70%)',
+        position: 'fixed',
+        inset: 0,
+        zIndex: 200,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background:
+          'radial-gradient(ellipse at 50% 30%, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.95) 70%)',
         padding: 20,
       }}
     >
@@ -62,8 +73,10 @@ export default function BulkOpenSummary({ results, onClose }: Props) {
         <div
           aria-hidden
           style={{
-            position: 'absolute', inset: 0,
-            background: 'radial-gradient(circle at 50% 40%, rgba(255,215,0,0.15) 0%, transparent 60%)',
+            position: 'absolute',
+            inset: 0,
+            background:
+              'radial-gradient(circle at 50% 40%, rgba(255,215,0,0.15) 0%, transparent 60%)',
             animation: 'bulkSummaryGlow 2s ease-out infinite alternate',
             pointerEvents: 'none',
           }}
@@ -96,7 +109,10 @@ export default function BulkOpenSummary({ results, onClose }: Props) {
         onClick={onClose}
         className="ff-btn ff-btn-green text-lg"
         style={{
-          paddingLeft: 32, paddingRight: 32, paddingTop: 12, paddingBottom: 12,
+          paddingLeft: 32,
+          paddingRight: 32,
+          paddingTop: 12,
+          paddingBottom: 12,
           marginTop: 16,
         }}
       >
@@ -124,8 +140,11 @@ function SummaryRow({ row }: { row: GroupedRow }) {
       <div
         className="flex-shrink-0"
         style={{
-          width: 32, height: 32, borderRadius: '50%',
-          backgroundColor: tint, boxShadow: `0 0 8px ${tint}`,
+          width: 32,
+          height: 32,
+          borderRadius: '50%',
+          backgroundColor: tint,
+          boxShadow: `0 0 8px ${tint}`,
         }}
       />
       <span className="flex-1 text-sm text-white">
@@ -147,9 +166,13 @@ function SummaryRow({ row }: { row: GroupedRow }) {
 
 function rarityColor(r: Rarity): string {
   switch (r) {
-    case 'legendary': return '#f59e0b'
-    case 'epic':      return '#a855f7'
-    case 'rare':      return '#3b82f6'
-    case 'common':    return '#6b7280'
+    case 'legendary':
+      return '#f59e0b'
+    case 'epic':
+      return '#a855f7'
+    case 'rare':
+      return '#3b82f6'
+    case 'common':
+      return '#6b7280'
   }
 }

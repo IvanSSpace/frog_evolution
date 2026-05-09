@@ -8,10 +8,8 @@ export function Header() {
   const incomePerSec = useGameStore((s) => s.incomePerSec)
   const boxProgress = useGameStore((s) => s.boxProgress)
   const boxWaiting = useGameStore((s) => s.boxWaiting)
-  const currentLocation = useGameStore((s) => s.currentLocation)
   const rareBoxProgress = useGameStore((s) => s.rareBoxProgress)
   useGameStore((s) => s.numberFormat) // subscribe to format changes
-  const showBoxProgress = currentLocation === 1
 
   return (
     <div
@@ -25,7 +23,16 @@ export function Header() {
 
       <div className="flex flex-col items-center gap-1">
         <div className="ff-balance">
-          <span className="text-xl leading-none">💩</span>
+          <img
+            src="/goo.svg"
+            style={{
+              width: '1.4em',
+              height: '1.4em',
+              display: 'inline-block',
+              verticalAlign: 'middle',
+            }}
+            alt=""
+          />
           <span className="tabular-nums text-base">{fmt(gold)}</span>
         </div>
         <div
@@ -37,25 +44,50 @@ export function Header() {
             letterSpacing: '0.3px',
           }}
         >
-          +{fmtRate(incomePerSec)} {t('header.per_sec')}
+          +{fmtRate(incomePerSec)}{' '}
+          <img
+            src="/goo.svg"
+            style={{
+              width: '0.9em',
+              height: '0.9em',
+              display: 'inline-block',
+              verticalAlign: 'middle',
+              marginRight: 1,
+            }}
+            alt=""
+          />
+          {t('header.per_sec')}
         </div>
       </div>
 
       <div className="justify-self-end flex flex-col items-end gap-2">
-        {showBoxProgress && <BoxProgress progress={boxProgress} waiting={boxWaiting} />}
-        {showBoxProgress && <RareBoxProgress progress={rareBoxProgress} />}
+        <BoxProgress progress={boxProgress} waiting={boxWaiting} />
+        <RareBoxProgress progress={rareBoxProgress} />
       </div>
     </div>
   )
 }
 
-function BoxProgress({ progress, waiting }: { progress: number; waiting: boolean }) {
+function BoxProgress({
+  progress,
+  waiting,
+}: {
+  progress: number
+  waiting: boolean
+}) {
   const pct = Math.round(progress * 100)
   return (
     <div className="flex flex-col items-end gap-1">
-      <div className={`text-2xl leading-none ${waiting ? 'animate-pulse' : ''}`}>📦</div>
+      <div
+        className={`text-2xl leading-none ${waiting ? 'animate-pulse' : ''}`}
+      >
+        📦
+      </div>
       <div className="ff-progress-track w-24 h-2.5">
-        <div className={`ff-progress-fill ${waiting ? 'waiting' : ''}`} style={{ width: `${pct}%` }} />
+        <div
+          className={`ff-progress-fill ${waiting ? 'waiting' : ''}`}
+          style={{ width: `${pct}%` }}
+        />
       </div>
     </div>
   )
@@ -66,7 +98,11 @@ function RareBoxProgress({ progress }: { progress: number }) {
   const isReady = pct >= 100
   return (
     <div className="flex flex-col items-end gap-1">
-      <div className={`text-2xl leading-none ${isReady ? 'animate-pulse' : ''}`}>✨</div>
+      <div
+        className={`text-2xl leading-none ${isReady ? 'animate-pulse' : ''}`}
+      >
+        ✨
+      </div>
       <div className="ff-progress-track w-24 h-2.5">
         <div
           className="ff-progress-fill"

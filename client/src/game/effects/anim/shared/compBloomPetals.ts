@@ -26,9 +26,13 @@ export function compBloomPetals(
       sprite.add(dot)
       scene.tweens.add({
         targets: dot,
-        x: Math.cos(ang) * dist, y: Math.sin(ang) * dist,
-        alpha: 0, scaleX: 1.5, scaleY: 1.5,
-        duration: dur + j * 50, ease: 'Sine.easeOut',
+        x: Math.cos(ang) * dist,
+        y: Math.sin(ang) * dist,
+        alpha: 0,
+        scaleX: 1.5,
+        scaleY: 1.5,
+        duration: dur + j * 50,
+        ease: 'Sine.easeOut',
         onComplete: () => dot.destroy(),
       })
     }

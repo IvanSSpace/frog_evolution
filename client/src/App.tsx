@@ -23,42 +23,36 @@ import {
   getTractorCapMs,
   getTractorIncomePerSec,
 } from './store/gameStore'
-import type { CosmicToastPayload } from './store/cosmic/types'
-import { findPlanetById, DAILY_CAP, type MissionResult } from './game/data/missionConfig'
-import { FlightConfirmDialog } from './components/CosmicHub/FlightConfirmDialog'
-import { MissionOverlay } from './components/MissionOverlay/MissionOverlay'
+import type { Element, Rarity } from './store/cosmic/types'
 import { StabilizationModal } from './components/CosmicHub/StabilizationModal'
 import { MilestoneToast } from './components/CosmicHub/bestiary/MilestoneToast'
 import { TutorialOverlay } from './components/Tutorial/TutorialOverlay'
+import { SerumModal } from './components/CosmicHub/SerumModal'
+import { SerumBar } from './components/SerumBar'
 import { installBestiaryDevHelpers } from './utils/devHelpers'
 
 const queryClient = new QueryClient()
 
 // Phase 11: Cosmic Hub modal lazy-loaded → отдельный chunk, не утяжеляет main bundle
-const CosmicHubModal = lazy(() => import('./components/CosmicHub/CosmicHubModal'))
+const CosmicHubModal = lazy(
+  () => import('./components/CosmicHub/CosmicHubModal'),
+)
 
 function App() {
   const [shopOpen, setShopOpen] = useState(false)
   const [frogShopOpen, setFrogShopOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [cosmicHubOpen, setCosmicHubOpen] = useState(false)
-  const [welcomeBack, setWelcomeBack] = useState<{ earned: number; hours: number } | null>(null)
+  const [serumOpen, setSerumOpen] = useState(false)
+  const [welcomeBack, setWelcomeBack] = useState<{
+    earned: number
+    hours: number
+  } | null>(null)
   const [discovered, setDiscovered] = useState<number | null>(null)
-  const [rareCrate, setRareCrate] = useState<{ minLevel: number; maxLevel: number } | null>(null)
-  // Phase 11: cosmic toast (multi-grouping COSMIC-HUB-06)
-  const [cosmicToast, setCosmicToast] = useState<CosmicToastPayload | null>(null)
-  const toastBufferRef = useRef<CosmicToastPayload[]>([])
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const toastHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Phase 16 (REQ SHIP-07/08): Flight confirm dialog state.
-  // Set non-null когда юзер тапает по planet на StarMap при открытом Cosmic Hub.
-  const [pendingFlightPlanetId, setPendingFlightPlanetId] = useState<string | null>(null)
-
-  // Phase 16 (REQ MISSION-01..08): mission overlay state.
-  // Set non-null когда eventBus emits 'cosmic:start-mission' и валидация прошла.
-  const [activeMissionPlanetId, setActiveMissionPlanetId] = useState<string | null>(null)
-
+  const [rareCrate, setRareCrate] = useState<{
+    minLevel: number
+    maxLevel: number
+  } | null>(null)
   useEffect(() => {
     initSfx()
     initPlanetVoice()
@@ -107,7 +101,17 @@ function App() {
     }
     eventBus.on('frog:discovered', onDiscovered)
 
-    const handleRareCrateOpened = ({ x: _x, y: _y, minLevel, maxLevel }: { x: number; y: number; minLevel: number; maxLevel: number }) => {
+    const handleRareCrateOpened = ({
+      x: _x,
+      y: _y,
+      minLevel,
+      maxLevel,
+    }: {
+      x: number
+      y: number
+      minLevel: number
+      maxLevel: number
+    }) => {
       setRareCrate({ minLevel, maxLevel })
     }
     eventBus.on('rareCrate:opened', handleRareCrateOpened)
@@ -120,137 +124,6 @@ function App() {
       eventBus.off('rareCrate:opened', handleRareCrateOpened)
       stopSync()
     }
-  }, [])
-
-  // Phase 11 (COSMIC-HUB-05/06): cosmic:toast subscriber + multi-grouping.
-  // Несколько emit'ов за GROUPING_WINDOW_MS объединяются в один grouped toast.
-  // Phase 14 (SERUM-10): payload.duration override (default 4000ms).
-  useEffect(() => {
-    const GROUPING_WINDOW_MS = 1000
-    const DEFAULT_AUTO_HIDE_MS = 4000
-
-    const handler = (payload: CosmicToastPayload) => {
-      toastBufferRef.current.push(payload)
-
-      // Сбросить старый окно-таймер, открыть новый — окно "плывёт"
-      if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
-
-      toastTimerRef.current = setTimeout(() => {
-        const buffer = toastBufferRef.current
-        toastBufferRef.current = []
-        toastTimerRef.current = null
-
-        if (buffer.length === 0) return
-
-        let next: CosmicToastPayload
-        if (buffer.length === 1) {
-          next = buffer[0]
-        } else {
-          // Grouped toast: суммируем count (если payload.count не задан → 1 за событие)
-          const totalCount = buffer.reduce((sum, t) => sum + (t.count ?? 1), 0)
-          // Action — только если все одинаковые (по label) — иначе ambiguity
-          const firstLabel = buffer[0].action?.label
-          const allSameAction = firstLabel != null &&
-            buffer.every((t) => t.action?.label === firstLabel)
-          // duration: max между всеми payload'ами (защита от мерцающих undo toast'ов)
-          const maxDuration = buffer.reduce<number | undefined>((m, t) => {
-            if (t.duration == null) return m
-            return m == null ? t.duration : Math.max(m, t.duration)
-          }, undefined)
-          next = {
-            type: buffer[0].type,
-            msg: `${totalCount} событий`,
-            count: totalCount,
-            action: allSameAction ? buffer[0].action : undefined,
-            duration: maxDuration,
-          }
-        }
-
-        setCosmicToast(next)
-
-        // Phase 14: payload.duration override (default 4000ms).
-        const hideMs = next.duration ?? DEFAULT_AUTO_HIDE_MS
-        if (toastHideTimerRef.current) clearTimeout(toastHideTimerRef.current)
-        toastHideTimerRef.current = setTimeout(() => {
-          setCosmicToast(null)
-          toastHideTimerRef.current = null
-        }, hideMs)
-      }, GROUPING_WINDOW_MS)
-    }
-
-    eventBus.on('cosmic:toast', handler)
-    return () => {
-      eventBus.off('cosmic:toast', handler)
-      if (toastTimerRef.current) {
-        clearTimeout(toastTimerRef.current)
-        toastTimerRef.current = null
-      }
-      if (toastHideTimerRef.current) {
-        clearTimeout(toastHideTimerRef.current)
-        toastHideTimerRef.current = null
-      }
-    }
-  }, [])
-
-  // Phase 16 (REQ SHIP-10): подписка на arrival event → toast «Прибыли на NAME [Изучить]».
-  // Re-используем cosmic:toast pipeline для grouping consistency.
-  useEffect(() => {
-    const handleArrived = ({ planetId }: { planetId: string }) => {
-      const planet = findPlanetById(planetId)
-      const name = planet?.name ?? planetId.toUpperCase()
-      eventBus.emit('cosmic:toast', {
-        type: 'generic',
-        msg: `Прибыли на ${name}`,
-        action: {
-          label: 'Изучить',
-          onClick: () => {
-            // Open Cosmic Hub on Корабль tab + emit start-mission.
-            // Plan 16-04 wires up — Plan 16-02 emit'ит start-mission scaffold.
-            eventBus.emit('cosmic:start-mission', { planetId })
-          },
-        },
-      })
-    }
-    eventBus.on('cosmic:ship-arrived', handleArrived)
-    return () => { eventBus.off('cosmic:ship-arrived', handleArrived) }
-  }, [])
-
-  // Phase 16 (REQ SHIP-07/08): subscriber на 'cosmic:request-flight'
-  // → показывать FlightConfirmDialog только если Cosmic Hub открыт.
-  // Same-planet docked → пропускаем confirm (SHIP-08).
-  useEffect(() => {
-    const handleRequestFlight = ({ planetId }: { planetId: string }) => {
-      if (!cosmicHubOpen) return
-      const ship = useGameStore.getState().ship
-      if (ship && ship.state === 'docked' && ship.planetId === planetId) return
-      setPendingFlightPlanetId(planetId)
-    }
-    eventBus.on('cosmic:request-flight', handleRequestFlight)
-    return () => { eventBus.off('cosmic:request-flight', handleRequestFlight) }
-  }, [cosmicHubOpen])
-
-  // Phase 16 (REQ MISSION-01): subscriber на 'cosmic:start-mission'
-  // → mount MissionOverlay (с валидацией ship.docked + crew credits).
-  useEffect(() => {
-    const handleStart = ({ planetId }: { planetId: string }) => {
-      const state = useGameStore.getState()
-      if (!state.ship || state.ship.state !== 'docked' || state.ship.planetId !== planetId) return
-      if (state.crew.missionsToday >= DAILY_CAP) return
-      setActiveMissionPlanetId(planetId)
-    }
-    eventBus.on('cosmic:start-mission', handleStart)
-    return () => { eventBus.off('cosmic:start-mission', handleStart) }
-  }, [])
-
-  // Phase 16 (REQ MISSION-05): subscriber на 'cosmic:mission-complete'
-  // → call investigatePlanet (atomic credit + addBox + toast).
-  useEffect(() => {
-    const handleComplete = ({ planetId, result }: { planetId: string; result: MissionResult }) => {
-      useGameStore.getState().investigatePlanet(planetId, result)
-      setActiveMissionPlanetId(null)
-    }
-    eventBus.on('cosmic:mission-complete', handleComplete)
-    return () => { eventBus.off('cosmic:mission-complete', handleComplete) }
   }, [])
 
   // Phase 16 (REQ UX-09): DEV-mode unlocks all sentinel flags + window dev helpers.
@@ -266,13 +139,8 @@ function App() {
       if (!cur.hasOpenedAnyBox) cur.setHasOpenedAnyBox(true)
     })
 
-    // Window-exposed dev helpers (testability: forceMissionType etc.).
+    // Window-exposed dev helpers.
     const w = window as unknown as Record<string, unknown>
-
-    w.__forceMissionType = (type: 'rhythm' | 'defend' | 'hotspot') => {
-      localStorage.setItem('__force_mission_type', type)
-      console.log('[dev] forced mission type:', type)
-    }
 
     w.__resetCrewToday = () => {
       useGameStore.setState((s) => ({
@@ -301,15 +169,24 @@ function App() {
       useGameStore.getState().arriveShipAt(planetId)
     }
 
+    w.__grantSerum = (
+      element: Element,
+      rarity: Rarity = 'common',
+      count = 1,
+    ) => {
+      useGameStore.getState().addSerum(element, rarity, count)
+      console.log(`[dev] granted ${count}× ${rarity} ${element} serum`)
+    }
+
     // Phase 18: bestiary dev helpers (window.__unlockBestiaryCells / __bestiaryCount / __resetBestiary).
     installBestiaryDevHelpers()
 
     return () => {
-      delete w.__forceMissionType
       delete w.__resetCrewToday
       delete w.__unlockAllTabs
       delete w.__lockAllTabs
       delete w.__shipTo
+      delete w.__grantSerum
       delete w.__unlockBestiaryCells
       delete w.__bestiaryCount
       delete w.__resetBestiary
@@ -334,16 +211,20 @@ function App() {
             onOpenFrogShop={() => setFrogShopOpen(true)}
             onOpenSettings={() => setSettingsOpen(true)}
             onOpenCosmicHub={() => setCosmicHubOpen(true)}
+            onOpenSerumModal={() => setSerumOpen(true)}
           />
         </div>
       </div>
 
       <MagnetToggle />
       <StarMapHUD />
+      <ShipFollowButton />
+      <SerumBar />
       <LocationStack />
 
       {shopOpen && <ShopModal onClose={() => setShopOpen(false)} />}
       {frogShopOpen && <FrogShopModal onClose={() => setFrogShopOpen(false)} />}
+      {serumOpen && <SerumModal onClose={() => setSerumOpen(false)} />}
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       <Suspense fallback={null}>
         {cosmicHubOpen && (
@@ -358,24 +239,11 @@ function App() {
       <MilestoneToast />
       {/* Phase 19-05 (UX-08): tutorial overlay — always mounted; conditional null-render. */}
       <TutorialOverlay />
-      {pendingFlightPlanetId && (
-        <FlightConfirmDialog
-          toPlanetId={pendingFlightPlanetId}
-          onConfirm={() => {
-            useGameStore.getState().sendShipTo(pendingFlightPlanetId)
-            setPendingFlightPlanetId(null)
-          }}
-          onCancel={() => setPendingFlightPlanetId(null)}
-        />
-      )}
-      {activeMissionPlanetId && (
-        <MissionOverlay
-          planetId={activeMissionPlanetId}
-          onClose={() => setActiveMissionPlanetId(null)}
-        />
-      )}
       {discovered !== null && (
-        <DiscoveryModal level={discovered} onClose={() => setDiscovered(null)} />
+        <DiscoveryModal
+          level={discovered}
+          onClose={() => setDiscovered(null)}
+        />
       )}
       {rareCrate && (
         <RareCrateModal
@@ -391,79 +259,7 @@ function App() {
           onClose={() => setWelcomeBack(null)}
         />
       )}
-      {cosmicToast && (
-        <CosmicToast
-          payload={cosmicToast}
-          onClose={() => setCosmicToast(null)}
-        />
-      )}
     </QueryClientProvider>
-  )
-}
-
-// Phase 11: cosmic toast UI (COSMIC-HUB-05/06).
-// Появляется внизу экрана (над BottomBar), автоматически скрывается через 4 сек.
-function CosmicToast({
-  payload,
-  onClose,
-}: {
-  payload: CosmicToastPayload
-  onClose: () => void
-}) {
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        bottom: 'calc(13% + 16px)',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 60,
-        background: '#1f2937',
-        color: '#fff',
-        borderRadius: 12,
-        padding: '12px 16px',
-        boxShadow: '0 4px 14px rgba(0,0,0,0.4)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        maxWidth: 320,
-        width: 'calc(100% - 32px)',
-        pointerEvents: 'auto',
-      }}
-    >
-      <span style={{ fontSize: 14, flex: 1 }}>{payload.msg}</span>
-      {payload.action && (
-        <button
-          onClick={() => { payload.action!.onClick(); onClose() }}
-          style={{
-            color: '#34d399',
-            fontSize: 14,
-            fontWeight: 600,
-            whiteSpace: 'nowrap',
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-          }}
-        >
-          {payload.action.label}
-        </button>
-      )}
-      <button
-        onClick={onClose}
-        style={{
-          color: 'rgba(255,255,255,0.4)',
-          fontSize: 18,
-          lineHeight: 1,
-          background: 'transparent',
-          border: 'none',
-          cursor: 'pointer',
-          padding: 0,
-        }}
-        aria-label="Close"
-      >
-        ×
-      </button>
-    </div>
   )
 }
 
@@ -471,7 +267,14 @@ function CosmicToast({
 // Появляется только когда StarMap активен.
 function StarMapHUD() {
   const [active, setActive] = useState(false)
-  const [data, setData] = useState({ x: 0, y: 0, zoom: 1, fps: 60, vis: 0, total: 0 })
+  const [data, setData] = useState({
+    x: 0,
+    y: 0,
+    zoom: 1,
+    fps: 60,
+    vis: 0,
+    total: 0,
+  })
 
   useEffect(() => {
     const onOpen = () => setActive(true)
@@ -499,7 +302,8 @@ function StarMapHUD() {
 
   if (!active) return null
 
-  const fpsColor = data.fps > 50 ? '#86efac' : data.fps > 30 ? '#fde047' : '#fca5a5'
+  const fpsColor =
+    data.fps > 50 ? '#86efac' : data.fps > 30 ? '#fde047' : '#fca5a5'
   return (
     <div
       style={{
@@ -525,7 +329,9 @@ function StarMapHUD() {
       <span>Y:{data.y}</span>
       <span>Z:{data.zoom.toFixed(2)}</span>
       <span style={{ color: fpsColor }}>FPS:{Math.round(data.fps)}</span>
-      <span style={{ opacity: 0.7 }}>{data.vis}/{data.total}</span>
+      <span style={{ opacity: 0.7 }}>
+        {data.vis}/{data.total}
+      </span>
     </div>
   )
 }
@@ -542,7 +348,8 @@ type PopoverData = {
   placement: 'below' | 'above'
 }
 
-// @ts-expect-error заменён Phaser-popover в StarMapScene; оставляю код для возможного отката
+// @ts-expect-error -- replaced by Phaser-popover in StarMapScene; kept for rollback
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- replaced by Phaser-popover; kept for rollback
 function PlanetPopover() {
   // data — для UI содержимого (имя, тип, placement). НЕ обновляется при move
   // (placement зафиксирован при select). Position обновляется напрямую через ref/RAF
@@ -550,7 +357,12 @@ function PlanetPopover() {
   const [data, setData] = useState<PopoverData | null>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
   // Текущие координаты якоря — обновляются из event без re-render
-  const liveCoordsRef = useRef<{ bottomX: number; bottomY: number; topX: number; topY: number } | null>(null)
+  const liveCoordsRef = useRef<{
+    bottomX: number
+    bottomY: number
+    topX: number
+    topY: number
+  } | null>(null)
 
   useEffect(() => {
     const onSelect = (e: PopoverData) => {
@@ -562,13 +374,24 @@ function PlanetPopover() {
       }
       setData(e)
     }
-    const onMoved = (e: { raceId: string; bottomX: number; bottomY: number; topX: number; topY: number }) => {
+    const onMoved = (e: {
+      raceId: string
+      bottomX: number
+      bottomY: number
+      topX: number
+      topY: number
+    }) => {
       liveCoordsRef.current = {
-        bottomX: e.bottomX, bottomY: e.bottomY,
-        topX: e.topX, topY: e.topY,
+        bottomX: e.bottomX,
+        bottomY: e.bottomY,
+        topX: e.topX,
+        topY: e.topY,
       }
     }
-    const onClose = () => { liveCoordsRef.current = null; setData(null) }
+    const onClose = () => {
+      liveCoordsRef.current = null
+      setData(null)
+    }
     eventBus.on('starmap:planet-selected', onSelect)
     eventBus.on('starmap:planet-moved', onMoved)
     eventBus.on('starmap:popover-close', onClose)
@@ -624,10 +447,22 @@ function PlanetPopover() {
   if (!data) return null
 
   const TYPE_LABELS: Record<string, string> = {
-    home: 'Родина', crystal: 'Кристаллы', rocky: 'Камень', ancient: 'Древние',
-    mystic: 'Провидцы', organic: 'Органики', forge: 'Кузнецы', military: 'Военные',
-    destroyed: 'Уничтожено', crystal_bio: 'Кристалло-биоты', mechano: 'Механо',
-    energy: 'Энергеты', mist: 'Туман', aquatic: 'Водные', shadow: 'Тени', aerial: 'Воздушные',
+    home: 'Родина',
+    crystal: 'Кристаллы',
+    rocky: 'Камень',
+    ancient: 'Древние',
+    mystic: 'Провидцы',
+    organic: 'Органики',
+    forge: 'Кузнецы',
+    military: 'Военные',
+    destroyed: 'Уничтожено',
+    crystal_bio: 'Кристалло-биоты',
+    mechano: 'Механо',
+    energy: 'Энергеты',
+    mist: 'Туман',
+    aquatic: 'Водные',
+    shadow: 'Тени',
+    aerial: 'Воздушные',
   }
   const typeLabel = TYPE_LABELS[data.raceType] || data.raceType
 
@@ -670,8 +505,7 @@ function PlanetPopover() {
           borderRight: `${ARROW_W / 2}px solid transparent`,
           ...(isBelow
             ? { borderBottom: `${ARROW_H}px solid #4d6b1f` }
-            : { borderTop: `${ARROW_H}px solid #4d6b1f` }
-          ),
+            : { borderTop: `${ARROW_H}px solid #4d6b1f` }),
         }}
       />
       {/* Внутренняя стрелка — кремовая заливка */}
@@ -687,8 +521,7 @@ function PlanetPopover() {
           borderRight: `${ARROW_INNER_W / 2}px solid transparent`,
           ...(isBelow
             ? { borderBottom: `${ARROW_INNER_H}px solid #f5fbe9` }
-            : { borderTop: `${ARROW_INNER_H}px solid #f5fbe9` }
-          ),
+            : { borderTop: `${ARROW_INNER_H}px solid #f5fbe9` }),
         }}
       />
       {/* Компактная панель — width фиксирован на родителе */}
@@ -703,25 +536,30 @@ function PlanetPopover() {
         }}
       >
         {/* Заголовок */}
-        <div style={{
-          fontFamily: 'Russo One, system-ui, sans-serif',
-          letterSpacing: 1,
-          fontSize: 16,
-          color: '#dc2626',
-          textShadow: '0 1px 0 rgba(255,255,255,0.85), 1px 1px 0 #fff, -1px 1px 0 #fff, 1px -1px 0 #fff, -1px -1px 0 #fff',
-          marginBottom: 2,
-          lineHeight: 1,
-        }}>
+        <div
+          style={{
+            fontFamily: 'Russo One, system-ui, sans-serif',
+            letterSpacing: 1,
+            fontSize: 16,
+            color: '#dc2626',
+            textShadow:
+              '0 1px 0 rgba(255,255,255,0.85), 1px 1px 0 #fff, -1px 1px 0 #fff, 1px -1px 0 #fff, -1px -1px 0 #fff',
+            marginBottom: 2,
+            lineHeight: 1,
+          }}
+        >
           {data.raceName}
         </div>
         {/* Подпись типа */}
-        <div style={{
-          fontSize: 10,
-          color: '#4d6b1f',
-          marginBottom: 8,
-          fontFamily: 'Nunito, system-ui, sans-serif',
-          fontWeight: 700,
-        }}>
+        <div
+          style={{
+            fontSize: 10,
+            color: '#4d6b1f',
+            marginBottom: 8,
+            fontFamily: 'Nunito, system-ui, sans-serif',
+            fontWeight: 700,
+          }}
+        >
           {typeLabel}
         </div>
         {/* Кнопки — компактные */}
@@ -729,7 +567,13 @@ function PlanetPopover() {
           <button
             onClick={() => console.log('connect', data.raceId)}
             className="ff-btn ff-btn-green"
-            style={{ width: '100%', justifyContent: 'flex-start', fontSize: 11, padding: '5px 9px', borderBottomWidth: 4 }}
+            style={{
+              width: '100%',
+              justifyContent: 'flex-start',
+              fontSize: 11,
+              padding: '5px 9px',
+              borderBottomWidth: 4,
+            }}
           >
             <span style={{ fontSize: 13, marginRight: 5 }}>📡</span>
             Связаться
@@ -737,7 +581,13 @@ function PlanetPopover() {
           <button
             onClick={() => console.log('send', data.raceId)}
             className="ff-btn ff-btn-amber"
-            style={{ width: '100%', justifyContent: 'flex-start', fontSize: 11, padding: '5px 9px', borderBottomWidth: 4 }}
+            style={{
+              width: '100%',
+              justifyContent: 'flex-start',
+              fontSize: 11,
+              padding: '5px 9px',
+              borderBottomWidth: 4,
+            }}
           >
             <span style={{ fontSize: 13, marginRight: 5 }}>🚀</span>
             Скаут
@@ -745,7 +595,13 @@ function PlanetPopover() {
           <button
             onClick={() => console.log('info', data.raceId)}
             className="ff-btn ff-btn-purple"
-            style={{ width: '100%', justifyContent: 'flex-start', fontSize: 11, padding: '5px 9px', borderBottomWidth: 4 }}
+            style={{
+              width: '100%',
+              justifyContent: 'flex-start',
+              fontSize: 11,
+              padding: '5px 9px',
+              borderBottomWidth: 4,
+            }}
           >
             <span style={{ fontSize: 13, marginRight: 5 }}>📋</span>
             Описание
@@ -781,7 +637,10 @@ function MagnetToggle() {
 
   return (
     <button
-      onClick={() => { hapticSelection(); toggleMagnet() }}
+      onClick={() => {
+        hapticSelection()
+        toggleMagnet()
+      }}
       aria-label={magnetEnabled ? t('magnet.off') : t('magnet.on')}
       style={{
         position: 'fixed',
@@ -796,9 +655,15 @@ function MagnetToggle() {
       }}
       className="ff-tile w-12 h-12 text-2xl"
     >
-      <span style={{
-        filter: magnetEnabled ? 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))' : 'grayscale(0.7)',
-      }}>🧲</span>
+      <span
+        style={{
+          filter: magnetEnabled
+            ? 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))'
+            : 'grayscale(0.7)',
+        }}
+      >
+        🧲
+      </span>
       {!magnetEnabled && (
         <span
           style={{
@@ -810,13 +675,85 @@ function MagnetToggle() {
             color: '#dc2626',
             fontSize: '32px',
             fontWeight: 900,
-            textShadow: '0 0 4px rgba(255,255,255,0.85), 0 0 6px rgba(255,255,255,0.6)',
+            textShadow:
+              '0 0 4px rgba(255,255,255,0.85), 0 0 6px rgba(255,255,255,0.6)',
             pointerEvents: 'none',
           }}
         >
           ⊘
         </span>
       )}
+    </button>
+  )
+}
+
+function ShipFollowButton() {
+  const shipState = useGameStore((s) => s.ship?.state)
+  const [following, setFollowing] = useState(false)
+  const [starMapActive, setStarMapActive] = useState(false)
+
+  useEffect(() => {
+    const onOpen = () => setStarMapActive(true)
+    const onClose = () => {
+      setStarMapActive(false)
+      setFollowing(false)
+    }
+    eventBus.on('starmap:open', onOpen)
+    eventBus.on('starmap:close', onClose)
+    return () => {
+      eventBus.off('starmap:open', onOpen)
+      eventBus.off('starmap:close', onClose)
+    }
+  }, [])
+
+  // Scene cancels follow (e.g. drag or ship docked)
+  useEffect(() => {
+    const handler = ({ following: f }: { following: boolean }) =>
+      setFollowing(f)
+    eventBus.on('starmap:follow-changed', handler)
+    return () => eventBus.off('starmap:follow-changed', handler)
+  }, [])
+
+  if (!starMapActive || shipState !== 'transit') return null
+
+  const toggle = () => {
+    const next = !following
+    setFollowing(next)
+    eventBus.emit('starmap:follow-ship', { enable: next })
+  }
+
+  return (
+    <button
+      onClick={toggle}
+      aria-label={following ? 'Отключить слежение' : 'Следовать за кораблём'}
+      style={{
+        position: 'fixed',
+        top: 'calc(12% + 10px)',
+        left: 12,
+        zIndex: 200,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '6px 12px',
+        borderRadius: 20,
+        border: following
+          ? '1.5px solid #34d399'
+          : '1.5px solid rgba(255,255,255,0.25)',
+        background: following ? 'rgba(16,185,129,0.18)' : 'rgba(0,0,0,0.55)',
+        color: following ? '#34d399' : 'rgba(255,255,255,0.7)',
+        fontSize: 12,
+        fontWeight: 600,
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
+        cursor: 'pointer',
+        pointerEvents: 'auto',
+        transition: 'all 0.2s',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+      }}
+    >
+      <span style={{ fontSize: 14 }}>{following ? '📍' : '🚀'}</span>
+      {following ? 'Следую' : 'Следовать'}
     </button>
   )
 }

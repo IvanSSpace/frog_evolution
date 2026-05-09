@@ -21,20 +21,35 @@ export function ShopModal({ onClose }: Props) {
       onClick={onClose}
       className="ff-backdrop ff-fade"
       style={{
-        position: 'fixed', inset: 0, zIndex: 100,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        pointerEvents: 'auto', padding: 16,
+        position: 'fixed',
+        inset: 0,
+        zIndex: 100,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        pointerEvents: 'auto',
+        padding: 16,
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         className="ff-panel ff-pop"
-        style={{ width: '100%', maxWidth: 380, maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}
+        style={{
+          width: '100%',
+          maxWidth: 380,
+          maxHeight: '88vh',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
       >
-        <div className="relative flex items-center justify-between px-5 pt-4 pb-3"
-             style={{ borderBottom: '3px dashed rgba(77,107,31,0.4)' }}>
-          <h2 className="ff-display ff-stroke-white text-3xl"
-              style={{ color: '#dc2626', letterSpacing: 1.5 }}>
+        <div
+          className="relative flex items-center justify-between px-5 pt-4 pb-3"
+          style={{ borderBottom: '3px dashed rgba(77,107,31,0.4)' }}
+        >
+          <h2
+            className="ff-display ff-stroke-white text-3xl"
+            style={{ color: '#dc2626', letterSpacing: 1.5 }}
+          >
             {t('shop.title')}
           </h2>
           <button
@@ -84,23 +99,41 @@ type GenericCardProps = {
   onBuy: () => void
 }
 
-function UpgradeCard({ icon, title, effect, level, maxLevel, cost, isMax, canAfford, onBuy }: GenericCardProps) {
+function UpgradeCard({
+  icon,
+  title,
+  effect,
+  level,
+  maxLevel,
+  cost,
+  isMax,
+  canAfford,
+  onBuy,
+}: GenericCardProps) {
   const { t } = useTranslation()
   useGameStore((s) => s.numberFormat) // subscribe to format changes
   return (
     <div className="ff-card p-3 flex items-center gap-3">
-      <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center text-3xl rounded-2xl"
-           style={{
-             background: 'linear-gradient(180deg, #ecfccb 0%, #bef264 100%)',
-             border: '2px solid #4d7c0f',
-             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)',
-           }}>
-        <span style={{ filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))' }}>{icon}</span>
+      <div
+        className="flex-shrink-0 w-14 h-14 flex items-center justify-center text-3xl rounded-2xl"
+        style={{
+          background: 'linear-gradient(180deg, #ecfccb 0%, #bef264 100%)',
+          border: '2px solid #4d7c0f',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)',
+        }}
+      >
+        <span style={{ filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))' }}>
+          {icon}
+        </span>
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="ff-display text-base text-emerald-900 leading-tight">{title}</div>
-        <div className="ff-body text-xs text-emerald-800 mt-0.5 font-bold leading-tight">{effect}</div>
+        <div className="ff-display text-base text-emerald-900 leading-tight">
+          {title}
+        </div>
+        <div className="ff-body text-xs text-emerald-800 mt-0.5 font-bold leading-tight">
+          {effect}
+        </div>
         <div className="ff-body text-[10px] text-emerald-700 font-bold mt-0.5">
           {t('shop.level', { current: level, max: maxLevel })}
         </div>
@@ -113,7 +146,23 @@ function UpgradeCard({ icon, title, effect, level, maxLevel, cost, isMax, canAff
           isMax ? 'ff-btn-grey' : canAfford ? 'ff-btn-green' : 'ff-btn-red'
         }`}
       >
-        {isMax ? t('shop.max') : `${fmt(cost)} 💩`}
+        {isMax ? (
+          t('shop.max')
+        ) : (
+          <>
+            {fmt(cost)}{' '}
+            <img
+              src="/goo.svg"
+              style={{
+                width: '1.1em',
+                height: '1.1em',
+                display: 'inline-block',
+                verticalAlign: 'middle',
+              }}
+              alt=""
+            />
+          </>
+        )}
       </button>
     </div>
   )
@@ -140,7 +189,9 @@ function DropSpeedCard() {
       cost={cost}
       isMax={isMax}
       canAfford={canAfford}
-      onBuy={() => hapticNotification(buyUpgrade('dropSpeed') ? 'success' : 'error')}
+      onBuy={() =>
+        hapticNotification(buyUpgrade('dropSpeed') ? 'success' : 'error')
+      }
     />
   )
 }
@@ -156,9 +207,10 @@ function TractorCard() {
   const canAfford = gold >= cost
   const hours = cfg.capHours[level]
   const nextHours = isMax ? hours : cfg.capHours[level + 1]
-  const cur = level === 0
-    ? t('shop.tractor.not_bought')
-    : t('shop.tractor.offline', { hours })
+  const cur =
+    level === 0
+      ? t('shop.tractor.not_bought')
+      : t('shop.tractor.offline', { hours })
   const next = isMax ? '' : `${nextHours}h`
   return (
     <UpgradeCard
@@ -170,7 +222,9 @@ function TractorCard() {
       cost={cost}
       isMax={isMax}
       canAfford={canAfford}
-      onBuy={() => hapticNotification(buyUpgrade('tractor') ? 'success' : 'error')}
+      onBuy={() =>
+        hapticNotification(buyUpgrade('tractor') ? 'success' : 'error')
+      }
     />
   )
 }
@@ -186,12 +240,22 @@ function MagnetCard() {
   const canAfford = gold >= cost
   const interval = (getMagnetSpawnInterval(level) / 1000).toFixed(0)
   const duration = (getMagnetDuration(level) / 1000).toFixed(0)
-  const nextInterval = isMax ? interval : (getMagnetSpawnInterval(level + 1) / 1000).toFixed(0)
-  const nextDuration = isMax ? duration : (getMagnetDuration(level + 1) / 1000).toFixed(0)
-  const cur = level === 0
-    ? t('shop.magnet.not_bought')
-    : t('shop.magnet.effect', { interval, duration })
-  const next = isMax ? '' : t('shop.magnet.effect', { interval: nextInterval, duration: nextDuration })
+  const nextInterval = isMax
+    ? interval
+    : (getMagnetSpawnInterval(level + 1) / 1000).toFixed(0)
+  const nextDuration = isMax
+    ? duration
+    : (getMagnetDuration(level + 1) / 1000).toFixed(0)
+  const cur =
+    level === 0
+      ? t('shop.magnet.not_bought')
+      : t('shop.magnet.effect', { interval, duration })
+  const next = isMax
+    ? ''
+    : t('shop.magnet.effect', {
+        interval: nextInterval,
+        duration: nextDuration,
+      })
   return (
     <UpgradeCard
       icon="🧲"
@@ -202,7 +266,9 @@ function MagnetCard() {
       cost={cost}
       isMax={isMax}
       canAfford={canAfford}
-      onBuy={() => hapticNotification(buyUpgrade('magnet') ? 'success' : 'error')}
+      onBuy={() =>
+        hapticNotification(buyUpgrade('magnet') ? 'success' : 'error')
+      }
     />
   )
 }
@@ -235,7 +301,9 @@ function CrateQualityCard() {
       cost={cost}
       isMax={isMax}
       canAfford={canAfford}
-      onBuy={() => hapticNotification(buyUpgrade('crateQuality') ? 'success' : 'error')}
+      onBuy={() =>
+        hapticNotification(buyUpgrade('crateQuality') ? 'success' : 'error')
+      }
     />
   )
 }
@@ -265,7 +333,9 @@ function RareBoxSpeedCard() {
       cost={cost}
       isMax={isMax}
       canAfford={canAfford}
-      onBuy={() => hapticNotification(buyUpgrade('rareBoxSpeed') ? 'success' : 'error')}
+      onBuy={() =>
+        hapticNotification(buyUpgrade('rareBoxSpeed') ? 'success' : 'error')
+      }
     />
   )
 }

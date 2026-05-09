@@ -74,9 +74,9 @@ function rollRarity(pity, bonusRarity, rng = Math.random) {
   // 2. Soft pity boost
   let weights = { ...RARITY_WEIGHTS }
   if (pity.legendary >= 20) {
-    weights = { common: 45, rare: 33, epic: 12, legendary: 10 }   // +7%
+    weights = { common: 45, rare: 33, epic: 12, legendary: 10 } // +7%
   } else if (pity.legendary >= 15) {
-    weights = { common: 48, rare: 34, epic: 12, legendary: 6 }    // +3%
+    weights = { common: 48, rare: 34, epic: 12, legendary: 6 } // +3%
   }
 
   // 3. Weighted random
@@ -131,12 +131,12 @@ function runSimulation(iterations, rng = Math.random) {
     iterations,
     distribution: dist,
     pct: {
-      common: +(dist.common * 100 / iterations).toFixed(2),
-      rare: +(dist.rare * 100 / iterations).toFixed(2),
-      epic: +(dist.epic * 100 / iterations).toFixed(2),
-      legendary: +(dist.legendary * 100 / iterations).toFixed(2),
+      common: +((dist.common * 100) / iterations).toFixed(2),
+      rare: +((dist.rare * 100) / iterations).toFixed(2),
+      epic: +((dist.epic * 100) / iterations).toFixed(2),
+      legendary: +((dist.legendary * 100) / iterations).toFixed(2),
     },
-    avgLegendaryPer100: +(dist.legendary * 100 / iterations).toFixed(3),
+    avgLegendaryPer100: +((dist.legendary * 100) / iterations).toFixed(3),
     timeToFirstLegendary: firstLegIdx,
     pityHard25Breaches: pityBreaches,
     legendaryGap: {
@@ -166,13 +166,17 @@ if (require.main === module) {
   // фактическом play loop. Hard guarantees (max gap ≤ 25) — самое важное.
   const errors = []
   if (result.avgLegendaryPer100 < 4.0 || result.avgLegendaryPer100 > 7.0) {
-    errors.push(`avgLegendaryPer100 ${result.avgLegendaryPer100} outside [4.0, 7.0] (pity-effective range)`)
+    errors.push(
+      `avgLegendaryPer100 ${result.avgLegendaryPer100} outside [4.0, 7.0] (pity-effective range)`,
+    )
   }
   if (result.pityHard25Breaches !== 0) {
     errors.push(`pityHard25Breaches ${result.pityHard25Breaches} (expected 0)`)
   }
   if (result.legendaryGap.max != null && result.legendaryGap.max > 25) {
-    errors.push(`legendaryGap.max ${result.legendaryGap.max} exceeds hard 25 cap`)
+    errors.push(
+      `legendaryGap.max ${result.legendaryGap.max} exceeds hard 25 cap`,
+    )
   }
 
   if (errors.length > 0) {

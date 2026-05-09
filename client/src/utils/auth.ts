@@ -27,7 +27,9 @@ export interface AuthResult {
 export async function authenticate(): Promise<AuthResult> {
   if (isInsideTelegram()) {
     try {
-      const { data } = await api.post('/auth/telegram', { initData: getInitData() })
+      const { data } = await api.post('/auth/telegram', {
+        initData: getInitData(),
+      })
       setToken(data.payload.token)
       return { user: data.user, mode: 'telegram' }
     } catch (err) {
@@ -42,6 +44,8 @@ export async function authenticate(): Promise<AuthResult> {
     return { user: null, mode: 'dev' }
   }
 
-  console.warn('[auth] Telegram WebApp не обнаружен — приложение должно запускаться внутри Telegram')
+  console.warn(
+    '[auth] Telegram WebApp не обнаружен — приложение должно запускаться внутри Telegram',
+  )
   return { user: null, mode: 'failed' }
 }

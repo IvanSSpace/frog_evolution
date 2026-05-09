@@ -16,7 +16,11 @@ export const BESTIARY_BYTE_COUNT = BESTIARY_BIT_COUNT / 8
  *   index = (level - 1) * 64 + ELEMENTS.indexOf(element) * 4 + RARITIES.indexOf(rarity)
  * Range: 0..1535. Returns -1 если invalid.
  */
-export function bestiaryIndex(element: Element, rarity: Rarity, level: number): number {
+export function bestiaryIndex(
+  element: Element,
+  rarity: Rarity,
+  level: number,
+): number {
   const e = ELEMENTS.indexOf(element)
   const r = RARITIES.indexOf(rarity)
   if (e < 0 || r < 0 || level < 1 || level > 24) return -1
@@ -79,7 +83,10 @@ export function countUnlocked(bitset: ReadonlyArray<number>): number {
  *   common = Болото, rare = Лес, epic = Континент, legendary = Планета.
  * Каждая локация = 16 elements × 24 levels = 384 cells.
  */
-export function unlockedInLocation(bitset: ReadonlyArray<number>, rarity: Rarity): number {
+export function unlockedInLocation(
+  bitset: ReadonlyArray<number>,
+  rarity: Rarity,
+): number {
   let count = 0
   const r = RARITIES.indexOf(rarity)
   if (r < 0) return 0
@@ -103,14 +110,19 @@ export const BESTIARY_MILESTONES = [
   { threshold: 576, reward: { type: 'frog-exclusive' } },
 ] as const
 
-export type BestiaryMilestone = typeof BESTIARY_MILESTONES[number]
+export type BestiaryMilestone = (typeof BESTIARY_MILESTONES)[number]
 export type BestiaryReward = BestiaryMilestone['reward']
 
 /**
  * Возвращает milestones которые пересечены в transition prev → next, ascending.
  * Empty array если no crossing.
  */
-export function milestonesCrossed(prev: number, next: number): readonly BestiaryMilestone[] {
+export function milestonesCrossed(
+  prev: number,
+  next: number,
+): readonly BestiaryMilestone[] {
   if (next <= prev) return []
-  return BESTIARY_MILESTONES.filter((m) => prev < m.threshold && next >= m.threshold)
+  return BESTIARY_MILESTONES.filter(
+    (m) => prev < m.threshold && next >= m.threshold,
+  )
 }

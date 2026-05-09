@@ -6,23 +6,45 @@ import { useTranslation } from 'react-i18next'
 import { useGameStore } from '../../store/gameStore'
 import type { Element, Rarity } from '../../store/cosmic/types'
 import {
-  countUnlocked, unlockedInLocation, readBit, bestiaryIndex,
+  countUnlocked,
+  unlockedInLocation,
+  readBit,
+  bestiaryIndex,
 } from '../../store/cosmic/bestiary'
 import {
-  BestiaryGrid, FilterPills, useBestiaryView, BestiaryDetailModal,
+  BestiaryGrid,
+  FilterPills,
+  useBestiaryView,
+  BestiaryDetailModal,
 } from './bestiary'
 
 interface LocationTab {
   rarity: Rarity
-  labelKey: string  // i18n key
+  labelKey: string // i18n key
   icon: string
 }
 
 const LOCATION_TABS: readonly LocationTab[] = [
-  { rarity: 'common', labelKey: 'cosmic_hub.bestiary.location_swamp', icon: '🌿' },
-  { rarity: 'rare', labelKey: 'cosmic_hub.bestiary.location_forest', icon: '🌲' },
-  { rarity: 'epic', labelKey: 'cosmic_hub.bestiary.location_continent', icon: '🏔️' },
-  { rarity: 'legendary', labelKey: 'cosmic_hub.bestiary.location_planet', icon: '🪐' },
+  {
+    rarity: 'common',
+    labelKey: 'cosmic_hub.bestiary.location_swamp',
+    icon: '🌿',
+  },
+  {
+    rarity: 'rare',
+    labelKey: 'cosmic_hub.bestiary.location_forest',
+    icon: '🌲',
+  },
+  {
+    rarity: 'epic',
+    labelKey: 'cosmic_hub.bestiary.location_continent',
+    icon: '🏔️',
+  },
+  {
+    rarity: 'legendary',
+    labelKey: 'cosmic_hub.bestiary.location_planet',
+    icon: '🪐',
+  },
 ] as const
 
 interface SelectedCell {
@@ -43,7 +65,12 @@ export function BestiaryTab() {
 
   // Per-tab unlocked count map (memoized)
   const perLocationCounts = useMemo(() => {
-    const result: Record<Rarity, number> = { common: 0, rare: 0, epic: 0, legendary: 0 }
+    const result: Record<Rarity, number> = {
+      common: 0,
+      rare: 0,
+      epic: 0,
+      legendary: 0,
+    }
     for (const r of ['common', 'rare', 'epic', 'legendary'] as const) {
       result[r] = unlockedInLocation(bitset, r)
     }
@@ -56,7 +83,11 @@ export function BestiaryTab() {
 
   const selectedUnlocked = useMemo(() => {
     if (!selectedCell) return false
-    const idx = bestiaryIndex(selectedCell.element, selectedCell.rarity, selectedCell.level)
+    const idx = bestiaryIndex(
+      selectedCell.element,
+      selectedCell.rarity,
+      selectedCell.level,
+    )
     return readBit(bitset, idx)
   }, [selectedCell, bitset])
 
@@ -65,7 +96,10 @@ export function BestiaryTab() {
       {/* Global counter */}
       <div className="px-3 py-2 text-xs text-white/60 border-b border-white/10 flex justify-between items-center">
         <span>
-          {t('cosmic_hub.bestiary.discovered_total', { count: totalUnlocked, total: 1536 })}
+          {t('cosmic_hub.bestiary.discovered_total', {
+            count: totalUnlocked,
+            total: 1536,
+          })}
         </span>
         <span className="text-white/40 tabular-nums">
           {Math.round((totalUnlocked / 1536) * 100)}%

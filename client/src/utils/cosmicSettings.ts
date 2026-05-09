@@ -48,7 +48,9 @@ export function getCalmFarmMode(): boolean {
 export function setCalmFarmMode(value: boolean): void {
   try {
     localStorage.setItem(KEY_CALM_FARM, value ? '1' : '0')
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   window.dispatchEvent(new CustomEvent(EVENT_NAME))
 }
 
@@ -70,7 +72,9 @@ export function getReducedEffects(): boolean {
 export function setReducedEffects(value: boolean): void {
   try {
     localStorage.setItem(KEY_REDUCED_EFFECTS, value ? '1' : '0')
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   window.dispatchEvent(new CustomEvent(EVENT_NAME))
 }
 

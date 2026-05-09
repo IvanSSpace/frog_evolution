@@ -21,8 +21,12 @@ export function compRipple(
       ring.strokeCircle(0, 0, sys.size * 1.0)
       sprite.add(ring)
       scene.tweens.add({
-        targets: ring, scaleX: 2.0 + rng() * 0.7, scaleY: 2.0 + rng() * 0.7, alpha: 0,
-        duration: 600 + rng() * 200, ease: 'Sine.easeOut',
+        targets: ring,
+        scaleX: 2.0 + rng() * 0.7,
+        scaleY: 2.0 + rng() * 0.7,
+        alpha: 0,
+        duration: 600 + rng() * 200,
+        ease: 'Sine.easeOut',
         onComplete: () => ring.destroy(),
       })
     })

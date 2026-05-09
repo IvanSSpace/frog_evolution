@@ -43,7 +43,9 @@ function loadPlanetMap() {
 function extractThemeComponents() {
   const p = path.resolve(__dirname, '../src/game/scenes/StarMapScene.ts')
   const src = fs.readFileSync(p, 'utf8')
-  const m = src.match(/THEME_COMPONENTS:\s*Record<string,\s*number\[\]>\s*=\s*\{([\s\S]*?)\n\s*\}/)
+  const m = src.match(
+    /THEME_COMPONENTS:\s*Record<string,\s*number\[\]>\s*=\s*\{([\s\S]*?)\n\s*\}/,
+  )
   if (!m) throw new Error('THEME_COMPONENTS not found in StarMapScene.ts')
   const body = m[1]
   const result = {}

@@ -10,10 +10,24 @@
 import type Phaser from 'phaser'
 import type { Element } from '../../../store/cosmic/types'
 import {
-  compFlameTongues, compIceWisps, compRipple, compBloomPetals, compToxicCloud,
-  compPlasmaArc, compHaloFlash, compCrystalShatter, compSandSwirl, compChromaShift,
-  compChimeRing, compEchoWave, compStarBurst, compConfetti, compFlash, compBubbleStream,
-  compRing, compSparkle,
+  compFlameTongues,
+  compIceWisps,
+  compRipple,
+  compBloomPetals,
+  compToxicCloud,
+  compPlasmaArc,
+  compHaloFlash,
+  compCrystalShatter,
+  compSandSwirl,
+  compChromaShift,
+  compChimeRing,
+  compEchoWave,
+  compStarBurst,
+  compConfetti,
+  compFlash,
+  compBubbleStream,
+  compRing,
+  compSparkle,
 } from '../anim/shared'
 import type { SharedBgSystem } from '../anim/shared/types'
 import { ELEMENT_TINTS } from './elementTints'
@@ -53,10 +67,10 @@ interface TierParams {
 }
 
 const TIER_PARAMS: Record<AwakenedTier, TierParams> = {
-  common:    { size: 8,  brightness: 0.55, intervalMs: 2500 },
-  rare:      { size: 10, brightness: 0.70, intervalMs: 2000 },
-  epic:      { size: 13, brightness: 0.85, intervalMs: 1500 },
-  legendary: { size: 16, brightness: 1.00, intervalMs: 1000 },
+  common: { size: 8, brightness: 0.55, intervalMs: 2500 },
+  rare: { size: 10, brightness: 0.7, intervalMs: 2000 },
+  epic: { size: 13, brightness: 0.85, intervalMs: 1500 },
+  legendary: { size: 16, brightness: 1.0, intervalMs: 1000 },
 }
 
 // ============== Element → primitives mapping ==============
@@ -78,16 +92,28 @@ const ELEMENT_CORE: Record<Element, SysPrimitive> = {
   binary: compEchoWave,
   arcane: compStarBurst,
   mechanical: compConfetti,
-  war: compFlameTongues,   // war core = flame (compFlash без sys, отдельно через flashes[])
+  war: compFlameTongues, // war core = flame (compFlash без sys, отдельно через flashes[])
   void: compBubbleStream,
 }
 
 // "Glow" primitive (rare+) — обычно compHaloFlash, иногда compSparkle для контраста.
 const ELEMENT_GLOW: Record<Element, SysPrimitive> = {
-  fire: compHaloFlash, ice: compHaloFlash, water: compHaloFlash, forest: compHaloFlash,
-  toxic: compHaloFlash, plasma: compHaloFlash, shadow: compEchoWave, crystal: compHaloFlash,
-  desert: compHaloFlash, gas: compHaloFlash, ring: compHaloFlash, binary: compHaloFlash,
-  arcane: compHaloFlash, mechanical: compHaloFlash, war: compHaloFlash, void: compHaloFlash,
+  fire: compHaloFlash,
+  ice: compHaloFlash,
+  water: compHaloFlash,
+  forest: compHaloFlash,
+  toxic: compHaloFlash,
+  plasma: compHaloFlash,
+  shadow: compEchoWave,
+  crystal: compHaloFlash,
+  desert: compHaloFlash,
+  gas: compHaloFlash,
+  ring: compHaloFlash,
+  binary: compHaloFlash,
+  arcane: compHaloFlash,
+  mechanical: compHaloFlash,
+  war: compHaloFlash,
+  void: compHaloFlash,
 }
 
 // "Accent" primitive (rare+) — element-specific вторичный motif (sparkle / shatter / bubble).
@@ -132,7 +158,10 @@ const ELEMENT_STORM: Record<Element, SysPrimitive> = {
 
 // ============== Build preset map ==============
 
-function buildPresetForTier(element: Element, tier: AwakenedTier): TierPresetList {
+function buildPresetForTier(
+  element: Element,
+  tier: AwakenedTier,
+): TierPresetList {
   const core = ELEMENT_CORE[element]
   const glow = ELEMENT_GLOW[element]
   const accent = ELEMENT_ACCENT[element]
@@ -158,23 +187,48 @@ function buildPresetForTier(element: Element, tier: AwakenedTier): TierPresetLis
 
     case 'legendary': {
       // 8+ emits: core×3 + glow + accent + storm + compRing + compFlash.
-      const fns: SysPrimitive[] = [core, core, core, glow, accent, storm, compRing]
+      const fns: SysPrimitive[] = [
+        core,
+        core,
+        core,
+        glow,
+        accent,
+        storm,
+        compRing,
+      ]
       // ring element — extra ring; war — extra flash.
       if (element === 'ring') fns.push(compRing)
       if (element === 'arcane') fns.push(storm)
-      const flashes: FlashPrimitive[] = element === 'war' ? [compFlash, compFlash] : [compFlash]
+      const flashes: FlashPrimitive[] =
+        element === 'war' ? [compFlash, compFlash] : [compFlash]
       return { fns, flashes }
     }
   }
 }
 
 // 4 × 16 = 64 preset entries.
-const AWAKENED_PRESET_MAP: Record<AwakenedTier, Record<Element, TierPresetList>> = (() => {
+const AWAKENED_PRESET_MAP: Record<
+  AwakenedTier,
+  Record<Element, TierPresetList>
+> = (() => {
   const result = {} as Record<AwakenedTier, Record<Element, TierPresetList>>
   const elements: Element[] = [
-    'fire', 'ice', 'water', 'forest', 'toxic', 'plasma',
-    'shadow', 'crystal', 'desert', 'gas', 'ring', 'binary',
-    'arcane', 'mechanical', 'war', 'void',
+    'fire',
+    'ice',
+    'water',
+    'forest',
+    'toxic',
+    'plasma',
+    'shadow',
+    'crystal',
+    'desert',
+    'gas',
+    'ring',
+    'binary',
+    'arcane',
+    'mechanical',
+    'war',
+    'void',
   ]
   for (const tier of AWAKENED_TIERS) {
     const tierMap = {} as Record<Element, TierPresetList>
@@ -187,19 +241,28 @@ const AWAKENED_PRESET_MAP: Record<AwakenedTier, Record<Element, TierPresetList>>
 })()
 
 // Convenience exports — strict typed records (per plan must_haves).
-export const COMMON_PRESETS: Record<Element, TierPresetList> = AWAKENED_PRESET_MAP['common']
-export const RARE_PRESETS: Record<Element, TierPresetList> = AWAKENED_PRESET_MAP['rare']
-export const EPIC_PRESETS: Record<Element, TierPresetList> = AWAKENED_PRESET_MAP['epic']
-export const LEGENDARY_PRESETS: Record<Element, TierPresetList> = AWAKENED_PRESET_MAP['legendary']
+export const COMMON_PRESETS: Record<Element, TierPresetList> =
+  AWAKENED_PRESET_MAP['common']
+export const RARE_PRESETS: Record<Element, TierPresetList> =
+  AWAKENED_PRESET_MAP['rare']
+export const EPIC_PRESETS: Record<Element, TierPresetList> =
+  AWAKENED_PRESET_MAP['epic']
+export const LEGENDARY_PRESETS: Record<Element, TierPresetList> =
+  AWAKENED_PRESET_MAP['legendary']
 
 // ============== buildFakeSys helper (T-13-budget: avoid 64× literal duplication) ==============
 
-function buildFakeSys(element: Element, size: number, brightness: number): SharedBgSystem {
+function buildFakeSys(
+  element: Element,
+  size: number,
+  brightness: number,
+): SharedBgSystem {
   const tint = ELEMENT_TINTS[element]
   return {
     id: `awakened-${element}`,
     name: element,
-    x: 0, y: 0,
+    x: 0,
+    y: 0,
     type: 'resource',
     archetype: archetypeForElement(element),
     color: tint,
@@ -261,7 +324,9 @@ export function scheduleAwakenedIdle(
     delay: intervalMs,
     loop: true,
     callback: () => {
-      const ownerScene: Phaser.Scene | null = (container as { scene: Phaser.Scene | null }).scene
+      const ownerScene: Phaser.Scene | null = (
+        container as { scene: Phaser.Scene | null }
+      ).scene
       if (!ownerScene || !container.active) return
       try {
         for (const fn of preset.fns) {

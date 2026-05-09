@@ -24,9 +24,9 @@ interface StabilizationPayload {
   bucket: Bucket
 }
 
-const SLOT_DURATION_MS = 1800   // фаза 1: rotating numbers
-const REVEAL_HOLD_MS = 2200     // фаза 2: финальное число + копирайт (total 4s)
-const TOTAL_DURATION_MS = SLOT_DURATION_MS + REVEAL_HOLD_MS  // 4000ms
+const SLOT_DURATION_MS = 1800 // фаза 1: rotating numbers
+const REVEAL_HOLD_MS = 2200 // фаза 2: финальное число + копирайт (total 4s)
+const TOTAL_DURATION_MS = SLOT_DURATION_MS + REVEAL_HOLD_MS // 4000ms
 
 const BUCKET_TO_KEY: Record<Bucket, string> = {
   S: 'cosmic_hub.carrier.stabilize.s_top',
@@ -153,10 +153,7 @@ export function StabilizationModal() {
         </div>
 
         {/* Element */}
-        <div
-          className="text-lg font-bold"
-          style={{ color: tintCss }}
-        >
+        <div className="text-lg font-bold" style={{ color: tintCss }}>
           {elementName}
         </div>
 
@@ -168,7 +165,9 @@ export function StabilizationModal() {
               'text-5xl font-bold tabular-nums transition-transform',
               phase === 'reveal' ? 'scale-110' : 'scale-100',
             ].join(' ')}
-            style={phase === 'reveal' ? { color: tintCss } : { color: '#ffffff' }}
+            style={
+              phase === 'reveal' ? { color: tintCss } : { color: '#ffffff' }
+            }
           >
             {slotDisplay}
           </span>
@@ -177,7 +176,10 @@ export function StabilizationModal() {
         {/* Bucket label (visible only after reveal) */}
         {phase === 'reveal' ? (
           <div
-            className={['text-base font-semibold', BUCKET_TO_COLOR[payload.bucket]].join(' ')}
+            className={[
+              'text-base font-semibold',
+              BUCKET_TO_COLOR[payload.bucket],
+            ].join(' ')}
           >
             {t(BUCKET_TO_KEY[payload.bucket])}
           </div>

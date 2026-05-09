@@ -37,7 +37,11 @@ interface DevMainScene extends Phaser.Scene {
 declare global {
   interface Window {
     // Phase 12:
-    __addDevCarrier?: (frogId?: string, element?: Element, rarity?: Rarity) => void
+    __addDevCarrier?: (
+      frogId?: string,
+      element?: Element,
+      rarity?: Rarity,
+    ) => void
     __clearDevCarriers?: () => void
     __listDevCarriers?: () => void
     __listFrogIds?: () => DevFrogInfo[]
@@ -57,15 +61,22 @@ if (import.meta.env.DEV) {
   // ============== Phase 12 helpers (unchanged) ==============
 
   window.__addDevCarrier = (frogId, element, rarity) => {
-    const e: Element = element ?? ELEMENTS[Math.floor(Math.random() * ELEMENTS.length)]
+    const e: Element =
+      element ?? ELEMENTS[Math.floor(Math.random() * ELEMENTS.length)]
     const r: Rarity = rarity ?? 'common'
     const id = frogId ?? `dev-${Date.now()}`
     useGameStore.getState().addCarrier({
-      frogId: id, element: e, rarity: r, feedCount: 0, stabilized: false,
+      frogId: id,
+      element: e,
+      rarity: r,
+      feedCount: 0,
+      stabilized: false,
     })
     console.log('[dev] carrier added', { frogId: id, element: e, rarity: r })
     if (!frogId) {
-      console.log('[dev] tip: pass frogId to bind to a real frog. Use __listFrogIds() to get ids.')
+      console.log(
+        '[dev] tip: pass frogId to bind to a real frog. Use __listFrogIds() to get ids.',
+      )
     }
   }
 
@@ -81,7 +92,8 @@ if (import.meta.env.DEV) {
 
   window.__listFrogIds = (): DevFrogInfo[] => {
     const ms = window.__mainScene
-    const list: DevFrogInfo[] = ms?.frogs?.map((f) => ({ id: f.id, level: f.level })) ?? []
+    const list: DevFrogInfo[] =
+      ms?.frogs?.map((f) => ({ id: f.id, level: f.level })) ?? []
     console.table(list)
     return list
   }
@@ -97,10 +109,16 @@ if (import.meta.env.DEV) {
     const carriers = store.carriers
     const idx = carriers.findIndex((c) => c.frogId === frogId)
     if (idx === -1) {
-      console.warn('[dev] carrier not found:', frogId, '— use __listDevCarriers()')
+      console.warn(
+        '[dev] carrier not found:',
+        frogId,
+        '— use __listDevCarriers()',
+      )
       return
     }
-    const updated = carriers.map((c, i) => (i === idx ? { ...c, rarity: tier } : c))
+    const updated = carriers.map((c, i) =>
+      i === idx ? { ...c, rarity: tier } : c,
+    )
     useGameStore.setState({ carriers: updated })
     // markDirty — на случай если subscription по reference сработала, но
     // syncCarriers пропустит из-за timing (frame ordering).
@@ -115,15 +133,21 @@ if (import.meta.env.DEV) {
    */
   window.__testBurstEffect = (frogId, element) => {
     const ms = window.__mainScene
-    if (!ms) { console.warn('[dev] no __mainScene — open game first'); return }
+    if (!ms) {
+      console.warn('[dev] no __mainScene — open game first')
+      return
+    }
 
     // Найти лягушку (если frogId передан) или взять первую с container.
-    const frog = ms.frogs.find((f) => (frogId ? f.id === frogId : !!f.container))
-    const el: Element = element ?? (
-      frog
-        ? (useGameStore.getState().carriers.find((c) => c.frogId === frog.id)?.element as Element | undefined) ?? 'fire'
-        : 'fire'
+    const frog = ms.frogs.find((f) =>
+      frogId ? f.id === frogId : !!f.container,
     )
+    const el: Element =
+      element ??
+      (frog
+        ? ((useGameStore.getState().carriers.find((c) => c.frogId === frog.id)
+            ?.element as Element | undefined) ?? 'fire')
+        : 'fire')
 
     if (frog?.container) {
       burstEffect(ms, frog.container, el)
@@ -137,7 +161,9 @@ if (import.meta.env.DEV) {
     const y = cam ? cam.scrollY + cam.height / 2 : 300
     const tmp = ms.add.container(x, y)
     burstEffect(ms, tmp, el)
-    ms.time.delayedCall(500, () => { if (tmp.active) tmp.destroy(true) })
+    ms.time.delayedCall(500, () => {
+      if (tmp.active) tmp.destroy(true)
+    })
     console.log('[dev] burstEffect (no frog) →', el, 'at', { x, y })
   }
 
@@ -146,7 +172,10 @@ if (import.meta.env.DEV) {
    */
   window.__testMergeEffect = (element, x, y) => {
     const ms = window.__mainScene
-    if (!ms) { console.warn('[dev] no __mainScene — open game first'); return }
+    if (!ms) {
+      console.warn('[dev] no __mainScene — open game first')
+      return
+    }
     const cam = ms.cameras?.main
     const cx = x ?? (cam ? cam.scrollX + cam.width / 2 : 200)
     const cy = y ?? (cam ? cam.scrollY + cam.height / 2 : 300)
@@ -201,17 +230,25 @@ if (import.meta.env.DEV) {
     let count = 0
     for (const byte of bitset) {
       let b = byte | 0
-      while (b) { count += b & 1; b >>>= 1 }
+      while (b) {
+        count += b & 1
+        b >>>= 1
+      }
     }
-    console.log('[dev] bestiary bits set:',
-      count, '/ 1536 (', (count / 1536 * 100).toFixed(2), '%)')
+    console.log(
+      '[dev] bestiary bits set:',
+      count,
+      '/ 1536 (',
+      ((count / 1536) * 100).toFixed(2),
+      '%)',
+    )
     return count
   }
 
   console.log(
     '[dev Phase 12+13+17] helpers: __addDevCarrier, __setCarrierTier(frogId, tier), ' +
-    '__testBurstEffect(frogId?, element?), __testMergeEffect(element?, x?, y?), ' +
-    '__clearDevCarriers, __listDevCarriers, __listFrogIds, ' +
-    '__forceFeed(frogId, count?), __forceStabilize(frogId), __bestiaryBitsSet',
+      '__testBurstEffect(frogId?, element?), __testMergeEffect(element?, x?, y?), ' +
+      '__clearDevCarriers, __listDevCarriers, __listFrogIds, ' +
+      '__forceFeed(frogId, count?), __forceStabilize(frogId), __bestiaryBitsSet',
   )
 }

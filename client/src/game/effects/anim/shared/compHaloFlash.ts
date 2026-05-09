@@ -27,13 +27,21 @@ export function compHaloFlash(
     const pulses = 2 + Math.floor(rng() * 2)
     const pulseDur = 180 + rng() * 100
     scene.tweens.add({
-      targets: halo, scaleX: 1.4, scaleY: 1.4,
-      yoyo: true, repeat: pulses - 1, duration: pulseDur,
+      targets: halo,
+      scaleX: 1.4,
+      scaleY: 1.4,
+      yoyo: true,
+      repeat: pulses - 1,
+      duration: pulseDur,
       ease: 'Sine.easeInOut',
       onComplete: () => {
         scene.tweens.add({
-          targets: halo, alpha: 0, scaleX: 1.6, scaleY: 1.6,
-          duration: 250, ease: 'Cubic.easeOut',
+          targets: halo,
+          alpha: 0,
+          scaleX: 1.6,
+          scaleY: 1.6,
+          duration: 250,
+          ease: 'Cubic.easeOut',
           onComplete: () => halo.destroy(),
         })
       },
@@ -41,8 +49,11 @@ export function compHaloFlash(
   } else {
     scene.tweens.add({
       targets: halo,
-      scaleX: 1.6 + rng() * 0.6, scaleY: 1.6 + rng() * 0.6, alpha: 0,
-      duration: 450 + rng() * 350, ease: pickEase(rng),
+      scaleX: 1.6 + rng() * 0.6,
+      scaleY: 1.6 + rng() * 0.6,
+      alpha: 0,
+      duration: 450 + rng() * 350,
+      ease: pickEase(rng),
       onComplete: () => halo.destroy(),
     })
   }

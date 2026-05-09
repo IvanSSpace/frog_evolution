@@ -21,11 +21,13 @@ export function compStarBurst(
   burst.lineStyle((1 + rng() * 1.5) * DPR, color, 0.85)
   for (let i = 0; i < rays; i++) {
     const ang = (i / rays) * Math.PI * 2 + rng() * 0.2
-    const lenMult = (tippingPct > 0 && rng() < tippingPct) ? 2 : 1
+    const lenMult = tippingPct > 0 && rng() < tippingPct ? 2 : 1
     const endR = endRBase * (0.7 + rng() * 0.4) * lenMult
     burst.lineBetween(
-      Math.cos(ang) * startR, Math.sin(ang) * startR,
-      Math.cos(ang) * endR, Math.sin(ang) * endR,
+      Math.cos(ang) * startR,
+      Math.sin(ang) * startR,
+      Math.cos(ang) * endR,
+      Math.sin(ang) * endR,
     )
   }
   // Тонкие accent поверх
@@ -37,8 +39,12 @@ export function compStarBurst(
   }
   sprite.add(burst)
   scene.tweens.add({
-    targets: burst, alpha: 0, scaleX: 1.3 + rng() * 0.4, scaleY: 1.3 + rng() * 0.4,
-    duration: 400 + rng() * 300, ease: pickEase(rng),
+    targets: burst,
+    alpha: 0,
+    scaleX: 1.3 + rng() * 0.4,
+    scaleY: 1.3 + rng() * 0.4,
+    duration: 400 + rng() * 300,
+    ease: pickEase(rng),
     onComplete: () => burst.destroy(),
   })
 }
