@@ -13,11 +13,11 @@ import { ShipController } from './starmap/shipController'
 import {
   setupStarfield,
   drawLines,
-  redrawMainLines,
   buildBgBatch,
   renderSystem,
   createSparkleAt,
 } from './starmap/starfield'
+import { CoordinatesHUDController } from './starmap/coordinatesHUD'
 import { deriveModulations } from '../../audio/planetVoice'
 import {
   compRing,
@@ -462,7 +462,14 @@ export class StarMapScene extends Phaser.Scene {
     setupVeranLightning(this, MAIN_RACES)
     setupRelictMourning(this, MAIN_RACES)
 
-    this.setupCoordinatesHUD()
+    // Phase 20-04 (Wave 4): per-frame update tick + HUD данных делегированы CoordinatesHUDController.
+    new CoordinatesHUDController(this, {
+      bgDetailMinZoom: BG_DETAIL_MIN_ZOOM,
+      bgPlanetMinZoom: BG_PLANET_MIN_ZOOM,
+      bgInteractiveMinZoom: BG_INTERACTIVE_MIN_ZOOM,
+      moonFadeStart: MOON_FADE_START,
+      moonFadeEnd: MOON_FADE_END,
+    }).setup()
 
     // Phaser-popover scale-compensation. Применяется в PRE_RENDER чтобы scale
     // соответствовал текущему cam.zoom синхронно с render (без 1-frame lag).
@@ -547,132 +554,8 @@ export class StarMapScene extends Phaser.Scene {
   hudVisible = 0
   hudTotal = 0
 
-  private setupCoordinatesHUD() {
-    // Сглаженный FPS (скользящее среднее по 30 кадрам)
-    const fpsHistory: number[] = []
-    const FPS_WINDOW = 30
-
-    this.events.on('update', (_t: number, dt: number) => {
-      const cam = this.cameras.main
-
-      const instantFps = dt > 0 ? 1000 / dt : 60
-      fpsHistory.push(instantFps)
-      if (fpsHistory.length > FPS_WINDOW) fpsHistory.shift()
-      const avgFps = fpsHistory.reduce((a, b) => a + b, 0) / fpsHistory.length
-
-      // Spike-детектор: лог в консоль если кадр > 50ms (FPS < 20) — для диагностики лагов.
-      if (dt > 50) {
-        const visibleNow = this.cullableData.filter((c) => c.obj.visible).length
-        devWarn(
-          `[StarMap spike] frame=${dt.toFixed(1)}ms zoom=${cam.zoom.toFixed(3)} visible=${visibleNow}/${this.cullableData.length} tweens=${this.tweens.getTweens().length}`,
-        )
-      }
-
-      // Culling tick — каждые 6 кадров
-      this.cullTickCounter++
-      let visibleCount = 0
-      if (this.cullTickCounter >= 6) {
-        this.cullTickCounter = 0
-        const view = cam.worldView
-        const margin = 50 * DPR
-        const left = view.left - margin
-        const right = view.right + margin
-        const top = view.top - margin
-        const bottom = view.bottom + margin
-        const curZoom = cam.zoom
-        for (const c of this.cullableData) {
-          // LOD-cut: при zoom ниже lodMinZoom объект скрыт независимо от viewport.
-          // Используется для фоновых планет: при сильном отдалении 434 контейнера
-          // не нужны — превращаются в шум, плюс одновременное setVisible(true)
-          // при возврате zoom давало FPS-spike.
-          const lodOk = c.lodMinZoom === undefined || curZoom >= c.lodMinZoom
-          const inView =
-            lodOk &&
-            c.x + c.r > left &&
-            c.x - c.r < right &&
-            c.y + c.r > top &&
-            c.y - c.r < bottom
-          if (c.obj.visible !== inView) c.obj.setVisible(inView)
-          if (inView) visibleCount++
-        }
-      }
-
-      // Сохраняем для React-HUD overlay
-      this.hudFps = avgFps
-      this.hudVisible = visibleCount
-      this.hudTotal = this.cullableData.length
-
-      // Компенсация zoom для звёзд-ромбов: при отдалении они растут,
-      // при приближении остаются нормального размера. Cap на минимум 1.
-      const zoom = this.cameras.main.zoom
-      const zoomComp = Math.max(1, 1 / zoom)
-      for (const s of this.zoomCompStars) {
-        if (s.obj.visible) s.obj.setScale(s.baseScale * zoomComp)
-      }
-
-      // Линии связи между главными расами: re-draw с новой толщиной если zoom
-      // изменился заметно (>2%). Плавный рост видимости при отдалении.
-      if (
-        this.mainLinesGfx &&
-        Math.abs(zoom - this.mainLinesLastZoom) / Math.max(zoom, 0.001) > 0.02
-      ) {
-        redrawMainLines(this)
-      }
-
-      // LOD деталей BG-планет: при zoom < BG_DETAIL_MIN_ZOOM скрываем archetype-detail
-      // Graphics. Видны только базовые шары → ~80% меньше draw calls на zoom-out.
-      const detailVisible = zoom >= BG_DETAIL_MIN_ZOOM
-      // Update только если состояние изменилось (раз в zoom-переход, не каждый кадр)
-      if (
-        this.bgArchetypeGfx.length > 0 &&
-        this.bgArchetypeGfx[0].visible !== detailVisible
-      ) {
-        for (const gd of this.bgArchetypeGfx) gd.setVisible(detailVisible)
-      }
-
-      // Batch BG: видим при zoom < BG_PLANET_MIN_ZOOM (звёздное небо вместо containers).
-      // Когда видим — индивидуальные containers скрыты через manual culling LOD-cut.
-      const batchVisible = zoom < BG_PLANET_MIN_ZOOM
-      if (this.bgBatchGfx && this.bgBatchGfx.visible !== batchVisible) {
-        this.bgBatchGfx.setVisible(batchVisible)
-      }
-
-      // Interactive toggle для BG: при zoom < BG_INTERACTIVE_MIN_ZOOM отключаем
-      // input.enabled у всех BG containers — снимает hit-test overhead.
-      const wantInteractive = zoom >= BG_INTERACTIVE_MIN_ZOOM
-      if (this.bgInteractiveEnabled !== wantInteractive) {
-        this.bgInteractiveEnabled = wantInteractive
-        for (const c of this.bgInteractiveContainers) {
-          if (c.input) c.input.enabled = wantInteractive
-        }
-      }
-
-      // Спутники планет: плавный fade-in между MOON_FADE_START и MOON_FADE_END.
-      // alpha 0 при zoom < 0.45, alpha 1 при zoom > 0.55 — плавный crossfade.
-      const moonAlpha = Phaser.Math.Clamp(
-        (zoom - MOON_FADE_START) / (MOON_FADE_END - MOON_FADE_START),
-        0,
-        1,
-      )
-      const moonsActive = moonAlpha > 0.001
-      const dtSec = dt / 1000
-      for (const m of this.moons) {
-        if (m.obj.visible !== moonsActive) m.obj.setVisible(moonsActive)
-        if (!moonsActive) continue
-        m.obj.setAlpha(moonAlpha * 0.85) // 0.85 — базовая alpha спутника как было
-        m.angle += dtSec * m.speed
-        m.obj.x = Math.cos(m.angle) * m.radius
-        m.obj.y = Math.sin(m.angle) * m.radius * 0.6 // эллиптическая орбита
-      }
-
-      // Popover-follower: planet-moved обновляет position для текущего placement.
-      // Placement не меняется при follow — фиксируется в момент выбора.
-      // ВАЖНО: planet-moved emit перенесён в PRE_RENDER event ниже.
-      // Здесь (внутри 'update') scroll/zoom могут быть ещё не финальными —
-      // другие update-listeners (inertia, clamp) могут их изменить позже.
-      // PRE_RENDER гарантирует финальные значения = синхронно с тем что рисует Phaser.
-    })
-  }
+  // setupCoordinatesHUD — extracted в './starmap/coordinatesHUD.ts' (Phase 20-04, Wave 4).
+  // CoordinatesHUDController пишет в hudFps/hudVisible/hudTotal каждый кадр.
 
   // ============== ФОНЫ ==============
   // setupStarfield/drawLines/redrawMainLines/buildBgBatch/renderSystem/createSparkleAt

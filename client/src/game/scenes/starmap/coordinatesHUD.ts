@@ -1,0 +1,186 @@
+// Phase 20-04 (Wave 4): per-frame update loop + HUD data extracted from StarMapScene.ts.
+// Controller-class — owns FPS smoothing window. Reads/writes scene's package-public
+// fields (cullableData, zoomCompStars, moons, bgArchetypeGfx, bgBatchGfx,
+// bgInteractiveEnabled, bgInteractiveContainers, mainLinesGfx, mainLinesLastZoom,
+// hudFps, hudVisible, hudTotal).
+//
+// Public API:
+//   - setup(): subscribes to scene.events.on('update'). Per-frame:
+//     1. Smooth FPS (30-frame rolling avg) → write hudFps
+//     2. Spike detector (>50ms frame → console warn)
+//     3. Manual culling tick (every 6 frames) — frustum + LOD-cut → write hudVisible/hudTotal
+//     4. Zoom-comp scaling for sparkle stars
+//     5. Main connection lines re-draw on zoom change >2%
+//     6. BG detail LOD toggle (zoom threshold)
+//     7. BG batch graphics visibility (extreme zoom-out)
+//     8. BG interactive enable/disable (hit-test overhead optimization)
+//     9. Moon orbit animation + fade-in
+//
+// HUD values consumed by React via getStarMapHUD() in src/game/index.ts —
+// reads scene.hudFps/hudVisible/hudTotal directly. Controller writes to those fields,
+// preserves existing API contract.
+//
+// Despite the name "CoordinatesHUD", this is the central per-frame update tick.
+// Имя сохранено из исторического: первая версия HUD-overlay рисовала координаты в Phaser.
+
+import Phaser from 'phaser'
+import type { StarMapScene } from '../StarMapScene'
+import { redrawMainLines } from './starfield'
+import { devWarn } from '../../../utils/devLog'
+
+const DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 3))
+
+export interface CoordinatesHUDConfig {
+  /** Минимальный zoom при котором рисуется детализация BG-планет. */
+  bgDetailMinZoom: number
+  /** Минимальный zoom при котором BG-планеты видны как контейнеры (vs. batch). */
+  bgPlanetMinZoom: number
+  /** Минимальный zoom при котором BG-планеты кликабельны. */
+  bgInteractiveMinZoom: number
+  /** Начало fade-in спутников (alpha 0 ниже). */
+  moonFadeStart: number
+  /** Конец fade-in спутников (alpha 1 выше). */
+  moonFadeEnd: number
+}
+
+export class CoordinatesHUDController {
+  private scene: StarMapScene
+  private config: CoordinatesHUDConfig
+
+  constructor(scene: StarMapScene, config: CoordinatesHUDConfig) {
+    this.scene = scene
+    this.config = config
+  }
+
+  setup(): void {
+    const scene = this.scene
+    const config = this.config
+    // Сглаженный FPS (скользящее среднее по 30 кадрам)
+    const fpsHistory: number[] = []
+    const FPS_WINDOW = 30
+
+    scene.events.on('update', (_t: number, dt: number) => {
+      const cam = scene.cameras.main
+
+      const instantFps = dt > 0 ? 1000 / dt : 60
+      fpsHistory.push(instantFps)
+      if (fpsHistory.length > FPS_WINDOW) fpsHistory.shift()
+      const avgFps = fpsHistory.reduce((a, b) => a + b, 0) / fpsHistory.length
+
+      // Spike-детектор: лог в консоль если кадр > 50ms (FPS < 20) — для диагностики лагов.
+      if (dt > 50) {
+        const visibleNow = scene.cullableData.filter(
+          (c) => c.obj.visible,
+        ).length
+        devWarn(
+          `[StarMap spike] frame=${dt.toFixed(1)}ms zoom=${cam.zoom.toFixed(3)} visible=${visibleNow}/${scene.cullableData.length} tweens=${scene.tweens.getTweens().length}`,
+        )
+      }
+
+      // Culling tick — каждые 6 кадров
+      scene.cullTickCounter++
+      let visibleCount = 0
+      if (scene.cullTickCounter >= 6) {
+        scene.cullTickCounter = 0
+        const view = cam.worldView
+        const margin = 50 * DPR
+        const left = view.left - margin
+        const right = view.right + margin
+        const top = view.top - margin
+        const bottom = view.bottom + margin
+        const curZoom = cam.zoom
+        for (const c of scene.cullableData) {
+          // LOD-cut: при zoom ниже lodMinZoom объект скрыт независимо от viewport.
+          // Используется для фоновых планет: при сильном отдалении 434 контейнера
+          // не нужны — превращаются в шум, плюс одновременное setVisible(true)
+          // при возврате zoom давало FPS-spike.
+          const lodOk = c.lodMinZoom === undefined || curZoom >= c.lodMinZoom
+          const inView =
+            lodOk &&
+            c.x + c.r > left &&
+            c.x - c.r < right &&
+            c.y + c.r > top &&
+            c.y - c.r < bottom
+          if (c.obj.visible !== inView) c.obj.setVisible(inView)
+          if (inView) visibleCount++
+        }
+      }
+
+      // Сохраняем для React-HUD overlay
+      scene.hudFps = avgFps
+      scene.hudVisible = visibleCount
+      scene.hudTotal = scene.cullableData.length
+
+      // Компенсация zoom для звёзд-ромбов: при отдалении они растут,
+      // при приближении остаются нормального размера. Cap на минимум 1.
+      const zoom = scene.cameras.main.zoom
+      const zoomComp = Math.max(1, 1 / zoom)
+      for (const s of scene.zoomCompStars) {
+        if (s.obj.visible) s.obj.setScale(s.baseScale * zoomComp)
+      }
+
+      // Линии связи между главными расами: re-draw с новой толщиной если zoom
+      // изменился заметно (>2%). Плавный рост видимости при отдалении.
+      if (
+        scene.mainLinesGfx &&
+        Math.abs(zoom - scene.mainLinesLastZoom) / Math.max(zoom, 0.001) > 0.02
+      ) {
+        redrawMainLines(scene)
+      }
+
+      // LOD деталей BG-планет: при zoom < BG_DETAIL_MIN_ZOOM скрываем archetype-detail
+      // Graphics. Видны только базовые шары → ~80% меньше draw calls на zoom-out.
+      const detailVisible = zoom >= config.bgDetailMinZoom
+      // Update только если состояние изменилось (раз в zoom-переход, не каждый кадр)
+      if (
+        scene.bgArchetypeGfx.length > 0 &&
+        scene.bgArchetypeGfx[0].visible !== detailVisible
+      ) {
+        for (const gd of scene.bgArchetypeGfx) gd.setVisible(detailVisible)
+      }
+
+      // Batch BG: видим при zoom < BG_PLANET_MIN_ZOOM (звёздное небо вместо containers).
+      // Когда видим — индивидуальные containers скрыты через manual culling LOD-cut.
+      const batchVisible = zoom < config.bgPlanetMinZoom
+      if (scene.bgBatchGfx && scene.bgBatchGfx.visible !== batchVisible) {
+        scene.bgBatchGfx.setVisible(batchVisible)
+      }
+
+      // Interactive toggle для BG: при zoom < BG_INTERACTIVE_MIN_ZOOM отключаем
+      // input.enabled у всех BG containers — снимает hit-test overhead.
+      const wantInteractive = zoom >= config.bgInteractiveMinZoom
+      if (scene.bgInteractiveEnabled !== wantInteractive) {
+        scene.bgInteractiveEnabled = wantInteractive
+        for (const c of scene.bgInteractiveContainers) {
+          if (c.input) c.input.enabled = wantInteractive
+        }
+      }
+
+      // Спутники планет: плавный fade-in между MOON_FADE_START и MOON_FADE_END.
+      // alpha 0 при zoom < 0.45, alpha 1 при zoom > 0.55 — плавный crossfade.
+      const moonAlpha = Phaser.Math.Clamp(
+        (zoom - config.moonFadeStart) /
+          (config.moonFadeEnd - config.moonFadeStart),
+        0,
+        1,
+      )
+      const moonsActive = moonAlpha > 0.001
+      const dtSec = dt / 1000
+      for (const m of scene.moons) {
+        if (m.obj.visible !== moonsActive) m.obj.setVisible(moonsActive)
+        if (!moonsActive) continue
+        m.obj.setAlpha(moonAlpha * 0.85) // 0.85 — базовая alpha спутника как было
+        m.angle += dtSec * m.speed
+        m.obj.x = Math.cos(m.angle) * m.radius
+        m.obj.y = Math.sin(m.angle) * m.radius * 0.6 // эллиптическая орбита
+      }
+
+      // Popover-follower: planet-moved обновляет position для текущего placement.
+      // Placement не меняется при follow — фиксируется в момент выбора.
+      // ВАЖНО: planet-moved emit перенесён в PRE_RENDER event ниже.
+      // Здесь (внутри 'update') scroll/zoom могут быть ещё не финальными —
+      // другие update-listeners (inertia, clamp) могут их изменить позже.
+      // PRE_RENDER гарантирует финальные значения = синхронно с тем что рисует Phaser.
+    })
+  }
+}
