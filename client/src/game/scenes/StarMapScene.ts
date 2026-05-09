@@ -307,7 +307,7 @@ export class StarMapScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image('spaceShip', '/spaceShip.png')
+    this.load.image('spaceShip', '/spaceShip.webp')
   }
 
   create() {
