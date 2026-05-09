@@ -11,8 +11,6 @@ import planetMap from '../data/planetMap.json'
 import { findPlanetById, DAILY_CAP } from '../data/missionConfig'
 import type { ShipState } from '../../store/cosmic/types'
 import { deriveModulations } from '../../audio/planetVoice'
-import { pickColor as sharedPickColor } from '../effects/anim/shared/sharedHelpers'
-import type { AnimSys } from '../effects/anim/shared/types'
 import {
   compRing,
   compSparkle,
@@ -94,6 +92,26 @@ import {
   compGravityKnot,
   compCosmicWeb,
   compParticleFountain,
+  // Group I — Phase 20-02 (final batch)
+  compEchoSpawn,
+  compRipBlade,
+  compEarthquakeShake,
+  compKaleidoscope,
+  compDroneHum,
+  compGlitchStutter,
+  compDopplerWave,
+  compMorseFlash,
+  compCrystalBell,
+  compWindRustle,
+  compClockGears,
+  compBouncingBall,
+  compDigitalGlitch,
+  compRingPulsar,
+  compSwarmParticles,
+  compPrismRefract,
+  compLifeBloom,
+  compWindRibbons,
+  compWreckageOrbit,
 } from '../effects/anim/shared'
 import type { Race, BgSystem, Archetype, PlanetMapEntry } from './starmap/types'
 import {
@@ -1600,44 +1618,44 @@ export class StarMapScene extends Phaser.Scene {
         compParticleFountain(this, sprite, sys, rng)
         break
       case 73:
-        this.compEchoSpawn(sprite, sys, rng)
+        compEchoSpawn(this, sprite, sys, rng)
         break
       case 74:
         compIceWisps(this, sprite, sys, rng)
         break
       case 75:
-        this.compRipBlade(sprite, sys, rng)
+        compRipBlade(this, sprite, sys, rng)
         break
       // Расширение 4 — компоненты 76-87 (с явными sound-style)
       case 76:
         compChimeRing(this, sprite, sys, rng)
         break
       case 77:
-        this.compEarthquakeShake(sprite, sys, rng)
+        compEarthquakeShake(this, sprite, sys, rng)
         break
       case 78:
-        this.compKaleidoscope(sprite, sys, rng)
+        compKaleidoscope(this, sprite, sys, rng)
         break
       case 79:
-        this.compDroneHum(sprite, sys, rng)
+        compDroneHum(this, sprite, sys, rng)
         break
       case 80:
-        this.compGlitchStutter(sprite, sys, rng)
+        compGlitchStutter(this, sprite, sys, rng)
         break
       case 81:
-        this.compDopplerWave(sprite, sys, rng)
+        compDopplerWave(this, sprite, sys, rng)
         break
       case 82:
-        this.compMorseFlash(sprite, sys, rng)
+        compMorseFlash(this, sprite, sys, rng)
         break
       case 83:
-        this.compCrystalBell(sprite, sys, rng)
+        compCrystalBell(this, sprite, sys, rng)
         break
       case 84:
-        this.compWindRustle(sprite, sys, rng)
+        compWindRustle(this, sprite, sys, rng)
         break
       case 85:
-        this.compClockGears(sprite, sys, rng)
+        compClockGears(this, sprite, sys, rng)
         break
       case 86:
         compBubbleStream(this, sprite, sys, rng)
@@ -1647,28 +1665,28 @@ export class StarMapScene extends Phaser.Scene {
         break
       // Phase 8 — компоненты 88-95
       case 88:
-        this.compBouncingBall(sprite, sys, rng)
+        compBouncingBall(this, sprite, sys, rng)
         break
       case 89:
-        this.compDigitalGlitch(sprite, sys, rng)
+        compDigitalGlitch(this, sprite, sys, rng)
         break
       case 90:
-        this.compRingPulsar(sprite, sys, rng)
+        compRingPulsar(this, sprite, sys, rng)
         break
       case 91:
-        this.compSwarmParticles(sprite, sys, rng)
+        compSwarmParticles(this, sprite, sys, rng)
         break
       case 92:
-        this.compPrismRefract(sprite, sys, rng)
+        compPrismRefract(this, sprite, sys, rng)
         break
       case 93:
-        this.compLifeBloom(sprite, sys, rng)
+        compLifeBloom(this, sprite, sys, rng)
         break
       case 94:
-        this.compWindRibbons(sprite, sys, rng)
+        compWindRibbons(this, sprite, sys, rng)
         break
       case 95:
-        this.compWreckageOrbit(sprite, sys, rng)
+        compWreckageOrbit(this, sprite, sys, rng)
         break
     }
   }
@@ -1767,13 +1785,8 @@ export class StarMapScene extends Phaser.Scene {
    * 87 plasmaArc        — arc-buzz            (электрическая дуга)
    * ════════════════════════════════════════════════════════════════════════ */
 
-  // Helpers: pick цвета.
-  // Phase 9: extracted в effects/anim/shared/sharedHelpers.ts. Здесь — thin wrapper
-  // для backward-compat не-целевых comp методов которые продолжают вызывать this.pickColor.
-  // pickEase wrapper удалён в Phase 20-02 — больше не используется (все методы с easing вынесены).
-  private pickColor(rng: () => number, sys: Race | BgSystem): number {
-    return sharedPickColor(rng, sys as AnimSys)
-  }
+  // Helpers: pickColor/pickEase wrappers удалены в Phase 20-02 — все comp методы вынесены
+  // в effects/anim/shared/, которые импортируют helpers напрямую из sharedHelpers.ts.
 
   // === 12 АТОМАРНЫХ КОМПОНЕНТОВ ===
 
@@ -2123,842 +2136,38 @@ export class StarMapScene extends Phaser.Scene {
   // 70. compGravityKnot — extracted в effects/anim/shared/compGravityKnot.ts (Phase 20-02).
   // 71. compCosmicWeb — extracted в effects/anim/shared/compCosmicWeb.ts (Phase 20-02).
   // 72. compParticleFountain — extracted в effects/anim/shared/compParticleFountain.ts (Phase 20-02).
-
-  // 73. Echo spawn — фантомные копии планеты появляются и исчезают вокруг
-  private compEchoSpawn(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const N = 4 + Math.floor(rng() * 3)
-    for (let i = 0; i < N; i++) {
-      this.time.delayedCall(i * 80, () => {
-        if (!sprite.active) return
-        const ang = (i / N) * Math.PI * 2 + rng() * 0.4
-        const dist = sys.size * (1.0 + rng() * 0.5)
-        const ghost = this.add.circle(
-          Math.cos(ang) * dist,
-          Math.sin(ang) * dist,
-          sys.size * 0.55,
-          sys.color,
-          0.5,
-        )
-        sprite.add(ghost)
-        this.tweens.add({
-          targets: ghost,
-          alpha: 0,
-          scale: 1.4,
-          duration: 400 + rng() * 200,
-          ease: 'Cubic.easeOut',
-          onComplete: () => ghost.destroy(),
-        })
-      })
-    }
-  }
-
+  // 73. compEchoSpawn — extracted в effects/anim/shared/compEchoSpawn.ts (Phase 20-02).
   // 74. compIceWisps — extracted в effects/anim/shared/compIceWisps.ts (Phase 9).
-
-  // 75. Rip blade — острый «разрез» прорезает планету диагонально
-  private compRipBlade(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const blade = this.add.graphics()
-    const color = this.pickColor(rng, sys)
-    const len = sys.size * (3 + rng() * 0.6)
-    const w = (1.5 + rng()) * DPR
-    blade.fillStyle(color, 0.8)
-    blade.fillRect(-len / 2, -w * 1.5, len, w * 3)
-    blade.fillStyle(0xffffff, 0.95)
-    blade.fillRect(-len / 2, -w * 0.5, len, w)
-    blade.rotation = rng() * Math.PI * 2
-    blade.scale = 0.1
-    sprite.add(blade)
-    this.tweens.add({
-      targets: blade,
-      scaleX: 1.2,
-      scaleY: 1,
-      alpha: 0,
-      duration: 350 + rng() * 200,
-      ease: 'Cubic.easeOut',
-      onComplete: () => blade.destroy(),
-    })
-  }
+  // 75. compRipBlade — extracted в effects/anim/shared/compRipBlade.ts (Phase 20-02).
 
   // === РАСШИРЕНИЕ 4 (компоненты 76-87) ===
   // Каждый имеет sound-style ярлык — концептуальное «звучание» анимации.
 
   // 76. compChimeRing — extracted в effects/anim/shared/compChimeRing.ts (Phase 9).
-
-  // 77. Earthquake shake — sound-style: rumble-shake (тряска земли)
-  // 6-10 точек в случайных местах резко дрожат
-  private compEarthquakeShake(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const N = 6 + Math.floor(rng() * 5)
-    for (let i = 0; i < N; i++) {
-      const ang = rng() * Math.PI * 2
-      const r = sys.size * (0.7 + rng() * 0.4)
-      const x = Math.cos(ang) * r,
-        y = Math.sin(ang) * r
-      const dot = this.add.circle(
-        x,
-        y,
-        (1.5 + rng() * 1.5) * DPR,
-        this.pickColor(rng, sys),
-        1,
-      )
-      sprite.add(dot)
-      this.tweens.add({
-        targets: dot,
-        x: x + (rng() - 0.5) * sys.size * 0.5,
-        y: y + (rng() - 0.5) * sys.size * 0.5,
-        yoyo: true,
-        repeat: 3,
-        duration: 60 + rng() * 40,
-        ease: 'Sine.easeInOut',
-        onComplete: () => {
-          this.tweens.add({
-            targets: dot,
-            alpha: 0,
-            duration: 200,
-            onComplete: () => dot.destroy(),
-          })
-        },
-      })
-    }
-  }
-
-  // 78. Kaleidoscope — sound-style: symmetry-spin (симметричное вращение)
-  // 6/8-секторная симметричная картина с вращением
-  private compKaleidoscope(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const sectors = rng() < 0.5 ? 6 : 8
-    const kaleido = this.add.graphics()
-    const c1 = this.pickColor(rng, sys)
-    const c2 = this.pickColor(rng, sys)
-    for (let i = 0; i < sectors; i++) {
-      const ang = (i / sectors) * Math.PI * 2
-      kaleido.fillStyle(i % 2 === 0 ? c1 : c2, 0.6)
-      const r = sys.size * (1.3 + rng() * 0.3)
-      kaleido.fillTriangle(
-        0,
-        0,
-        Math.cos(ang) * r,
-        Math.sin(ang) * r,
-        Math.cos(ang + Math.PI / sectors) * r,
-        Math.sin(ang + Math.PI / sectors) * r,
-      )
-    }
-    kaleido.scale = 0.3
-    sprite.add(kaleido)
-    this.tweens.add({
-      targets: kaleido,
-      scale: 1.3 + rng() * 0.3,
-      alpha: 0,
-      rotation: ((rng() < 0.5 ? 1 : -1) * Math.PI) / 2,
-      duration: 600 + rng() * 200,
-      ease: 'Cubic.easeOut',
-      onComplete: () => kaleido.destroy(),
-    })
-  }
-
-  // 79. Drone hum — sound-style: bass-drone (низкий тяжелый дрон)
-  // Большой круг медленно пульсирует с низкой частотой
-  private compDroneHum(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const drone = this.add.circle(
-      0,
-      0,
-      sys.size * 1.4,
-      this.pickColor(rng, sys),
-      0.4,
-    )
-    sprite.add(drone)
-    this.tweens.add({
-      targets: drone,
-      scale: 1.3,
-      alpha: 0,
-      duration: 800 + rng() * 200,
-      ease: 'Sine.easeInOut',
-      onComplete: () => drone.destroy(),
-    })
-  }
-
-  // 80. Glitch stutter — sound-style: glitch-stutter (цифровое заикание)
-  // Повторяющиеся быстрые offset+colorshift
-  private compGlitchStutter(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const stutters = 4 + Math.floor(rng() * 3)
-    const colors = [0xff0066, 0x00ff66, 0x0066ff, 0xfde047]
-    for (let i = 0; i < stutters; i++) {
-      this.time.delayedCall(i * 60, () => {
-        if (!sprite.active) return
-        const shift = sys.size * (0.1 + rng() * 0.15)
-        const ang = rng() * Math.PI * 2
-        const ghost = this.add.circle(
-          Math.cos(ang) * shift,
-          Math.sin(ang) * shift,
-          sys.size * 0.85,
-          colors[i % colors.length],
-          0.55,
-        )
-        ghost.setBlendMode(Phaser.BlendModes.SCREEN)
-        sprite.add(ghost)
-        this.tweens.add({
-          targets: ghost,
-          alpha: 0,
-          duration: 100,
-          ease: 'Cubic.easeOut',
-          onComplete: () => ghost.destroy(),
-        })
-      })
-    }
-  }
-
-  // 81. Doppler wave — sound-style: doppler-shift (волна со сдвигом)
-  // Эллиптическая волна расширяется с asymmetric color tint
-  private compDopplerWave(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const wave = this.add.graphics()
-    const angle = rng() * Math.PI * 2
-    const c1 = this.pickColor(rng, sys)
-    const c2 = this.pickColor(rng, sys)
-    wave.lineStyle(2 * DPR, c1, 0.7)
-    wave.strokeEllipse(-sys.size * 0.2, 0, sys.size * 1.6, sys.size * 1.0)
-    wave.lineStyle(1.5 * DPR, c2, 0.5)
-    wave.strokeEllipse(sys.size * 0.2, 0, sys.size * 2.0, sys.size * 1.2)
-    wave.rotation = angle
-    sprite.add(wave)
-    this.tweens.add({
-      targets: wave,
-      scale: 1.7 + rng() * 0.3,
-      alpha: 0,
-      x: Math.cos(angle) * sys.size,
-      y: Math.sin(angle) * sys.size,
-      duration: 600 + rng() * 200,
-      ease: 'Cubic.easeOut',
-      onComplete: () => wave.destroy(),
-    })
-  }
-
-  // 82. Morse flash — sound-style: dit-dah-dit (азбука морзе)
-  // Серия коротких + длинных вспышек, как сигнал
-  private compMorseFlash(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    // Pattern: dot-dot-dash-dot (каждый = blink с alpha)
-    const pattern = [80, 80, 200, 80] // ms
-    let totalDelay = 0
-    for (const dur of pattern) {
-      this.time.delayedCall(totalDelay, () => {
-        if (!sprite.active) return
-        const flash = this.add.circle(
-          0,
-          0,
-          sys.size * 1.05,
-          this.pickColor(rng, sys),
-          0.7,
-        )
-        sprite.add(flash)
-        this.tweens.add({
-          targets: flash,
-          alpha: 0,
-          duration: dur,
-          ease: 'Sine.easeOut',
-          onComplete: () => flash.destroy(),
-        })
-      })
-      totalDelay += dur + 60
-    }
-  }
-
-  // 83. Crystal bell — sound-style: clink-resonate (хрустальный звон)
-  // Гексагон + расходящиеся круги-резонансы
-  private compCrystalBell(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const hex = this.add.graphics()
-    const color = this.pickColor(rng, sys)
-    hex.lineStyle(2 * DPR, color, 0.85)
-    hex.beginPath()
-    for (let i = 0; i <= 6; i++) {
-      const a = (i / 6) * Math.PI * 2 - Math.PI / 2
-      const x = Math.cos(a) * sys.size * 1.1
-      const y = Math.sin(a) * sys.size * 1.1
-      if (i === 0) hex.moveTo(x, y)
-      else hex.lineTo(x, y)
-    }
-    hex.strokePath()
-    sprite.add(hex)
-    // Резонанс: 2 расходящихся круга
-    for (let i = 0; i < 2; i++) {
-      this.time.delayedCall(120 + i * 100, () => {
-        if (!sprite.active) return
-        const ring = this.add.graphics()
-        ring.lineStyle(0.8 * DPR, color, 0.5)
-        ring.strokeCircle(0, 0, sys.size * 1.1)
-        sprite.add(ring)
-        this.tweens.add({
-          targets: ring,
-          scale: 2.2,
-          alpha: 0,
-          duration: 500,
-          onComplete: () => ring.destroy(),
-        })
-      })
-    }
-    this.tweens.add({
-      targets: hex,
-      scale: 1.2,
-      alpha: 0,
-      rotation: Math.PI / 6,
-      duration: 600,
-      ease: 'Cubic.easeOut',
-      onComplete: () => hex.destroy(),
-    })
-  }
-
-  // 84. Wind rustle — sound-style: wind-whisper (шёпот ветра)
-  // Мелкие точки сдуваются в одну сторону
-  private compWindRustle(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const N = 14 + Math.floor(rng() * 8)
-    const windAng = rng() * Math.PI * 2
-    const cosW = Math.cos(windAng),
-      sinW = Math.sin(windAng)
-    for (let i = 0; i < N; i++) {
-      const startAng = rng() * Math.PI * 2
-      const startR = sys.size * (0.7 + rng() * 0.5)
-      const sx = Math.cos(startAng) * startR
-      const sy = Math.sin(startAng) * startR
-      const dist = sys.size * (1.5 + rng() * 0.6)
-      const dot = this.add.circle(
-        sx,
-        sy,
-        (0.8 + rng()) * DPR,
-        this.pickColor(rng, sys),
-        0.85,
-      )
-      sprite.add(dot)
-      this.tweens.add({
-        targets: dot,
-        x: sx + cosW * dist + (rng() - 0.5) * sys.size * 0.3,
-        y: sy + sinW * dist + (rng() - 0.5) * sys.size * 0.3,
-        alpha: 0,
-        duration: 600 + rng() * 250,
-        ease: 'Sine.easeOut',
-        delay: rng() * 200,
-        onComplete: () => dot.destroy(),
-      })
-    }
-  }
-
-  // 85. Clock gears — sound-style: clockwork-tick (часовой ход)
-  // 2 концентрические шестерни с зубцами вращаются
-  private compClockGears(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    for (let g = 0; g < 2; g++) {
-      const gear = this.add.graphics()
-      const color = g === 0 ? sys.color : sys.accent
-      const teeth = 8 + g * 4
-      const r = sys.size * (1.0 + g * 0.3)
-      gear.lineStyle(1.5 * DPR, color, 0.85)
-      gear.beginPath()
-      for (let i = 0; i <= teeth * 2; i++) {
-        const a = (i / (teeth * 2)) * Math.PI * 2
-        const rr = i % 2 === 0 ? r : r * 0.92
-        const x = Math.cos(a) * rr
-        const y = Math.sin(a) * rr
-        if (i === 0) gear.moveTo(x, y)
-        else gear.lineTo(x, y)
-      }
-      gear.strokePath()
-      sprite.add(gear)
-      const direction = g === 0 ? 1 : -1
-      this.tweens.add({
-        targets: gear,
-        rotation: (direction * Math.PI) / 4,
-        alpha: 0,
-        scale: 1.15,
-        duration: 700 + rng() * 200,
-        ease: 'Cubic.easeOut',
-        onComplete: () => gear.destroy(),
-      })
-    }
-  }
-
+  // 77. compEarthquakeShake — extracted в effects/anim/shared/compEarthquakeShake.ts (Phase 20-02).
+  // 78. compKaleidoscope — extracted в effects/anim/shared/compKaleidoscope.ts (Phase 20-02).
+  // 79. compDroneHum — extracted в effects/anim/shared/compDroneHum.ts (Phase 20-02).
+  // 80. compGlitchStutter — extracted в effects/anim/shared/compGlitchStutter.ts (Phase 20-02).
+  // 81. compDopplerWave — extracted в effects/anim/shared/compDopplerWave.ts (Phase 20-02).
+  // 82. compMorseFlash — extracted в effects/anim/shared/compMorseFlash.ts (Phase 20-02).
+  // 83. compCrystalBell — extracted в effects/anim/shared/compCrystalBell.ts (Phase 20-02).
+  // 84. compWindRustle — extracted в effects/anim/shared/compWindRustle.ts (Phase 20-02).
+  // 85. compClockGears — extracted в effects/anim/shared/compClockGears.ts (Phase 20-02).
   // 86. compBubbleStream — extracted в effects/anim/shared/compBubbleStream.ts (Phase 9).
-
   // 87. compPlasmaArc — extracted в effects/anim/shared/compPlasmaArc.ts (Phase 9).
 
   // === PHASE 8 (компоненты 88-95) ===
   // Тематические дополнения: bouncingBall, digitalGlitch, ringPulsar, swarmParticles,
   // prismRefract, lifeBloom, windRibbons, wreckageOrbit. Расширяют under-loaded pool'ы.
 
-  // 88. Bouncing ball — sound-style: rubber-thump (резиновый отскок)
-  // Мяч прыгает над планетой, отскоки с затуханием по высоте.
-  private compBouncingBall(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const ball = this.add.circle(
-      0,
-      0,
-      (3 + rng() * 2) * DPR,
-      this.pickColor(rng, sys),
-      1,
-    )
-    sprite.add(ball)
-    const bounces = 3 + Math.floor(rng() * 3) // 3..5
-    const baseY = sys.size * 0.6
-    const startX = -sys.size * 0.9
-    const stepX = (sys.size * 1.8) / bounces
-    ball.x = startX
-    ball.y = baseY
-    let elapsed = 0
-    const bounceDur = 200
-    for (let i = 0; i < bounces; i++) {
-      const apexHeight = sys.size * (1.0 - i * 0.18)
-      const apexY = baseY - apexHeight
-      const xMid = startX + stepX * (i + 0.5)
-      const xEnd = startX + stepX * (i + 1)
-      // Подъём
-      this.tweens.add({
-        targets: ball,
-        x: xMid,
-        y: apexY,
-        duration: bounceDur,
-        ease: 'Quad.easeOut',
-        delay: elapsed,
-      })
-      // Падение
-      this.tweens.add({
-        targets: ball,
-        x: xEnd,
-        y: baseY,
-        duration: bounceDur,
-        ease: 'Quad.easeIn',
-        delay: elapsed + bounceDur,
-      })
-      elapsed += bounceDur * 2
-    }
-    // Финальный fade и destroy
-    this.tweens.add({
-      targets: ball,
-      alpha: 0,
-      duration: 200,
-      ease: 'Cubic.easeOut',
-      delay: elapsed,
-      onComplete: () => ball.destroy(),
-    })
-  }
-
-  // 89. Digital glitch — sound-style: glitch-tear (RGB-shift искажения)
-  // Пиксельные клоны разных RGB-цветов с stutter offset.
-  private compDigitalGlitch(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const channels = [0xff0066, 0x00ff66, 0x0066ff]
-    const stutters = 4 + Math.floor(rng() * 3) // 4..6
-    const stepDelay = 70 + rng() * 30
-    const ghosts: Phaser.GameObjects.Rectangle[] = []
-    for (let i = 0; i < stutters; i++) {
-      this.time.delayedCall(i * stepDelay, () => {
-        if (!sprite.active) return
-        for (let c = 0; c < 3; c++) {
-          const offX = (rng() - 0.5) * sys.size * 0.6
-          const offY = (rng() - 0.5) * sys.size * 0.3
-          const rect = this.add.rectangle(
-            offX,
-            offY,
-            sys.size * 1.4,
-            sys.size * 0.18,
-            channels[c],
-            0.55,
-          )
-          rect.setBlendMode(Phaser.BlendModes.SCREEN)
-          sprite.add(rect)
-          ghosts.push(rect)
-          this.tweens.add({
-            targets: rect,
-            alpha: 0,
-            duration: 100 + rng() * 50,
-            ease: 'Cubic.easeOut',
-            onComplete: () => rect.destroy(),
-          })
-        }
-      })
-    }
-    // Сафети-cleanup на случай если что-то осталось
-    this.time.delayedCall(stutters * stepDelay + 300, () => {
-      for (const g of ghosts) {
-        if (g.active) g.destroy()
-      }
-    })
-  }
-
-  // 90. Ring pulsar — sound-style: heartbeat (lub-DUB пульсация)
-  // Двойной удар: короткая пульсация → сильная пульсация.
-  private compRingPulsar(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const ring = this.add.graphics()
-    const color = this.pickColor(rng, sys)
-    ring.lineStyle(2 * DPR, color, 0.85)
-    ring.strokeCircle(0, 0, sys.size * 1.3)
-    ring.scale = 0.85
-    sprite.add(ring)
-    // Lub: короткая пульсация
-    this.tweens.add({
-      targets: ring,
-      scale: 1.15,
-      duration: 120,
-      ease: 'Sine.easeOut',
-      yoyo: true,
-    })
-    // DUB: сильная пульсация (через delay)
-    this.tweens.add({
-      targets: ring,
-      scale: 1.4,
-      alpha: 0,
-      duration: 200,
-      ease: 'Cubic.easeOut',
-      delay: 280,
-    })
-    // Финальное затухание + destroy
-    this.tweens.add({
-      targets: ring,
-      alpha: 0,
-      duration: 350,
-      ease: 'Cubic.easeOut',
-      delay: 480,
-      onComplete: () => ring.destroy(),
-    })
-  }
-
-  // 91. Swarm particles — sound-style: buzz-swarm (рой жучков)
-  // 12-20 точек огибают планету по орбите с разными угловыми скоростями.
-  private compSwarmParticles(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const N = 12 + Math.floor(rng() * 9) // 12..20
-    const dur = 1000
-    const particles: {
-      obj: Phaser.GameObjects.Arc
-      r: number
-      ang: number
-      speed: number
-    }[] = []
-    for (let i = 0; i < N; i++) {
-      const r = sys.size * (1.0 + rng() * 0.4)
-      const ang = (i / N) * Math.PI * 2 + rng() * 0.3
-      const speed = (rng() - 0.5) * 0.006 // ±0.003 рад/мс
-      const dot = this.add.circle(
-        Math.cos(ang) * r,
-        Math.sin(ang) * r,
-        (1.2 + rng()) * DPR,
-        this.pickColor(rng, sys),
-        0.85,
-      )
-      sprite.add(dot)
-      particles.push({ obj: dot, r, ang, speed })
-    }
-    let elapsed = 0
-    const update = (_t: number, dt: number) => {
-      elapsed += dt
-      for (const p of particles) {
-        p.ang += p.speed * dt
-        p.obj.x = Math.cos(p.ang) * p.r
-        p.obj.y = Math.sin(p.ang) * p.r
-        // Плавное fade в конце жизни
-        const t = elapsed / dur
-        if (t > 0.7) p.obj.alpha = Math.max(0, 0.85 * (1 - (t - 0.7) / 0.3))
-      }
-    }
-    this.events.on('update', update)
-    this.time.delayedCall(dur, () => {
-      this.events.off('update', update)
-      for (const p of particles) {
-        if (p.obj.active) p.obj.destroy()
-      }
-    })
-  }
-
-  // 92. Prism refract — sound-style: spectral-shimmer (преломление радуги)
-  // 7 разноцветных лучей расходятся из точки на краю планеты.
-  private compPrismRefract(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const rainbow = [
-      0xff0000, 0xff7f00, 0xffff00, 0x00ff00, 0x0000ff, 0x4b0082, 0x9400d3,
-    ]
-    const baseAng = rng() * Math.PI * 2
-    const ox = Math.cos(baseAng) * sys.size
-    const oy = Math.sin(baseAng) * sys.size
-    const rays: Phaser.GameObjects.Graphics[] = []
-    for (let i = 0; i < 7; i++) {
-      const offset = ((i - 3) / 3) * (Math.PI / 12) // ±15° spread
-      const rayAng = baseAng + offset
-      const len = sys.size * (1.5 + rng() * 0.5)
-      const ray = this.add.graphics()
-      ray.lineStyle(1.5 * DPR, rainbow[i], 0)
-      ray.lineBetween(
-        ox,
-        oy,
-        ox + Math.cos(rayAng) * len,
-        oy + Math.sin(rayAng) * len,
-      )
-      ray.alpha = 0
-      sprite.add(ray)
-      rays.push(ray)
-      // Fade-in
-      this.tweens.add({
-        targets: ray,
-        alpha: 0.85,
-        duration: 100,
-        ease: 'Sine.easeOut',
-        delay: i * 15,
-      })
-      // Fade-out + destroy
-      this.tweens.add({
-        targets: ray,
-        alpha: 0,
-        duration: 400,
-        ease: 'Cubic.easeOut',
-        delay: 200 + i * 15,
-        onComplete: () => ray.destroy(),
-      })
-    }
-  }
-
-  // 93. Life bloom — sound-style: organic-grow (растущие лозы)
-  // 4-6 vine-линий тянутся из центра наружу через сегменты, в конце — точка-цветок.
-  private compLifeBloom(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const vines = 4 + Math.floor(rng() * 3) // 4..6
-    const segs = 6
-    const segStep = 60
-    const flowers: Phaser.GameObjects.Arc[] = []
-    for (let v = 0; v < vines; v++) {
-      const baseAng = (v / vines) * Math.PI * 2 + (rng() - 0.5) * 0.4
-      const color = this.pickColor(rng, sys)
-      const vine = this.add.graphics()
-      vine.lineStyle(1.5 * DPR, color, 0.9)
-      sprite.add(vine)
-      // Узлы Bezier-like вдоль extending пути
-      const ctrlAng = baseAng + (rng() - 0.5) * 0.6
-      const endR = sys.size * 0.85
-      const ctrlR = sys.size * 0.55
-      const endX = Math.cos(baseAng) * endR
-      const endY = Math.sin(baseAng) * endR
-      const ctrlX = Math.cos(ctrlAng) * ctrlR
-      const ctrlY = Math.sin(ctrlAng) * ctrlR
-      let prevX = 0,
-        prevY = 0
-      for (let s = 1; s <= segs; s++) {
-        const t = s / segs
-        const u = 1 - t
-        const nx = u * u * 0 + 2 * u * t * ctrlX + t * t * endX
-        const ny = u * u * 0 + 2 * u * t * ctrlY + t * t * endY
-        const px = prevX,
-          py = prevY
-        const nxC = nx,
-          nyC = ny
-        this.time.delayedCall(s * segStep + v * 30, () => {
-          if (!vine.active) return
-          vine.lineBetween(px, py, nxC, nyC)
-        })
-        prevX = nx
-        prevY = ny
-      }
-      // Цветок на конце
-      this.time.delayedCall(segs * segStep + v * 30 + 80, () => {
-        if (!sprite.active) return
-        const flower = this.add.circle(endX, endY, DPR * 1.5, color, 1)
-        sprite.add(flower)
-        flowers.push(flower)
-        this.tweens.add({
-          targets: flower,
-          scale: 2,
-          alpha: 0,
-          duration: 300,
-          ease: 'Sine.easeOut',
-          onComplete: () => flower.destroy(),
-        })
-      })
-      // Финальный fade + destroy ветки
-      this.tweens.add({
-        targets: vine,
-        alpha: 0,
-        duration: 300,
-        ease: 'Cubic.easeOut',
-        delay: 800,
-        onComplete: () => vine.destroy(),
-      })
-    }
-  }
-
-  // 94. Wind ribbons — sound-style: airy-whoosh (ленты ветра)
-  // 2-3 ленты-sin-wave проносятся через планету слева направо.
-  private compWindRibbons(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const ribbonCount = 2 + Math.floor(rng() * 2) // 2..3
-    const dur = 1100
-    const ribbons: {
-      gfx: Phaser.GameObjects.Graphics
-      color: number
-      phase: number
-      amp: number
-      yBase: number
-      startTime: number
-    }[] = []
-    for (let i = 0; i < ribbonCount; i++) {
-      const gfx = this.add.graphics()
-      sprite.add(gfx)
-      ribbons.push({
-        gfx,
-        color: this.pickColor(rng, sys),
-        phase: rng() * Math.PI * 2,
-        amp: sys.size * (0.15 + rng() * 0.2),
-        yBase: (rng() - 0.5) * sys.size * 0.6,
-        startTime: i * 200,
-      })
-    }
-    let elapsed = 0
-    const totalLen = sys.size * 2.5
-    const segs = 12
-    const update = (_t: number, dt: number) => {
-      elapsed += dt
-      for (const r of ribbons) {
-        const localT = (elapsed - r.startTime) / dur
-        if (localT < 0) continue
-        const xCenter = -sys.size + sys.size * 2 * localT
-        // Alpha: 0 → 0.6 → 0
-        const alpha =
-          localT < 0.3
-            ? (localT / 0.3) * 0.6
-            : localT > 0.7
-              ? Math.max(0, ((1 - localT) / 0.3) * 0.6)
-              : 0.6
-        r.gfx.clear()
-        r.gfx.lineStyle(1.5 * DPR, r.color, alpha)
-        for (let s = 0; s < segs; s++) {
-          const t1 = s / segs
-          const t2 = (s + 1) / segs
-          const x1 = xCenter - totalLen / 2 + totalLen * t1
-          const x2 = xCenter - totalLen / 2 + totalLen * t2
-          const y1 =
-            r.yBase +
-            Math.sin(t1 * Math.PI * 4 + r.phase + elapsed * 0.005) * r.amp
-          const y2 =
-            r.yBase +
-            Math.sin(t2 * Math.PI * 4 + r.phase + elapsed * 0.005) * r.amp
-          r.gfx.lineBetween(x1, y1, x2, y2)
-        }
-      }
-    }
-    this.events.on('update', update)
-    this.time.delayedCall(dur + 200, () => {
-      this.events.off('update', update)
-      for (const r of ribbons) {
-        if (r.gfx.active) r.gfx.destroy()
-      }
-    })
-  }
-
-  // 95. Wreckage orbit — sound-style: debris-creak (обломки на орбите)
-  // 6-10 крошечных треугольников вращаются вокруг планеты с разными скоростями.
-  private compWreckageOrbit(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const N = 6 + Math.floor(rng() * 5) // 6..10
-    const dur = 900
-    const debris: {
-      gfx: Phaser.GameObjects.Graphics
-      r: number
-      ang: number
-      speed: number
-      spin: number
-    }[] = []
-    for (let i = 0; i < N; i++) {
-      const gfx = this.add.graphics()
-      const color = this.pickColor(rng, sys)
-      const sz = (1.5 + rng() * 1.2) * DPR
-      gfx.fillStyle(color, 0.85)
-      gfx.fillTriangle(-sz, sz * 0.6, sz, sz * 0.3, 0, -sz)
-      sprite.add(gfx)
-      const r = sys.size * (1.1 + rng() * 0.3)
-      const ang = (i / N) * Math.PI * 2 + rng() * 0.4
-      const speed = (rng() < 0.5 ? 1 : -1) * (0.001 + rng() * 0.003)
-      const spin = (rng() - 0.5) * 0.008
-      gfx.x = Math.cos(ang) * r
-      gfx.y = Math.sin(ang) * r
-      debris.push({ gfx, r, ang, speed, spin })
-    }
-    let elapsed = 0
-    const update = (_t: number, dt: number) => {
-      elapsed += dt
-      for (const d of debris) {
-        d.ang += d.speed * dt
-        d.gfx.x = Math.cos(d.ang) * d.r
-        d.gfx.y = Math.sin(d.ang) * d.r
-        d.gfx.rotation += d.spin * dt
-        if (elapsed > dur * 0.6) {
-          d.gfx.alpha = Math.max(0, 1 - (elapsed - dur * 0.6) / (dur * 0.4))
-        }
-      }
-    }
-    this.events.on('update', update)
-    this.time.delayedCall(dur, () => {
-      this.events.off('update', update)
-      for (const d of debris) {
-        if (d.gfx.active) d.gfx.destroy()
-      }
-    })
-  }
+  // 88. compBouncingBall — extracted в effects/anim/shared/compBouncingBall.ts (Phase 20-02).
+  // 89. compDigitalGlitch — extracted в effects/anim/shared/compDigitalGlitch.ts (Phase 20-02).
+  // 90. compRingPulsar — extracted в effects/anim/shared/compRingPulsar.ts (Phase 20-02).
+  // 91. compSwarmParticles — extracted в effects/anim/shared/compSwarmParticles.ts (Phase 20-02).
+  // 92. compPrismRefract — extracted в effects/anim/shared/compPrismRefract.ts (Phase 20-02).
+  // 93. compLifeBloom — extracted в effects/anim/shared/compLifeBloom.ts (Phase 20-02).
+  // 94. compWindRibbons — extracted в effects/anim/shared/compWindRibbons.ts (Phase 20-02).
+  // 95. compWreckageOrbit — extracted в effects/anim/shared/compWreckageOrbit.ts (Phase 20-02).
 
   private renderMainPlanet(sys: Race) {
     // Sparkle над планетой — один на каждую главную расу.
