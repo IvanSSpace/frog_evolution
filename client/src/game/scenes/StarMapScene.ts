@@ -1,13 +1,11 @@
 import Phaser from 'phaser'
 import { eventBus } from '../../store/eventBus'
-import { useGameStore } from '../../store/gameStore'
 import {
   attachNebulaBackground,
   type NebulaBackgroundHandle,
 } from '../effects/NebulaBackground'
 import { violetRing } from '../effects/presets'
 import planetMap from '../data/planetMap.json'
-import { DAILY_CAP } from '../data/missionConfig'
 import { ShipController } from './starmap/shipController'
 // ShipSprite/ShipState — теперь только внутри shipController.ts (Phase 20-04, Wave 4).
 import {
@@ -18,109 +16,10 @@ import {
   createSparkleAt,
 } from './starmap/starfield'
 import { CoordinatesHUDController } from './starmap/coordinatesHUD'
+import { PopoverController } from './starmap/popovers'
 import { deriveModulations } from '../../audio/planetVoice'
-import {
-  compRing,
-  compSparkle,
-  compFlash,
-  compStarBurst,
-  compHaloFlash,
-  compConfetti,
-  compRipple,
-  compEchoWave,
-  compFlameTongues,
-  compIceWisps,
-  compPlasmaArc,
-  compChromaShift,
-  compCrystalShatter,
-  compBloomPetals,
-  compToxicCloud,
-  compSandSwirl,
-  compChimeRing,
-  compBubbleStream,
-  // Group F — Phase 20-02
-  compMultiRing,
-  compLightning,
-  compOrbit,
-  compSpiral,
-  compWave,
-  compComet,
-  compVortex,
-  compStormSwirl,
-  compRingDance,
-  compLavaErupt,
-  compDustPuff,
-  compBeam,
-  compTwinPulse,
-  compSingularity,
-  compGravityWell,
-  compSolarFlare,
-  compAuroraRibbon,
-  compDNAHelix,
-  compLensFlare,
-  compConstellation,
-  // Group G — Phase 20-02
-  compMagneticField,
-  compPhoenixBurst,
-  compWormhole,
-  compCosmicRay,
-  compQuantumSplit,
-  compHeartPulse,
-  compCrackleDischarge,
-  compPixelGrid,
-  compSpiralArms,
-  compCrystalGrow,
-  compSnowDrift,
-  compGalaxySpawn,
-  compPulseHex,
-  compTornado,
-  compStarPolygon,
-  compCrossFlash,
-  compWaveTrain,
-  compPetalStorm,
-  compSnakeTrail,
-  compBubblePop,
-  // Group H — Phase 20-02
-  compAtomShells,
-  compSupernova,
-  compAccretionDisk,
-  compFlickerStars,
-  compLightDance,
-  compDimensionRift,
-  compFrostExplode,
-  compTimeWave,
-  compGlyphFlash,
-  compPrismShift,
-  compChargeBurst,
-  compInfinityTrail,
-  compShieldRipple,
-  compFireworks,
-  compScanline,
-  compLiquidPool,
-  compGravityKnot,
-  compCosmicWeb,
-  compParticleFountain,
-  // Group I — Phase 20-02 (final batch)
-  compEchoSpawn,
-  compRipBlade,
-  compEarthquakeShake,
-  compKaleidoscope,
-  compDroneHum,
-  compGlitchStutter,
-  compDopplerWave,
-  compMorseFlash,
-  compCrystalBell,
-  compWindRustle,
-  compClockGears,
-  compBouncingBall,
-  compDigitalGlitch,
-  compRingPulsar,
-  compSwarmParticles,
-  compPrismRefract,
-  compLifeBloom,
-  compWindRibbons,
-  compWreckageOrbit,
-} from '../effects/anim/shared'
+// 96 comp* импортов и DAILY_CAP/useGameStore — теперь только в popovers.ts
+// (Phase 20-04, Wave 4: extracted playUniqueAnimation/runAnimComponent/openBgNamePopup).
 import type { Race, BgSystem, Archetype, PlanetMapEntry } from './starmap/types'
 import { mulberry32, hashId, effectiveSeed, animRng } from './starmap/helpers'
 import { setupCosmicDust } from './starmap/ambient/cosmicDust'
@@ -239,7 +138,7 @@ export class StarMapScene extends Phaser.Scene {
   // поэтому это эквивалент package-private. Не используются вне starmap/* модулей.
   allSystems: (Race | BgSystem)[] = []
   systemSprites = new Map<string, Phaser.GameObjects.Container>()
-  private selectionMarker: Phaser.GameObjects.Graphics | null = null
+  // selectionMarker мигрировал в PopoverController (Phase 20-04, Wave 4).
   // Список объектов для manual culling (Phaser не делает frustum culling для Container).
   // lodMinZoom: если zoom < lodMinZoom → объект скрыт независимо от viewport (LOD).
   cullableData: Array<{
@@ -263,12 +162,11 @@ export class StarMapScene extends Phaser.Scene {
   // Phaser scroll выводится из этой позиции через centerOn() каждый раз.
   private camCenterX = 0
   private camCenterY = 0
-  // ID выбранной для popover расы (Phaser-popover в той же scene, в world-coords)
-  private selectedMainRaceId: string | null = null
+  // ID выбранной для popover расы (Phaser-popover в той же scene, в world-coords).
+  // Phase 20-04 (Wave 4): package-public — setupControls сбрасывает на тап в пустоту.
+  selectedMainRaceId: string | null = null
   private popover?: Phaser.GameObjects.Container
-  // Простая модалка с именем BG-планеты — появляется через 400ms после клика.
-  private bgNamePopup?: Phaser.GameObjects.Container
-  private bgNamePopupTimer?: Phaser.Time.TimerEvent
+  // bgNamePopup/bgNamePopupTimer мигрировали в PopoverController (Phase 20-04, Wave 4).
   private nebula?: NebulaBackgroundHandle
   // Звёзды-ромбы, которые компенсируют zoom (видны и при максимальном отдалении)
   zoomCompStars: Array<{
@@ -304,19 +202,86 @@ export class StarMapScene extends Phaser.Scene {
   mainLinesLastZoom = -1
   // Состояние счётчика тапов на каждую планету. Уникальная анимация срабатывает
   // на первом нажатии после смены/перерыва, потом раз в 2-6 нажатий.
-  private planetPressState = new Map<
-    string,
-    { count: number; threshold: number }
-  >()
-  private currentPressedPlanetId: string | null = null
+  // Phase 20-04 (Wave 4): package-public — PopoverController читает/мутирует,
+  // setupControls сбрасывает currentPressedPlanetId на тап-в-пустоту.
+  planetPressState = new Map<string, { count: number; threshold: number }>()
+  currentPressedPlanetId: string | null = null
   // Флаг: текущий pointerup перехвачен interactive объектом (планетой/звездой).
   // Используется глобальным pointerup'ом для определения «тап в пустое место».
   tapHandledThisFrame = false
+
+  // Phase 7: override-карта для main races (которым нельзя мутировать rngSeed как BG).
+  // Заполняется в refineAnimSeeds() при коллизиях signatures.
+  // Phase 20-04 (Wave 4): package-public — PopoverController читает через animRng helper.
+  mainSeedOverride = new Map<string, number>()
+
+  // Тематический mapping: каждый тип получает пул из подходящих компонентов.
+  // 0-11: универсальные (ring, multiRing, sparkle, flash, lightning, orbit, spiral, confetti, wave, comet, starBurst, halo)
+  // 12-23: тематические (vortex, stormSwirl, ringDance, crystalShatter, ripple, sandSwirl, lavaErupt, bloomPetals, dustPuff, toxicCloud, beam, twinPulse)
+  // 24-38: креативные (singularity, echoWave, gravityWell, solarFlare, auroraRibbon, dnaHelix, lensFlare, constellation, magneticField, phoenixBurst, wormhole, cosmicRay, quantumSplit, heartPulse, crackleDischarge)
+  // 39-53: расширение (pixelGrid, spiralArms, crystalGrow, snowDrift, galaxySpawn, pulseHex, tornado, starPolygon, crossFlash, waveTrain, petalStorm, flameTongues, snakeTrail, bubblePop, chromaShift)
+  // Phase 7: добавлены компоненты 54-63 в pools, каждый archetype/type ≥10 компонентов.
+  // Расширение 3: компоненты 64-75 (chargeBurst, infinityTrail, shieldRipple, fireworks,
+  // scanline, liquidPool, gravityKnot, cosmicWeb, particleFountain, echoSpawn, iceWisps, ripBlade)
+  // Расширение 4: компоненты 76-87 (chimeRing, earthquakeShake, kaleidoscope, droneHum,
+  // glitchStutter, dopplerWave, morseFlash, crystalBell, windRustle, clockGears, bubbleStream, plasmaArc)
+  // Phase 8: расширены под-загруженные pool'ы новыми компонентами 88-95, все pool'ы ≥14.
+  // Phase 20-04 (Wave 4): package-public — PopoverController.playUniqueAnimation
+  // и getAnimationDurationMs читают, buildAnimSignature (в scene) тоже читает.
+  readonly THEME_COMPONENTS: Record<string, number[]> = {
+    // BG archetypes
+    gas_giant: [
+      12, 13, 6, 2, 8, 11, 27, 32, 33, 0, 1, 40, 45, 50, 49, 56, 67, 70, 79, 81,
+    ],
+    gas_ringed: [1, 5, 0, 8, 14, 28, 32, 30, 43, 49, 46, 56, 65, 71, 76, 83],
+    ice: [15, 2, 4, 0, 11, 10, 36, 32, 25, 41, 42, 47, 60, 64, 74, 76, 83, 84],
+    ocean: [16, 8, 2, 6, 11, 25, 28, 37, 48, 52, 51, 69, 72, 81, 86],
+    desert: [17, 7, 8, 6, 11, 35, 27, 42, 51, 0, 3, 68, 75, 77, 84],
+    lava: [18, 4, 10, 7, 9, 11, 33, 27, 30, 38, 50, 53, 67, 75, 72, 87, 77],
+    forest: [19, 11, 2, 6, 14, 29, 28, 49, 41, 51, 69, 71, 84, 86, 91, 93],
+    mineral: [15, 10, 4, 2, 0, 30, 31, 38, 41, 44, 46, 54, 66, 75, 78, 83, 92],
+    dead: [20, 3, 11, 8, 26, 24, 34, 53, 55, 35, 9, 73, 70, 79, 77, 95],
+    toxic: [21, 6, 2, 11, 7, 38, 26, 52, 53, 50, 69, 75, 80, 86, 91, 89],
+    plasma: [
+      4, 22, 10, 9, 11, 0, 27, 30, 35, 32, 47, 50, 53, 55, 58, 63, 64, 67, 75,
+      80, 87, 92,
+    ],
+    binary: [23, 5, 1, 7, 11, 14, 36, 29, 37, 53, 43, 65, 73, 81, 88, 90],
+    // Main types — заточены под лор каждой расы
+    home: [11, 2, 0, 1, 5, 14, 19, 28, 37, 31, 49, 43, 66, 71, 76, 83],
+    crystal: [15, 2, 10, 0, 4, 30, 36, 31, 38, 41, 44, 46, 60, 66, 64, 78, 83],
+    rocky: [3, 20, 4, 7, 26, 35, 39, 47, 11, 0, 53, 75, 77, 88, 95],
+    ancient: [
+      11, 0, 6, 2, 22, 31, 29, 26, 44, 46, 43, 57, 61, 62, 65, 71, 78, 85,
+    ],
+    mystic: [
+      11, 6, 22, 4, 12, 14, 26, 31, 34, 28, 43, 53, 57, 59, 61, 62, 70, 73, 78,
+      82,
+    ],
+    organic: [19, 11, 2, 6, 14, 29, 37, 49, 51, 41, 69, 72, 86, 84, 91, 93],
+    forge: [7, 10, 4, 9, 22, 18, 33, 27, 38, 50, 47, 53, 64, 67, 75, 87, 85],
+    military: [10, 7, 4, 9, 22, 18, 27, 30, 35, 47, 39, 53, 66, 67, 75, 82, 87],
+    destroyed: [7, 3, 9, 20, 24, 34, 26, 39, 53, 55, 59, 70, 75, 80, 89, 95],
+    crystal_bio: [15, 2, 11, 6, 19, 36, 29, 41, 49, 62, 63, 64, 78, 83, 90, 92],
+    mechano: [
+      15, 4, 9, 1, 22, 10, 32, 38, 30, 39, 47, 54, 58, 66, 71, 80, 82, 85, 89,
+    ],
+    energy: [
+      10, 22, 4, 11, 0, 30, 27, 35, 32, 53, 50, 54, 58, 63, 64, 67, 80, 87,
+    ],
+    mist: [11, 8, 6, 21, 20, 28, 26, 52, 51, 57, 73, 64, 79, 84, 91, 94],
+    aquatic: [8, 16, 2, 11, 6, 25, 37, 28, 48, 52, 51, 69, 72, 81, 86],
+    shadow: [3, 20, 11, 6, 12, 26, 34, 24, 53, 51, 59, 70, 73, 75, 79, 89],
+    aerial: [6, 8, 11, 2, 16, 28, 32, 35, 42, 51, 49, 60, 64, 72, 84, 94],
+  }
 
   // Phase 16: Ship singleton — Phaser-native ракетка с trail.
   // Auto-spawn в create() через ensureShipExists. Subscribed на cosmicSlice.ship.
   // Phase 20-04 (Wave 4): Lifecycle вынесен в ShipController.
   private shipController!: ShipController
+  // Phase 20-04 (Wave 4): popover/popup + tap orchestration вынесены в PopoverController.
+  // Package-public — setupControls и pointerup-handlers вызывают методы напрямую.
+  popoverController!: PopoverController
 
   constructor() {
     super({ key: 'StarMapScene' })
@@ -398,6 +363,11 @@ export class StarMapScene extends Phaser.Scene {
     // ту же константу 0x85ebca6b которую refineAnimSeeds учитывает в своих
     // signature space (88+ comp × strict params, миллионы вариантов).
     this.refineTextureSeeds()
+
+    // Phase 20-04 (Wave 4): popover/tap orchestration controller — должен быть
+    // создан ДО renderSystem, потому что pointerup handlers внутри renderMain/Bg
+    // вызывают this.popoverController.{handlePlanetPress,selectSystem,scheduleBgNamePopup}.
+    this.popoverController = new PopoverController(this)
 
     // Starfield — после генерации систем, чтобы кластеризовать звёзды вокруг планет
     setupStarfield(this, { worldSize: WORLD_SIZE, seed: SEED })
@@ -562,620 +532,10 @@ export class StarMapScene extends Phaser.Scene {
   // — extracted в './starmap/starfield.ts' (Phase 20-04, Wave 4).
 
   // ============== УНИКАЛЬНЫЕ АНИМАЦИИ ПЛАНЕТ ==============
-
-  // Обработка нажатия на планету: первое нажатие после смены планеты или
-  // после перерыва срабатывает анимацию, далее — каждые 2-6 нажатий случайно.
-  private handlePlanetPress(sys: Race | BgSystem) {
-    if (this.currentPressedPlanetId !== sys.id) {
-      this.planetPressState.set(sys.id, { count: 0, threshold: 1 })
-      this.currentPressedPlanetId = sys.id
-    }
-    let st = this.planetPressState.get(sys.id)
-    if (!st) {
-      st = { count: 0, threshold: 1 }
-      this.planetPressState.set(sys.id, st)
-    }
-    st.count++
-    if (st.count >= st.threshold) {
-      const durationMs = this.getAnimationDurationMs(sys)
-      eventBus.emit('starmap:planet-tapped', {
-        id: sys.id,
-        type: sys.type,
-        archetype: 'archetype' in sys ? (sys as BgSystem).archetype : undefined,
-        durationMs,
-        seed: effectiveSeed(sys, this.mainSeedOverride),
-      })
-      // Phase 16 (REQ SHIP-07): parallel emit для Cosmic Hub flight flow.
-      // App-side subscriber решает, открыт ли Hub, и показывает confirm dialog.
-      eventBus.emit('cosmic:request-flight', { planetId: sys.id })
-      this.playUniqueAnimation(sys)
-      st.count = 0
-      st.threshold = 2 + Math.floor(Math.random() * 5) // 2-6
-    }
-  }
-
-  // Типичная длительность каждого из 96 компонентов анимации (ms).
-  // Значения — приблизительный max каждой компоненты, выведенный из const dur
-  // внутри comp* функций. Cap=1500ms (wrapper destroy в playUniqueAnimation).
-  // Phase 8: добавлены entries 88-95 для новых компонентов.
-  private static readonly COMP_DURATIONS_MS: Record<number, number> = {
-    0: 800,
-    1: 800,
-    2: 600,
-    3: 250,
-    4: 500,
-    5: 1500,
-    6: 900,
-    7: 800,
-    8: 850,
-    9: 1200,
-    10: 700,
-    11: 800,
-    12: 1300,
-    13: 1100,
-    14: 1000,
-    15: 600,
-    16: 800,
-    17: 1000,
-    18: 1100,
-    19: 900,
-    20: 1000,
-    21: 1100,
-    22: 550,
-    23: 750,
-    24: 1000,
-    25: 700,
-    26: 1000,
-    27: 900,
-    28: 1200,
-    29: 1000,
-    30: 550,
-    31: 900,
-    32: 850,
-    33: 1200,
-    34: 1300,
-    35: 550,
-    36: 600,
-    37: 800,
-    38: 350,
-    39: 800,
-    40: 1500,
-    41: 700,
-    42: 1200,
-    43: 800,
-    44: 750,
-    45: 1500,
-    46: 750,
-    47: 550,
-    48: 1000,
-    49: 1100,
-    50: 600,
-    51: 1000,
-    52: 700,
-    53: 400,
-    54: 1500,
-    55: 1300,
-    56: 1500,
-    57: 800,
-    58: 900,
-    59: 1100,
-    60: 700,
-    61: 900,
-    62: 550,
-    63: 600,
-    64: 900,
-    65: 1500,
-    66: 700,
-    67: 800,
-    68: 800,
-    69: 1000,
-    70: 1200,
-    71: 1000,
-    72: 900,
-    73: 800,
-    74: 1100,
-    75: 550,
-    76: 700,
-    77: 800,
-    78: 1000,
-    79: 1500,
-    80: 400,
-    81: 900,
-    82: 600,
-    83: 700,
-    84: 1000,
-    85: 1100,
-    86: 900,
-    87: 1200,
-    // Phase 8 components
-    88: 900, // bouncingBall
-    89: 600, // digitalGlitch
-    90: 900, // ringPulsar
-    91: 1000, // swarmParticles
-    92: 600, // prismRefract
-    93: 1000, // lifeBloom
-    94: 1100, // windRibbons
-    95: 900, // wreckageOrbit
-  }
-
-  // Прогоняет ту же логику recipe-сборки что и playUniqueAnimation, но без
-  // запуска tweens. Возвращает суммарную длительность анимации (delay + max comp).
-  // Cap=1500ms (wrapper destroy timeout в playUniqueAnimation:943).
-  private getAnimationDurationMs(sys: Race | BgSystem): number {
-    const rng = animRng(sys, this.mainSeedOverride)
-    const theme = (sys as BgSystem).archetype ?? sys.type
-    const pool = this.THEME_COMPONENTS[theme] ?? [
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
-    ]
-
-    // Реплицируем порядок rng() из playUniqueAnimation
-    const r1 = rng()
-    const targetCount = r1 < 0.5 ? 2 : r1 < 0.85 ? 3 : 4
-    const compCount = Math.min(targetCount, pool.length)
-    const used = new Set<number>()
-    const components: number[] = []
-    while (components.length < compCount) {
-      const c = pool[Math.floor(rng() * pool.length)]
-      if (!used.has(c)) {
-        used.add(c)
-        components.push(c)
-      }
-    }
-
-    // useModifier rng calls (для совпадения порядка, хотя нам они не нужны)
-    const useModifier = rng() < 0.25
-    if (useModifier) {
-      rng()
-      rng()
-    }
-
-    let maxFinish = 0
-    components.forEach((c, i) => {
-      const delay = i === 0 ? 0 : Math.floor(rng() * 250) + 50
-      const dur = StarMapScene.COMP_DURATIONS_MS[c] ?? 800
-      const finish = delay + dur
-      if (finish > maxFinish) maxFinish = finish
-    })
-
-    // +50ms tail на затухание звука; cap = 1500ms wrapper
-    return Math.min(1500, maxFinish + 50)
-  }
-
-  // Тематические палитры — extracted в effects/anim/shared/sharedHelpers.ts (Phase 9).
-  // Использовались только pickColor() который теперь thin-wrapper над sharedPickColor.
-  // Если в будущем потребуется доступ из StarMapScene напрямую — re-import THEME_PALETTES.
-
-  // Тематический mapping: каждый тип получает пул из подходящих компонентов.
-  // 0-11: универсальные (ring, multiRing, sparkle, flash, lightning, orbit, spiral, confetti, wave, comet, starBurst, halo)
-  // 12-23: тематические (vortex, stormSwirl, ringDance, crystalShatter, ripple, sandSwirl, lavaErupt, bloomPetals, dustPuff, toxicCloud, beam, twinPulse)
-  // 24-38: креативные (singularity, echoWave, gravityWell, solarFlare, auroraRibbon, dnaHelix, lensFlare, constellation, magneticField, phoenixBurst, wormhole, cosmicRay, quantumSplit, heartPulse, crackleDischarge)
-  // 39-53: расширение (pixelGrid, spiralArms, crystalGrow, snowDrift, galaxySpawn, pulseHex, tornado, starPolygon, crossFlash, waveTrain, petalStorm, flameTongues, snakeTrail, bubblePop, chromaShift)
-  // Phase 7: добавлены компоненты 54-63 в pools, каждый archetype/type ≥10 компонентов.
-  // Расширение 3: компоненты 64-75 (chargeBurst, infinityTrail, shieldRipple, fireworks,
-  // scanline, liquidPool, gravityKnot, cosmicWeb, particleFountain, echoSpawn, iceWisps, ripBlade)
-  // Расширение 4: компоненты 76-87 (chimeRing, earthquakeShake, kaleidoscope, droneHum,
-  // glitchStutter, dopplerWave, morseFlash, crystalBell, windRustle, clockGears, bubbleStream, plasmaArc)
-  // Phase 8: расширены под-загруженные pool'ы новыми компонентами 88-95, все pool'ы ≥14.
-  private readonly THEME_COMPONENTS: Record<string, number[]> = {
-    // BG archetypes
-    gas_giant: [
-      12, 13, 6, 2, 8, 11, 27, 32, 33, 0, 1, 40, 45, 50, 49, 56, 67, 70, 79, 81,
-    ],
-    gas_ringed: [1, 5, 0, 8, 14, 28, 32, 30, 43, 49, 46, 56, 65, 71, 76, 83],
-    ice: [15, 2, 4, 0, 11, 10, 36, 32, 25, 41, 42, 47, 60, 64, 74, 76, 83, 84],
-    ocean: [16, 8, 2, 6, 11, 25, 28, 37, 48, 52, 51, 69, 72, 81, 86],
-    desert: [17, 7, 8, 6, 11, 35, 27, 42, 51, 0, 3, 68, 75, 77, 84],
-    lava: [18, 4, 10, 7, 9, 11, 33, 27, 30, 38, 50, 53, 67, 75, 72, 87, 77],
-    forest: [19, 11, 2, 6, 14, 29, 28, 49, 41, 51, 69, 71, 84, 86, 91, 93],
-    mineral: [15, 10, 4, 2, 0, 30, 31, 38, 41, 44, 46, 54, 66, 75, 78, 83, 92],
-    dead: [20, 3, 11, 8, 26, 24, 34, 53, 55, 35, 9, 73, 70, 79, 77, 95],
-    toxic: [21, 6, 2, 11, 7, 38, 26, 52, 53, 50, 69, 75, 80, 86, 91, 89],
-    plasma: [
-      4, 22, 10, 9, 11, 0, 27, 30, 35, 32, 47, 50, 53, 55, 58, 63, 64, 67, 75,
-      80, 87, 92,
-    ],
-    binary: [23, 5, 1, 7, 11, 14, 36, 29, 37, 53, 43, 65, 73, 81, 88, 90],
-    // Main types — заточены под лор каждой расы
-    home: [11, 2, 0, 1, 5, 14, 19, 28, 37, 31, 49, 43, 66, 71, 76, 83],
-    crystal: [15, 2, 10, 0, 4, 30, 36, 31, 38, 41, 44, 46, 60, 66, 64, 78, 83],
-    rocky: [3, 20, 4, 7, 26, 35, 39, 47, 11, 0, 53, 75, 77, 88, 95],
-    ancient: [
-      11, 0, 6, 2, 22, 31, 29, 26, 44, 46, 43, 57, 61, 62, 65, 71, 78, 85,
-    ],
-    mystic: [
-      11, 6, 22, 4, 12, 14, 26, 31, 34, 28, 43, 53, 57, 59, 61, 62, 70, 73, 78,
-      82,
-    ],
-    organic: [19, 11, 2, 6, 14, 29, 37, 49, 51, 41, 69, 72, 86, 84, 91, 93],
-    forge: [7, 10, 4, 9, 22, 18, 33, 27, 38, 50, 47, 53, 64, 67, 75, 87, 85],
-    military: [10, 7, 4, 9, 22, 18, 27, 30, 35, 47, 39, 53, 66, 67, 75, 82, 87],
-    destroyed: [7, 3, 9, 20, 24, 34, 26, 39, 53, 55, 59, 70, 75, 80, 89, 95],
-    crystal_bio: [15, 2, 11, 6, 19, 36, 29, 41, 49, 62, 63, 64, 78, 83, 90, 92],
-    mechano: [
-      15, 4, 9, 1, 22, 10, 32, 38, 30, 39, 47, 54, 58, 66, 71, 80, 82, 85, 89,
-    ],
-    energy: [
-      10, 22, 4, 11, 0, 30, 27, 35, 32, 53, 50, 54, 58, 63, 64, 67, 80, 87,
-    ],
-    mist: [11, 8, 6, 21, 20, 28, 26, 52, 51, 57, 73, 64, 79, 84, 91, 94],
-    aquatic: [8, 16, 2, 11, 6, 25, 37, 28, 48, 52, 51, 69, 72, 81, 86],
-    shadow: [3, 20, 11, 6, 12, 26, 34, 24, 53, 51, 59, 70, 73, 75, 79, 89],
-    aerial: [6, 8, 11, 2, 16, 28, 32, 35, 42, 51, 49, 60, 64, 72, 84, 94],
-  }
-
-  // ANIM_EASES — extracted в effects/anim/shared/sharedHelpers.ts (Phase 9).
-  // pickEase wrapper делегирует туда; локальная константа больше не нужна.
-
-  // Phase 7: override-карта для main races (которым нельзя мутировать rngSeed как BG).
-  // Заполняется в refineAnimSeeds() при коллизиях signatures.
-  private mainSeedOverride = new Map<string, number>()
-
-  // animRng / effectiveSeed — extracted в './starmap/helpers.ts' (Phase 20-01).
-  // Принимают `mainSeedOverride` явным аргументом вместо `this`.
-
-  // Главный entry — собирает уникальный рецепт анимации для планеты.
-  // 1) Pool компонентов берётся из THEME_COMPONENTS по archetype/type → каждая
-  //    планета играет анимации, тематически подходящие её природе.
-  // 2) Recipe = 1-4 случайных компонента из pool с rng-параметрами.
-  // 3) Цвета берутся из THEME_PALETTES → визуально соответствуют ассоциации архетипа.
-  // Уникальных подписей: ~24 компонента × ~10⁵ комбинаций параметров × pool size = миллионы.
-  private playUniqueAnimation(sys: Race | BgSystem) {
-    const sprite = this.systemSprites.get(sys.id)
-    if (!sprite) return
-    const rng = animRng(sys, this.mainSeedOverride)
-
-    // Тематический pool компонентов
-    const theme = (sys as BgSystem).archetype ?? sys.type
-    const pool = this.THEME_COMPONENTS[theme] ?? [
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
-    ]
-
-    // Phase 7: минимум 2 компонента — 1-component recipes давали всего 10 уникальных вариантов
-    // на pool из 10, что приводило к видимым повторам среди ~25% планет.
-    // Распределение: 2 (50%), 3 (35%), 4 (15%).
-    const r1 = rng()
-    const targetCount = r1 < 0.5 ? 2 : r1 < 0.85 ? 3 : 4
-    const compCount = Math.min(targetCount, pool.length)
-    const used = new Set<number>()
-    const components: number[] = []
-    while (components.length < compCount) {
-      const c = pool[Math.floor(rng() * pool.length)]
-      if (!used.has(c)) {
-        used.add(c)
-        components.push(c)
-      }
-    }
-
-    // Phase 7: композитный модификатор recipe (25% шанс) —
-    // оборачивает все компоненты recipe в общий wrapper-container с глобальным
-    // rotation offset (±90°) и scale shift (0.7-1.3). Это даёт миллионы доп. вариаций.
-    const useModifier = rng() < 0.25
-    const modRotation = useModifier ? (rng() - 0.5) * Math.PI : 0
-    const modScale = useModifier ? 0.7 + rng() * 0.6 : 1
-
-    components.forEach((c, i) => {
-      const delay = i === 0 ? 0 : Math.floor(rng() * 250) + 50
-      this.time.delayedCall(delay, () => {
-        if (!sprite.active) return
-        if (useModifier) {
-          const wrapper = this.add.container(0, 0)
-          wrapper.rotation = modRotation
-          wrapper.setScale(modScale)
-          sprite.add(wrapper)
-          this.runAnimComponent(c, wrapper, sys, rng)
-          // Уборка wrapper'а после завершения всех его child-tweens.
-          // 1500ms покрывает дольший компонент (комет, торнадо ~700-1000ms).
-          this.time.delayedCall(1500, () => {
-            if (wrapper.active) wrapper.destroy()
-          })
-        } else {
-          this.runAnimComponent(c, sprite, sys, rng)
-        }
-      })
-    })
-  }
-
-  private runAnimComponent(
-    idx: number,
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    switch (idx) {
-      case 0:
-        compRing(this, sprite, sys, rng)
-        break
-      case 1:
-        compMultiRing(this, sprite, sys, rng)
-        break
-      case 2:
-        compSparkle(this, sprite, sys, rng)
-        break
-      case 3:
-        compFlash(this, sprite, rng)
-        break
-      case 4:
-        compLightning(this, sprite, sys, rng)
-        break
-      case 5:
-        compOrbit(this, sprite, sys, rng)
-        break
-      case 6:
-        compSpiral(this, sprite, sys, rng)
-        break
-      case 7:
-        compConfetti(this, sprite, sys, rng)
-        break
-      case 8:
-        compWave(this, sprite, sys, rng)
-        break
-      case 9:
-        compComet(this, sprite, sys, rng)
-        break
-      case 10:
-        compStarBurst(this, sprite, sys, rng)
-        break
-      case 11:
-        compHaloFlash(this, sprite, sys, rng)
-        break
-      case 12:
-        compVortex(this, sprite, sys, rng)
-        break
-      case 13:
-        compStormSwirl(this, sprite, sys, rng)
-        break
-      case 14:
-        compRingDance(this, sprite, sys, rng)
-        break
-      case 15:
-        compCrystalShatter(this, sprite, sys, rng)
-        break
-      case 16:
-        compRipple(this, sprite, sys, rng)
-        break
-      case 17:
-        compSandSwirl(this, sprite, sys, rng)
-        break
-      case 18:
-        compLavaErupt(this, sprite, sys, rng)
-        break
-      case 19:
-        compBloomPetals(this, sprite, sys, rng)
-        break
-      case 20:
-        compDustPuff(this, sprite, sys, rng)
-        break
-      case 21:
-        compToxicCloud(this, sprite, sys, rng)
-        break
-      case 22:
-        compBeam(this, sprite, sys, rng)
-        break
-      case 23:
-        compTwinPulse(this, sprite, sys, rng)
-        break
-      case 24:
-        compSingularity(this, sprite, sys, rng)
-        break
-      case 25:
-        compEchoWave(this, sprite, sys, rng)
-        break
-      case 26:
-        compGravityWell(this, sprite, sys, rng)
-        break
-      case 27:
-        compSolarFlare(this, sprite, sys, rng)
-        break
-      case 28:
-        compAuroraRibbon(this, sprite, sys, rng)
-        break
-      case 29:
-        compDNAHelix(this, sprite, sys, rng)
-        break
-      case 30:
-        compLensFlare(this, sprite, sys, rng)
-        break
-      case 31:
-        compConstellation(this, sprite, sys, rng)
-        break
-      case 32:
-        compMagneticField(this, sprite, sys, rng)
-        break
-      case 33:
-        compPhoenixBurst(this, sprite, sys, rng)
-        break
-      case 34:
-        compWormhole(this, sprite, sys, rng)
-        break
-      case 35:
-        compCosmicRay(this, sprite, sys, rng)
-        break
-      case 36:
-        compQuantumSplit(this, sprite, sys, rng)
-        break
-      case 37:
-        compHeartPulse(this, sprite, sys, rng)
-        break
-      case 38:
-        compCrackleDischarge(this, sprite, sys, rng)
-        break
-      case 39:
-        compPixelGrid(this, sprite, sys, rng)
-        break
-      case 40:
-        compSpiralArms(this, sprite, sys, rng)
-        break
-      case 41:
-        compCrystalGrow(this, sprite, sys, rng)
-        break
-      case 42:
-        compSnowDrift(this, sprite, sys, rng)
-        break
-      case 43:
-        compGalaxySpawn(this, sprite, sys, rng)
-        break
-      case 44:
-        compPulseHex(this, sprite, sys, rng)
-        break
-      case 45:
-        compTornado(this, sprite, sys, rng)
-        break
-      case 46:
-        compStarPolygon(this, sprite, sys, rng)
-        break
-      case 47:
-        compCrossFlash(this, sprite, sys, rng)
-        break
-      case 48:
-        compWaveTrain(this, sprite, sys, rng)
-        break
-      case 49:
-        compPetalStorm(this, sprite, sys, rng)
-        break
-      case 50:
-        compFlameTongues(this, sprite, sys, rng)
-        break
-      case 51:
-        compSnakeTrail(this, sprite, sys, rng)
-        break
-      case 52:
-        compBubblePop(this, sprite, sys, rng)
-        break
-      case 53:
-        compChromaShift(this, sprite, sys, rng)
-        break
-      // Phase 7: новые компоненты
-      case 54:
-        compAtomShells(this, sprite, sys, rng)
-        break
-      case 55:
-        compSupernova(this, sprite, sys, rng)
-        break
-      case 56:
-        compAccretionDisk(this, sprite, sys, rng)
-        break
-      case 57:
-        compFlickerStars(this, sprite, sys, rng)
-        break
-      case 58:
-        compLightDance(this, sprite, sys, rng)
-        break
-      case 59:
-        compDimensionRift(this, sprite, sys, rng)
-        break
-      case 60:
-        compFrostExplode(this, sprite, sys, rng)
-        break
-      case 61:
-        compTimeWave(this, sprite, sys, rng)
-        break
-      case 62:
-        compGlyphFlash(this, sprite, sys, rng)
-        break
-      case 63:
-        compPrismShift(this, sprite, sys, rng)
-        break
-      // Расширение 3 (доп. оригинальные компоненты)
-      case 64:
-        compChargeBurst(this, sprite, sys, rng)
-        break
-      case 65:
-        compInfinityTrail(this, sprite, sys, rng)
-        break
-      case 66:
-        compShieldRipple(this, sprite, sys, rng)
-        break
-      case 67:
-        compFireworks(this, sprite, sys, rng)
-        break
-      case 68:
-        compScanline(this, sprite, sys, rng)
-        break
-      case 69:
-        compLiquidPool(this, sprite, sys, rng)
-        break
-      case 70:
-        compGravityKnot(this, sprite, sys, rng)
-        break
-      case 71:
-        compCosmicWeb(this, sprite, sys, rng)
-        break
-      case 72:
-        compParticleFountain(this, sprite, sys, rng)
-        break
-      case 73:
-        compEchoSpawn(this, sprite, sys, rng)
-        break
-      case 74:
-        compIceWisps(this, sprite, sys, rng)
-        break
-      case 75:
-        compRipBlade(this, sprite, sys, rng)
-        break
-      // Расширение 4 — компоненты 76-87 (с явными sound-style)
-      case 76:
-        compChimeRing(this, sprite, sys, rng)
-        break
-      case 77:
-        compEarthquakeShake(this, sprite, sys, rng)
-        break
-      case 78:
-        compKaleidoscope(this, sprite, sys, rng)
-        break
-      case 79:
-        compDroneHum(this, sprite, sys, rng)
-        break
-      case 80:
-        compGlitchStutter(this, sprite, sys, rng)
-        break
-      case 81:
-        compDopplerWave(this, sprite, sys, rng)
-        break
-      case 82:
-        compMorseFlash(this, sprite, sys, rng)
-        break
-      case 83:
-        compCrystalBell(this, sprite, sys, rng)
-        break
-      case 84:
-        compWindRustle(this, sprite, sys, rng)
-        break
-      case 85:
-        compClockGears(this, sprite, sys, rng)
-        break
-      case 86:
-        compBubbleStream(this, sprite, sys, rng)
-        break
-      case 87:
-        compPlasmaArc(this, sprite, sys, rng)
-        break
-      // Phase 8 — компоненты 88-95
-      case 88:
-        compBouncingBall(this, sprite, sys, rng)
-        break
-      case 89:
-        compDigitalGlitch(this, sprite, sys, rng)
-        break
-      case 90:
-        compRingPulsar(this, sprite, sys, rng)
-        break
-      case 91:
-        compSwarmParticles(this, sprite, sys, rng)
-        break
-      case 92:
-        compPrismRefract(this, sprite, sys, rng)
-        break
-      case 93:
-        compLifeBloom(this, sprite, sys, rng)
-        break
-      case 94:
-        compWindRibbons(this, sprite, sys, rng)
-        break
-      case 95:
-        compWreckageOrbit(this, sprite, sys, rng)
-        break
-    }
-  }
+  // handlePlanetPress/getAnimationDurationMs/playUniqueAnimation/runAnimComponent
+  // и константа COMP_DURATIONS_MS — extracted в './starmap/popovers.ts' (Phase 20-04, Wave 4).
+  // PopoverController owns tap orchestration; THEME_COMPONENTS остаётся на сцене,
+  // т.к. buildAnimSignature (для refineAnimSeeds, ниже) тоже его читает.
 
   /* ════════════════════════════════════════════════════════════════════════
    * SOUND-STYLE TABLE — каждый компонент имеет «звуковую подпись» (концептуально).
@@ -2198,10 +1558,10 @@ export class StarMapScene extends Phaser.Scene {
           name: sys.name,
           archetype: sys.type ?? '',
         })
-        this.handlePlanetPress(sys)
-        this.selectSystem(sys)
+        this.popoverController.handlePlanetPress(sys)
+        this.popoverController.selectSystem(sys)
         // Main planet: показать тот же popup что у bg-планет (имя + тип + Лететь/Изучить)
-        this.scheduleBgNamePopup(sys)
+        this.popoverController.scheduleBgNamePopup(sys)
       }
     })
 
@@ -3345,10 +2705,10 @@ export class StarMapScene extends Phaser.Scene {
           name: sys.name,
           archetype: (sys as BgSystem).archetype ?? '',
         })
-        this.handlePlanetPress(sys)
-        this.selectSystem(sys)
+        this.popoverController.handlePlanetPress(sys)
+        this.popoverController.selectSystem(sys)
         // BG: показать модалку с именем через 400ms
-        this.scheduleBgNamePopup(sys)
+        this.popoverController.scheduleBgNamePopup(sys)
         // Spring-анимация: squish по вертикали → bounce, как у лягушек
         if (springTween) {
           springTween.stop()
@@ -3401,400 +2761,8 @@ export class StarMapScene extends Phaser.Scene {
     }
   }
 
-  // === BG NAME POPUP — простая модалка с именем планеты ===
-  private closeBgNamePopup() {
-    if (this.bgNamePopupTimer) {
-      this.bgNamePopupTimer.remove()
-      this.bgNamePopupTimer = undefined
-    }
-    if (this.bgNamePopup) {
-      this.bgNamePopup.destroy(true)
-      this.bgNamePopup = undefined
-    }
-  }
-
-  // Открывает popup с именем планеты (BG или main) с задержкой.
-  private scheduleBgNamePopup(sys: BgSystem | Race) {
-    this.closeBgNamePopup()
-    // Задержка ~400ms чтобы не наслаивать на анимацию клика
-    this.bgNamePopupTimer = this.time.delayedCall(400, () => {
-      this.openBgNamePopup(sys)
-    })
-  }
-
-  private openBgNamePopup(sys: BgSystem | Race) {
-    const PADDING_X = 14 * DPR
-    const PADDING_Y = 8 * DPR
-    const offsetY = -(sys.size + 70 * DPR) // над планетой
-
-    const container = this.add.container(sys.x, sys.y + offsetY)
-    container.setDepth(1500)
-    this.bgNamePopup = container
-
-    // Текст имени
-    const nameText = this.add.text(0, 0, sys.name, {
-      fontFamily: 'Russo One, system-ui, sans-serif',
-      fontSize: `${13 * DPR}px`,
-      color: '#fef9d7',
-      stroke: '#1f2a14',
-      strokeThickness: 2 * DPR,
-    })
-    nameText.setOrigin(0.5, 0.5)
-
-    // Подпись: для bg = "type · archetype" (resource · forest), для main = "type" (military / mystic / etc)
-    const typeLabel =
-      'archetype' in sys && sys.archetype
-        ? `${sys.type} · ${sys.archetype}`
-        : sys.type
-    const subText = this.add.text(0, 14 * DPR, typeLabel, {
-      fontFamily: 'Nunito, system-ui, sans-serif',
-      fontSize: `${9 * DPR}px`,
-      color: '#a3e635',
-    })
-    subText.setOrigin(0.5, 0.5)
-
-    // Фон-капсула
-    const w = Math.max(nameText.width, subText.width) + PADDING_X * 2
-    const h = nameText.height + subText.height + PADDING_Y * 2 + 4
-    const bg = this.add.graphics()
-    bg.fillStyle(0x1f2a14, 0.92)
-    bg.fillRoundedRect(-w / 2, -h / 2 + 4, w, h, 8 * DPR)
-    bg.lineStyle(1.5 * DPR, 0xa3e635, 0.6)
-    bg.strokeRoundedRect(-w / 2, -h / 2 + 4, w, h, 8 * DPR)
-
-    container.add(bg)
-    container.add(nameText)
-    container.add(subText)
-
-    // Кнопка действия под капсулой: «Изучить» если здесь, «Лететь» если docked-elsewhere,
-    // «Перенаправить» если в полёте к ДРУГОЙ планете, ничего если уже летим именно сюда.
-    const shipState = useGameStore.getState().ship
-    const isCurrentPlanet =
-      shipState?.state === 'docked' && shipState.planetId === sys.id
-    const isAlreadyHeadingHere =
-      shipState?.state === 'transit' && shipState.toPlanetId === sys.id
-    const BTN_W = 76 * DPR
-    const BTN_H = 22 * DPR
-    const BTN_Y = h / 2 + 4 + 6 * DPR + BTN_H / 2
-
-    if (isCurrentPlanet) {
-      const canInvestigate =
-        (useGameStore.getState().crew?.missionsToday ?? 0) < DAILY_CAP
-      const btnBg = this.add.graphics()
-      btnBg.fillStyle(canInvestigate ? 0xd97706 : 0x374151, 1)
-      btnBg.fillRoundedRect(
-        -BTN_W / 2,
-        BTN_Y - BTN_H / 2,
-        BTN_W,
-        BTN_H,
-        5 * DPR,
-      )
-      if (canInvestigate) {
-        btnBg.lineStyle(1.5 * DPR, 0xfbbf24, 0.7)
-        btnBg.strokeRoundedRect(
-          -BTN_W / 2,
-          BTN_Y - BTN_H / 2,
-          BTN_W,
-          BTN_H,
-          5 * DPR,
-        )
-        btnBg.setInteractive(
-          new Phaser.Geom.Rectangle(
-            -BTN_W / 2,
-            BTN_Y - BTN_H / 2,
-            BTN_W,
-            BTN_H,
-          ),
-          Phaser.Geom.Rectangle.Contains,
-        )
-        let btnDownTime = 0
-        btnBg.on(
-          'pointerdown',
-          (
-            _p: unknown,
-            _lx: unknown,
-            _ly: unknown,
-            ev: Phaser.Types.Input.EventData,
-          ) => {
-            btnDownTime = Date.now()
-            ev.stopPropagation()
-          },
-        )
-        btnBg.on(
-          'pointerup',
-          (
-            _p: unknown,
-            _lx: unknown,
-            _ly: unknown,
-            ev: Phaser.Types.Input.EventData,
-          ) => {
-            ev.stopPropagation()
-            if (Date.now() - btnDownTime < 400) {
-              this.tapHandledThisFrame = true
-              const ok = useGameStore
-                .getState()
-                .investigatePlanet(sys.id, 'good')
-              if (ok)
-                eventBus.emit('cosmic:toast', {
-                  type: 'generic',
-                  msg: '📦 Бокс получен!',
-                })
-              this.closeBgNamePopup()
-            }
-          },
-        )
-      }
-      const btnText = this.add.text(
-        0,
-        BTN_Y,
-        canInvestigate ? '🔬 Изучить' : '⏱ Устал',
-        {
-          fontFamily: 'Nunito, system-ui, sans-serif',
-          fontSize: `${9 * DPR}px`,
-          color: canInvestigate ? '#ffffff' : '#9ca3af',
-          fontStyle: 'bold',
-        },
-      )
-      btnText.setOrigin(0.5, 0.5)
-      container.add(btnBg)
-      container.add(btnText)
-    } else if (!isAlreadyHeadingHere) {
-      // Не текущая planet и не та куда уже летим → показываем кнопку «Лететь».
-      // Работает одинаково: docked → fresh flight, in-transit → redirect (внутри store).
-      const btnBg = this.add.graphics()
-      btnBg.fillStyle(0x16a34a, 1)
-      btnBg.fillRoundedRect(
-        -BTN_W / 2,
-        BTN_Y - BTN_H / 2,
-        BTN_W,
-        BTN_H,
-        5 * DPR,
-      )
-      btnBg.lineStyle(1.5 * DPR, 0x4ade80, 0.7)
-      btnBg.strokeRoundedRect(
-        -BTN_W / 2,
-        BTN_Y - BTN_H / 2,
-        BTN_W,
-        BTN_H,
-        5 * DPR,
-      )
-      btnBg.setInteractive(
-        new Phaser.Geom.Rectangle(-BTN_W / 2, BTN_Y - BTN_H / 2, BTN_W, BTN_H),
-        Phaser.Geom.Rectangle.Contains,
-      )
-      let btnDownTime = 0
-      btnBg.on(
-        'pointerdown',
-        (
-          _p: unknown,
-          _lx: unknown,
-          _ly: unknown,
-          ev: Phaser.Types.Input.EventData,
-        ) => {
-          btnDownTime = Date.now()
-          ev.stopPropagation()
-        },
-      )
-      btnBg.on(
-        'pointerup',
-        (
-          _p: unknown,
-          _lx: unknown,
-          _ly: unknown,
-          ev: Phaser.Types.Input.EventData,
-        ) => {
-          ev.stopPropagation()
-          if (Date.now() - btnDownTime < 400) {
-            this.tapHandledThisFrame = true
-            this.closeBgNamePopup()
-            // sendShipTo сам обрабатывает redirect (использует latestShipPos)
-            useGameStore.getState().sendShipTo(sys.id)
-          }
-        },
-      )
-      const btnText = this.add.text(0, BTN_Y, '🚀 Лететь', {
-        fontFamily: 'Nunito, system-ui, sans-serif',
-        fontSize: `${9 * DPR}px`,
-        color: '#ffffff',
-        fontStyle: 'bold',
-      })
-      btnText.setOrigin(0.5, 0.5)
-      container.add(btnBg)
-      container.add(btnText)
-    }
-
-    // Blocking zone — absorbs taps on the popup background so they don't fall
-    // through to the planet container underneath (which would re-schedule the popup).
-    // Zone at index 0 (lowest depth) → receives events AFTER buttons (buttons
-    // already call ev.stopPropagation(), so zone only fires for background taps).
-    {
-      const ZONE_TOP = -(h / 2 + PADDING_Y)
-      const ZONE_BOTTOM = BTN_Y + BTN_H / 2 + PADDING_Y
-      const blockZone = this.add.zone(
-        0,
-        (ZONE_TOP + ZONE_BOTTOM) / 2,
-        w + PADDING_X * 2,
-        ZONE_BOTTOM - ZONE_TOP,
-      )
-      blockZone.setInteractive()
-      blockZone.on(
-        'pointerdown',
-        (
-          _p: unknown,
-          _lx: unknown,
-          _ly: unknown,
-          ev: Phaser.Types.Input.EventData,
-        ) => {
-          this.tapHandledThisFrame = true
-          ev.stopPropagation()
-        },
-      )
-      blockZone.on(
-        'pointerup',
-        (
-          _p: unknown,
-          _lx: unknown,
-          _ly: unknown,
-          ev: Phaser.Types.Input.EventData,
-        ) => {
-          this.tapHandledThisFrame = true
-          ev.stopPropagation()
-        },
-      )
-      container.addAt(blockZone, 0)
-    }
-
-    // Compensation zoom — popup всегда фиксированного размера на экране
-    const cam = this.cameras.main
-    container.setScale(Math.max(0.3, 1 / cam.zoom))
-
-    // Appear-анимация: fade-in + slight slide вверх
-    container.setAlpha(0)
-    container.y += 6 * DPR
-    this.tweens.add({
-      targets: container,
-      alpha: 1,
-      y: container.y - 6 * DPR,
-      duration: 220,
-      ease: 'Cubic.easeOut',
-    })
-
-    // Auto-close через 3.5 сек
-    this.bgNamePopupTimer = this.time.delayedCall(3500, () => {
-      if (!this.bgNamePopup) return
-      this.tweens.add({
-        targets: this.bgNamePopup,
-        alpha: 0,
-        duration: 200,
-        onComplete: () => this.closeBgNamePopup(),
-      })
-    })
-  }
-
-  private selectSystem(sys: Race | BgSystem) {
-    if (this.selectionMarker) this.selectionMarker.destroy()
-    const m = this.add.graphics()
-    const sz = sys.size || 14 * DPR
-    m.lineStyle(2 * DPR, 0xffd700, 1)
-    m.strokeCircle(sys.x, sys.y, sz + 14 * DPR)
-    m.lineStyle(1 * DPR, 0xffd700, 0.5)
-    m.strokeCircle(sys.x, sys.y, sz + 22 * DPR)
-    m.setDepth(15)
-    this.selectionMarker = m
-    this.tweens.add({
-      targets: m,
-      alpha: { from: 1, to: 0.4 },
-      yoyo: true,
-      repeat: -1,
-      duration: 700,
-      ease: 'Sine.easeInOut',
-    })
-
-    // Selection marker, анимация и музыка планет — отрабатывают ниже.
-    // Popup с именем + кнопкой Лететь — теперь показывается одинаково для всех
-    // планет (main + bg) через scheduleBgNamePopup в pointerup-handler'е.
-
-    const sprite = this.systemSprites.get(sys.id)
-    if (sprite) {
-      this.tweens.killTweensOf(sprite)
-      this.tweens.add({
-        targets: sprite,
-        scaleY: 0.85,
-        scaleX: 1.15,
-        duration: 100,
-        yoyo: true,
-        ease: 'Power2',
-        onComplete: () => {
-          this.tweens.add({
-            targets: sprite,
-            scale: { from: 1.05, to: 1 },
-            duration: 200,
-            ease: 'Back.easeOut',
-            onComplete: () => {
-              this.tweens.add({
-                targets: sprite,
-                scale: { from: 0.97, to: 1.03 },
-                duration: 2500,
-                yoyo: true,
-                repeat: -1,
-                ease: 'Sine.easeInOut',
-              })
-            },
-          })
-        },
-      })
-    }
-
-    // Главные расы — по их type, фоновые — по архетипу
-    const emojiMap: Record<string, string> = {
-      // Главные первичные
-      home: '🐸',
-      crystal: '💎',
-      rocky: '🪨',
-      ancient: '⏳',
-      mystic: '🔮',
-      organic: '🌿',
-      forge: '🔥',
-      military: '⚔️',
-      destroyed: '💔',
-      // Расширение — 7 новых рас
-      crystal_bio: '🌸',
-      mechano: '⚙️',
-      energy: '⚡',
-      mist: '🌫️',
-      aquatic: '🌊',
-      shadow: '🌑',
-      aerial: '☁️',
-      // Архетипы фоновых
-      gas_giant: '🌀',
-      gas_ringed: '🪐',
-      ice: '❄️',
-      ocean: '🌊',
-      desert: '🏜️',
-      lava: '🌋',
-      forest: '🌲',
-      mineral: '⛏️',
-      dead: '💀',
-      toxic: '☠️',
-      plasma: '☀️',
-      binary: '⚡',
-    }
-    const archKey = (sys as BgSystem).archetype
-    const emoji = emojiMap[archKey] || emojiMap[sys.type] || '?'
-    const float = this.add.text(sys.x, sys.y - sz - 8 * DPR, emoji, {
-      fontSize: 22 * DPR,
-    })
-    float.setOrigin(0.5)
-    float.setDepth(80)
-    this.tweens.add({
-      targets: float,
-      y: sys.y - sz - 50 * DPR,
-      alpha: { from: 1, to: 0 },
-      duration: 1400,
-      ease: 'Sine.easeOut',
-      onComplete: () => float.destroy(),
-    })
-  }
+  // closeBgNamePopup/scheduleBgNamePopup/openBgNamePopup/selectSystem
+  // — extracted в './starmap/popovers.ts' (Phase 20-04, Wave 4).
 
   // ============== УПРАВЛЕНИЕ ==============
 
@@ -3901,7 +2869,7 @@ export class StarMapScene extends Phaser.Scene {
           this.selectedMainRaceId = null
           this.closePhaserPopover()
         }
-        this.closeBgNamePopup()
+        this.popoverController.closeBgNamePopup()
       }
     })
 
