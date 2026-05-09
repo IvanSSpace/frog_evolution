@@ -211,22 +211,25 @@ const C = 60,
 
 const PROFILES: Record<string, VoiceProfile> = {
   // ── Main race types ──
-  home: { notes: [C, E, G, C + 12], synths: ['bell', 'drone'] },
+  home: { notes: [C, E, G, C + 12], synths: ['bell', 'drone'], gain: -1 },
   crystal: {
     notes: [E + 12, G + 12, B + 12],
     synths: ['bell', 'pluck'],
     detune: 5,
+    gain: -1.5,
   },
   rocky: { notes: [C - 24, G - 12], synths: ['membrane', 'drone'] },
   ancient: {
     notes: [A - 12, E, A],
     synths: ['drone', 'bell'],
     octaveOffset: -12,
+    gain: -1,
   },
   mystic: {
     notes: [Fs, A, Cs(), Fs + 12],
     synths: ['drone', 'bell'],
     detune: 12,
+    gain: -1,
   },
   organic: {
     notes: [F, A, C + 12],
@@ -241,7 +244,7 @@ const PROFILES: Record<string, VoiceProfile> = {
   military: {
     notes: [C, C - 12, G - 12],
     synths: ['membrane', 'fm', 'pluck'],
-    gain: 8,
+    gain: 2,
   },
   destroyed: {
     notes: [Eb - 12, Bb - 12],
@@ -251,6 +254,7 @@ const PROFILES: Record<string, VoiceProfile> = {
   crystal_bio: {
     notes: [F + 12, A + 12, C + 24],
     synths: ['bell', 'drone', 'pluck'],
+    gain: -2,
   },
   mechano: { notes: [C, G, C + 12], synths: ['fm', 'pluck'] },
   energy: {
@@ -284,8 +288,9 @@ const PROFILES: Record<string, VoiceProfile> = {
   gas_ringed: {
     notes: [C - 12, G - 12, E + 12, G + 12],
     synths: ['drone', 'bell'],
+    gain: -1,
   },
-  ice: { notes: [E + 12, B + 12, E + 24], synths: ['bell', 'pluck'] },
+  ice: { notes: [E + 12, B + 12, E + 24], synths: ['bell', 'pluck'], gain: -1.5 },
   ocean: {
     notes: [F, A, C + 12],
     synths: ['drone', 'noise'],
@@ -302,7 +307,7 @@ const PROFILES: Record<string, VoiceProfile> = {
     synths: ['pluck', 'noise'],
     noiseType: 'pink',
   },
-  mineral: { notes: [C + 12, G + 12], synths: ['bell', 'membrane'] },
+  mineral: { notes: [C + 12, G + 12], synths: ['bell', 'membrane'], gain: -1 },
   dead: { notes: [C - 24], synths: ['drone'] },
   toxic: { notes: [Eb, A], synths: ['drone', 'fm'], detune: 20 },
   plasma: {

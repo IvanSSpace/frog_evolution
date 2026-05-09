@@ -2708,6 +2708,8 @@ export class StarMapScene extends Phaser.Scene {
         })
         this.handlePlanetPress(sys)
         this.selectSystem(sys)
+        // Main planet: показать тот же popup что у bg-планет (имя + тип + Лететь/Изучить)
+        this.scheduleBgNamePopup(sys)
       }
     })
 
@@ -3912,8 +3914,8 @@ export class StarMapScene extends Phaser.Scene {
     }
   }
 
-  // Открывает popup с именем BG-планеты с задержкой (даём анимации сыграть).
-  private scheduleBgNamePopup(sys: BgSystem) {
+  // Открывает popup с именем планеты (BG или main) с задержкой.
+  private scheduleBgNamePopup(sys: BgSystem | Race) {
     this.closeBgNamePopup()
     // Задержка ~400ms чтобы не наслаивать на анимацию клика
     this.bgNamePopupTimer = this.time.delayedCall(400, () => {
@@ -3921,7 +3923,7 @@ export class StarMapScene extends Phaser.Scene {
     })
   }
 
-  private openBgNamePopup(sys: BgSystem) {
+  private openBgNamePopup(sys: BgSystem | Race) {
     const PADDING_X = 14 * DPR
     const PADDING_Y = 8 * DPR
     const offsetY = -(sys.size + 70 * DPR) // над планетой
@@ -3940,8 +3942,11 @@ export class StarMapScene extends Phaser.Scene {
     })
     nameText.setOrigin(0.5, 0.5)
 
-    // Подпись типа (resource/hostile/empty + archetype)
-    const typeLabel = `${sys.type} · ${sys.archetype}`
+    // Подпись: для bg = "type · archetype" (resource · forest), для main = "type" (military / mystic / etc)
+    const typeLabel =
+      'archetype' in sys && sys.archetype
+        ? `${sys.type} · ${sys.archetype}`
+        : sys.type
     const subText = this.add.text(0, 14 * DPR, typeLabel, {
       fontFamily: 'Nunito, system-ui, sans-serif',
       fontSize: `${9 * DPR}px`,
@@ -4201,12 +4206,9 @@ export class StarMapScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     })
 
-    // Phaser-popover для main-рас удалён (мёртвая модалка с console.log кнопками).
-    // Selection marker, анимация и музыка планет остаются — они отрабатывают ниже.
-    const isMain = MAIN_RACES.some((r) => r.id === sys.id)
-    if (isMain) {
-      this.closeBgNamePopup() // не наслаиваем bg-popup поверх main-выбора
-    }
+    // Selection marker, анимация и музыка планет — отрабатывают ниже.
+    // Popup с именем + кнопкой Лететь — теперь показывается одинаково для всех
+    // планет (main + bg) через scheduleBgNamePopup в pointerup-handler'е.
 
     const sprite = this.systemSprites.get(sys.id)
     if (sprite) {
