@@ -64,8 +64,11 @@ export default function CascadeRevealModal({
     }
   }, [onComplete])
 
-  // Звук открытия бокса при маунте.
+  // Звук открытия бокса при маунте (ref-guard против StrictMode double-invoke).
+  const boxSoundFiredRef = useRef(false)
   useEffect(() => {
+    if (boxSoundFiredRef.current) return
+    boxSoundFiredRef.current = true
     void sfx.ensureReady()
     sfx.play('boxOpen')
   }, [])

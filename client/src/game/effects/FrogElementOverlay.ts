@@ -155,10 +155,10 @@ export class FrogElementOverlay {
     const orbY = -(body.height / 2 + CSS_HEAD_MARGIN * 1.5)
     this.orb.setY(orbY)
 
-    // Тинт на тело убран — элемент показывается через орб,
-    // полный тинт менял все пиксели (включая глаза) на цвет элемента.
-    this.prevBodyTint = null
-    this.appliedTintToBody = null
+    // Тинт тела — лягушка принимает цвет элемента.
+    this.prevBodyTint = body.tintTopLeft
+    body.setTint(tint)
+    this.appliedTintToBody = body
 
     // Reparent overlay container into host frog container.
     // Container уже добавлен в scene root в constructor — снимаем оттуда сначала.

@@ -1519,6 +1519,11 @@ export class MainScene extends Phaser.Scene {
         if (isCrossLocation) {
           // Лягушка улетает в свою локацию
           this.playCrossLocationFlyAway(cx, cy, newLevel)
+          eventBus.emit('cosmic:toast', {
+            type: 'generic',
+            msg: i18next.t('cosmic_hub.carrier.merge_cross_location_warn'),
+            duration: 3000,
+          })
         } else {
           // Обычный pop-in
           const newFrog = this.spawnFrog(cx, cy, newLevel)
@@ -1607,42 +1612,37 @@ export class MainScene extends Phaser.Scene {
 
       if (outcome.result === 'success') {
         // Replace carrier visual: remove old, spawn new at +1 level.
+        // Carrier-evolved frog всегда остаётся в текущей локации (не улетает cross-location).
         const newLevel = outcome.newLevel
         const oldCarrierLevel = carrier.level
         this.removeFrog(carrier)
         const storeS = useGameStore.getState()
         storeS.removeFrogFromLocation(storeS.currentLocation, oldCarrierLevel)
+        storeS.addFrogToLocation(storeS.currentLocation, newLevel)
 
-        const newCfg = FROG_LEVELS[newLevel - 1]
-        storeS.addFrogToLocation(newCfg.location, newLevel)
-        const isCrossLocation = newCfg.location !== storeS.currentLocation
-        if (isCrossLocation) {
-          this.playCrossLocationFlyAway(cx, cy, newLevel)
-        } else {
-          const newFrog = this.spawnFrog(cx, cy, newLevel)
-          // Transfer carrier.frogId на newFrog.id.
-          const carriersNow = useGameStore.getState().carriers.slice()
-          const idx = carriersNow.findIndex((c) => c.frogId === carrier.id)
-          if (idx >= 0) {
-            carriersNow[idx] = { ...carriersNow[idx], frogId: newFrog.id }
-            useGameStore.setState({ carriers: carriersNow })
-          }
-          newFrog.container.setScale(0)
-          this.tweens.add({
-            targets: newFrog.container,
-            scale: BASE_SCALE * 1.2,
-            duration: 160,
-            ease: 'Back.easeOut',
-            onComplete: () => {
-              this.tweens.add({
-                targets: newFrog.container,
-                scale: BASE_SCALE,
-                duration: 100,
-                ease: 'Power2.easeOut',
-              })
-            },
-          })
+        const newFrog = this.spawnFrog(cx, cy, newLevel)
+        // Transfer carrier.frogId на newFrog.id.
+        const carriersNow = useGameStore.getState().carriers.slice()
+        const idx = carriersNow.findIndex((c) => c.frogId === carrier.id)
+        if (idx >= 0) {
+          carriersNow[idx] = { ...carriersNow[idx], frogId: newFrog.id }
+          useGameStore.setState({ carriers: carriersNow })
         }
+        newFrog.container.setScale(0)
+        this.tweens.add({
+          targets: newFrog.container,
+          scale: BASE_SCALE * 1.2,
+          duration: 160,
+          ease: 'Back.easeOut',
+          onComplete: () => {
+            this.tweens.add({
+              targets: newFrog.container,
+              scale: BASE_SCALE,
+              duration: 100,
+              ease: 'Power2.easeOut',
+            })
+          },
+        })
         hapticNotification('success')
 
         const wasNew = storeS.markDiscovered(newLevel)

@@ -153,73 +153,77 @@ class SfxEngine {
     const k = this.kit
     const level = opts.level ?? 1
 
-    switch (name) {
-      case 'pickup': {
-        // Рандомный 300мс кусок из frogTap.mp3
-        const CLIP = 0.3
-        const totalDur = k.tapPlayer.buffer.duration
-        const maxOffset = Math.max(0, totalDur - CLIP)
-        const offset = Math.random() * maxOffset
-        k.tapPlayer.start(now, offset, CLIP)
-        break
-      }
-      case 'drop': {
-        // Мягкий "тук"
-        k.membrane.triggerAttackRelease('A1', '16n', now, 0.1)
-        break
-      }
-      case 'merge': {
-        // Рандомный 300мс кусок из frogMerge.mp3
-        const CLIP = 0.3
-        const totalDur = k.mergePlayer.buffer.duration
-        const maxOffset = Math.max(0, totalDur - CLIP)
-        const offset = Math.random() * maxOffset
-        k.mergePlayer.start(now, offset, CLIP)
-        break
-      }
-      case 'evolve': {
-        // Триумфальный major + октавный шиммер сверху
-        const root = 60 + Math.min(level, 14)
-        const triad = [root, root + 4, root + 7, root + 12].map((n) =>
-          Tone.Frequency(n, 'midi').toFrequency(),
-        )
-        k.shimmer.triggerAttackRelease(triad, 1.4, now, 0.6)
-        // Сверху — звезда: октавная нота через 0.15s
-        k.bell.triggerAttackRelease(
-          Tone.Frequency(root + 24, 'midi').toFrequency(),
-          0.6,
-          now + 0.15,
-          0.5,
-        )
-        k.bell.triggerAttackRelease(
-          Tone.Frequency(root + 19, 'midi').toFrequency(),
-          0.5,
-          now + 0.3,
-          0.4,
-        )
-        break
-      }
-      case 'boxOpen': {
-        // Удар + восходящий каскад колоколов для открытия бокса
-        k.membrane.triggerAttackRelease('C2', '8n', now, 0.5)
-        const cascade = [60, 64, 67, 72] // C4 E4 G4 C5
-        cascade.forEach((midi, i) => {
-          const freq = Tone.Frequency(midi, 'midi').toFrequency()
-          k.bell.triggerAttackRelease(
-            freq,
-            0.5,
-            now + 0.08 + i * 0.1,
-            0.55 + i * 0.05,
+    try {
+      switch (name) {
+        case 'pickup': {
+          // Рандомный 300мс кусок из frogTap.mp3
+          const CLIP = 0.3
+          const totalDur = k.tapPlayer.buffer.duration
+          const maxOffset = Math.max(0, totalDur - CLIP)
+          const offset = Math.random() * maxOffset
+          k.tapPlayer.start(now, offset, CLIP)
+          break
+        }
+        case 'drop': {
+          // Мягкий "тук"
+          k.membrane.triggerAttackRelease('A1', '16n', now, 0.1)
+          break
+        }
+        case 'merge': {
+          // Рандомный 300мс кусок из frogMerge.mp3
+          const CLIP = 0.3
+          const totalDur = k.mergePlayer.buffer.duration
+          const maxOffset = Math.max(0, totalDur - CLIP)
+          const offset = Math.random() * maxOffset
+          k.mergePlayer.start(now, offset, CLIP)
+          break
+        }
+        case 'evolve': {
+          // Триумфальный major + октавный шиммер сверху
+          const root = 60 + Math.min(level, 14)
+          const triad = [root, root + 4, root + 7, root + 12].map((n) =>
+            Tone.Frequency(n, 'midi').toFrequency(),
           )
-        })
-        k.shimmer.triggerAttackRelease(
-          Tone.Frequency(72, 'midi').toFrequency(),
-          1.2,
-          now + 0.45,
-          0.45,
-        )
-        break
+          k.shimmer.triggerAttackRelease(triad, 1.4, now, 0.6)
+          // Сверху — звезда: октавная нота через 0.15s
+          k.bell.triggerAttackRelease(
+            Tone.Frequency(root + 24, 'midi').toFrequency(),
+            0.6,
+            now + 0.15,
+            0.5,
+          )
+          k.bell.triggerAttackRelease(
+            Tone.Frequency(root + 19, 'midi').toFrequency(),
+            0.5,
+            now + 0.3,
+            0.4,
+          )
+          break
+        }
+        case 'boxOpen': {
+          // Удар + восходящий каскад колоколов для открытия бокса
+          k.membrane.triggerAttackRelease('C2', '8n', now, 0.5)
+          const cascade = [60, 64, 67, 72] // C4 E4 G4 C5
+          cascade.forEach((midi, i) => {
+            const freq = Tone.Frequency(midi, 'midi').toFrequency()
+            k.bell.triggerAttackRelease(
+              freq,
+              0.5,
+              now + 0.08 + i * 0.1,
+              0.55 + i * 0.05,
+            )
+          })
+          k.shimmer.triggerAttackRelease(
+            Tone.Frequency(72, 'midi').toFrequency(),
+            1.2,
+            now + 0.45,
+            0.45,
+          )
+          break
+        }
       }
+    } catch (e) {
+      console.warn('[sfx] audio scheduling error (ignored):', e)
     }
   }
 }
