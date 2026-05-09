@@ -36,6 +36,15 @@ import {
   compChimeRing,
   compBubbleStream,
 } from '../effects/anim/shared'
+import type { Race, BgSystem, Archetype, PlanetMapEntry } from './starmap/types'
+import {
+  TYPE_LABELS,
+  mulberry32,
+  hashId,
+  effectiveSeed,
+  animRng,
+  worldToDom,
+} from './starmap/helpers'
 
 // Phaser-сцена Звёздной карты. Запускается рядом с MainScene через scene-manager.
 // Ничего о gameStore не знает — это «декоративная карта» для просмотра системы
@@ -63,31 +72,6 @@ const BG_DETAIL_MIN_ZOOM = 0.1
 // Это снимает hit-test overhead с pointer events во время drag/pinch.
 const BG_INTERACTIVE_MIN_ZOOM = 0.41
 
-// Shape of entries in planetMap.json — superset of Race/BgSystem fields.
-interface PlanetMapEntry {
-  kind: string
-  id: string
-  name: string
-  x: number
-  y: number
-  type: string
-  color: number
-  accent: number
-  size: number
-  [key: string]: unknown
-}
-
-interface Race {
-  id: string
-  name: string
-  x: number
-  y: number
-  type: string
-  color: number
-  accent: number
-  size: number
-}
-
 // MAIN_RACES читаются из planetMap.json — источник истины для всех 16 главных рас.
 // Координаты/размеры в JSON хранятся в DPR=1 base, в runtime умножаются на real DPR.
 // Чтобы изменить позицию/цвет/размер главной расы — правь planetMap.json напрямую.
@@ -107,73 +91,11 @@ const MAIN_RACES: Race[] = (planetMap.planets as PlanetMapEntry[])
 // NAMES_POOL устарел — теперь имена берутся из BG_NAME_POOL (data/planetNames.ts).
 // Перемешиваются seed-shuffle в generateBackgroundSystems → каждая планета
 // получает уникальное стабильное имя.
-
-const TYPE_LABELS: Record<string, string> = {
-  home: 'Родина',
-  crystal: 'Кристаллы',
-  rocky: 'Камень',
-  ancient: 'Древние',
-  mystic: 'Провидцы',
-  organic: 'Органики',
-  forge: 'Кузнецы',
-  military: 'Военные',
-  destroyed: 'Уничтожено',
-  crystal_bio: 'Кристалло-биоты',
-  mechano: 'Механо',
-  energy: 'Энергеты',
-  mist: 'Туман',
-  aquatic: 'Водные',
-  shadow: 'Тени',
-  aerial: 'Воздушные',
-}
-
-function mulberry32(seed: number) {
-  let a = seed >>> 0
-  return () => {
-    a |= 0
-    a = (a + 0x6d2b79f5) | 0
-    let t = a
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
+//
+// TYPE_LABELS, mulberry32, Archetype, BgSystem, Race, PlanetMapEntry — extracted
+// в `./starmap/types.ts` и `./starmap/helpers.ts` (Phase 20-01).
 
 const SEED = 19450707
-
-// Архетипы планет — визуальная типизация. Каждая фоновая получает один.
-type Archetype =
-  | 'gas_giant' // газовый гигант (большой, полосы)
-  | 'gas_ringed' // газовый с кольцом (редкий, очень большой)
-  | 'ice' // ледяной (белый+голубой, блики)
-  | 'ocean' // водный (голубой+белый облака)
-  | 'desert' // пустынный (жёлто-оранжевый)
-  | 'lava' // лавовый (красный+чёрный, трещины)
-  | 'forest' // лесной/живой (зелёный)
-  | 'mineral' // рудный (металлик)
-  | 'dead' // мёртвый (серый, кратеры)
-  | 'toxic' // токсичный (фиолетовый, ядовитый)
-  | 'plasma' // плазменный (горячий, лучи)
-  | 'binary' // двойной шар (два сросшихся)
-
-interface BgSystem {
-  id: string
-  name: string
-  x: number
-  y: number
-  // Игровой тип — для логики экспедиций
-  type: 'resource' | 'hostile' | 'empty'
-  // Визуальный архетип — для рендера
-  archetype: Archetype
-  color: number
-  accent: number
-  size: number
-  brightness: number
-  hasMoon: boolean
-  rngSeed: number
-  // Обитаема ли (если да — над ней значок цивилизации, акцент ярче)
-  isInhabited?: boolean
-}
 
 // Базовые HSL hue по архетипам (диапазон). Цвет генерируется из этого
 // + рандомное смещение, чтобы каждая планета имела УНИКАЛЬНЫЙ оттенок.
@@ -1098,7 +1020,7 @@ export class StarMapScene extends Phaser.Scene {
         type: sys.type,
         archetype: 'archetype' in sys ? (sys as BgSystem).archetype : undefined,
         durationMs,
-        seed: this.effectiveSeed(sys),
+        seed: effectiveSeed(sys, this.mainSeedOverride),
       })
       // Phase 16 (REQ SHIP-07): parallel emit для Cosmic Hub flight flow.
       // App-side subscriber решает, открыт ли Hub, и показывает confirm dialog.
@@ -1217,7 +1139,7 @@ export class StarMapScene extends Phaser.Scene {
   // запуска tweens. Возвращает суммарную длительность анимации (delay + max comp).
   // Cap=1500ms (wrapper destroy timeout в playUniqueAnimation:943).
   private getAnimationDurationMs(sys: Race | BgSystem): number {
-    const rng = this.animRng(sys)
+    const rng = animRng(sys, this.mainSeedOverride)
     const theme = (sys as BgSystem).archetype ?? sys.type
     const pool = this.THEME_COMPONENTS[theme] ?? [
       0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
@@ -1325,36 +1247,8 @@ export class StarMapScene extends Phaser.Scene {
   // Заполняется в refineAnimSeeds() при коллизиях signatures.
   private mainSeedOverride = new Map<string, number>()
 
-  // Создаёт детерминированный RNG для каждой планеты.
-  // BG: rngSeed. Main: hash от id, или override из refineAnimSeeds.
-  private animRng(sys: Race | BgSystem): () => number {
-    let seed: number
-    if ('rngSeed' in sys && typeof (sys as BgSystem).rngSeed === 'number') {
-      seed = (sys as BgSystem).rngSeed
-    } else {
-      const override = this.mainSeedOverride.get(sys.id)
-      if (override !== undefined) {
-        seed = override
-      } else {
-        let h = 5381
-        for (let i = 0; i < sys.id.length; i++)
-          h = ((h * 33) ^ sys.id.charCodeAt(i)) >>> 0
-        seed = h
-      }
-    }
-    return mulberry32(seed)
-  }
-
-  // Phase 8: возвращает фактический seed используемый для anim/sound модуляций.
-  // Для BG: rngSeed после возможного refine. Для main: mainSeedOverride или hashId.
-  private effectiveSeed(sys: Race | BgSystem): number {
-    if ('rngSeed' in sys && typeof (sys as BgSystem).rngSeed === 'number') {
-      return (sys as BgSystem).rngSeed
-    }
-    const override = this.mainSeedOverride.get(sys.id)
-    if (override !== undefined) return override
-    return this.hashId(sys.id)
-  }
+  // animRng / effectiveSeed — extracted в './starmap/helpers.ts' (Phase 20-01).
+  // Принимают `mainSeedOverride` явным аргументом вместо `this`.
 
   // Главный entry — собирает уникальный рецепт анимации для планеты.
   // 1) Pool компонентов берётся из THEME_COMPONENTS по archetype/type → каждая
@@ -1365,7 +1259,7 @@ export class StarMapScene extends Phaser.Scene {
   private playUniqueAnimation(sys: Race | BgSystem) {
     const sprite = this.systemSprites.get(sys.id)
     if (!sprite) return
-    const rng = this.animRng(sys)
+    const rng = animRng(sys, this.mainSeedOverride)
 
     // Тематический pool компонентов
     const theme = (sys as BgSystem).archetype ?? sys.type
@@ -3427,7 +3321,7 @@ export class StarMapScene extends Phaser.Scene {
   // Phase 8: signature расширена strict-параметрами (rotationBin, scaleBin, hueBin, delayBins)
   // для отлова коллизий по visible-различимым параметрам, не только recipe set.
   private buildAnimSignature(sys: Race | BgSystem): string {
-    const rng = this.animRng(sys)
+    const rng = animRng(sys, this.mainSeedOverride)
     const theme = (sys as BgSystem).archetype ?? sys.type
     const pool = this.THEME_COMPONENTS[theme] ?? [
       0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
@@ -3474,7 +3368,7 @@ export class StarMapScene extends Phaser.Scene {
     const seedSource =
       'rngSeed' in sys && typeof (sys as BgSystem).rngSeed === 'number'
         ? (sys as BgSystem).rngSeed
-        : (this.mainSeedOverride.get(sys.id) ?? this.hashId(sys.id))
+        : (this.mainSeedOverride.get(sys.id) ?? hashId(sys.id))
     // Проектируем seed в 8 hue bins (0..7)
     const hueBin = (seedSource >>> 5) & 0x7
 
@@ -3512,7 +3406,7 @@ export class StarMapScene extends Phaser.Scene {
           'rngSeed' in sys && typeof (sys as BgSystem).rngSeed === 'number'
         const cur = isBg
           ? (sys as BgSystem).rngSeed
-          : (this.mainSeedOverride.get(sys.id) ?? this.hashId(sys.id))
+          : (this.mainSeedOverride.get(sys.id) ?? hashId(sys.id))
         const newSeed = (cur ^ ((attempt + 1) * 0x9e3779b9)) >>> 0
         if (isBg) {
           ;(sys as BgSystem).rngSeed = newSeed
@@ -3531,18 +3425,13 @@ export class StarMapScene extends Phaser.Scene {
     )
   }
 
-  // Helper: hash id → seed (используется в refineAnimSeeds для main races без rngSeed)
-  private hashId(id: string): number {
-    let h = 5381
-    for (let i = 0; i < id.length; i++) h = ((h * 33) ^ id.charCodeAt(i)) >>> 0
-    return h
-  }
+  // hashId — extracted в './starmap/helpers.ts' (Phase 20-01).
 
   // Phase 8: signature формат tuple-string. archetype|pitch|rot|inv|det|cutoff.
   // Используется для refineSoundSeeds — гарантирует 1000/1000 unique sound signatures.
   private buildSoundSignature(sys: Race | BgSystem): string {
     const archetype = (sys as BgSystem).archetype ?? sys.type
-    const seed = this.effectiveSeed(sys)
+    const seed = effectiveSeed(sys, this.mainSeedOverride)
     const m = deriveModulations(seed, archetype)
     return `${archetype}|${m.pitchStep}|${m.rotationIdx}|${m.inversionIdx}|${m.detuneBin}|${m.cutoffBin}`
   }
@@ -3567,7 +3456,7 @@ export class StarMapScene extends Phaser.Scene {
           'rngSeed' in sys && typeof (sys as BgSystem).rngSeed === 'number'
         const cur = isBg
           ? (sys as BgSystem).rngSeed
-          : (this.mainSeedOverride.get(sys.id) ?? this.hashId(sys.id))
+          : (this.mainSeedOverride.get(sys.id) ?? hashId(sys.id))
         const newSeed = (cur ^ ((attempt + 1) * 0xc2b2ae3d)) >>> 0
         if (isBg) {
           ;(sys as BgSystem).rngSeed = newSeed
@@ -7110,17 +6999,7 @@ export class StarMapScene extends Phaser.Scene {
     this.mainPlanetHits.push({ container, baseR, circle: hitArea })
   }
 
-  // Конвертация world coords → viewport DOM coords (для placement decision)
-  private worldToDom(worldX: number, worldY: number): { x: number; y: number } {
-    const cam = this.cameras.main
-    const physX = (worldX - cam.scrollX) * cam.zoom
-    const physY = (worldY - cam.scrollY) * cam.zoom
-    const cssX = physX / DPR
-    const cssY = physY / DPR
-    const canvas = this.game.canvas
-    const rect = canvas.getBoundingClientRect()
-    return { x: rect.left + cssX, y: rect.top + cssY }
-  }
+  // worldToDom — extracted в './starmap/helpers.ts' (Phase 20-01).
 
   // ============== PHASER POPOVER ==============
 
@@ -7711,7 +7590,7 @@ export class StarMapScene extends Phaser.Scene {
       this.selectedMainRaceId = sys.id
       // Placement: предпочитаем 'below', но если снизу не помещается — пробуем 'above'.
       // Считаем место относительно реальных границ #game-canvas (учитывает top/bottom bars).
-      const planetCenter = this.worldToDom(sys.x, sys.y)
+      const planetCenter = worldToDom(this, sys.x, sys.y)
       const canvasRect = this.game.canvas.getBoundingClientRect()
       // Реальная высота popover в screen px: panel(190) + arrow(14) + offset(32) + запас
       const POPOVER_HEIGHT = 260
