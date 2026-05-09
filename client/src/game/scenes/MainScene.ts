@@ -2,9 +2,6 @@ import Phaser from 'phaser'
 import {
   useGameStore,
   getDropIntervalMs,
-  getMagnetSpawnInterval,
-  getMagnetDuration,
-  getMagnetMergesPerCycle,
   getLocationById,
 } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
@@ -31,18 +28,17 @@ import {
   FIELD_PAD_Y,
   FIELD_PAD_Y_BOTTOM,
   MAX_PENDING_BOXES,
-  MERGE_RADIUS,
   TEXTURE_QUALITY,
   mapKeyForLocation,
   tintToHex,
   type BoxData,
   type FrogData,
-  type MagnetData,
 } from './main/types'
 import { FrogSpawner } from './main/FrogSpawner'
 import { MergeController } from './main/MergeController'
 import { BoxController } from './main/BoxController'
 import { PoopController } from './main/PoopController'
+import { MagnetController } from './main/MagnetController'
 
 export class MainScene extends Phaser.Scene {
   // Phase 21 (Wave 1+): несколько полей переведены с `private` на package-public,
@@ -60,8 +56,7 @@ export class MainScene extends Phaser.Scene {
   boxOpenCount = 0
   private pendingBoxCount = 0
 
-  private magnets: MagnetData[] = []
-  private magnetSpawnMs = 0
+  // Phase 21-04 (Wave 4): magnet state перенесён в MagnetController.
 
   // Phase 21-03 (Wave 3): poops package-public — мутируется PoopController.
   // Живые какашки на сцене — трекаем чтобы переносить в oldContainer при переходе локации
@@ -95,6 +90,9 @@ export class MainScene extends Phaser.Scene {
 
   // Phase 21-03 (Wave 3): auto-poop drops в отдельном controller'е.
   private poop!: PoopController
+
+  // Phase 21-04 (Wave 4): magnet system в отдельном controller'е (state + tick).
+  private magnet!: MagnetController
 
   // Camera всегда на зум 1.0 — без камерных трюков, чтобы canvas не «дёргался»
   // и не было чёрной рамки. Эффект «другого масштаба» полностью отрабатывают
@@ -140,6 +138,8 @@ export class MainScene extends Phaser.Scene {
     // Phase 21-03 (Wave 3): box (spawn + open) и poop (auto-drop) controller'ы.
     this.box = new BoxController(this, this.spawner, this.merge)
     this.poop = new PoopController(this, this.merge)
+    // Phase 21-04 (Wave 4): magnet controller — нужен merge.findClosestSameLevelPair / performMerge.
+    this.magnet = new MagnetController(this, this.merge)
 
     // Зум-переход красиво смотрится только если за пределами поля чёрный, а не серый
     this.cameras.main.setBackgroundColor(0x0b1a0b)
@@ -344,11 +344,7 @@ export class MainScene extends Phaser.Scene {
     this.boxes = []
 
     // Магниты (если были)
-    for (const m of [...this.magnets]) {
-      this.tweens.killTweensOf(m.emoji)
-      m.emoji.destroy()
-    }
-    this.magnets = []
+    this.magnet.clearAll()
 
     // Какашки (если остались)
     for (const p of [...this.poops]) {
@@ -360,7 +356,7 @@ export class MainScene extends Phaser.Scene {
     this.boxProgressMs = 0
     this.boxOpenCount = 0
     useGameStore.getState().setRareBoxProgress(0)
-    this.magnetSpawnMs = 0
+    this.magnet.resetSpawnTimer()
     this.syncEntityCount()
   }
 
@@ -417,11 +413,7 @@ export class MainScene extends Phaser.Scene {
     const cy = height / 2
 
     // 1. Магниты эфемерны — убиваем сразу
-    for (const m of [...this.magnets]) {
-      this.tweens.killTweensOf(m.emoji)
-      m.emoji.destroy()
-    }
-    this.magnets = []
+    this.magnet.clearAll()
 
     // Если уходим с болота — фиксируем в pending, чтобы при возврате восстановились.
     // Сами img коробок улетают вместе с oldContainer (см. ниже), так что юзер видит
@@ -637,7 +629,7 @@ export class MainScene extends Phaser.Scene {
         this.boxProgressMs = 0
         this.boxOpenCount = 0
         useGameStore.getState().setRareBoxProgress(0)
-        this.magnetSpawnMs = 0
+        this.magnet.resetSpawnTimer()
         this.syncEntityCount()
 
         // Pending-коробки уже спавнились ДО анимации внутри newContainer
@@ -972,14 +964,6 @@ export class MainScene extends Phaser.Scene {
     this.merge.spawnFloatingText(x, y, text, type)
   }
 
-  private hasMergeablePair(): boolean {
-    return this.merge.hasMergeablePair()
-  }
-
-  private findClosestSameLevelPair() {
-    return this.merge.findClosestSameLevelPair()
-  }
-
   private removeFrog(frog: FrogData) {
     this.spawner.removeFrog(frog)
   }
@@ -998,158 +982,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   // ============== МАГНИТ ==============
-  // findClosestSameLevelPair / hasMergeablePair жили здесь до Phase 21-02
-  // (использовались только Magnet'ом). Сейчас в MergeController; вызываем
-  // через тонкие wrapper'ы выше.
-
-  private spawnMagnet(level: number) {
-    const pair = this.findClosestSameLevelPair()
-    if (!pair) return
-
-    const [a, b] = pair
-
-    // Освобождаем пару от их текущих движений чтобы магнит чисто тянул
-    for (const f of [a, b]) {
-      this.tweens.killTweensOf(f.container)
-      f.isMoving = false
-    }
-
-    const x = (a.container.x + b.container.x) / 2
-    const y = (a.container.y + b.container.y) / 2
-    const duration = getMagnetDuration(level)
-
-    const container = this.add.container(x, y)
-    container.setDepth(99000)
-
-    const emoji = this.add.text(0, 0, '🧲', { fontSize: `${30 * DPR}px` })
-    emoji.setOrigin(0.5)
-    container.add(emoji)
-    container.setScale(0)
-
-    // Pop-in
-    this.tweens.add({
-      targets: container,
-      scale: 1,
-      duration: 200,
-      ease: 'Back.easeOut',
-    })
-
-    // Лёгкая пульсация эмодзи
-    this.tweens.add({
-      targets: emoji,
-      scale: 1.12,
-      duration: 600,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    })
-
-    const magnet: MagnetData = {
-      container,
-      emoji,
-      x,
-      y,
-      expiresAt: Date.now() + duration,
-      pair,
-      mergesDone: 0,
-      mergesTarget: getMagnetMergesPerCycle(level),
-    }
-    this.magnets.push(magnet)
-  }
-
-  private removeMagnet(magnet: MagnetData) {
-    this.magnets = this.magnets.filter((m) => m !== magnet)
-    this.tweens.killTweensOf(magnet.emoji)
-    this.tweens.killTweensOf(magnet.container)
-    this.tweens.add({
-      targets: magnet.container,
-      scale: 0,
-      alpha: 0,
-      duration: 180,
-      ease: 'Power2.easeIn',
-      onComplete: () => magnet.container.destroy(),
-    })
-  }
-
-  private updateMagnets() {
-    const now = Date.now()
-
-    // Сбрасываем флаг притяжения — переустановим у целевой пары
-    for (const f of this.frogs) f.isAttracted = false
-
-    for (const m of [...this.magnets]) {
-      if (now >= m.expiresAt) {
-        this.removeMagnet(m)
-        continue
-      }
-
-      const [a, b] = m.pair
-
-      // Если кто-то из пары уничтожен / в drag / merge — отменяем магнит
-      if (
-        !this.frogs.includes(a) ||
-        !this.frogs.includes(b) ||
-        a.isDragging ||
-        a.isMerging ||
-        b.isDragging ||
-        b.isMerging
-      ) {
-        this.removeMagnet(m)
-        continue
-      }
-
-      // Притягиваем именно эту пару к точке магнита
-      const pull = 0.06
-      a.container.x = Phaser.Math.Linear(a.container.x, m.x, pull)
-      a.container.y = Phaser.Math.Linear(a.container.y, m.y, pull)
-      b.container.x = Phaser.Math.Linear(b.container.x, m.x, pull)
-      b.container.y = Phaser.Math.Linear(b.container.y, m.y, pull)
-      a.isAttracted = true
-      b.isAttracted = true
-
-      // Когда сошлись — мерджим в точке магнита
-      const d = Phaser.Math.Distance.Between(
-        a.container.x,
-        a.container.y,
-        b.container.x,
-        b.container.y,
-      )
-      if (d < MERGE_RADIUS * 0.7) {
-        this.performMerge(a, b, m.x, m.y)
-        m.mergesDone += 1
-
-        if (m.mergesDone >= m.mergesTarget) {
-          this.removeMagnet(m)
-          continue
-        }
-
-        // Ищем следующую пару — если есть, переезжаем магнит к ней
-        const next = this.findClosestSameLevelPair()
-        if (!next) {
-          this.removeMagnet(m)
-          continue
-        }
-        const [na, nb] = next
-        for (const f of [na, nb]) {
-          this.tweens.killTweensOf(f.container)
-          f.isMoving = false
-        }
-        const newX = (na.container.x + nb.container.x) / 2
-        const newY = (na.container.y + nb.container.y) / 2
-        m.pair = next
-        m.x = newX
-        m.y = newY
-        // Плавный полёт магнита к новой паре
-        this.tweens.add({
-          targets: m.container,
-          x: newX,
-          y: newY,
-          duration: 220,
-          ease: 'Power2.easeOut',
-        })
-      }
-    }
-  }
+  // Phase 21-04: вся логика (spawn / update / remove + state) в MagnetController.
 
   // ============== ПОКУПКА ЛЯГУШЕК ==============
 
@@ -1294,28 +1127,18 @@ export class MainScene extends Phaser.Scene {
     const location = getLocationById(store.currentLocation)
     const magnetLevel = store.upgrades.magnet
     const serumPaused = store.serumDragActive
+    // Phase 21-04: магнит — controller'ный tick. Phase 14 (SERUM-06): пока активен
+    // serum-drag, magnet полностью pause'ится (resetSpawnTimer + не tick).
     if (
       !serumPaused &&
       location.magnetEnabled &&
       magnetLevel > 0 &&
       store.magnetEnabled
     ) {
-      this.magnetSpawnMs += delta
-      const spawnInt = getMagnetSpawnInterval(magnetLevel)
-      if (this.magnetSpawnMs >= spawnInt) {
-        if (this.hasMergeablePair() && this.magnets.length === 0) {
-          this.spawnMagnet(magnetLevel)
-          this.magnetSpawnMs = 0
-        } else {
-          // Замираем на 100% и ждём появления пары
-          this.magnetSpawnMs = spawnInt
-        }
-      }
+      this.magnet.tick(magnetLevel, delta)
     } else {
-      this.magnetSpawnMs = 0
+      this.magnet.resetSpawnTimer()
     }
-    // Phase 14: останавливаем активные магниты во время selection.
-    if (!serumPaused && this.magnets.length > 0) this.updateMagnets()
 
     // Depth sort: чем ниже лягушка/коробка, тем она поверх
     for (const frog of this.frogs) {
