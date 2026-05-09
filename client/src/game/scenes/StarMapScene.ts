@@ -165,7 +165,7 @@ export class StarMapScene extends Phaser.Scene {
   // camera.scheduleBoundsUpdate — все внешние call-sites идут через this.camera.
   camera!: CameraController
   // ID выбранной для popover расы (Phaser-popover в той же scene, в world-coords).
-  // Phase 20-04 (Wave 4): package-public — setupControls сбрасывает на тап в пустоту.
+  // Phase 20-04 (Wave 4): package-public — ControlsController сбрасывает на тап в пустоту.
   selectedMainRaceId: string | null = null
   private popover?: Phaser.GameObjects.Container
   // bgNamePopup/bgNamePopupTimer мигрировали в PopoverController (Phase 20-04, Wave 4).
@@ -205,7 +205,7 @@ export class StarMapScene extends Phaser.Scene {
   // Состояние счётчика тапов на каждую планету. Уникальная анимация срабатывает
   // на первом нажатии после смены/перерыва, потом раз в 2-6 нажатий.
   // Phase 20-04 (Wave 4): package-public — PopoverController читает/мутирует,
-  // setupControls сбрасывает currentPressedPlanetId на тап-в-пустоту.
+  // ControlsController сбрасывает currentPressedPlanetId на тап-в-пустоту.
   planetPressState = new Map<string, { count: number; threshold: number }>()
   currentPressedPlanetId: string | null = null
   // Флаг: текущий pointerup перехвачен interactive объектом (планетой/звездой).
