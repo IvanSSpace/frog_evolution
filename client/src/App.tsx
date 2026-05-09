@@ -24,6 +24,7 @@ import {
   getTractorIncomePerSec,
 } from './store/gameStore'
 import type { Element, Rarity } from './store/cosmic/types'
+import { FlightConfirmDialog } from './components/CosmicHub/FlightConfirmDialog'
 import { StabilizationModal } from './components/CosmicHub/StabilizationModal'
 import { MilestoneToast } from './components/CosmicHub/bestiary/MilestoneToast'
 import { TutorialOverlay } from './components/Tutorial/TutorialOverlay'
@@ -219,6 +220,7 @@ function App() {
       <MagnetToggle />
       <StarMapHUD />
       <ShipFollowButton />
+      <FlightFlow />
       <SerumBar />
       <LocationStack />
 
@@ -684,6 +686,36 @@ function MagnetToggle() {
         </span>
       )}
     </button>
+  )
+}
+
+// Подключает confirm-dialog для полётов: слушает cosmic:request-flight событие
+// от StarMapScene (срабатывает при тапе на любую планету), показывает модалку
+// с travel time, на confirm — sendShipTo. Игнорирует тап на текущую planet (no-op).
+function FlightFlow() {
+  const [pending, setPending] = useState<string | null>(null)
+
+  useEffect(() => {
+    const handler = ({ planetId }: { planetId: string }) => {
+      const ship = useGameStore.getState().ship
+      if (ship?.state === 'docked' && ship.planetId === planetId) return
+      setPending(planetId)
+    }
+    eventBus.on('cosmic:request-flight', handler)
+    return () => eventBus.off('cosmic:request-flight', handler)
+  }, [])
+
+  if (!pending) return null
+
+  return (
+    <FlightConfirmDialog
+      toPlanetId={pending}
+      onConfirm={() => {
+        useGameStore.getState().sendShipTo(pending)
+        setPending(null)
+      }}
+      onCancel={() => setPending(null)}
+    />
   )
 }
 
