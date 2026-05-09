@@ -1,5 +1,4 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Header } from './ui/components/Header'
 import { BottomBar } from './ui/components/BottomBar'
@@ -10,12 +9,14 @@ import { DiscoveryModal } from './ui/components/DiscoveryModal'
 import { RareCrateModal } from './ui/components/RareCrateModal'
 import { SettingsModal } from './ui/components/SettingsModal'
 import { LocationStack } from './ui/components/LocationStack'
+import { StarMapHUD } from './ui/components/StarMapHUD'
+import { MagnetToggle } from './ui/components/MagnetToggle'
+import { ShipFollowButton } from './ui/components/ShipFollowButton'
 import { eventBus } from './store/eventBus'
 import { initSfx } from './audio/sfxBootstrap'
 import { initPlanetVoice } from './audio/planetVoice'
 import { authenticate } from './utils/auth'
 import { loadGameState, startSync, stopSync } from './utils/gameSync'
-import { hapticSelection } from './utils/telegram'
 import {
   useGameStore,
   saveSessionTimestamp,
@@ -261,225 +262,6 @@ function App() {
         />
       )}
     </QueryClientProvider>
-  )
-}
-
-// HUD Звёздной карты — координаты, zoom, FPS. DOM-overlay поверх Phaser canvas.
-// Появляется только когда StarMap активен.
-function StarMapHUD() {
-  const [active, setActive] = useState(false)
-  const [data, setData] = useState({
-    x: 0,
-    y: 0,
-    zoom: 1,
-    fps: 60,
-    vis: 0,
-    total: 0,
-  })
-
-  useEffect(() => {
-    const onOpen = () => setActive(true)
-    const onClose = () => setActive(false)
-    eventBus.on('starmap:open', onOpen)
-    eventBus.on('starmap:close', onClose)
-    return () => {
-      eventBus.off('starmap:open', onOpen)
-      eventBus.off('starmap:close', onClose)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!active) return
-    let raf = 0
-    const tick = async () => {
-      const { getStarMapHUD } = await import('./game')
-      const d = getStarMapHUD()
-      if (d) setData(d)
-      raf = requestAnimationFrame(tick)
-    }
-    tick()
-    return () => cancelAnimationFrame(raf)
-  }, [active])
-
-  if (!active) return null
-
-  const fpsColor =
-    data.fps > 50 ? '#86efac' : data.fps > 30 ? '#fde047' : '#fca5a5'
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 6,
-        left: 8,
-        zIndex: 200,
-        pointerEvents: 'none',
-        fontFamily: 'JetBrains Mono, monospace',
-        fontSize: 10,
-        lineHeight: 1.3,
-        color: '#ffd700',
-        textShadow: '0 0 3px rgba(0,0,0,0.95), 0 1px 2px rgba(0,0,0,0.95)',
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
-        WebkitTapHighlightColor: 'transparent',
-        outline: 'none',
-        display: 'flex',
-        gap: 8,
-      }}
-    >
-      <span>X:{data.x}</span>
-      <span>Y:{data.y}</span>
-      <span>Z:{data.zoom.toFixed(2)}</span>
-      <span style={{ color: fpsColor }}>FPS:{Math.round(data.fps)}</span>
-      <span style={{ opacity: 0.7 }}>
-        {data.vis}/{data.total}
-      </span>
-    </div>
-  )
-}
-
-function MagnetToggle() {
-  const { t } = useTranslation()
-  const magnetLevel = useGameStore((s) => s.upgrades.magnet)
-  const magnetEnabled = useGameStore((s) => s.magnetEnabled)
-  const toggleMagnet = useGameStore((s) => s.toggleMagnet)
-  const currentLocation = useGameStore((s) => s.currentLocation)
-  const [starMapActive, setStarMapActive] = useState(false)
-
-  useEffect(() => {
-    const onOpen = () => setStarMapActive(true)
-    const onClose = () => setStarMapActive(false)
-    eventBus.on('starmap:open', onOpen)
-    eventBus.on('starmap:close', onClose)
-    return () => {
-      eventBus.off('starmap:open', onOpen)
-      eventBus.off('starmap:close', onClose)
-    }
-  }, [])
-
-  if (magnetLevel < 1) return null
-  if (currentLocation !== 1) return null
-  if (starMapActive) return null // на Звёздной карте магнит не нужен
-
-  return (
-    <button
-      onClick={() => {
-        hapticSelection()
-        toggleMagnet()
-      }}
-      aria-label={magnetEnabled ? t('magnet.off') : t('magnet.on')}
-      style={{
-        position: 'fixed',
-        top: 'calc(12% + 2px)',
-        left: 12,
-        zIndex: 50,
-        pointerEvents: 'auto',
-        ['--ff-tile-from' as never]: magnetEnabled ? '#fcd34d' : '#9ca3af',
-        ['--ff-tile-to' as never]: magnetEnabled ? '#d97706' : '#4b5563',
-        ['--ff-tile-border' as never]: magnetEnabled ? '#78350f' : '#1f2937',
-        opacity: magnetEnabled ? 1 : 0.7,
-      }}
-      className="ff-tile w-12 h-12 text-2xl"
-    >
-      <span
-        style={{
-          filter: magnetEnabled
-            ? 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))'
-            : 'grayscale(0.7)',
-        }}
-      >
-        🧲
-      </span>
-      {!magnetEnabled && (
-        <span
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#dc2626',
-            fontSize: '32px',
-            fontWeight: 900,
-            textShadow:
-              '0 0 4px rgba(255,255,255,0.85), 0 0 6px rgba(255,255,255,0.6)',
-            pointerEvents: 'none',
-          }}
-        >
-          ⊘
-        </span>
-      )}
-    </button>
-  )
-}
-
-function ShipFollowButton() {
-  const shipState = useGameStore((s) => s.ship?.state)
-  const [following, setFollowing] = useState(false)
-  const [starMapActive, setStarMapActive] = useState(false)
-
-  useEffect(() => {
-    const onOpen = () => setStarMapActive(true)
-    const onClose = () => {
-      setStarMapActive(false)
-      setFollowing(false)
-    }
-    eventBus.on('starmap:open', onOpen)
-    eventBus.on('starmap:close', onClose)
-    return () => {
-      eventBus.off('starmap:open', onOpen)
-      eventBus.off('starmap:close', onClose)
-    }
-  }, [])
-
-  // Scene cancels follow (e.g. drag or ship docked)
-  useEffect(() => {
-    const handler = ({ following: f }: { following: boolean }) =>
-      setFollowing(f)
-    eventBus.on('starmap:follow-changed', handler)
-    return () => eventBus.off('starmap:follow-changed', handler)
-  }, [])
-
-  if (!starMapActive || shipState !== 'transit') return null
-
-  const toggle = () => {
-    const next = !following
-    setFollowing(next)
-    eventBus.emit('starmap:follow-ship', { enable: next })
-  }
-
-  return (
-    <button
-      onClick={toggle}
-      aria-label={following ? 'Отключить слежение' : 'Следовать за кораблём'}
-      style={{
-        position: 'fixed',
-        top: 'calc(12% + 10px)',
-        left: 12,
-        zIndex: 200,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '6px 12px',
-        borderRadius: 20,
-        border: following
-          ? '1.5px solid #34d399'
-          : '1.5px solid rgba(255,255,255,0.25)',
-        background: following ? 'rgba(16,185,129,0.18)' : 'rgba(0,0,0,0.55)',
-        color: following ? '#34d399' : 'rgba(255,255,255,0.7)',
-        fontSize: 12,
-        fontWeight: 600,
-        backdropFilter: 'blur(6px)',
-        WebkitBackdropFilter: 'blur(6px)',
-        cursor: 'pointer',
-        pointerEvents: 'auto',
-        transition: 'all 0.2s',
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
-      }}
-    >
-      <span style={{ fontSize: 14 }}>{following ? '📍' : '🚀'}</span>
-      {following ? 'Следую' : 'Следовать'}
-    </button>
   )
 }
 
