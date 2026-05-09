@@ -5,9 +5,7 @@ import {
   getMagnetSpawnInterval,
   getMagnetDuration,
   getMagnetMergesPerCycle,
-  getCrateLevel,
   getLocationById,
-  getRareBoxThreshold,
 } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
 import {
@@ -15,8 +13,6 @@ import {
   MAX_LEVEL,
   textureKeyForLevel,
   getTargetIncomePerSec,
-  getPoopValueExact,
-  stochasticRound,
   type PoopType,
 } from '../config/frogs'
 import { hapticImpact, hapticNotification } from '../../utils/telegram'
@@ -30,19 +26,12 @@ import type { Element, Rarity } from '../../store/cosmic/types'
 import { devLog } from '../../utils/devLog'
 import {
   BASE_SCALE,
-  BOX_DISPLAY_SIZE,
-  BOX_FALL_DURATION,
-  BOX_IDLE_INTERVAL,
-  BOX_OPEN_RADIUS,
   DPR,
   FIELD_PAD_X,
   FIELD_PAD_Y,
   FIELD_PAD_Y_BOTTOM,
-  MAX_ENTITIES,
   MAX_PENDING_BOXES,
   MERGE_RADIUS,
-  RARE_BOX_SCALE_MULT,
-  RARE_BOX_TINT,
   TEXTURE_QUALITY,
   mapKeyForLocation,
   tintToHex,
@@ -52,6 +41,8 @@ import {
 } from './main/types'
 import { FrogSpawner } from './main/FrogSpawner'
 import { MergeController } from './main/MergeController'
+import { BoxController } from './main/BoxController'
+import { PoopController } from './main/PoopController'
 
 export class MainScene extends Phaser.Scene {
   // Phase 21 (Wave 1+): несколько полей переведены с `private` на package-public,
@@ -62,16 +53,19 @@ export class MainScene extends Phaser.Scene {
   //   frogs, overlayManager, selectionLayer, cachedSerumDragActive,
   //   isLocationTransitioning  — читает FrogSpawner
   frogs: FrogData[] = []
-  private boxes: BoxData[] = []
+  // Phase 21-03 (Wave 3): boxes/boxOpenCount/pendingBoxCount пакеджед-public —
+  // используются BoxController + transition handler.
+  boxes: BoxData[] = []
   private boxProgressMs = 0
-  private boxOpenCount = 0
+  boxOpenCount = 0
   private pendingBoxCount = 0
 
   private magnets: MagnetData[] = []
   private magnetSpawnMs = 0
 
+  // Phase 21-03 (Wave 3): poops package-public — мутируется PoopController.
   // Живые какашки на сцене — трекаем чтобы переносить в oldContainer при переходе локации
-  private poops: Phaser.GameObjects.Image[] = []
+  poops: Phaser.GameObjects.Image[] = []
 
   private prevLocation = 1
   isLocationTransitioning = false
@@ -95,6 +89,12 @@ export class MainScene extends Phaser.Scene {
 
   // Phase 21-02 (Wave 2): merge / feed / carrier-merge в отдельном controller'е.
   private merge!: MergeController
+
+  // Phase 21-03 (Wave 3): box drop / open в отдельном controller'е.
+  private box!: BoxController
+
+  // Phase 21-03 (Wave 3): auto-poop drops в отдельном controller'е.
+  private poop!: PoopController
 
   // Camera всегда на зум 1.0 — без камерных трюков, чтобы canvas не «дёргался»
   // и не было чёрной рамки. Эффект «другого масштаба» полностью отрабатывают
@@ -137,6 +137,9 @@ export class MainScene extends Phaser.Scene {
     this.spawner = new FrogSpawner(this)
     // Phase 21-02 (Wave 2): merge controller — spawner-зависимая (spiralFrogTo/spawnFrog).
     this.merge = new MergeController(this, this.spawner)
+    // Phase 21-03 (Wave 3): box (spawn + open) и poop (auto-drop) controller'ы.
+    this.box = new BoxController(this, this.spawner, this.merge)
+    this.poop = new PoopController(this, this.merge)
 
     // Зум-переход красиво смотрится только если за пределами поля чёрный, а не серый
     this.cameras.main.setBackgroundColor(0x0b1a0b)
@@ -921,71 +924,11 @@ export class MainScene extends Phaser.Scene {
   }
 
   // ============== КАКАШКИ (auto-collect) ==============
+  // Phase 21-03: spawnAutoPoop перенесён в PoopController.
 
-  // Phase 21-01: package-public — вызывается FrogSpawner (poopTimer callback).
+  // Phase 21-01/21-03: package-public — вызывается FrogSpawner (poopTimer callback).
   spawnAutoPoop(frog: FrogData, type: PoopType) {
-    const x = frog.container.x
-    const y = frog.container.y
-    const facingRight = frog.facingRight
-    // Сумма вычисляется по точной цели уровня (target/sec × interval),
-    // округляется стохастически — среднее за время точно матчит target.
-    const value = stochasticRound(getPoopValueExact(frog.level))
-
-    // Размер у всех типов одинаковый, но крупнее базы
-    const finalScale = BASE_SCALE * 1.3
-
-    // Положение приземления какашки — отдельно по X и Y, индекс = уровень-1
-    // horizDistByLevel — насколько далеко по ГОРИЗОНТАЛИ от лягушки (положительное — назад от неё)
-    // vertOffsetByLevel — насколько НИЖЕ центра лягушки приземлится (положительное — вниз, отрицательное — вверх)
-    const horizDistByLevel = [20, 26, 34, 40, 42, 42] // L1..L6
-    const vertOffsetByLevel = [14, 16, 16, 20, 10, 26] // L1..L6
-
-    const horizDist =
-      (horizDistByLevel[Math.min(frog.level - 1, 5)] ?? 28) * DPR
-    const vertOffset =
-      (vertOffsetByLevel[Math.min(frog.level - 1, 5)] ?? 16) * DPR
-
-    const behindX = x + (facingRight ? -10 * DPR : 10 * DPR)
-    const startY = y + 6 * DPR
-    const img = this.add.image(behindX, startY, 'goo')
-    img.setAlpha(0)
-    img.setScale(0.4 * finalScale)
-    this.poops.push(img)
-
-    // Phase 1: какашка появляется сзади и приземляется на (landX, landY)
-    const landX = behindX + (facingRight ? -horizDist : horizDist)
-    const landY = y + vertOffset
-
-    this.tweens.add({
-      targets: img,
-      x: landX,
-      y: landY,
-      alpha: 1,
-      scale: finalScale,
-      duration: 220,
-      ease: 'Power2.easeOut',
-      onComplete: () => {
-        // Какашка статична, медленно тает на месте.
-        // Если стохастический round дал 0 (для совсем малых таргетов) — без денег и цифры,
-        // визуал какашки всё равно показываем.
-        if (value > 0) {
-          useGameStore.getState().addGold(value)
-          eventBus.emit('goo:collected', { value })
-          this.spawnFloatingText(landX, landY - 22 * DPR, `+${value}`, type)
-        }
-
-        this.tweens.add({
-          targets: img,
-          alpha: 0,
-          duration: 1100,
-          ease: 'Sine.easeIn',
-          onComplete: () => {
-            this.poops = this.poops.filter((p) => p !== img)
-            img.destroy()
-          },
-        })
-      },
-    })
+    this.poop.spawnAutoPoop(frog, type)
   }
 
   // spawnFloatingText перенесён в MergeController (Phase 21-02). Внутри MainScene
@@ -1029,10 +972,6 @@ export class MainScene extends Phaser.Scene {
     this.merge.spawnFloatingText(x, y, text, type)
   }
 
-  private flashAt(x: number, y: number) {
-    this.merge.flashAt(x, y)
-  }
-
   private hasMergeablePair(): boolean {
     return this.merge.hasMergeablePair()
   }
@@ -1046,246 +985,16 @@ export class MainScene extends Phaser.Scene {
   }
 
   // ============== БОКС-ДРОПЫ ==============
+  // Phase 21-03: вся box-логика (spawn / land / idle / tap) перенесена в
+  // BoxController. Wrapper'ы canSpawnBox / spawnBox используются в
+  // update()-loop'е и в onLocationChanged (pending-spawn).
 
   private canSpawnBox(): boolean {
-    return this.frogs.length + this.boxes.length < MAX_ENTITIES
+    return this.box.canSpawnBox()
   }
 
   private spawnBox(isRare = false, preLanded = false) {
-    const { width, height } = this.scale
-    const x = Phaser.Math.Between(
-      FIELD_PAD_X + 40 * DPR,
-      width - FIELD_PAD_X - 40 * DPR,
-    )
-    const targetY = Phaser.Math.Between(
-      FIELD_PAD_Y + 40 * DPR,
-      height - FIELD_PAD_Y_BOTTOM - 40 * DPR,
-    )
-
-    // Стартуем выше канваса — коробка просто влетает в кадр без fade.
-    // Если preLanded — стартуем сразу на целевой Y, без анимации падения.
-    const startY = preLanded ? targetY : -BOX_DISPLAY_SIZE
-    const img = this.add.image(x, startY, 'box')
-    img.setDisplaySize(BOX_DISPLAY_SIZE, BOX_DISPLAY_SIZE)
-    img.setDepth(targetY) // сразу высокий depth чтобы не перекрывалось лягушками
-    if (isRare) {
-      img.setTint(RARE_BOX_TINT)
-      img.setDisplaySize(
-        BOX_DISPLAY_SIZE * RARE_BOX_SCALE_MULT,
-        BOX_DISPLAY_SIZE * RARE_BOX_SCALE_MULT,
-      )
-    }
-    const baseScale = img.scaleX
-
-    const box: BoxData = {
-      img,
-      isLanding: !preLanded,
-      baseScale,
-      baseY: targetY,
-      idleTween: null,
-      isRare,
-    }
-    this.boxes.push(box)
-    this.syncEntityCount()
-
-    // Инпут вешаем сразу, во время падения handler игнорирует через isLanding
-    img.setInteractive({ useHandCursor: true })
-    img.on('pointerdown', () => {
-      if (box.isLanding) return
-      hapticImpact('medium')
-      // Открываем тапнутую коробку + все приземлившиеся в радиусе
-      const cx = box.img.x
-      const cy = box.img.y
-      const targets: BoxData[] = []
-      for (const b of this.boxes) {
-        if (b.isLanding) continue
-        const d = Phaser.Math.Distance.Between(cx, cy, b.img.x, b.img.y)
-        if (d <= BOX_OPEN_RADIUS) targets.push(b)
-      }
-      for (const t of targets) this.onBoxTapped(t)
-    })
-
-    if (preLanded) {
-      this.startBoxIdleAnim(box)
-      return
-    }
-
-    this.tweens.add({
-      targets: img,
-      y: targetY,
-      duration: BOX_FALL_DURATION,
-      ease: 'Quad.easeIn',
-      onComplete: () => {
-        // Squash при приземлении
-        this.tweens.add({
-          targets: img,
-          scaleY: baseScale * 0.7,
-          scaleX: baseScale * 1.15,
-          duration: 80,
-          yoyo: true,
-          ease: 'Power2',
-          onComplete: () => {
-            img.scaleX = baseScale
-            img.scaleY = baseScale
-            box.isLanding = false
-            this.startBoxIdleAnim(box)
-          },
-        })
-      },
-    })
-  }
-
-  private startBoxIdleAnim(box: BoxData) {
-    const { baseScale, baseY } = box
-    const jumpHeight = 7 * DPR
-
-    const cycle = () => {
-      if (!box.img.active || !this.boxes.includes(box)) return
-
-      box.idleTween = this.tweens.chain({
-        targets: box.img,
-        tweens: [
-          // Squash перед прыжком: шире, ниже
-          {
-            scaleX: baseScale * 1.12,
-            scaleY: baseScale * 0.88,
-            duration: 100,
-            ease: 'Power2.easeIn',
-          },
-          // Подпрыг + растяжка вверх
-          {
-            scaleX: baseScale * 0.96,
-            scaleY: baseScale * 1.06,
-            y: baseY - jumpHeight,
-            duration: 150,
-            ease: 'Power2.easeOut',
-          },
-          // Приземление: снова squash
-          {
-            scaleX: baseScale * 1.1,
-            scaleY: baseScale * 0.9,
-            y: baseY,
-            duration: 80,
-            ease: 'Power2.easeIn',
-          },
-          // Settle к норме
-          {
-            scaleX: baseScale,
-            scaleY: baseScale,
-            duration: 100,
-            ease: 'Back.easeOut',
-          },
-        ],
-        onComplete: () => {
-          box.idleTween = null
-          this.time.delayedCall(BOX_IDLE_INTERVAL, cycle)
-        },
-      })
-    }
-
-    // Первая пауза перед первым прыжком
-    this.time.delayedCall(BOX_IDLE_INTERVAL, cycle)
-  }
-
-  private onBoxTapped(box: BoxData) {
-    if (box.isLanding) return
-    if (!box.img.active) return
-
-    const x = box.img.x
-    const y = box.img.y
-    const baseScale = box.baseScale
-
-    this.boxes = this.boxes.filter((b) => b !== box)
-    this.syncEntityCount()
-    this.tweens.killTweensOf(box.img)
-    box.idleTween = null
-    box.img.disableInteractive()
-
-    // Коробка увеличивается и исчезает
-    this.tweens.add({
-      targets: box.img,
-      scaleX: baseScale * 1.4,
-      scaleY: baseScale * 1.4,
-      alpha: 0,
-      rotation: 0.4,
-      duration: 220,
-      ease: 'Power2.easeOut',
-      onComplete: () => box.img.destroy(),
-    })
-
-    // Частицы взрыва
-    for (let i = 0; i < 10; i++) {
-      const angle = (i / 10) * Math.PI * 2 + Math.random() * 0.4
-      const dist = (40 + Math.random() * 30) * DPR
-      const p = this.add.circle(x, y, 3 * DPR, 0xc8a572, 0.9)
-      p.setDepth(99998)
-      this.tweens.add({
-        targets: p,
-        x: x + Math.cos(angle) * dist,
-        y: y + Math.sin(angle) * dist + 25 * DPR,
-        alpha: 0,
-        duration: 350,
-        ease: 'Power2.easeOut',
-        onComplete: () => p.destroy(),
-      })
-    }
-
-    // Camera shake + flash
-    this.cameras.main.shake(120, 0.005)
-    this.flashAt(x, y)
-
-    if (box.isRare) {
-      eventBus.emit('rareCrate:opened', {
-        x,
-        y,
-        minLevel: 1,
-        maxLevel: MAX_LEVEL,
-      })
-      return
-    }
-
-    // Считаем открытые обычные боксы → мега-бокс каждые N открытий (только на Болоте)
-    const storeForCount = useGameStore.getState()
-    if (storeForCount.currentLocation === 1) {
-      this.boxOpenCount++
-      const threshold = getRareBoxThreshold(storeForCount.upgrades.rareBoxSpeed)
-      if (this.boxOpenCount >= threshold && this.canSpawnBox()) {
-        this.spawnBox(true)
-        this.boxOpenCount = 0
-        storeForCount.setRareBoxProgress(0)
-      } else {
-        storeForCount.setRareBoxProgress(
-          Math.min(this.boxOpenCount / threshold, 1),
-        )
-      }
-    }
-
-    // Спавн лягушки. На Болоте (loc 1) применяется crateQuality, на других локациях — minLevel.
-    this.time.delayedCall(0, () => {
-      const state = useGameStore.getState()
-      const loc = getLocationById(state.currentLocation)
-      const frogLevel =
-        loc.id === 1 ? getCrateLevel(state.upgrades.crateQuality) : loc.minLevel
-      const newFrog = this.spawnFrog(x, y, frogLevel)
-      state.addFrogToLocation(loc.id, frogLevel)
-      newFrog.container.setScale(0)
-      this.tweens.add({
-        targets: newFrog.container,
-        scale: BASE_SCALE * 1.2,
-        duration: 160,
-        ease: 'Back.easeOut',
-        onComplete: () => {
-          this.tweens.add({
-            targets: newFrog.container,
-            scale: BASE_SCALE,
-            duration: 100,
-            ease: 'Power2.easeOut',
-          })
-        },
-      })
-    })
-
-    // Освободившийся слот подхватит сам update() — не нужно дёргать вручную
+    this.box.spawnBox(isRare, preLanded)
   }
 
   // ============== МАГНИТ ==============
