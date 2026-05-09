@@ -16,6 +16,7 @@ import {
   createSparkleAt,
 } from './starmap/starfield'
 import { CoordinatesHUDController } from './starmap/coordinatesHUD'
+import { CameraController } from './starmap/cameraController'
 import { PopoverController } from './starmap/popovers'
 import { deriveModulations } from '../../audio/planetVoice'
 // 96 comp* импортов и DAILY_CAP/useGameStore — теперь только в popovers.ts
@@ -158,10 +159,10 @@ export class StarMapScene extends Phaser.Scene {
     baseR: number
     circle: Phaser.Geom.Circle
   }> = []
-  // Целевая позиция центра камеры в world coords. Управляем через setCameraCenter().
-  // Phaser scroll выводится из этой позиции через centerOn() каждый раз.
-  private camCenterX = 0
-  private camCenterY = 0
+  // Phase 20-05 (Wave 5): camera target/clamp + hit-area sizing вынесены в CameraController.
+  // camera.camCenterX/Y, camera.setCenter, camera.getMinZoom, camera.updatePlanetHitAreas,
+  // camera.scheduleBoundsUpdate — все внешние call-sites идут через this.camera.
+  camera!: CameraController
   // ID выбранной для popover расы (Phaser-popover в той же scene, в world-coords).
   // Phase 20-04 (Wave 4): package-public — setupControls сбрасывает на тап в пустоту.
   selectedMainRaceId: string | null = null
@@ -364,6 +365,12 @@ export class StarMapScene extends Phaser.Scene {
     // signature space (88+ comp × strict params, миллионы вариантов).
     this.refineTextureSeeds()
 
+    // Phase 20-05 (Wave 5): CameraController — должен быть создан до setCameraCenter
+    // (вызывается ниже на старте + используется ControlsController в setup).
+    // Использует scene.mainPlanetHits (заполняется renderSystem) — обращение только
+    // в updatePlanetHitAreas, который вызывается ПОСЛЕ renderSystem в create().
+    this.camera = new CameraController(this)
+
     // Phase 20-04 (Wave 4): popover/tap orchestration controller — должен быть
     // создан ДО renderSystem, потому что pointerup handlers внутри renderMain/Bg
     // вызывают this.popoverController.{handlePlanetPress,selectSystem,scheduleBgNamePopup}.
@@ -385,8 +392,8 @@ export class StarMapScene extends Phaser.Scene {
     // подстраивается если HOME перемещён в JSON.
     const home = MAIN_RACES.find((r) => r.id === 'home') ?? MAIN_RACES[0]
     this.cameras.main.setZoom(1.0)
-    this.setCameraCenter(home.x, home.y)
-    this.updatePlanetHitAreas()
+    this.camera.setCenter(home.x, home.y)
+    this.camera.updatePlanetHitAreas()
 
     this.setupControls()
 
@@ -401,7 +408,11 @@ export class StarMapScene extends Phaser.Scene {
       const cam = this.cameras.main
       // Плавный zoom-back до 1.0 + центрирование на HOME
       this.tweens.add({
-        targets: { z: cam.zoom, x: this.camCenterX, y: this.camCenterY },
+        targets: {
+          z: cam.zoom,
+          x: this.camera.centerX,
+          y: this.camera.centerY,
+        },
         z: 1.0,
         x: homeRace.x,
         y: homeRace.y,
@@ -410,13 +421,13 @@ export class StarMapScene extends Phaser.Scene {
         onUpdate: (tw) => {
           const t = tw.targets[0] as { x: number; y: number; z: number }
           cam.setZoom(t.z)
-          this.setCameraCenter(t.x, t.y)
+          this.camera.setCenter(t.x, t.y)
           // Hit-areas зависят от zoom — обновляем по ходу tween, иначе после
           // завершения hit-area остаётся гигантской (от прежнего малого zoom).
-          this.scheduleBoundsUpdate()
+          this.camera.scheduleBoundsUpdate()
         },
         onComplete: () => {
-          this.updatePlanetHitAreas() // финальное обновление под точный zoom 1.0
+          this.camera.updatePlanetHitAreas() // финальное обновление под точный zoom 1.0
         },
       })
     })
@@ -465,57 +476,9 @@ export class StarMapScene extends Phaser.Scene {
 
   // setupShipSprite/teardownShipSprite/applyShipState — extracted в './starmap/shipController.ts' (Phase 20-04, Wave 4).
 
-  // Адаптивный hit-area для главных планет — чем сильнее zoom-out,
-  // тем больше зона тапа в мировых координатах (фиксированно ~32px на экране).
-  private updatePlanetHitAreas() {
-    const cam = this.cameras.main
-    const minScreenR = 32 * DPR
-    const minWorldR = minScreenR / cam.zoom
-    for (const h of this.mainPlanetHits) {
-      const newR = Math.max(h.baseR, minWorldR)
-      h.circle.radius = newR
-    }
-  }
-
-  // Минимальный zoom — «cover»: вселенная заполняет экран по длинной оси.
-  // Это исключает появление чёрного пространства за её пределами.
-  private getMinZoom(): number {
-    const cam = this.cameras.main
-    const worldFull = WORLD_SIZE * 2
-    return Math.max(cam.width / worldFull, cam.height / worldFull)
-  }
-
-  // ЕДИНАЯ ТОЧКА управления камерой: все компоненты вызывают это.
-  // Возвращает true если значение упёрлось в границу (для обнуления velocity).
-  private setCameraCenter(
-    targetX: number,
-    targetY: number,
-  ): { hitX: boolean; hitY: boolean } {
-    const cam = this.cameras.main
-    const halfViewW = cam.width / cam.zoom / 2
-    const halfViewH = cam.height / cam.zoom / 2
-    const boundHalfW = Math.max(WORLD_SIZE - halfViewW, 0)
-    const boundHalfH = Math.max(WORLD_SIZE - halfViewH, 0)
-    const clampedX = Math.max(-boundHalfW, Math.min(boundHalfW, targetX))
-    const clampedY = Math.max(-boundHalfH, Math.min(boundHalfH, targetY))
-    const hitX = clampedX !== targetX
-    const hitY = clampedY !== targetY
-    this.camCenterX = clampedX
-    this.camCenterY = clampedY
-    cam.centerOn(clampedX, clampedY)
-    return { hitX, hitY }
-  }
-
-  // Hit-areas обновляются throttled — не критично для визуала
-  private hitAreasScheduled = false
-  private scheduleBoundsUpdate() {
-    if (this.hitAreasScheduled) return
-    this.hitAreasScheduled = true
-    requestAnimationFrame(() => {
-      this.hitAreasScheduled = false
-      this.updatePlanetHitAreas()
-    })
-  }
+  // updatePlanetHitAreas / getMinZoom / setCameraCenter / scheduleBoundsUpdate
+  // — extracted в './starmap/cameraController.ts' (Phase 20-05, Wave 5).
+  // Все вызовы делегируются через this.camera (CameraController instance).
 
   // ============== TEMP DEBUG HUD ==============
   // HUD теперь через React (см. StarMapHUD компонент в App.tsx).
@@ -2820,11 +2783,15 @@ export class StarMapScene extends Phaser.Scene {
         } else {
           const ratio = d / initialPinchDist
           cam.setZoom(
-            Phaser.Math.Clamp(initialZoom * ratio, this.getMinZoom(), 1.8),
+            Phaser.Math.Clamp(
+              initialZoom * ratio,
+              this.camera.getMinZoom(),
+              1.8,
+            ),
           )
           // Re-clamp center после изменения zoom
-          this.setCameraCenter(this.camCenterX, this.camCenterY)
-          this.scheduleBoundsUpdate()
+          this.camera.setCenter(this.camera.centerX, this.camera.centerY)
+          this.camera.scheduleBoundsUpdate()
         }
         velX = 0
         velY = 0
@@ -2833,16 +2800,16 @@ export class StarMapScene extends Phaser.Scene {
         const dy = p.y - lastY
         const now = Date.now()
         const dt = Math.max(1, now - lastMoveTime)
-        // Накопление velocity + движение камеры через единую API setCameraCenter
+        // Накопление velocity + движение камеры через единую API camera.setCenter
         const instantVX = dx / dt
         const instantVY = dy / dt
         velX = velX * 0.6 + instantVX * 0.4
         velY = velY * 0.6 + instantVY * 0.4
         const dxWorld = dx / cam.zoom
         const dyWorld = dy / cam.zoom
-        const result = this.setCameraCenter(
-          this.camCenterX - dxWorld,
-          this.camCenterY - dyWorld,
+        const result = this.camera.setCenter(
+          this.camera.centerX - dxWorld,
+          this.camera.centerY - dyWorld,
         )
         if (result.hitX) velX = 0
         if (result.hitY) velY = 0
@@ -2882,7 +2849,7 @@ export class StarMapScene extends Phaser.Scene {
       if (this.shipController.followingShip && shipSprite) {
         velX = 0
         velY = 0
-        this.setCameraCenter(shipSprite.worldX, shipSprite.worldY)
+        this.camera.setCenter(shipSprite.worldX, shipSprite.worldY)
         return
       }
       // Inertia только когда не идёт активный drag
@@ -2892,9 +2859,9 @@ export class StarMapScene extends Phaser.Scene {
           const cam = this.cameras.main
           const dxWorld = (velX * dt) / cam.zoom
           const dyWorld = (velY * dt) / cam.zoom
-          const result = this.setCameraCenter(
-            this.camCenterX - dxWorld,
-            this.camCenterY - dyWorld,
+          const result = this.camera.setCenter(
+            this.camera.centerX - dxWorld,
+            this.camera.centerY - dyWorld,
           )
           if (result.hitX) velX = 0
           if (result.hitY) velY = 0
@@ -2906,7 +2873,7 @@ export class StarMapScene extends Phaser.Scene {
           velY = 0
           // Жёсткий re-center каждый кадр — гарантия что Phaser не "уехал" сам.
           // Это идемпотентная операция: если уже на месте — ничего не меняет.
-          this.setCameraCenter(this.camCenterX, this.camCenterY)
+          this.camera.setCenter(this.camera.centerX, this.camera.centerY)
         }
       }
     })
@@ -2922,11 +2889,11 @@ export class StarMapScene extends Phaser.Scene {
         const cam = this.cameras.main
         const factor = dy > 0 ? 0.9 : 1.1
         cam.setZoom(
-          Phaser.Math.Clamp(cam.zoom * factor, this.getMinZoom(), 1.8),
+          Phaser.Math.Clamp(cam.zoom * factor, this.camera.getMinZoom(), 1.8),
         )
         // Re-clamp center: пределы изменились с zoom, текущая позиция могла стать невалидной
-        this.setCameraCenter(this.camCenterX, this.camCenterY)
-        this.scheduleBoundsUpdate()
+        this.camera.setCenter(this.camera.centerX, this.camera.centerY)
+        this.camera.scheduleBoundsUpdate()
       },
     )
   }
