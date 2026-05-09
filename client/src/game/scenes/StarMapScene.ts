@@ -3972,10 +3972,9 @@ export class StarMapScene extends Phaser.Scene {
     const shipState = useGameStore.getState().ship
     const isCurrentPlanet =
       shipState?.state === 'docked' && shipState.planetId === sys.id
-    const isInTransit = shipState?.state === 'transit'
     const isAlreadyHeadingHere =
       shipState?.state === 'transit' && shipState.toPlanetId === sys.id
-    const BTN_W = 92 * DPR
+    const BTN_W = 76 * DPR
     const BTN_H = 22 * DPR
     const BTN_Y = h / 2 + 4 + 6 * DPR + BTN_H / 2
 
@@ -4061,16 +4060,10 @@ export class StarMapScene extends Phaser.Scene {
       container.add(btnBg)
       container.add(btnText)
     } else if (!isAlreadyHeadingHere) {
-      // Не текущая planet и не та куда уже летим → показываем кнопку.
-      // Если docked elsewhere → "🚀 Лететь" (зелёная).
-      // Если в полёте к другой planet → "🔀 Перенаправить" (амбер, чтобы было заметно).
-      const isRedirect = isInTransit
-      const fillColor = isRedirect ? 0xd97706 : 0x16a34a
-      const strokeColor = isRedirect ? 0xfbbf24 : 0x4ade80
-      const label = isRedirect ? '🔀 Перенаправить' : '🚀 Лететь'
-
+      // Не текущая planet и не та куда уже летим → показываем кнопку «Лететь».
+      // Работает одинаково: docked → fresh flight, in-transit → redirect (внутри store).
       const btnBg = this.add.graphics()
-      btnBg.fillStyle(fillColor, 1)
+      btnBg.fillStyle(0x16a34a, 1)
       btnBg.fillRoundedRect(
         -BTN_W / 2,
         BTN_Y - BTN_H / 2,
@@ -4078,7 +4071,7 @@ export class StarMapScene extends Phaser.Scene {
         BTN_H,
         5 * DPR,
       )
-      btnBg.lineStyle(1.5 * DPR, strokeColor, 0.7)
+      btnBg.lineStyle(1.5 * DPR, 0x4ade80, 0.7)
       btnBg.strokeRoundedRect(
         -BTN_W / 2,
         BTN_Y - BTN_H / 2,
@@ -4120,7 +4113,7 @@ export class StarMapScene extends Phaser.Scene {
           }
         },
       )
-      const btnText = this.add.text(0, BTN_Y, label, {
+      const btnText = this.add.text(0, BTN_Y, '🚀 Лететь', {
         fontFamily: 'Nunito, system-ui, sans-serif',
         fontSize: `${9 * DPR}px`,
         color: '#ffffff',
