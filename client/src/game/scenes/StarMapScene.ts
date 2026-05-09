@@ -115,6 +115,11 @@ import {
 } from '../effects/anim/shared'
 import type { Race, BgSystem, Archetype, PlanetMapEntry } from './starmap/types'
 import { mulberry32, hashId, effectiveSeed, animRng } from './starmap/helpers'
+import { setupCosmicDust } from './starmap/ambient/cosmicDust'
+import { setupRandomSignals } from './starmap/ambient/randomSignals'
+import { setupTorRing } from './starmap/ambient/torRing'
+import { setupVeranLightning } from './starmap/ambient/veranLightning'
+import { setupRelictMourning } from './starmap/ambient/relictMourning'
 import { devLog, devWarn } from '../../utils/devLog'
 
 // Phaser-сцена Звёздной карты. Запускается рядом с MainScene через scene-manager.
@@ -436,12 +441,16 @@ export class StarMapScene extends Phaser.Scene {
       })
     })
 
-    // Живые анимации (ambient effects)
-    this.setupCosmicDust()
-    this.setupRandomSignals()
-    this.setupTorRing()
-    this.setupVeranLightning()
-    this.setupRelictMourning()
+    // Живые анимации (ambient effects). Вынесены в starmap/ambient/* (Wave 3).
+    setupCosmicDust(this, {
+      worldSize: WORLD_SIZE,
+      seed: SEED,
+      register: (obj, x, y, r) => this.cullableData.push({ obj, x, y, r }),
+    })
+    setupRandomSignals(this, MAIN_RACES)
+    setupTorRing(this, MAIN_RACES, this.systemSprites)
+    setupVeranLightning(this, MAIN_RACES)
+    setupRelictMourning(this, MAIN_RACES)
 
     this.setupCoordinatesHUD()
 
@@ -4461,184 +4470,6 @@ export class StarMapScene extends Phaser.Scene {
         this.scheduleBoundsUpdate()
       },
     )
-  }
-
-  // ============== ЖИВЫЕ АНИМАЦИИ ==============
-
-  private setupCosmicDust() {
-    const dustRng = mulberry32(SEED + 3)
-    // Космическая пыль — каждая частица tween. Снижено с 140.
-    for (let i = 0; i < 50; i++) {
-      const startX = (dustRng() - 0.5) * WORLD_SIZE * 2
-      const startY = (dustRng() - 0.5) * WORLD_SIZE * 2
-      const dx = (dustRng() - 0.5) * 200 * DPR
-      const dy = (dustRng() - 0.5) * 200 * DPR
-      const alpha = 0.2 + dustRng() * 0.4
-      const color = [0xa5f3fc, 0xfde047, 0xc4b5fd, 0xfecaca][
-        Math.floor(dustRng() * 4)
-      ]
-      const dust = this.add.circle(
-        startX,
-        startY,
-        (0.8 + dustRng() * 1.2) * DPR,
-        color,
-        alpha,
-      )
-      dust.setDepth(-50)
-      this.tweens.add({
-        targets: dust,
-        x: startX + dx,
-        y: startY + dy,
-        duration: 18000 + dustRng() * 18000,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut',
-      })
-      // Радиус culling-сферы должен охватывать tween-движение
-      this.cullableData.push({ obj: dust, x: startX, y: startY, r: 300 * DPR })
-    }
-  }
-
-  private setupRandomSignals() {
-    const interactive = MAIN_RACES.filter(
-      (r) => r.id !== 'home' && r.id !== 'relict',
-    )
-    const signal = () => {
-      const race = interactive[Math.floor(Math.random() * interactive.length)]
-      for (let i = 0; i < 3; i++) {
-        this.time.delayedCall(i * 200, () => {
-          const ring = this.add.graphics()
-          ring.lineStyle(2 * DPR, race.color, 0.7)
-          ring.strokeCircle(0, 0, race.size + 10 * DPR)
-          ring.x = race.x
-          ring.y = race.y
-          ring.setDepth(15)
-          this.tweens.add({
-            targets: ring,
-            scale: 2.4,
-            alpha: 0,
-            duration: 1400,
-            ease: 'Quad.easeOut',
-            onComplete: () => ring.destroy(),
-          })
-        })
-      }
-      const tag = this.add.text(race.x, race.y - race.size - 18 * DPR, '📡', {
-        fontSize: 16 * DPR,
-      })
-      tag.setOrigin(0.5)
-      tag.setDepth(70)
-      this.tweens.add({
-        targets: tag,
-        y: race.y - race.size - 36 * DPR,
-        alpha: { from: 1, to: 0 },
-        duration: 1500,
-        onComplete: () => tag.destroy(),
-      })
-    }
-    this.time.addEvent({
-      delay: 6000,
-      loop: true,
-      callback: () => {
-        signal()
-        if (Math.random() < 0.25) this.time.delayedCall(800, signal)
-      },
-    })
-  }
-
-  private setupTorRing() {
-    const tor = this.findRace('tor')
-    if (!tor) return
-    const container = this.systemSprites.get('tor')
-    if (!container) return
-    const ring = this.add.graphics()
-    ring.lineStyle(2 * DPR, 0xfca5a5, 0.6)
-    ring.strokeCircle(0, 0, tor.size + 18 * DPR)
-    ring.lineStyle(1 * DPR, 0xfca5a5, 0.3)
-    ring.strokeCircle(0, 0, tor.size + 24 * DPR)
-    ring.setDepth(5)
-    container.add(ring)
-    this.tweens.add({
-      targets: ring,
-      angle: 360,
-      duration: 18000,
-      repeat: -1,
-      ease: 'Linear',
-    })
-  }
-
-  private setupVeranLightning() {
-    const veran = this.findRace('veran')
-    if (!veran) return
-    const flash = () => {
-      const lightning = this.add.graphics()
-      lightning.lineStyle(2 * DPR, 0xc4b5fd, 1)
-      const numBolts = 3 + Math.floor(Math.random() * 3)
-      for (let i = 0; i < numBolts; i++) {
-        const ang = Math.random() * Math.PI * 2
-        let x = Math.cos(ang) * (veran.size + 6 * DPR)
-        let y = Math.sin(ang) * (veran.size + 6 * DPR)
-        lightning.beginPath()
-        lightning.moveTo(x, y)
-        for (let j = 0; j < 4; j++) {
-          x += Math.cos(ang) * 8 * DPR + (Math.random() - 0.5) * 6 * DPR
-          y += Math.sin(ang) * 8 * DPR + (Math.random() - 0.5) * 6 * DPR
-          lightning.lineTo(x, y)
-        }
-        lightning.strokePath()
-      }
-      lightning.x = veran.x
-      lightning.y = veran.y
-      lightning.setDepth(12)
-      this.tweens.add({
-        targets: lightning,
-        alpha: 0,
-        duration: 250,
-        onComplete: () => lightning.destroy(),
-      })
-    }
-    this.time.addEvent({
-      delay: 4500,
-      loop: true,
-      callback: () => {
-        if (Math.random() < 0.55) {
-          flash()
-          if (Math.random() < 0.4) this.time.delayedCall(120, flash)
-        }
-      },
-    })
-  }
-
-  private setupRelictMourning() {
-    const relict = this.findRace('relict')
-    if (!relict) return
-    this.time.addEvent({
-      delay: 1800,
-      loop: true,
-      callback: () => {
-        const particle = this.add.circle(
-          relict.x + (Math.random() - 0.5) * relict.size,
-          relict.y + relict.size * 0.3,
-          1.5 * DPR,
-          0xa5f3fc,
-          0.7,
-        )
-        particle.setDepth(11)
-        this.tweens.add({
-          targets: particle,
-          y: relict.y - (60 + Math.random() * 30) * DPR,
-          x: particle.x + (Math.random() - 0.5) * 20 * DPR,
-          alpha: 0,
-          duration: 3500,
-          ease: 'Sine.easeOut',
-          onComplete: () => particle.destroy(),
-        })
-      },
-    })
-  }
-
-  private findRace(id: string) {
-    return MAIN_RACES.find((r) => r.id === id)
   }
 
   shutdown() {
