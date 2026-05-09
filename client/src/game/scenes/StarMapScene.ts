@@ -3967,12 +3967,15 @@ export class StarMapScene extends Phaser.Scene {
     container.add(nameText)
     container.add(subText)
 
-    // Кнопка действия под капсулой: «Изучить» если здесь, «Лететь» иначе.
+    // Кнопка действия под капсулой: «Изучить» если здесь, «Лететь» если docked-elsewhere,
+    // «Перенаправить» если в полёте к ДРУГОЙ планете, ничего если уже летим именно сюда.
     const shipState = useGameStore.getState().ship
     const isCurrentPlanet =
       shipState?.state === 'docked' && shipState.planetId === sys.id
     const isInTransit = shipState?.state === 'transit'
-    const BTN_W = 76 * DPR
+    const isAlreadyHeadingHere =
+      shipState?.state === 'transit' && shipState.toPlanetId === sys.id
+    const BTN_W = 92 * DPR
     const BTN_H = 22 * DPR
     const BTN_Y = h / 2 + 4 + 6 * DPR + BTN_H / 2
 
@@ -4057,9 +4060,17 @@ export class StarMapScene extends Phaser.Scene {
       btnText.setOrigin(0.5, 0.5)
       container.add(btnBg)
       container.add(btnText)
-    } else if (!isInTransit) {
+    } else if (!isAlreadyHeadingHere) {
+      // Не текущая planet и не та куда уже летим → показываем кнопку.
+      // Если docked elsewhere → "🚀 Лететь" (зелёная).
+      // Если в полёте к другой planet → "🔀 Перенаправить" (амбер, чтобы было заметно).
+      const isRedirect = isInTransit
+      const fillColor = isRedirect ? 0xd97706 : 0x16a34a
+      const strokeColor = isRedirect ? 0xfbbf24 : 0x4ade80
+      const label = isRedirect ? '🔀 Перенаправить' : '🚀 Лететь'
+
       const btnBg = this.add.graphics()
-      btnBg.fillStyle(0x16a34a, 1)
+      btnBg.fillStyle(fillColor, 1)
       btnBg.fillRoundedRect(
         -BTN_W / 2,
         BTN_Y - BTN_H / 2,
@@ -4067,7 +4078,7 @@ export class StarMapScene extends Phaser.Scene {
         BTN_H,
         5 * DPR,
       )
-      btnBg.lineStyle(1.5 * DPR, 0x4ade80, 0.7)
+      btnBg.lineStyle(1.5 * DPR, strokeColor, 0.7)
       btnBg.strokeRoundedRect(
         -BTN_W / 2,
         BTN_Y - BTN_H / 2,
@@ -4104,11 +4115,12 @@ export class StarMapScene extends Phaser.Scene {
           if (Date.now() - btnDownTime < 400) {
             this.tapHandledThisFrame = true
             this.closeBgNamePopup()
+            // sendShipTo сам обрабатывает redirect (использует latestShipPos)
             useGameStore.getState().sendShipTo(sys.id)
           }
         },
       )
-      const btnText = this.add.text(0, BTN_Y, '🚀 Лететь', {
+      const btnText = this.add.text(0, BTN_Y, label, {
         fontFamily: 'Nunito, system-ui, sans-serif',
         fontSize: `${9 * DPR}px`,
         color: '#ffffff',

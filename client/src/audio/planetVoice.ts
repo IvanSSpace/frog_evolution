@@ -235,11 +235,13 @@ const PROFILES: Record<string, VoiceProfile> = {
     notes: [F, A, C + 12],
     synths: ['drone', 'noise'],
     noiseType: 'pink',
+    gain: 3,
   },
   forge: {
     notes: [C, Eb, G],
     synths: ['membrane', 'noise', 'fm'],
     noiseType: 'white',
+    gain: 3,
   },
   military: {
     notes: [C, C - 12, G - 12],
@@ -250,6 +252,7 @@ const PROFILES: Record<string, VoiceProfile> = {
     notes: [Eb - 12, Bb - 12],
     synths: ['noise', 'drone'],
     noiseType: 'brown',
+    gain: 3,
   },
   crystal_bio: {
     notes: [F + 12, A + 12, C + 24],
@@ -266,6 +269,7 @@ const PROFILES: Record<string, VoiceProfile> = {
     notes: [D, A, D + 12],
     synths: ['drone', 'noise'],
     noiseType: 'pink',
+    gain: 3,
   },
   aquatic: {
     notes: [G, B, D + 12],
@@ -276,15 +280,17 @@ const PROFILES: Record<string, VoiceProfile> = {
     notes: [C - 24, Eb - 12],
     synths: ['drone', 'noise'],
     noiseType: 'brown',
+    gain: 3,
   },
   aerial: {
     notes: [G + 12, B + 12, D + 24],
     synths: ['pluck', 'noise'],
     noiseType: 'white',
+    gain: 2,
   },
 
   // ── BG archetypes ──
-  gas_giant: { notes: [C - 12, G - 12, C], synths: ['drone', 'fm'] },
+  gas_giant: { notes: [C - 12, G - 12, C], synths: ['drone', 'fm'], gain: 3 },
   gas_ringed: {
     notes: [C - 12, G - 12, E + 12, G + 12],
     synths: ['drone', 'bell'],
@@ -295,27 +301,35 @@ const PROFILES: Record<string, VoiceProfile> = {
     notes: [F, A, C + 12],
     synths: ['drone', 'noise'],
     noiseType: 'pink',
+    gain: 3,
   },
-  desert: { notes: [F, C + 12], synths: ['noise', 'drone'], noiseType: 'pink' },
+  desert: {
+    notes: [F, C + 12],
+    synths: ['noise', 'drone'],
+    noiseType: 'pink',
+    gain: 3,
+  },
   lava: {
     notes: [C - 12, Eb - 12],
     synths: ['membrane', 'noise', 'fm'],
     noiseType: 'brown',
+    gain: 3,
   },
   forest: {
     notes: [G, B, D + 12],
     synths: ['pluck', 'noise'],
     noiseType: 'pink',
+    gain: 2,
   },
   mineral: { notes: [C + 12, G + 12], synths: ['bell', 'membrane'], gain: -1 },
-  dead: { notes: [C - 24], synths: ['drone'] },
-  toxic: { notes: [Eb, A], synths: ['drone', 'fm'], detune: 20 },
+  dead: { notes: [C - 24], synths: ['drone'], gain: 3 },
+  toxic: { notes: [Eb, A], synths: ['drone', 'fm'], detune: 20, gain: 3 },
   plasma: {
     notes: [G + 12, D + 24, A + 24],
     synths: ['fm', 'pluck'],
     detune: 15,
   },
-  binary: { notes: [C, F], synths: ['drone', 'fm'] },
+  binary: { notes: [C, F], synths: ['drone', 'fm'], gain: 3 },
 }
 
 function Cs(): number {
