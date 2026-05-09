@@ -14,8 +14,6 @@ import {
   FROG_LEVELS,
   MAX_LEVEL,
   textureKeyForLevel,
-  rollPoopType,
-  POOP_INTERVAL_MS,
   getTargetIncomePerSec,
   getPoopValueExact,
   stochasticRound,
@@ -32,79 +30,39 @@ import { classifyDropTarget } from '../../utils/carrierFeed'
 import i18next from 'i18next'
 import type { Element, Rarity } from '../../store/cosmic/types'
 import { devLog, devWarn } from '../../utils/devLog'
-
-const tintToHex = (cssHex: string): number =>
-  parseInt(cssHex.replace('#', ''), 16)
-
-const mapKeyForLocation = (locId: number): string => {
-  if (locId === 2) return 'map2'
-  if (locId === 3) return 'map3'
-  if (locId === 4) return 'map4'
-  return 'map'
-}
-
-// Игра рендерится в физических пикселях (window * DPR), CSS-зум 1/DPR в game/index.ts
-// Все размеры/координаты ниже задаются в CSS-пикселях, умножение на DPR делается здесь
-const DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 3))
-
-const DASH_RADIUS = 70 * DPR
-const FIELD_PAD_X = 48 * DPR
-const FIELD_PAD_Y = 60 * DPR // верхний отступ от верха канваса
-const FIELD_PAD_Y_BOTTOM = 90 * DPR // нижний отступ — крупнее, чтобы лягушки не уходили слишком вниз
-const MERGE_RADIUS = 50 * DPR
-
-// Бокс-дропы
-const MAX_ENTITIES = 16 // суммарный лимит лягушки + коробки
-const MAX_PENDING_BOXES = 8 // cap «отложенных» коробок при отсутствии на болоте
-const BOX_FALL_DURATION = 380 // длительность падения (быстрее)
-const BOX_DISPLAY_SIZE = 56 * DPR // размер коробки на экране
-const BOX_IDLE_INTERVAL = 5500 // период подпрыгивания
-const BOX_OPEN_RADIUS = 80 * DPR // радиус разлёта тапа — открывает все коробки рядом
-
-// RARE_BOX_INTERVAL_MS теперь динамический (getRareBoxIntervalMs), база 30с
-const RARE_BOX_TINT = 0xffd700
-const RARE_BOX_SCALE_MULT = 1.25
-
-// SVG грузится в физических пикселях (CSS * DPR), плюс +50% для запаса
-const TEXTURE_QUALITY = DPR * 1.5
-const BASE_SCALE = DPR / TEXTURE_QUALITY // = 1/1.5 ≈ 0.667
-
-interface BoxData {
-  img: Phaser.GameObjects.Image
-  isLanding: boolean
-  baseScale: number
-  baseY: number
-  idleTween: Phaser.Tweens.TweenChain | null
-  isRare?: boolean
-}
-
-interface MagnetData {
-  container: Phaser.GameObjects.Container
-  emoji: Phaser.GameObjects.Text
-  x: number
-  y: number
-  expiresAt: number
-  pair: [FrogData, FrogData]
-  mergesDone: number
-  mergesTarget: number
-}
-
-interface FrogData {
-  container: Phaser.GameObjects.Container
-  body: Phaser.GameObjects.Image
-  facingRight: boolean
-  isMoving: boolean
-  isDragging: boolean
-  isMerging: boolean
-  isAttracted: boolean
-  level: number
-  poopTimer: Phaser.Time.TimerEvent | null
-  // Phase 12: stable cross-session id для match с CarrierData.frogId.
-  id: string
-}
+import {
+  BASE_SCALE,
+  BOX_DISPLAY_SIZE,
+  BOX_FALL_DURATION,
+  BOX_IDLE_INTERVAL,
+  BOX_OPEN_RADIUS,
+  DPR,
+  FIELD_PAD_X,
+  FIELD_PAD_Y,
+  FIELD_PAD_Y_BOTTOM,
+  MAX_ENTITIES,
+  MAX_PENDING_BOXES,
+  MERGE_RADIUS,
+  RARE_BOX_SCALE_MULT,
+  RARE_BOX_TINT,
+  TEXTURE_QUALITY,
+  mapKeyForLocation,
+  tintToHex,
+  type BoxData,
+  type FrogData,
+  type MagnetData,
+} from './main/types'
+import { FrogSpawner } from './main/FrogSpawner'
 
 export class MainScene extends Phaser.Scene {
-  private frogs: FrogData[] = []
+  // Phase 21 (Wave 1+): несколько полей переведены с `private` на package-public,
+  // потому что main/FrogSpawner.ts (и далее main/MergeController, main/BoxController…)
+  // читают/мутируют их напрямую. TS не имеет `friend`/`internal`, поэтому это
+  // эквивалент package-private — поля не должны использоваться вне scenes/main/*.
+  //
+  //   frogs, overlayManager, selectionLayer, cachedSerumDragActive,
+  //   isLocationTransitioning  — читает FrogSpawner
+  frogs: FrogData[] = []
   private boxes: BoxData[] = []
   private boxProgressMs = 0
   private boxOpenCount = 0
@@ -117,21 +75,24 @@ export class MainScene extends Phaser.Scene {
   private poops: Phaser.GameObjects.Image[] = []
 
   private prevLocation = 1
-  private isLocationTransitioning = false
+  isLocationTransitioning = false
   private bg!: Phaser.GameObjects.Image
   // Аккумулятор для фонового дохода с лягушек неактивных локаций
   // (на текущей локации монеты приходят через настоящие какашки visible-лягушек)
   private bgIncomeAccum = 0
 
   // Phase 12: overlay manager для carrier-лягушек.
-  private overlayManager: FrogOverlayManager | null = null
+  overlayManager: FrogOverlayManager | null = null
 
   // Phase 14: serum selection layer (зелёные halo + red flash).
-  private selectionLayer: SerumSelectionLayer | null = null
+  selectionLayer: SerumSelectionLayer | null = null
   private unsubSerum: (() => void) | null = null
-  private cachedSerumDragActive = false
+  cachedSerumDragActive = false
   // Phase 14: SERUM-11 desktop drag — haptic-rate-limit на hover eligible.
   private lastHaptiHover = false
+
+  // Phase 21-01 (Wave 1): frog spawn / motion / lifecycle в отдельном controller'е.
+  private spawner!: FrogSpawner
 
   // Camera всегда на зум 1.0 — без камерных трюков, чтобы canvas не «дёргался»
   // и не было чёрной рамки. Эффект «другого масштаба» полностью отрабатывают
@@ -169,6 +130,9 @@ export class MainScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale
+
+    // Phase 21-01 (Wave 1): инициализируем spawner до первого spawnLocationFrogs.
+    this.spawner = new FrogSpawner(this)
 
     // Зум-переход красиво смотрится только если за пределами поля чёрный, а не серый
     this.cameras.main.setBackgroundColor(0x0b1a0b)
@@ -328,53 +292,14 @@ export class MainScene extends Phaser.Scene {
     return { x, y }
   }
 
-  // Спавнит лягушек текущей локации из store на хаотичных позициях
+  // Phase 21-01: тонкий wrapper над FrogSpawner — оставлен для совместимости
+  // с существующими call-site внутри MainScene (create, onLocationChanged).
   private spawnLocationFrogs() {
-    const state = useGameStore.getState()
-    const locId = state.currentLocation
-    const levels = state.locationFrogs[locId - 1] ?? []
-    if (levels.length === 0) return
-    levels.forEach((lvl) => {
-      const { x, y } = this.randomFieldPos()
-      this.spawnFrog(x, y, lvl)
-    })
+    this.spawner.spawnLocationFrogs()
   }
 
-  /**
-   * После спавна лягушек — перепривязывает CarrierData.frogId к живым лягушкам.
-   * Нужно при перезагрузке страницы: старые session-only frogId стали невалидны,
-   * но carrier.level совпадает с уровнем лягушки → матчим по уровню.
-   */
   private rebindCarriers(): void {
-    const carriers = useGameStore.getState().carriers
-    if (carriers.length === 0) return
-    const liveFrogIds = new Set(this.frogs.map((f) => f.id))
-    const staleCarriers = carriers.filter((c) => !liveFrogIds.has(c.frogId))
-    if (staleCarriers.length === 0) return
-
-    // Build set of already-bound frog IDs to avoid double-binding
-    const boundIds = new Set(
-      carriers.filter((c) => liveFrogIds.has(c.frogId)).map((c) => c.frogId),
-    )
-
-    const updated = carriers.map((c) => {
-      if (liveFrogIds.has(c.frogId)) return c
-      const carrierLevel = c.level ?? 1
-      // Normal: match by level. Debug carriers (frogId='debug:el:loc'): any free frog.
-      const match =
-        this.frogs.find(
-          (f) => f.level === carrierLevel && !boundIds.has(f.id),
-        ) ??
-        (c.frogId.startsWith('debug:')
-          ? this.frogs.find((f) => !boundIds.has(f.id))
-          : undefined)
-      if (!match) return c
-      boundIds.add(match.id)
-      return { ...c, frogId: match.id }
-    })
-
-    useGameStore.setState({ carriers: updated })
-    this.overlayManager?.markDirty()
+    this.spawner.rebindCarriers()
   }
 
   // Полная очистка поля при смене локации
@@ -717,350 +642,20 @@ export class MainScene extends Phaser.Scene {
     })
   }
 
+  // Phase 21-01: spawnFrog/idle/dash/scheduleNext перенесены в FrogSpawner.
+  // Эти thin-wrapper'ы оставлены для существующих внутренних call-site
+  // (onFrogPurchased, rareCrate handler, performMerge spawn-after-vortex,
+  // performFeed spawn newFrog, performCarrierMerge, onBoxTapped, debugSpawnAllCarriers).
   private spawnFrog(x: number, y: number, level: number = 1): FrogData {
-    const container = this.add.container(x, y)
-    container.setScale(BASE_SCALE)
-
-    const body = this.add.image(0, 0, textureKeyForLevel(level))
-    body.scaleY = 1.0
-    body.setTint(FROG_LEVELS[level - 1].tint)
-    body.setInteractive({ useHandCursor: true })
-    this.input.setDraggable(body)
-
-    container.add(body)
-
-    const frog: FrogData = {
-      container,
-      body,
-      facingRight: true,
-      isMoving: false,
-      isDragging: false,
-      isMerging: false,
-      isAttracted: false,
-      level,
-      poopTimer: null,
-      // Phase 12: stable id для match с CarrierData.frogId.
-      id: `frog-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
-    }
-    this.frogs.push(frog)
-    this.syncEntityCount()
-    // Phase 12: новая лягушка может быть carrier — сообщаем manager пере-проверить.
-    this.overlayManager?.markDirty()
-    // Phase 14: если selection active — пере-вычислить eligible set
-    // (новая лягушка может или не может быть eligible).
-    if (this.cachedSerumDragActive) {
-      const state = useGameStore.getState()
-      if (state.serumDragActive && state.selectedSerum) {
-        const sel = state.selectedSerum
-        const eligible = this.frogs.filter((f) =>
-          isEligible(
-            { id: f.id, level: f.level },
-            sel.element,
-            sel.rarity,
-            state.carriers,
-          ),
-        )
-        this.selectionLayer?.show(
-          eligible.map((f) => ({
-            id: f.id,
-            container: f.container,
-            body: f.body,
-          })),
-          tintToHex(ELEMENT_TINT[sel.element]),
-        )
-      }
-    }
-
-    // Лягушка какает по своему таймеру 1.7с — независимо от прыжка/драга
-    // startAt со случайным смещением — чтобы лягушки какали вразнобой, а не синхронно
-    frog.poopTimer = this.time.addEvent({
-      delay: POOP_INTERVAL_MS,
-      startAt: Math.random() * POOP_INTERVAL_MS,
-      loop: true,
-      callback: () => {
-        if (frog.isMerging) return
-        const type = rollPoopType(frog.level)
-        this.spawnAutoPoop(frog, type)
-        // Лёгкое сжатие тела на каждый пук (поверх idle, не блокирует)
-        this.tweens.add({
-          targets: frog.body,
-          scaleY: 0.85,
-          duration: 70,
-          yoyo: true,
-          ease: 'Power2.easeIn',
-        })
-      },
-    })
-
-    let dragMoved = false
-    let dragStartX = 0
-    let dragStartY = 0
-    let prevDragX = 0
-
-    body.on('dragstart', (pointer: Phaser.Input.Pointer) => {
-      dragStartX = pointer.x
-      dragStartY = pointer.y
-      prevDragX = pointer.x
-      dragMoved = false
-      this.tweens.killTweensOf(frog.container)
-      this.tweens.killTweensOf(frog.body)
-      frog.isMoving = true
-      frog.isDragging = true
-      frog.container.setDepth(99999)
-
-      eventBus.emit('frog:pickup', { level: frog.level })
-
-      // Pickup: быстро 0.8 → вернуть на 1.0
-      this.tweens.add({
-        targets: frog.body,
-        scaleY: 0.8,
-        duration: 60,
-        ease: 'Power2.easeIn',
-        onComplete: () => {
-          this.tweens.add({
-            targets: frog.body,
-            scaleY: 1.0,
-            duration: 120,
-            ease: 'Power2.easeOut',
-          })
-        },
-      })
-
-      // Какание идёт по своему таймеру (frog.poopTimer) — драг его не блокирует
-    })
-
-    body.on('drag', (pointer: Phaser.Input.Pointer) => {
-      if (
-        Phaser.Math.Distance.Between(
-          dragStartX,
-          dragStartY,
-          pointer.x,
-          pointer.y,
-        ) > 8
-      ) {
-        dragMoved = true
-      }
-
-      const dx = pointer.x - prevDragX
-      if (Math.abs(dx) > 2) {
-        const movingRight = dx > 0
-        if (movingRight !== frog.facingRight) {
-          frog.container.scaleX = (movingRight ? 1 : -1) * BASE_SCALE
-          frog.facingRight = movingRight
-        }
-      }
-      prevDragX = pointer.x
-
-      frog.container.x = pointer.x
-      frog.container.y = pointer.y
-      frog.body.x = 0
-      frog.body.y = 0
-    })
-
-    body.on('dragend', (pointer: Phaser.Input.Pointer) => {
-      frog.isDragging = false
-
-      // Phase 14 (SERUM-06): drop-merge заблокирован во время serum selection.
-      // Tap-as-drag-end остаётся (handler ниже route'ит через onFrogTapped → handleSerumTap).
-      const serumActive = useGameStore.getState().serumDragActive
-
-      // Сначала проверяем мердж в позиции отпускания пальца
-      if (!serumActive && frog.level < MAX_LEVEL) {
-        const target = this.findMergeTarget(
-          pointer.x,
-          pointer.y,
-          frog.level,
-          frog,
-        )
-        if (target) {
-          eventBus.emit('frog:drop', { level: frog.level, merged: true })
-          this.performMerge(frog, target, pointer.x, pointer.y)
-          return
-        }
-      }
-
-      if (!dragMoved) {
-        this.onFrogTapped(frog, pointer.x, pointer.y)
-        return
-      }
-
-      eventBus.emit('frog:drop', { level: frog.level, merged: false })
-
-      // Если отпустил за полем — плавно тянем обратно к ближайшей валидной точке
-      const margin = 20 * DPR
-      const { width, height } = this.scale
-      const minX = FIELD_PAD_X + margin
-      const maxX = width - FIELD_PAD_X - margin
-      const minY = FIELD_PAD_Y + margin
-      const maxY = height - FIELD_PAD_Y_BOTTOM - margin
-      const clampedX = Phaser.Math.Clamp(frog.container.x, minX, maxX)
-      const clampedY = Phaser.Math.Clamp(frog.container.y, minY, maxY)
-      const outOfBounds =
-        clampedX !== frog.container.x || clampedY !== frog.container.y
-
-      const playDropSquish = () => {
-        this.tweens.killTweensOf(frog.body)
-        this.tweens.add({
-          targets: frog.body,
-          scaleY: 0.8,
-          duration: 70,
-          ease: 'Power2.easeIn',
-          onComplete: () => {
-            this.tweens.add({
-              targets: frog.body,
-              scaleY: 1.0,
-              duration: 220,
-              ease: 'Back.easeOut',
-              onComplete: () => {
-                frog.isMoving = false
-                this.startIdleAnim(frog)
-                this.scheduleNextDash(frog)
-              },
-            })
-          },
-        })
-      }
-
-      if (outOfBounds) {
-        // Плавно подтягиваем к границе, потом drop squish
-        this.tweens.add({
-          targets: frog.container,
-          x: clampedX,
-          y: clampedY,
-          duration: 280,
-          ease: 'Power2.easeOut',
-          onComplete: playDropSquish,
-        })
-      } else {
-        playDropSquish()
-      }
-    })
-
-    this.startIdleAnim(frog)
-    this.scheduleNextDash(frog)
-
-    return frog
+    return this.spawner.spawnFrog(x, y, level)
   }
 
   private startIdleAnim(frog: FrogData) {
-    this.tweens.add({
-      targets: frog.body,
-      scaleY: 0.92,
-      duration: 700,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    })
+    this.spawner.startIdleAnim(frog)
   }
 
-  private scheduleNextDash(frog: FrogData) {
-    this.time.addEvent({
-      delay: Phaser.Math.Between(2000, 4000),
-      callback: () => this.performDash(frog),
-    })
-  }
-
-  private performDash(frog: FrogData) {
-    if (frog.isMerging) return
-    // Во время перехода между локациями — замораживаем, перепланируем после
-    if (this.isLocationTransitioning) {
-      this.scheduleNextDash(frog)
-      return
-    }
-    if (frog.isAttracted) {
-      this.scheduleNextDash(frog)
-      return
-    }
-    if (frog.isMoving) {
-      this.scheduleNextDash(frog)
-      return
-    }
-
-    const { width, height } = this.scale
-    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2)
-    const dist = Phaser.Math.FloatBetween(40 * DPR, DASH_RADIUS)
-
-    const fromX = frog.container.x
-    const fromY = frog.container.y
-    const toX = Phaser.Math.Clamp(
-      fromX + Math.cos(angle) * dist,
-      FIELD_PAD_X + 10 * DPR,
-      width - FIELD_PAD_X - 10 * DPR,
-    )
-    const toY = Phaser.Math.Clamp(
-      fromY + Math.sin(angle) * dist,
-      FIELD_PAD_Y + 10 * DPR,
-      height - FIELD_PAD_Y_BOTTOM - 10 * DPR,
-    )
-
-    const movingRight = toX >= fromX
-    if (movingRight !== frog.facingRight) {
-      frog.container.scaleX = (movingRight ? 1 : -1) * BASE_SCALE
-      frog.facingRight = movingRight
-    }
-
-    frog.isMoving = true
-    this.tweens.killTweensOf(frog.body)
-
-    // Какашки идут по своему таймеру (frog.poopTimer), независимо от прыжка
-
-    // Короткая пауза перед прыжком
-    this.time.delayedCall(350, () => {
-      // Лягушку взяли пока шла пауза — отменяем прыжок
-      if (frog.isDragging) {
-        frog.isMoving = false
-        return
-      }
-
-      // Stretch during dash
-      this.tweens.add({
-        targets: frog.body,
-        scaleY: 1.2,
-        duration: 120,
-        ease: 'Power2.easeOut',
-      })
-
-      // Move to target
-      this.tweens.add({
-        targets: frog.container,
-        x: toX,
-        y: toY,
-        duration: 200,
-        ease: 'Power2.easeOut',
-        onComplete: () => {
-          if (frog.isDragging) return
-
-          this.tweens.killTweensOf(frog.body)
-
-          // Landing squish → settle
-          this.tweens.add({
-            targets: frog.body,
-            scaleY: 0.8,
-            duration: 80,
-            ease: 'Power2.easeIn',
-            onComplete: () => {
-              if (frog.isDragging) return
-
-              this.tweens.add({
-                targets: frog.body,
-                scaleY: 1.0,
-                duration: 180,
-                ease: 'Back.easeOut',
-                onComplete: () => {
-                  if (frog.isDragging) return
-                  frog.isMoving = false
-                  this.startIdleAnim(frog)
-                  this.scheduleNextDash(frog)
-                },
-              })
-            },
-          })
-        },
-      })
-    })
-  }
-
-  private onFrogTapped(
+  // Phase 21-01: package-public — вызывается FrogSpawner (dragend handler).
+  onFrogTapped(
     frog: FrogData,
     tapX: number = frog.container.x,
     tapY: number = frog.container.y,
@@ -1323,7 +918,8 @@ export class MainScene extends Phaser.Scene {
 
   // ============== КАКАШКИ (auto-collect) ==============
 
-  private spawnAutoPoop(frog: FrogData, type: PoopType) {
+  // Phase 21-01: package-public — вызывается FrogSpawner (poopTimer callback).
+  spawnAutoPoop(frog: FrogData, type: PoopType) {
     const x = frog.container.x
     const y = frog.container.y
     const facingRight = frog.facingRight
@@ -1425,7 +1021,8 @@ export class MainScene extends Phaser.Scene {
 
   // ============== МЕРДЖ ==============
 
-  private findMergeTarget(
+  // Phase 21-01: package-public — используется FrogSpawner (dragend handler).
+  findMergeTarget(
     x: number,
     y: number,
     level: number,
@@ -1451,7 +1048,8 @@ export class MainScene extends Phaser.Scene {
     return best
   }
 
-  private performMerge(a: FrogData, b: FrogData, cx: number, cy: number) {
+  // Phase 21-01: package-public — вызывается FrogSpawner (dragend handler).
+  performMerge(a: FrogData, b: FrogData, cx: number, cy: number) {
     // Phase 17 (CARRIER-03/10): classify drop target before vortex.
     const carriers = useGameStore.getState().carriers
     const cls = classifyDropTarget(
@@ -1917,36 +1515,7 @@ export class MainScene extends Phaser.Scene {
     cy: number,
     duration: number,
   ) {
-    const startX = frog.container.x
-    const startY = frog.container.y
-    const startAngle = Math.atan2(startY - cy, startX - cx)
-    const startRadius = Math.max(
-      Phaser.Math.Distance.Between(startX, startY, cx, cy),
-      1,
-    )
-
-    const obj = { p: 0 }
-    this.tweens.add({
-      targets: obj,
-      p: 1,
-      duration,
-      ease: 'Power2.easeIn',
-      onUpdate: () => {
-        const a = startAngle + obj.p * Math.PI * 4 // 2 полных оборота
-        const r = startRadius * (1 - obj.p)
-        frog.container.x = cx + Math.cos(a) * r
-        frog.container.y = cy + Math.sin(a) * r
-      },
-    })
-
-    // Вращение вокруг своей оси и схлопывание
-    this.tweens.add({
-      targets: frog.container,
-      rotation: Math.PI * 4,
-      scale: 0,
-      duration,
-      ease: 'Power2.easeIn',
-    })
+    this.spawner.spiralFrogTo(frog, cx, cy, duration)
   }
 
   private spawnVortexParticles(cx: number, cy: number, duration: number) {
@@ -1992,12 +1561,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private removeFrog(frog: FrogData) {
-    this.frogs = this.frogs.filter((f) => f !== frog)
-    frog.poopTimer?.remove()
-    frog.poopTimer = null
-    this.overlayManager?.releaseForFrog(frog.id)
-    frog.container.destroy()
-    this.syncEntityCount()
+    this.spawner.removeFrog(frog)
   }
 
   // ============== БОКС-ДРОПЫ ==============
@@ -2480,7 +2044,8 @@ export class MainScene extends Phaser.Scene {
     })
   }
 
-  private syncEntityCount() {
+  // Phase 21-01: package-public — вызывается FrogSpawner (after spawn/remove).
+  syncEntityCount() {
     useGameStore
       .getState()
       .setEntityCount(this.frogs.length + this.boxes.length)
