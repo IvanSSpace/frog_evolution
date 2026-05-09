@@ -53,6 +53,27 @@ import {
   compDNAHelix,
   compLensFlare,
   compConstellation,
+  // Group G — Phase 20-02
+  compMagneticField,
+  compPhoenixBurst,
+  compWormhole,
+  compCosmicRay,
+  compQuantumSplit,
+  compHeartPulse,
+  compCrackleDischarge,
+  compPixelGrid,
+  compSpiralArms,
+  compCrystalGrow,
+  compSnowDrift,
+  compGalaxySpawn,
+  compPulseHex,
+  compTornado,
+  compStarPolygon,
+  compCrossFlash,
+  compWaveTrain,
+  compPetalStorm,
+  compSnakeTrail,
+  compBubblePop,
 } from '../effects/anim/shared'
 import type { Race, BgSystem, Archetype, PlanetMapEntry } from './starmap/types'
 import {
@@ -1434,67 +1455,67 @@ export class StarMapScene extends Phaser.Scene {
         compConstellation(this, sprite, sys, rng)
         break
       case 32:
-        this.compMagneticField(sprite, sys, rng)
+        compMagneticField(this, sprite, sys, rng)
         break
       case 33:
-        this.compPhoenixBurst(sprite, sys, rng)
+        compPhoenixBurst(this, sprite, sys, rng)
         break
       case 34:
-        this.compWormhole(sprite, sys, rng)
+        compWormhole(this, sprite, sys, rng)
         break
       case 35:
-        this.compCosmicRay(sprite, sys, rng)
+        compCosmicRay(this, sprite, sys, rng)
         break
       case 36:
-        this.compQuantumSplit(sprite, sys, rng)
+        compQuantumSplit(this, sprite, sys, rng)
         break
       case 37:
-        this.compHeartPulse(sprite, sys, rng)
+        compHeartPulse(this, sprite, sys, rng)
         break
       case 38:
-        this.compCrackleDischarge(sprite, sys, rng)
+        compCrackleDischarge(this, sprite, sys, rng)
         break
       case 39:
-        this.compPixelGrid(sprite, sys, rng)
+        compPixelGrid(this, sprite, sys, rng)
         break
       case 40:
-        this.compSpiralArms(sprite, sys, rng)
+        compSpiralArms(this, sprite, sys, rng)
         break
       case 41:
-        this.compCrystalGrow(sprite, sys, rng)
+        compCrystalGrow(this, sprite, sys, rng)
         break
       case 42:
-        this.compSnowDrift(sprite, sys, rng)
+        compSnowDrift(this, sprite, sys, rng)
         break
       case 43:
-        this.compGalaxySpawn(sprite, sys, rng)
+        compGalaxySpawn(this, sprite, sys, rng)
         break
       case 44:
-        this.compPulseHex(sprite, sys, rng)
+        compPulseHex(this, sprite, sys, rng)
         break
       case 45:
-        this.compTornado(sprite, sys, rng)
+        compTornado(this, sprite, sys, rng)
         break
       case 46:
-        this.compStarPolygon(sprite, sys, rng)
+        compStarPolygon(this, sprite, sys, rng)
         break
       case 47:
-        this.compCrossFlash(sprite, sys, rng)
+        compCrossFlash(this, sprite, sys, rng)
         break
       case 48:
-        this.compWaveTrain(sprite, sys, rng)
+        compWaveTrain(this, sprite, sys, rng)
         break
       case 49:
-        this.compPetalStorm(sprite, sys, rng)
+        compPetalStorm(this, sprite, sys, rng)
         break
       case 50:
         compFlameTongues(this, sprite, sys, rng)
         break
       case 51:
-        this.compSnakeTrail(sprite, sys, rng)
+        compSnakeTrail(this, sprite, sys, rng)
         break
       case 52:
-        this.compBubblePop(sprite, sys, rng)
+        compBubblePop(this, sprite, sys, rng)
         break
       case 53:
         compChromaShift(this, sprite, sys, rng)
@@ -1781,805 +1802,31 @@ export class StarMapScene extends Phaser.Scene {
   // 30. compLensFlare — extracted в effects/anim/shared/compLensFlare.ts (Phase 20-02).
   // 31. compConstellation — extracted в effects/anim/shared/compConstellation.ts (Phase 20-02).
 
-  // 32. Magnetic field — кривые из «полюсов» планеты
-  private compMagneticField(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const lines = this.add.graphics()
-    const color = this.pickColor(rng, sys)
-    const accent = this.pickColor(rng, sys)
-    const polarAng = rng() * Math.PI * 2
-    const arcs = 4 + Math.floor(rng() * 3)
-    for (let i = 0; i < arcs; i++) {
-      const offset = (i / (arcs - 1) - 0.5) * Math.PI * 0.6
-      const span = sys.size * (1.3 + i * 0.18)
-      // Bezier-like curve через 3 точки симметрично
-      const cosP = Math.cos(polarAng),
-        sinP = Math.sin(polarAng)
-      const x0 = cosP * sys.size,
-        y0 = sinP * sys.size
-      const x1 = cosP * span + sinP * span * (i % 2 === 0 ? 1 : -1) * 0.5
-      const y1 = sinP * span - cosP * span * (i % 2 === 0 ? 1 : -1) * 0.5
-      const x2 = -x0,
-        y2 = -y0
-      lines.lineStyle(
-        (0.8 + rng()) * DPR,
-        i % 2 === 0 ? color : accent,
-        0.6 + rng() * 0.3,
-      )
-      // approximation as 12 segments
-      const segs = 12
-      let px = x0,
-        py = y0
-      for (let s = 1; s <= segs; s++) {
-        const t = s / segs
-        // quadratic bezier
-        const u = 1 - t
-        const xx = u * u * x0 + 2 * u * t * x1 + t * t * x2
-        const yy = u * u * y0 + 2 * u * t * y1 + t * t * y2
-        lines.lineBetween(px, py, xx, yy)
-        px = xx
-        py = yy
-      }
-      void offset
-    }
-    sprite.add(lines)
-    this.tweens.add({
-      targets: lines,
-      alpha: 0,
-      scaleX: 1.3,
-      scaleY: 1.3,
-      duration: 600 + rng() * 250,
-      ease: 'Cubic.easeOut',
-      onComplete: () => lines.destroy(),
-    })
-  }
+  // 32. compMagneticField — extracted в effects/anim/shared/compMagneticField.ts (Phase 20-02).
 
-  // 33. Phoenix burst — искры взлетают и догорают (огненный фонтан)
-  private compPhoenixBurst(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const N = 14 + Math.floor(rng() * 8)
-    const fanCenter = -Math.PI / 2 + (rng() - 0.5) * 0.4
-    const fanWidth = 1.0 + rng() * 0.6
-    const dur = 700 + rng() * 250
-    for (let i = 0; i < N; i++) {
-      const ang = fanCenter + (rng() - 0.5) * fanWidth
-      const speed = sys.size * (1.5 + rng() * 0.8)
-      const color = this.pickColor(rng, sys)
-      const dot = this.add.circle(0, 0, (1.5 + rng() * 1.5) * DPR, color, 1)
-      sprite.add(dot)
-      const vx = Math.cos(ang) * speed
-      const vy = Math.sin(ang) * speed
-      const g = sys.size * 2.5
-      const startTime = this.time.now
-      const update = () => {
-        if (!dot.active) {
-          this.events.off('update', update)
-          return
-        }
-        const t = (this.time.now - startTime) / dur
-        if (t >= 1) {
-          dot.destroy()
-          this.events.off('update', update)
-          return
-        }
-        dot.x = vx * t
-        dot.y = vy * t + 0.5 * g * t * t
-        // догорает: смещение цвета через alpha + scale
-        dot.alpha = 1 - t * 0.95
-        dot.scale = 1 - t * 0.5
-      }
-      this.events.on('update', update)
-    }
-  }
-
-  // 34. Wormhole — концентрические уменьшающиеся кольца (туннель)
-  private compWormhole(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const rings = 5
-    const baseColor = this.pickColor(rng, sys)
-    const accent = this.pickColor(rng, sys)
-    for (let i = 0; i < rings; i++) {
-      this.time.delayedCall(i * 70, () => {
-        if (!sprite.active) return
-        const ring = this.add.graphics()
-        const c = i % 2 === 0 ? baseColor : accent
-        ring.lineStyle((1.5 + rng() * 1.5) * DPR, c, 0.85 - i * 0.1)
-        ring.strokeCircle(0, 0, sys.size * (2.2 - i * 0.2))
-        sprite.add(ring)
-        this.tweens.add({
-          targets: ring,
-          scaleX: 0.1,
-          scaleY: 0.1,
-          alpha: 0,
-          duration: 600,
-          ease: 'Cubic.easeIn',
-          onComplete: () => ring.destroy(),
-        })
-      })
-    }
-  }
-
-  // 35. Cosmic ray — длинная прямая линия с свечением, проходит мимо
-  private compCosmicRay(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const ang = rng() * Math.PI * 2
-    const reach = sys.size * (3.5 + rng())
-    const sx = Math.cos(ang) * -reach
-    const sy = Math.sin(ang) * -reach
-    const ex = Math.cos(ang) * reach
-    const ey = Math.sin(ang) * reach
-    const color = this.pickColor(rng, sys)
-    const w = (2 + rng() * 2) * DPR
-    const ray = this.add.graphics()
-    ray.lineStyle(w, color, 0.7)
-    ray.lineBetween(sx, sy, ex, ey)
-    ray.lineStyle(w * 0.5, 0xffffff, 1)
-    ray.lineBetween(sx, sy, ex, ey)
-    sprite.add(ray)
-    // двигаем альфу
-    this.tweens.add({
-      targets: ray,
-      alpha: 0,
-      duration: 350 + rng() * 200,
-      ease: 'Cubic.easeOut',
-      onComplete: () => ray.destroy(),
-    })
-  }
-
-  // 36. Quantum split — на момент 2 фантомных копии расходятся, потом сжимаются
-  private compQuantumSplit(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const ang = rng() * Math.PI * 2
-    const dist = sys.size * (1.0 + rng() * 0.4)
-    for (const sign of [1, -1]) {
-      const ghost = this.add.circle(0, 0, sys.size * 0.95, sys.color, 0.6)
-      sprite.add(ghost)
-      const tx = Math.cos(ang) * dist * sign
-      const ty = Math.sin(ang) * dist * sign
-      this.tweens.add({
-        targets: ghost,
-        x: tx,
-        y: ty,
-        alpha: 0,
-        scaleX: 0.8,
-        scaleY: 0.8,
-        duration: 400 + rng() * 200,
-        ease: 'Cubic.easeOut',
-        onComplete: () => ghost.destroy(),
-      })
-    }
-  }
-
-  // 37. Heart pulse — пульс из 2 кругов в виде сердца (горячая планета любви)
-  private compHeartPulse(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const heart = this.add.graphics()
-    const color = this.pickColor(rng, sys)
-    const r = sys.size * 0.7
-    heart.fillStyle(color, 0.85)
-    // 2 круга + треугольник снизу = сердце
-    heart.fillCircle(-r * 0.5, -r * 0.2, r * 0.6)
-    heart.fillCircle(r * 0.5, -r * 0.2, r * 0.6)
-    heart.fillTriangle(-r, 0, r, 0, 0, r * 1.0)
-    sprite.add(heart)
-    this.tweens.add({
-      targets: heart,
-      scaleX: 1.6 + rng() * 0.3,
-      scaleY: 1.6 + rng() * 0.3,
-      alpha: 0,
-      duration: 600 + rng() * 200,
-      ease: 'Sine.easeOut',
-      onComplete: () => heart.destroy(),
-    })
-  }
-
-  // 38. Crackle discharge — короткие электрические разряды по поверхности
-  private compCrackleDischarge(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const sparks = 6 + Math.floor(rng() * 5)
-    for (let i = 0; i < sparks; i++) {
-      const delay = Math.floor(rng() * 250)
-      this.time.delayedCall(delay, () => {
-        if (!sprite.active) return
-        const ang = rng() * Math.PI * 2
-        const r1 = sys.size * (0.7 + rng() * 0.2)
-        const r2 = sys.size * (1.0 + rng() * 0.3)
-        const startA = ang
-        const endA = ang + (rng() - 0.5) * 0.5
-        const arc = this.add.graphics()
-        const color = this.pickColor(rng, sys)
-        arc.lineStyle((1 + rng()) * DPR, color, 1)
-        // Зигзаг из 2 сегментов
-        const midR = (r1 + r2) / 2
-        const midA = (startA + endA) / 2 + (rng() - 0.5) * 0.3
-        arc.lineBetween(
-          Math.cos(startA) * r1,
-          Math.sin(startA) * r1,
-          Math.cos(midA) * midR,
-          Math.sin(midA) * midR,
-        )
-        arc.lineBetween(
-          Math.cos(midA) * midR,
-          Math.sin(midA) * midR,
-          Math.cos(endA) * r2,
-          Math.sin(endA) * r2,
-        )
-        sprite.add(arc)
-        this.tweens.add({
-          targets: arc,
-          alpha: 0,
-          duration: 200 + rng() * 150,
-          onComplete: () => arc.destroy(),
-        })
-      })
-    }
-  }
+  // 33. compPhoenixBurst — extracted в effects/anim/shared/compPhoenixBurst.ts (Phase 20-02).
+  // 34. compWormhole — extracted в effects/anim/shared/compWormhole.ts (Phase 20-02).
+  // 35. compCosmicRay — extracted в effects/anim/shared/compCosmicRay.ts (Phase 20-02).
+  // 36. compQuantumSplit — extracted в effects/anim/shared/compQuantumSplit.ts (Phase 20-02).
+  // 37. compHeartPulse — extracted в effects/anim/shared/compHeartPulse.ts (Phase 20-02).
+  // 38. compCrackleDischarge — extracted в effects/anim/shared/compCrackleDischarge.ts (Phase 20-02).
 
   // === РАСШИРЕНИЕ 39-53 ===
 
-  // 39. Pixel grid — N квадратиков образуют сетку и распадаются
-  private compPixelGrid(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const grid = 4 + Math.floor(rng() * 2) // 4x4 или 5x5
-    const span = sys.size * 1.4
-    const cell = (span * 2) / grid
-    const cellSize = cell * 0.6
-    const dur = 500 + rng() * 250
-    for (let i = 0; i < grid; i++) {
-      for (let j = 0; j < grid; j++) {
-        if (rng() < 0.3) continue // часть пропускаем
-        const x = -span + (i + 0.5) * cell
-        const y = -span + (j + 0.5) * cell
-        const color = this.pickColor(rng, sys)
-        const px = this.add.rectangle(x, y, cellSize, cellSize, color, 0.85)
-        sprite.add(px)
-        this.tweens.add({
-          targets: px,
-          alpha: 0,
-          x: x * (1 + rng() * 0.4),
-          y: y * (1 + rng() * 0.4),
-          rotation: (rng() - 0.5) * Math.PI,
-          duration: dur + rng() * 150,
-          delay: rng() * 200,
-          ease: 'Cubic.easeOut',
-          onComplete: () => px.destroy(),
-        })
-      }
-    }
-  }
-
-  // 40. Spiral arms — 2-4 спиральных рукава из точек как маленькая галактика
-  private compSpiralArms(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const arms = 2 + Math.floor(rng() * 3) // 2-4
-    const dotsPerArm = 8 + Math.floor(rng() * 4)
-    const turns = 0.7 + rng() * 0.7
-    const maxR = sys.size * (1.8 + rng() * 0.5)
-    const direction = rng() < 0.5 ? 1 : -1
-    const dur = 700 + rng() * 250
-    for (let a = 0; a < arms; a++) {
-      const armOffset = (a / arms) * Math.PI * 2
-      for (let i = 0; i < dotsPerArm; i++) {
-        const t = i / dotsPerArm
-        const r = maxR * t
-        const ang = armOffset + direction * t * Math.PI * 2 * turns
-        const color = this.pickColor(rng, sys)
-        const dot = this.add.circle(0, 0, (1 + rng() * 1.5) * DPR, color, 0.9)
-        sprite.add(dot)
-        this.tweens.add({
-          targets: dot,
-          x: Math.cos(ang) * r,
-          y: Math.sin(ang) * r,
-          alpha: 0,
-          duration: dur + i * 30,
-          ease: 'Cubic.easeOut',
-          delay: i * 25,
-          onComplete: () => dot.destroy(),
-        })
-      }
-    }
-  }
-
-  // 41. Crystal grow — кристаллы растут наружу из центра как ледяные иглы
-  private compCrystalGrow(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const N = 5 + Math.floor(rng() * 4)
-    for (let i = 0; i < N; i++) {
-      const ang = (i / N) * Math.PI * 2 + rng() * 0.3
-      const finalLen = sys.size * (1.6 + rng() * 0.6)
-      const color = this.pickColor(rng, sys)
-      const shard = this.add.graphics()
-      const w = (1.5 + rng() * 1.5) * DPR
-      shard.fillStyle(color, 0.9)
-      shard.fillTriangle(0, 0, w, finalLen * 0.5, -w, finalLen * 0.5)
-      shard.fillStyle(0xffffff, 0.5)
-      shard.fillTriangle(
-        0,
-        0,
-        w * 0.5,
-        finalLen * 0.5,
-        -w * 0.5,
-        finalLen * 0.5,
-      )
-      shard.rotation = ang - Math.PI / 2
-      shard.scale = 0.05
-      sprite.add(shard)
-      this.tweens.add({
-        targets: shard,
-        scale: 1,
-        duration: 350 + rng() * 150,
-        ease: 'Back.easeOut',
-        onComplete: () => {
-          this.tweens.add({
-            targets: shard,
-            alpha: 0,
-            scale: 1.2,
-            duration: 400 + rng() * 200,
-            ease: 'Cubic.easeIn',
-            onComplete: () => shard.destroy(),
-          })
-        },
-      })
-    }
-  }
-
-  // 42. Snow drift — снежинки парят и опускаются (для ice, aerial)
-  private compSnowDrift(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const N = 10 + Math.floor(rng() * 6)
-    for (let i = 0; i < N; i++) {
-      const startX = (rng() - 0.5) * sys.size * 3
-      const startY = -sys.size * 1.5 - rng() * sys.size * 0.5
-      const endY = sys.size * 1.5 + rng() * sys.size * 0.5
-      const driftX = (rng() - 0.5) * sys.size * 0.8
-      const color = this.pickColor(rng, sys)
-      const flake = this.add.circle(
-        startX,
-        startY,
-        (1 + rng()) * DPR,
-        color,
-        0.9,
-      )
-      sprite.add(flake)
-      this.tweens.add({
-        targets: flake,
-        y: endY,
-        x: startX + driftX,
-        alpha: 0,
-        duration: 700 + rng() * 400,
-        ease: 'Sine.easeIn',
-        delay: rng() * 150,
-        onComplete: () => flake.destroy(),
-      })
-    }
-  }
-
-  // 43. Galaxy spawn — мини-галактика рождается рядом с планетой (для gas_giant, ancient)
-  private compGalaxySpawn(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const offsetAng = rng() * Math.PI * 2
-    const offsetDist = sys.size * (1.6 + rng() * 0.5)
-    const cx = Math.cos(offsetAng) * offsetDist
-    const cy = Math.sin(offsetAng) * offsetDist
-    const galaxy = this.add.graphics()
-    const color = this.pickColor(rng, sys)
-    const accent = this.pickColor(rng, sys)
-    const ovalRX = sys.size * 0.6
-    const ovalRY = sys.size * 0.25
-    galaxy.fillStyle(color, 0.5)
-    galaxy.fillEllipse(0, 0, ovalRX * 2, ovalRY * 2)
-    galaxy.fillStyle(0xffffff, 0.85)
-    galaxy.fillCircle(0, 0, ovalRX * 0.25)
-    galaxy.fillStyle(accent, 0.5)
-    galaxy.fillEllipse(0, 0, ovalRX * 1.4, ovalRY * 1.4)
-    galaxy.x = cx
-    galaxy.y = cy
-    galaxy.rotation = rng() * Math.PI * 2
-    galaxy.scale = 0
-    sprite.add(galaxy)
-    this.tweens.add({
-      targets: galaxy,
-      scale: 1,
-      rotation: galaxy.rotation + Math.PI,
-      duration: 500 + rng() * 200,
-      ease: 'Back.easeOut',
-      onComplete: () => {
-        this.tweens.add({
-          targets: galaxy,
-          alpha: 0,
-          scale: 1.5,
-          duration: 350,
-          ease: 'Cubic.easeOut',
-          onComplete: () => galaxy.destroy(),
-        })
-      },
-    })
-  }
-
-  // 44. Pulse hex — гексагональное кольцо появляется и расширяется
-  private compPulseHex(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const sides = rng() < 0.5 ? 6 : 8
-    const hex = this.add.graphics()
-    const color = this.pickColor(rng, sys)
-    const r = sys.size * 1.3
-    hex.lineStyle((1.5 + rng()) * DPR, color, 0.9)
-    hex.beginPath()
-    for (let i = 0; i <= sides; i++) {
-      const a = (i / sides) * Math.PI * 2
-      const x = Math.cos(a) * r,
-        y = Math.sin(a) * r
-      if (i === 0) hex.moveTo(x, y)
-      else hex.lineTo(x, y)
-    }
-    hex.strokePath()
-    hex.rotation = rng() * Math.PI * 2
-    sprite.add(hex)
-    this.tweens.add({
-      targets: hex,
-      scale: 1.8 + rng() * 0.5,
-      alpha: 0,
-      rotation: hex.rotation + (rng() < 0.5 ? Math.PI / 6 : -Math.PI / 6),
-      duration: 500 + rng() * 250,
-      ease: 'Cubic.easeOut',
-      onComplete: () => hex.destroy(),
-    })
-  }
-
-  // 45. Tornado — спираль конусом вверх (вертикальный вихрь)
-  private compTornado(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const N = 16 + Math.floor(rng() * 6)
-    const dur = 700 + rng() * 200
-    const direction = rng() < 0.5 ? 1 : -1
-    const ang = -Math.PI / 2 // вверх
-    for (let i = 0; i < N; i++) {
-      const t0 = i / N
-      const dot = this.add.circle(
-        0,
-        0,
-        (1 + rng()) * DPR,
-        this.pickColor(rng, sys),
-        0.85,
-      )
-      sprite.add(dot)
-      const startTime = this.time.now + i * 25
-      const localDur = dur
-      const update = () => {
-        if (!dot.active) {
-          this.events.off('update', update)
-          return
-        }
-        const t = (this.time.now - startTime) / localDur
-        if (t < 0) return
-        if (t >= 1) {
-          dot.destroy()
-          this.events.off('update', update)
-          return
-        }
-        const along = sys.size * (1.5 - t * 2.5) // снизу-вверх
-        const radius = sys.size * (0.2 + t * 0.6) // расширяется
-        const phase = direction * t * Math.PI * 4 + t0 * Math.PI * 2
-        const cosA = Math.cos(ang),
-          sinA = Math.sin(ang)
-        // local coords: forward = ang, side = perpendicular
-        const sideX = -sinA,
-          sideY = cosA
-        dot.x = cosA * along + sideX * Math.cos(phase) * radius
-        dot.y = sinA * along + sideY * Math.cos(phase) * radius
-        dot.alpha = 0.85 * (1 - t)
-      }
-      this.events.on('update', update)
-    }
-  }
-
-  // 46. Star polygon — пятиконечная (или 6-) звезда расширяется
-  private compStarPolygon(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const points = 5 + Math.floor(rng() * 3) // 5-7
-    const star = this.add.graphics()
-    const color = this.pickColor(rng, sys)
-    const accent = this.pickColor(rng, sys)
-    const outR = sys.size * 1.2
-    const inR = outR * 0.4
-    const verts: number[] = []
-    for (let i = 0; i < points * 2; i++) {
-      const a = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2
-      const r = i % 2 === 0 ? outR : inR
-      verts.push(Math.cos(a) * r, Math.sin(a) * r)
-    }
-    star.fillStyle(color, 0.7)
-    star.beginPath()
-    star.moveTo(verts[0], verts[1])
-    for (let i = 2; i < verts.length; i += 2)
-      star.lineTo(verts[i], verts[i + 1])
-    star.closePath()
-    star.fill()
-    star.lineStyle(DPR, accent, 0.85)
-    star.strokePath()
-    star.scale = 0.3
-    sprite.add(star)
-    this.tweens.add({
-      targets: star,
-      scale: 1.6 + rng() * 0.5,
-      alpha: 0,
-      rotation: ((rng() < 0.5 ? 1 : -1) * Math.PI) / 5,
-      duration: 550 + rng() * 200,
-      ease: 'Cubic.easeOut',
-      onComplete: () => star.destroy(),
-    })
-  }
-
-  // 47. Cross flash — крестообразная вспышка X или + (для military, mineral)
-  private compCrossFlash(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const cross = this.add.graphics()
-    const color = this.pickColor(rng, sys)
-    const len = sys.size * (2.5 + rng() * 0.7)
-    const w = sys.size * 0.18
-    cross.fillStyle(color, 0.5)
-    cross.fillRect(-len, -w, len * 2, w * 2)
-    cross.fillRect(-w, -len, w * 2, len * 2)
-    cross.fillStyle(0xffffff, 0.95)
-    cross.fillRect(-len, -w * 0.4, len * 2, w * 0.8)
-    cross.fillRect(-w * 0.4, -len, w * 0.8, len * 2)
-    cross.rotation = rng() < 0.5 ? Math.PI / 4 : 0 // X или +
-    cross.scale = 0.4
-    sprite.add(cross)
-    this.tweens.add({
-      targets: cross,
-      scale: 1.3 + rng() * 0.3,
-      alpha: 0,
-      duration: 350 + rng() * 200,
-      ease: 'Cubic.easeOut',
-      onComplete: () => cross.destroy(),
-    })
-  }
-
-  // 48. Wave train — несколько асимметричных волн в одну сторону
-  private compWaveTrain(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const count = 3 + Math.floor(rng() * 3)
-    const direction = rng() * Math.PI * 2
-    const stepDelay = 100 + rng() * 80
-    for (let i = 0; i < count; i++) {
-      this.time.delayedCall(i * stepDelay, () => {
-        if (!sprite.active) return
-        const wave = this.add.graphics()
-        const color = this.pickColor(rng, sys)
-        wave.lineStyle((1 + rng()) * DPR, color, 0.7)
-        wave.strokeEllipse(0, 0, sys.size * 1.5, sys.size * 0.6)
-        wave.rotation = direction
-        sprite.add(wave)
-        this.tweens.add({
-          targets: wave,
-          x: Math.cos(direction) * sys.size * 1.5,
-          y: Math.sin(direction) * sys.size * 1.5,
-          alpha: 0,
-          scaleX: 1.5,
-          duration: 600,
-          ease: 'Sine.easeOut',
-          onComplete: () => wave.destroy(),
-        })
-      })
-    }
-  }
-
-  // 49. Petal storm — много лепестков-эллипсов кружатся вокруг
-  private compPetalStorm(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const N = 12 + Math.floor(rng() * 6)
-    const direction = rng() < 0.5 ? 1 : -1
-    const dur = 700 + rng() * 250
-    const baseR = sys.size * 1.2
-    for (let i = 0; i < N; i++) {
-      const phase = (i / N) * Math.PI * 2
-      const color = this.pickColor(rng, sys)
-      const petal = this.add.ellipse(
-        0,
-        0,
-        (3 + rng() * 2) * DPR,
-        (1.5 + rng()) * DPR,
-        color,
-        0.85,
-      )
-      petal.rotation = phase
-      sprite.add(petal)
-      const startTime = this.time.now
-      const update = () => {
-        if (!petal.active) {
-          this.events.off('update', update)
-          return
-        }
-        const t = (this.time.now - startTime) / dur
-        if (t >= 1) {
-          petal.destroy()
-          this.events.off('update', update)
-          return
-        }
-        const r = baseR * (1 + t * 0.6)
-        const a = phase + direction * t * Math.PI * 2
-        petal.x = Math.cos(a) * r
-        petal.y = Math.sin(a) * r
-        petal.rotation = a + Math.PI / 2
-        petal.alpha = 0.85 * (1 - t)
-      }
-      this.events.on('update', update)
-    }
-  }
-
+  // 39. compPixelGrid — extracted в effects/anim/shared/compPixelGrid.ts (Phase 20-02).
+  // 40. compSpiralArms — extracted в effects/anim/shared/compSpiralArms.ts (Phase 20-02).
+  // 41. compCrystalGrow — extracted в effects/anim/shared/compCrystalGrow.ts (Phase 20-02).
+  // 42. compSnowDrift — extracted в effects/anim/shared/compSnowDrift.ts (Phase 20-02).
+  // 43. compGalaxySpawn — extracted в effects/anim/shared/compGalaxySpawn.ts (Phase 20-02).
+  // 44. compPulseHex — extracted в effects/anim/shared/compPulseHex.ts (Phase 20-02).
+  // 45. compTornado — extracted в effects/anim/shared/compTornado.ts (Phase 20-02).
+  // 46. compStarPolygon — extracted в effects/anim/shared/compStarPolygon.ts (Phase 20-02).
+  // 47. compCrossFlash — extracted в effects/anim/shared/compCrossFlash.ts (Phase 20-02).
+  // 48. compWaveTrain — extracted в effects/anim/shared/compWaveTrain.ts (Phase 20-02).
+  // 49. compPetalStorm — extracted в effects/anim/shared/compPetalStorm.ts (Phase 20-02).
   // 50. compFlameTongues — extracted в effects/anim/shared/compFlameTongues.ts (Phase 9).
-
-  // 51. Snake trail — точка обходит S-образную форму с trail
-  private compSnakeTrail(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const dur = 700 + rng() * 250
-    const amplitude = sys.size * (0.6 + rng() * 0.3)
-    const length = sys.size * (3 + rng())
-    const ang = rng() * Math.PI * 2
-    const cosA = Math.cos(ang),
-      sinA = Math.sin(ang)
-    const head = this.add.circle(
-      0,
-      0,
-      (2.5 + rng()) * DPR,
-      this.pickColor(rng, sys),
-      1,
-    )
-    const trail: Phaser.GameObjects.Arc[] = []
-    sprite.add(head)
-    for (let i = 0; i < 6; i++) {
-      const t = this.add.circle(
-        0,
-        0,
-        (2 - i * 0.25) * DPR,
-        this.pickColor(rng, sys),
-        0.7 - i * 0.1,
-      )
-      sprite.add(t)
-      trail.push(t)
-    }
-    const startTime = this.time.now
-    const update = () => {
-      if (!head.active) {
-        this.events.off('update', update)
-        return
-      }
-      const t = (this.time.now - startTime) / dur
-      if (t >= 1) {
-        head.destroy()
-        trail.forEach((d) => d.destroy())
-        this.events.off('update', update)
-        return
-      }
-      const along = -length / 2 + length * t
-      const wave = Math.sin(t * Math.PI * 4) * amplitude
-      head.x = along * cosA - wave * sinA
-      head.y = along * sinA + wave * cosA
-      trail.forEach((d, i) => {
-        const tt = Math.max(0, t - (i + 1) * 0.04)
-        const a2 = -length / 2 + length * tt
-        const w2 = Math.sin(tt * Math.PI * 4) * amplitude
-        d.x = a2 * cosA - w2 * sinA
-        d.y = a2 * sinA + w2 * cosA
-      })
-    }
-    this.events.on('update', update)
-  }
-
-  // 52. Bubble pop — пузыри всплывают и лопаются (для ocean, toxic)
-  private compBubblePop(
-    sprite: Phaser.GameObjects.Container,
-    sys: Race | BgSystem,
-    rng: () => number,
-  ) {
-    const N = 5 + Math.floor(rng() * 4)
-    for (let i = 0; i < N; i++) {
-      const startAng = rng() * Math.PI * 2
-      const startR = sys.size * (0.8 + rng() * 0.3)
-      const sx = Math.cos(startAng) * startR
-      const sy = Math.sin(startAng) * startR
-      const color = this.pickColor(rng, sys)
-      const bubble = this.add.graphics()
-      const r = (3 + rng() * 3) * DPR
-      bubble.fillStyle(color, 0.4)
-      bubble.fillCircle(0, 0, r)
-      bubble.lineStyle(0.8 * DPR, 0xffffff, 0.7)
-      bubble.strokeCircle(0, 0, r)
-      bubble.fillStyle(0xffffff, 0.6)
-      bubble.fillCircle(-r * 0.3, -r * 0.3, r * 0.3)
-      bubble.x = sx
-      bubble.y = sy
-      bubble.scale = 0
-      sprite.add(bubble)
-      const upX = sx + (rng() - 0.5) * sys.size * 0.4
-      const upY = sy - sys.size * (0.7 + rng() * 0.5)
-      this.tweens.add({
-        targets: bubble,
-        scale: 1,
-        duration: 200,
-        ease: 'Back.easeOut',
-        delay: i * 50,
-        onComplete: () => {
-          this.tweens.add({
-            targets: bubble,
-            x: upX,
-            y: upY,
-            duration: 400 + rng() * 200,
-            ease: 'Sine.easeOut',
-            onComplete: () => {
-              this.tweens.add({
-                targets: bubble,
-                scale: 1.6,
-                alpha: 0,
-                duration: 150,
-                ease: 'Cubic.easeOut',
-                onComplete: () => bubble.destroy(),
-              })
-            },
-          })
-        },
-      })
-    }
-  }
-
+  // 51. compSnakeTrail — extracted в effects/anim/shared/compSnakeTrail.ts (Phase 20-02).
+  // 52. compBubblePop — extracted в effects/anim/shared/compBubblePop.ts (Phase 20-02).
   // 53. compChromaShift — extracted в effects/anim/shared/compChromaShift.ts (Phase 9).
 
   // === PHASE 7: UNIQUENESS CHECK ===
