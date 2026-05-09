@@ -435,11 +435,8 @@ export class StarMapScene extends Phaser.Scene {
       })
     })
 
-    // Живые анимации
-    // this.setupBlackHole() // удалено по запросу — туманность вместо
-    // this.setupHomeOrbiter() // удалено — кольца висели в (0,0), не в HOME
+    // Живые анимации (ambient effects)
     this.setupCosmicDust()
-    // this.setupSignalPulses()  // ВРЕМЕННО ОТКЛЮЧЕНО — понадобится для общения планет
     this.setupRandomSignals()
     this.setupTorRing()
     this.setupVeranLightning()
@@ -4471,125 +4468,6 @@ export class StarMapScene extends Phaser.Scene {
 
   // ============== ЖИВЫЕ АНИМАЦИИ ==============
 
-  // Чёрная дыра в центре вселенной (0, 0). Чёрное ядро + светящийся
-  // аккреционный диск + лучи света + гало.
-  // @ts-expect-error temporarily unused — раскомментируй вызов в create() если нужна обратно
-  private setupBlackHole() {
-    const cx = 0,
-      cy = 0
-    const coreR = 220 * DPR
-
-    // Гало убрано по запросу — было слишком расплывчато (блюрило экран)
-    const halo = this.add.graphics() // пустой placeholder для совместимости
-    halo.setDepth(-70)
-
-    // Аккреционный диск — наклонённый эллипс с градиентными полосами, вращается
-    const disk = this.add.graphics()
-    disk.fillStyle(0xfbbf24, 0.7)
-    disk.fillEllipse(0, 0, coreR * 5.2, coreR * 1.4)
-    disk.fillStyle(0xf97316, 0.65)
-    disk.fillEllipse(0, 0, coreR * 4.6, coreR * 1.1)
-    disk.fillStyle(0xfff7ed, 0.5)
-    disk.fillEllipse(0, 0, coreR * 3.8, coreR * 0.8)
-    disk.fillStyle(0xa78bfa, 0.4)
-    disk.fillEllipse(0, 0, coreR * 3.0, coreR * 0.55)
-    // Прорезь в центре диска (чтобы ядро было видно как тёмная точка)
-    disk.fillStyle(0x000000, 1)
-    disk.fillEllipse(0, 0, coreR * 2, coreR * 0.4)
-    disk.x = cx
-    disk.y = cy
-    disk.angle = -22
-    disk.setDepth(-60)
-    // Вращение диска убрано по запросу
-
-    // Сами лучи света — 8 радиальных лучей
-    const rays = this.add.graphics()
-    rays.lineStyle(3 * DPR, 0xfde047, 0.35)
-    for (let i = 0; i < 8; i++) {
-      const θ = (i * Math.PI) / 4
-      rays.lineBetween(
-        cx + Math.cos(θ) * coreR * 1.6,
-        cy + Math.sin(θ) * coreR * 1.6,
-        cx + Math.cos(θ) * coreR * 6,
-        cy + Math.sin(θ) * coreR * 6,
-      )
-    }
-    rays.setDepth(-65)
-    // Все анимации убраны — чёрная дыра статична
-
-    // Чёрное ядро (event horizon) — над диском
-    const core = this.add.graphics()
-    core.fillStyle(0x000000, 1)
-    core.fillCircle(cx, cy, coreR * 0.7)
-    // Тонкое внутреннее свечение по краю
-    core.lineStyle(2 * DPR, 0xfff7ed, 0.7)
-    core.strokeCircle(cx, cy, coreR * 0.72)
-    core.lineStyle(1 * DPR, 0xfde047, 0.5)
-    core.strokeCircle(cx, cy, coreR * 0.82)
-    core.setDepth(-55)
-
-    // Пульсации ядра/гало убраны — чёрная дыра полностью статична
-
-    // Регистрируем для culling
-    this.cullableData.push({ obj: halo, x: cx, y: cy, r: coreR * 4 })
-    this.cullableData.push({ obj: disk, x: cx, y: cy, r: coreR * 3 })
-    this.cullableData.push({ obj: rays, x: cx, y: cy, r: coreR * 6 })
-    this.cullableData.push({ obj: core, x: cx, y: cy, r: coreR })
-  }
-
-  // @ts-expect-error temporarily unused — раскомментируй вызов и привяжи к HOME world coords
-  private setupHomeOrbiter() {
-    const orbiter = this.add.text(0, 0, '🐸', { fontSize: 18 * DPR })
-    orbiter.setOrigin(0.5)
-    orbiter.setDepth(50)
-    // Интерактивность лягушки — тап даёт сердечко
-    orbiter.setInteractive(
-      new Phaser.Geom.Rectangle(-12 * DPR, -12 * DPR, 24 * DPR, 24 * DPR),
-      Phaser.Geom.Rectangle.Contains,
-    )
-    let dt0 = 0,
-      dx0 = 0,
-      dy0 = 0
-    orbiter.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      dt0 = Date.now()
-      dx0 = p.x
-      dy0 = p.y
-    })
-    orbiter.on('pointerup', (p: Phaser.Input.Pointer) => {
-      const elapsed = Date.now() - dt0
-      const moved = Math.abs(p.x - dx0) + Math.abs(p.y - dy0)
-      if (elapsed < 300 && moved < 8 * DPR) {
-        this.tapHandledThisFrame = true
-        this.popEmojiAt(orbiter.x, orbiter.y, '💚', orbiter)
-      }
-    })
-    let angle = 0
-    const radius = 95 * DPR
-    this.events.on('update', (_t: number, dt: number) => {
-      angle += (dt / 1000) * 0.6
-      orbiter.x = Math.cos(angle) * radius
-      orbiter.y = Math.sin(angle) * radius
-      orbiter.scaleX = Math.cos(angle) > 0 ? 1 : -1
-    })
-
-    const dust = this.add.circle(0, 0, 2 * DPR, 0xfde047, 0.85)
-    dust.setDepth(50)
-    let angle2 = Math.PI
-    const radius2 = 130 * DPR
-    this.events.on('update', (_t: number, dt: number) => {
-      angle2 += (dt / 1000) * 0.4
-      dust.x = Math.cos(angle2) * radius2
-      dust.y = Math.sin(angle2) * radius2
-    })
-
-    const rings = this.add.graphics()
-    rings.lineStyle(1 * DPR, 0x7dd3fc, 0.2)
-    rings.strokeCircle(0, 0, radius)
-    rings.lineStyle(1 * DPR, 0xfde047, 0.15)
-    rings.strokeCircle(0, 0, radius2)
-    rings.setDepth(40)
-  }
-
   private setupCosmicDust() {
     const dustRng = mulberry32(SEED + 3)
     // Космическая пыль — каждая частица tween. Снижено с 140.
@@ -4622,60 +4500,6 @@ export class StarMapScene extends Phaser.Scene {
       // Радиус culling-сферы должен охватывать tween-движение
       this.cullableData.push({ obj: dust, x: startX, y: startY, r: 300 * DPR })
     }
-  }
-
-  // @ts-expect-error temporarily unused — re-enable in create() when planet dialogues land
-  private setupSignalPulses() {
-    const links: [{ x: number; y: number }, Race][] = [
-      [{ x: 0, y: 0 }, this.findRace('bliks')!],
-      [{ x: 0, y: 0 }, this.findRace('drave')!],
-      [{ x: 0, y: 0 }, this.findRace('cairn')!],
-      [{ x: 0, y: 0 }, this.findRace('lyor')!],
-      [this.findRace('bliks')!, this.findRace('cairn')!],
-      [this.findRace('drave')!, this.findRace('veran')!],
-      [this.findRace('cairn')!, this.findRace('tor')!],
-      [this.findRace('lyor')!, this.findRace('veran')!],
-      [this.findRace('veran')!, this.findRace('tor')!],
-    ]
-
-    links.forEach(([from, to], idx) => {
-      const sendSignal = () => {
-        const colors = [0x00d4ff, 0xfde047, 0xa5f3fc]
-        const color = colors[idx % 3]
-        const dot = this.add.circle(from.x, from.y, 3 * DPR, color, 1)
-        dot.setDepth(20)
-        const halo = this.add.circle(from.x, from.y, 8 * DPR, color, 0.4)
-        halo.setDepth(19)
-        this.tweens.add({
-          targets: [dot, halo],
-          x: to.x,
-          y: to.y,
-          duration: 1800 + Math.random() * 800,
-          ease: 'Sine.easeInOut',
-          onComplete: () => {
-            this.tweens.add({
-              targets: [dot, halo],
-              alpha: 0,
-              scale: 3,
-              duration: 300,
-              onComplete: () => {
-                dot.destroy()
-                halo.destroy()
-              },
-            })
-          },
-        })
-      }
-      // Базовая задержка 1000мс + ступенчато по индексу — чтобы не вспыхнуть при открытии сцены
-      this.time.delayedCall(1000 + idx * 600, () => {
-        sendSignal()
-        this.time.addEvent({
-          delay: 4000 + Math.random() * 5000,
-          loop: true,
-          callback: sendSignal,
-        })
-      })
-    })
   }
 
   private setupRandomSignals() {
