@@ -31,7 +31,6 @@ export const UPGRADE_CONFIG = {
     maxLevel: 6,
     spawnIntervalMs: [Infinity, 10000, 8000, 7000, 6000, 5000, 4000],
     durationMs: [0, 5000, 5500, 6000, 6500, 7000, 8000],
-    radiusPx: [0, 120, 140, 160, 180, 200, 220],
     mergesPerCycle: [0, 1, 1, 2, 2, 3, 3],
     costs: [
       300_000, 1_000_000, 5_000_000, 50_000_000, 500_000_000, 5_000_000_000,
@@ -83,11 +82,6 @@ export function getMagnetSpawnInterval(level: number): number {
 
 export function getMagnetDuration(level: number): number {
   const arr = UPGRADE_CONFIG.magnet.durationMs
-  return arr[Math.min(level, arr.length - 1)]
-}
-
-export function getMagnetRadius(level: number): number {
-  const arr = UPGRADE_CONFIG.magnet.radiusPx
   return arr[Math.min(level, arr.length - 1)]
 }
 
