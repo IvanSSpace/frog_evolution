@@ -26,8 +26,6 @@ export const UPGRADE_CONFIG = {
       550, 3_500, 23_000, 250_000, 2_500_000, 25_000_000, 250_000_000,
       2_500_000_000,
     ],
-    // incomePerSec scales with level (×3 per level)
-    incomePerSecByLevel: [0, 30, 100, 300, 1000, 3000, 10000, 30000, 100000],
   },
   magnet: {
     maxLevel: 6,
@@ -106,9 +104,4 @@ export function getCrateLevel(upgradeLevel: number): number {
 export function getRareBoxThreshold(upgradeLevel: number): number {
   const arr = UPGRADE_CONFIG.rareBoxSpeed.counts
   return arr[Math.min(upgradeLevel, arr.length - 1)]
-}
-
-export function getTractorIncomePerSec(level: number): number {
-  const arr = UPGRADE_CONFIG.tractor.incomePerSecByLevel
-  return arr[Math.min(level, arr.length - 1)]
 }

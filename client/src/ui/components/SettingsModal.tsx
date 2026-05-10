@@ -251,8 +251,7 @@ function SettingsTab() {
   )
 
   const handleBugReport = () => {
-    // TODO: replace with actual Telegram username
-    const url = 'https://t.me/your_telegram_username'
+    const url = 'https://t.me/frog_evolution_support'
     const tg = getTelegramWebApp()
     if (tg?.openTelegramLink) {
       tg.openTelegramLink(url)

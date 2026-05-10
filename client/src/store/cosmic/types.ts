@@ -64,13 +64,6 @@ export interface BoxData {
   sourceArchetype?: string
 }
 
-export interface ScoutData {
-  id: string
-  missionId: string
-  returnsAt: number // unix ms
-  planetId: string
-}
-
 /**
  * Phase 17: исход одного feed roll.
  *  - 'success'   → carrier.level += 1
@@ -146,9 +139,6 @@ export interface CosmicSlice {
   // Инвентарь боксов (Phase 15)
   boxes: BoxData[]
 
-  // Скауты в полёте (Phase 16)
-  scouts: ScoutData[]
-
   // Корабль (Phase 16)
   ship: ShipState | null
 
@@ -198,7 +188,6 @@ export interface CosmicSlice {
 
 export interface CosmicToastPayload {
   type:
-    | 'scout-returned'
     | 'box-received'
     | 'mission-complete'
     | 'serum-applied'
@@ -225,7 +214,6 @@ export function makeInitialCosmicSlice(): CosmicSlice {
   return {
     serums,
     boxes: [],
-    scouts: [],
     ship: null,
     carriers: [],
     bestiaryBitset: new Array(192).fill(0), // Phase 17: full 1536 bits = 192 bytes

@@ -19,10 +19,9 @@ import { authenticate } from './utils/auth'
 import { loadGameState, startSync, stopSync } from './utils/gameSync'
 import {
   useGameStore,
-  saveSessionTimestamp,
-  getOfflineElapsedMs,
+  saveSessionState,
+  getOfflineSession,
   getTractorCapMs,
-  getTractorIncomePerSec,
 } from './store/gameStore'
 import type { Element, Rarity } from './store/cosmic/types'
 import { StabilizationModal } from './components/CosmicHub/StabilizationModal'
@@ -70,30 +69,39 @@ function App() {
       if (loaded) startSync()
     })
 
-    // Расчёт офлайн-дохода трактора при загрузке
-    const elapsedMs = getOfflineElapsedMs()
+    // Расчёт офлайн-дохода трактора при загрузке.
+    // Доход теперь считается по сохранённому incomePerSec (фактический доход
+    // фермы на момент ухода), а не по фиксированной таблице уровней трактора.
+    // Уровень трактора всё ещё определяет cap-time через getTractorCapMs.
+    const session = getOfflineSession()
     const tractorLevel = useGameStore.getState().upgrades.tractor
-    if (tractorLevel > 0 && elapsedMs > 0) {
+    if (session && tractorLevel > 0 && session.elapsedMs > 0) {
       const capMs = getTractorCapMs(tractorLevel)
-      const earnedMs = Math.min(elapsedMs, capMs)
+      const earnedMs = Math.min(session.elapsedMs, capMs)
       const earnedSec = Math.floor(earnedMs / 1000)
-      const income = earnedSec * getTractorIncomePerSec(tractorLevel)
+      const income = Math.floor(earnedSec * session.incomePerSec)
       if (income > 0) {
         useGameStore.getState().addGold(income)
-        setWelcomeBack({ earned: income, hours: earnedMs / 3_600_000 })
+        // Модалка показывается только при отсутствии 1+ часа — иначе
+        // мелькала бы при каждом быстром переоткрытии вкладки.
+        if (session.elapsedMs >= 60 * 60 * 1000) {
+          setWelcomeBack({ earned: income, hours: earnedMs / 3_600_000 })
+        }
       }
     }
-    saveSessionTimestamp()
+    const saveSession = () =>
+      saveSessionState(useGameStore.getState().incomePerSec)
+    saveSession()
 
-    // Heartbeat — пишем timestamp каждые 5 сек
-    const heartbeat = window.setInterval(saveSessionTimestamp, 5000)
+    // Heartbeat — пишем timestamp + текущий incomePerSec каждые 5 сек
+    const heartbeat = window.setInterval(saveSession, 5000)
 
     // Сохраняем когда таб уходит в фон
     const onVisibility = () => {
-      if (document.hidden) saveSessionTimestamp()
+      if (document.hidden) saveSession()
     }
     document.addEventListener('visibilitychange', onVisibility)
-    window.addEventListener('beforeunload', saveSessionTimestamp)
+    window.addEventListener('beforeunload', saveSession)
 
     // Открытие нового вида лягушки
     const onDiscovered = ({ level }: { level: number }) => {
@@ -121,7 +129,7 @@ function App() {
     return () => {
       window.clearInterval(heartbeat)
       document.removeEventListener('visibilitychange', onVisibility)
-      window.removeEventListener('beforeunload', saveSessionTimestamp)
+      window.removeEventListener('beforeunload', saveSession)
       eventBus.off('frog:discovered', onDiscovered)
       eventBus.off('rareCrate:opened', handleRareCrateOpened)
       stopSync()

@@ -7,7 +7,6 @@ import {
   type Element,
   type Rarity,
   type BoxData,
-  type ScoutData,
   type CarrierData,
   type RollResult,
   type TutorialStepId,
@@ -94,10 +93,6 @@ export interface CosmicSliceActions {
    * box record), unlike commitOpenedBox() which removes box from inventory.
    */
   openBox: (id: string) => void
-
-  // Scout actions (Phase 16)
-  addScout: (scout: ScoutData) => void
-  removeScout: (id: string) => void
 
   // Carrier actions (Phase 17)
   addCarrier: (carrier: CarrierData) => void
@@ -383,16 +378,6 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
         rarity: rolled,
         element: box.element,
       })
-    },
-
-    addScout: (scout) => {
-      const s = get()
-      set({ scouts: [...s.scouts, scout] })
-    },
-
-    removeScout: (id) => {
-      const s = get()
-      set({ scouts: s.scouts.filter((sc) => sc.id !== id) })
     },
 
     addCarrier: (carrier) => {

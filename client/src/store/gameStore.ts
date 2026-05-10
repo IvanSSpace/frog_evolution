@@ -13,7 +13,6 @@ import {
   getMagnetMergesPerCycle,
   getCrateLevel,
   getRareBoxThreshold,
-  getTractorIncomePerSec,
   type Upgrades,
 } from '../game/config/upgrades'
 import {
@@ -40,11 +39,11 @@ import {
   saveCosmicSlice,
   loadNumberFormat,
   saveNumberFormat,
-  saveSessionTimestamp,
-  getOfflineElapsedMs,
+  saveSessionState,
+  getOfflineSession,
 } from './persistence'
 
-export { saveSessionTimestamp, getOfflineElapsedMs }
+export { saveSessionState, getOfflineSession }
 
 // Re-exports for backward compat — many consumers import these from gameStore.
 // New code should import directly from game/config/upgrades or game/config/locations.
@@ -60,7 +59,6 @@ export {
   getMagnetMergesPerCycle,
   getCrateLevel,
   getRareBoxThreshold,
-  getTractorIncomePerSec,
   LOCATIONS,
   getLocationById,
 }
@@ -279,7 +277,6 @@ useGameStore.subscribe((state, prev) => {
   if (
     state.serums !== prev.serums ||
     state.boxes !== prev.boxes ||
-    state.scouts !== prev.scouts ||
     state.ship !== prev.ship ||
     state.carriers !== prev.carriers ||
     state.bestiaryBitset !== prev.bestiaryBitset ||
@@ -295,7 +292,6 @@ useGameStore.subscribe((state, prev) => {
     saveCosmicSlice({
       serums: state.serums,
       boxes: state.boxes,
-      scouts: state.scouts,
       ship: state.ship,
       carriers: state.carriers,
       bestiaryBitset: state.bestiaryBitset,

@@ -292,7 +292,6 @@ export function loadCosmicSlice(): CosmicPersist {
     return {
       serums: parsed.serums ?? defaults.serums,
       boxes,
-      scouts: Array.isArray(parsed.scouts) ? parsed.scouts : [],
       ship,
       carriers: Array.isArray(parsed.carriers) ? parsed.carriers : [],
       // Phase 17: bitset extended 24 → 192 bytes (1536 bits). Pad-only migration.
@@ -390,24 +389,61 @@ export function saveNumberFormat(f: NumberFormat) {
 const _initialFormat = loadNumberFormat()
 setGlobalFormat(_initialFormat)
 
-// ─── session timestamp (for offline tractor income) ──────────────────────────
+// ─── session state (for offline tractor income) ─────────────────────────────
+//
+// SESSION_KEY now stores JSON { ts, incomePerSec } so the tractor offline
+// payout uses the player's actual farm income/sec at the moment of leaving
+// rather than a fixed table tied to upgrade level. The shape change is
+// ephemeral (not migration-tracked) — a legacy plain-number string is read
+// back as { ts: <number>, incomePerSec: 0 } so old sessions just get zero
+// offline gold once and are then upgraded on the next save.
 
-export function saveSessionTimestamp() {
+export function saveSessionState(incomePerSec: number) {
   try {
-    localStorage.setItem(SESSION_KEY, Date.now().toString())
+    localStorage.setItem(
+      SESSION_KEY,
+      JSON.stringify({ ts: Date.now(), incomePerSec }),
+    )
   } catch {
     /* ignore */
   }
 }
 
-export function getOfflineElapsedMs(): number {
+export function getOfflineSession(): {
+  elapsedMs: number
+  incomePerSec: number
+} | null {
   try {
     const raw = localStorage.getItem(SESSION_KEY)
-    if (!raw) return 0
-    const last = parseInt(raw, 10)
-    if (!Number.isFinite(last)) return 0
-    return Math.max(0, Date.now() - last)
+    if (!raw) return null
+    let ts: number
+    let incomePerSec = 0
+    try {
+      const parsed = JSON.parse(raw)
+      if (
+        parsed &&
+        typeof parsed === 'object' &&
+        typeof parsed.ts === 'number'
+      ) {
+        ts = parsed.ts
+        if (typeof parsed.incomePerSec === 'number') {
+          incomePerSec = parsed.incomePerSec
+        }
+      } else if (typeof parsed === 'number' && Number.isFinite(parsed)) {
+        // JSON.parse of a plain numeric string — legacy format.
+        ts = parsed
+      } else {
+        return null
+      }
+    } catch {
+      // Not JSON — try legacy plain-number string format.
+      const legacy = parseInt(raw, 10)
+      if (!Number.isFinite(legacy)) return null
+      ts = legacy
+    }
+    if (!Number.isFinite(ts)) return null
+    return { elapsedMs: Math.max(0, Date.now() - ts), incomePerSec }
   } catch {
-    return 0
+    return null
   }
 }
