@@ -19,17 +19,18 @@ import { CoordinatesHUDController } from './starmap/coordinatesHUD'
 import { CameraController } from './starmap/cameraController'
 import { ControlsController } from './starmap/controlsController'
 import { PopoverController } from './starmap/popovers'
-import { deriveModulations } from '../../audio/planetVoice'
 // 96 comp* импортов и DAILY_CAP/useGameStore — теперь только в popovers.ts
 // (Phase 20-04, Wave 4: extracted playUniqueAnimation/runAnimComponent/openBgNamePopup).
+// deriveModulations, hashId, effectiveSeed, animRng — теперь только в SeedRefinementEngine.
 import type { Race, BgSystem, Archetype, PlanetMapEntry } from './starmap/types'
-import { mulberry32, hashId, effectiveSeed, animRng } from './starmap/helpers'
+import { mulberry32 } from './starmap/helpers'
+import { SeedRefinementEngine } from './starmap/seedRefinement/engine'
 import { setupCosmicDust } from './starmap/ambient/cosmicDust'
 import { setupRandomSignals } from './starmap/ambient/randomSignals'
 import { setupTorRing } from './starmap/ambient/torRing'
 import { setupVeranLightning } from './starmap/ambient/veranLightning'
 import { setupRelictMourning } from './starmap/ambient/relictMourning'
-import { devLog, devWarn } from '../../utils/devLog'
+import { devWarn } from '../../utils/devLog'
 
 // Phaser-сцена Звёздной карты. Запускается рядом с MainScene через scene-manager.
 // Ничего о gameStore не знает — это «декоративная карта» для просмотра системы
@@ -213,9 +214,15 @@ export class StarMapScene extends Phaser.Scene {
   tapHandledThisFrame = false
 
   // Phase 7: override-карта для main races (которым нельзя мутировать rngSeed как BG).
-  // Заполняется в refineAnimSeeds() при коллизиях signatures.
+  // Заполняется в seedEngine.refineAnims/refineSounds при коллизиях signatures.
   // Phase 20-04 (Wave 4): package-public — PopoverController читает через animRng helper.
-  mainSeedOverride = new Map<string, number>()
+  // Phase 20-XX: само хранилище и refine-методы вынесены в SeedRefinementEngine.
+  // Геттер делегирует в engine — popovers.ts продолжает работать без изменений.
+  get mainSeedOverride(): Map<string, number> {
+    return this.seedEngine.mainSeedOverride
+  }
+  // Создаётся в create() ПЕРЕД первым вызовом seedEngine.refineAll(...).
+  private seedEngine!: SeedRefinementEngine
 
   // Тематический mapping: каждый тип получает пул из подходящих компонентов.
   // 0-11: универсальные (ring, multiRing, sparkle, flash, lightning, orbit, spiral, confetti, wave, comet, starBurst, halo)
@@ -353,21 +360,20 @@ export class StarMapScene extends Phaser.Scene {
     this.allSystems = [...MAIN_RACES, ...bg]
 
     // Phase 7: глобальная уникальность signatures.
-    // ВАЖНО: refineTextureSeeds() ДОЛЖЕН вызываться ПЕРЕД refineAnimSeeds() —
+    // ВАЖНО: refineTextures() ДОЛЖЕН вызываться ПЕРЕД refineAnims() —
     // мутация rngSeed для текстур инвалидирует animation signatures, текстуры идут первыми.
-    // Phase 8: refineSoundSeeds() — третий pass (texture → anim → sound).
+    // Phase 8: refineSounds() — третий pass (texture → anim → sound).
     // Каждый pass conservative для следующего; sound mutation использует разную константу
     // (0xc2b2ae3d) чтобы не пересекаться с anim (0x9e3779b9) и texture (0x85ebca6b).
-    this.refineTextureSeeds()
-    this.refineAnimSeeds()
-    this.refineSoundSeeds() // Phase 8
     // Phase 8 plan 06: anim+sound refine могут изменить rngSeed → редко создают
     // новую texture коллизию (наблюдение: 1 collision из 984 после первого прогона).
     // Второй проход texture refine стабилизирует pipeline до 984/984 unique.
     // Anim/sound signatures не страдают: повторная texture mutation использует
-    // ту же константу 0x85ebca6b которую refineAnimSeeds учитывает в своих
+    // ту же константу 0x85ebca6b которую refineAnims учитывает в своих
     // signature space (88+ comp × strict params, миллионы вариантов).
-    this.refineTextureSeeds()
+    // Phase 20-XX: вся pipeline вынесена в SeedRefinementEngine.refineAll().
+    this.seedEngine = new SeedRefinementEngine(this.THEME_COMPONENTS)
+    this.seedEngine.refineAll(this.allSystems)
 
     // Phase 20-05 (Wave 5): CameraController — должен быть создан до setCameraCenter
     // (вызывается ниже на старте + используется ControlsController в setup).
@@ -683,251 +689,12 @@ export class StarMapScene extends Phaser.Scene {
   // 53. compChromaShift — extracted в effects/anim/shared/compChromaShift.ts (Phase 9).
 
   // === PHASE 7: UNIQUENESS CHECK ===
-
-  // Phase 8: квантует значение в индекс ближайшего бина (по abs distance).
-  // thresholds — отсортированный массив центров бинов. Возвращает 0..thresholds.length-1.
-  private quantize(value: number, thresholds: number[]): number {
-    let bestIdx = 0
-    let bestDist = Math.abs(value - thresholds[0])
-    for (let i = 1; i < thresholds.length; i++) {
-      const d = Math.abs(value - thresholds[i])
-      if (d < bestDist) {
-        bestDist = d
-        bestIdx = i
-      }
-    }
-    return bestIdx
-  }
-
-  // Симулирует первые RNG-вызовы playUniqueAnimation и возвращает signature.
-  // Должен ТОЧНО реплицировать порядок rng() calls в реальной игре.
-  // Phase 8: signature расширена strict-параметрами (rotationBin, scaleBin, hueBin, delayBins)
-  // для отлова коллизий по visible-различимым параметрам, не только recipe set.
-  private buildAnimSignature(sys: Race | BgSystem): string {
-    const rng = animRng(sys, this.mainSeedOverride)
-    const theme = (sys as BgSystem).archetype ?? sys.type
-    const pool = this.THEME_COMPONENTS[theme] ?? [
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
-    ]
-
-    // (1) recipe size + components — реплицирует playUniqueAnimation:984-992
-    const r1 = rng()
-    const targetCount = r1 < 0.5 ? 2 : r1 < 0.85 ? 3 : 4
-    const compCount = Math.min(targetCount, pool.length)
-    const used = new Set<number>()
-    const components: number[] = []
-    while (components.length < compCount) {
-      const c = pool[Math.floor(rng() * pool.length)]
-      if (!used.has(c)) {
-        used.add(c)
-        components.push(c)
-      }
-    }
-
-    // (2) modifier flag + rotation/scale (реплицирует playUniqueAnimation:997-999)
-    const useModifier = rng() < 0.25
-    const modRotation = useModifier ? (rng() - 0.5) * Math.PI : 0
-    const modScale = useModifier ? 0.7 + rng() * 0.6 : 1
-
-    // Phase 8: квантуем modifier params в бины
-    // rotation: 4 бина около (-π/2, -π/4, +π/4, +π/2); -1 если modifier нет
-    const rotationBin = useModifier
-      ? this.quantize(modRotation, [
-          -Math.PI / 2,
-          -Math.PI / 4,
-          Math.PI / 4,
-          Math.PI / 2,
-        ])
-      : -1
-    // scale: 4 бина около (0.7, 0.85, 1.15, 1.3); -1 если modifier нет
-    const scaleBin = useModifier
-      ? this.quantize(modScale, [0.7, 0.85, 1.15, 1.3])
-      : -1
-
-    // (3) hue_bin: дополнительный детерминированный hash от seed (НЕ дёргает rng).
-    // ВАЖНО: pickColor вызывает rng() уже внутри runAnimComponent — мы НЕ можем
-    // повторить этот порядок в signature, т.к. он зависит от внутренностей comp.
-    // Решение: используем raw seed (как его вычисляет animRng) и проектируем в 8 бинов.
-    const seedSource =
-      'rngSeed' in sys && typeof (sys as BgSystem).rngSeed === 'number'
-        ? (sys as BgSystem).rngSeed
-        : (this.mainSeedOverride.get(sys.id) ?? hashId(sys.id))
-    // Проектируем seed в 8 hue bins (0..7)
-    const hueBin = (seedSource >>> 5) & 0x7
-
-    // (4) delay_bins per non-first comp (3 бина: <100ms / 100-199ms / ≥200ms)
-    // ВАЖНО: реплицирует playUniqueAnimation:1002 — `Math.floor(rng() * 250) + 50`
-    // (диапазон 50..299), затем мы квантуем в 3 бина.
-    const delayBins: number[] = []
-    for (let i = 1; i < components.length; i++) {
-      const delay = Math.floor(rng() * 250) + 50
-      let bin: number
-      if (delay < 100) bin = 0
-      else if (delay < 200) bin = 1
-      else bin = 2
-      delayBins.push(bin)
-    }
-
-    // Sorted comps for set-equality (как в Phase 7), плюс strict params
-    // (rotationBin, scaleBin, hueBin, delayBins encoded in segments r/s/h/d).
-    const compsKey = [...components].sort((a, b) => a - b).join(',')
-    return `${compsKey}|m${useModifier ? 1 : 0}|r${rotationBin}|s${scaleBin}|h${hueBin}|d${delayBins.join(',')}|${theme}`
-  }
-
-  // После создания allSystems — refine seeds для уникальности recipe.
-  // Если signature уже встречалась → детерминированно мутируем seed и пересчитываем.
-  // Phase 8: после strict signature — 10 attempts на mutate seed (Phase 7 был 5).
-  // Mutation: seed XOR ((attempt+1) * 0x9e3779b9) — golden ratio константа для distribution.
-  private refineAnimSeeds(): void {
-    const sigs = new Map<string, string>()
-    let conflicts = 0
-    for (const sys of this.allSystems) {
-      let attempt = 0
-      let sig = this.buildAnimSignature(sys)
-      while (sigs.has(sig) && attempt < 10) {
-        const isBg =
-          'rngSeed' in sys && typeof (sys as BgSystem).rngSeed === 'number'
-        const cur = isBg
-          ? (sys as BgSystem).rngSeed
-          : (this.mainSeedOverride.get(sys.id) ?? hashId(sys.id))
-        const newSeed = (cur ^ ((attempt + 1) * 0x9e3779b9)) >>> 0
-        if (isBg) {
-          ;(sys as BgSystem).rngSeed = newSeed
-        } else {
-          this.mainSeedOverride.set(sys.id, newSeed)
-        }
-        sig = this.buildAnimSignature(sys)
-        attempt++
-        if (attempt === 10 && sigs.has(sig)) conflicts++
-      }
-      sigs.set(sig, sys.id)
-    }
-    devLog(
-      `[StarMap] anim signatures (strict): ${sigs.size}/${this.allSystems.length} unique, ${conflicts} unresolved conflicts (max 10 attempts)`,
-    )
-  }
-
+  //
+  // Phase 20-XX: вынесено в './starmap/seedRefinement/engine.ts'.
+  // SeedRefinementEngine хранит mainSeedOverride и реализует refineAll() —
+  // композитный pipeline texture → anim → sound → texture (последний pass
+  // стабилизирует редкие texture коллизии после anim/sound mutation).
   // hashId — extracted в './starmap/helpers.ts' (Phase 20-01).
-
-  // Phase 8: signature формат tuple-string. archetype|pitch|rot|inv|det|cutoff.
-  // Используется для refineSoundSeeds — гарантирует 1000/1000 unique sound signatures.
-  private buildSoundSignature(sys: Race | BgSystem): string {
-    const archetype = (sys as BgSystem).archetype ?? sys.type
-    const seed = effectiveSeed(sys, this.mainSeedOverride)
-    const m = deriveModulations(seed, archetype)
-    return `${archetype}|${m.pitchStep}|${m.rotationIdx}|${m.inversionIdx}|${m.detuneBin}|${m.cutoffBin}`
-  }
-
-  // Phase 8: третий refine pass (после texture → anim → sound).
-  // При коллизии sound signature мутирует seed XOR ((attempt+1) * 0xc2b2ae3d).
-  // До 10 attempts на планету. Логирует unique/total + unresolved в консоль.
-  // ВАЖНО: эта мутация seed повлияет на anim signature, поэтому проводится ПОСЛЕДНЕЙ
-  // (после texture и anim refine). Обратная зависимость допустима: после Sound mutation
-  // мы НЕ возвращаемся к anim refine, потому что anim signature space уже достаточен
-  // (10 attempts × strict signature) для absorbing новых мутаций.
-  // Mutation constant 0xc2b2ae3d (FNV-1a hash multiplier) отличается от anim (0x9e3779b9)
-  // и texture (0x85ebca6b) чтобы каждый pass разводил seeds в РАЗНОМ направлении.
-  private refineSoundSeeds(): void {
-    const sigs = new Map<string, string>()
-    let conflicts = 0
-    for (const sys of this.allSystems) {
-      let attempt = 0
-      let sig = this.buildSoundSignature(sys)
-      while (sigs.has(sig) && attempt < 10) {
-        const isBg =
-          'rngSeed' in sys && typeof (sys as BgSystem).rngSeed === 'number'
-        const cur = isBg
-          ? (sys as BgSystem).rngSeed
-          : (this.mainSeedOverride.get(sys.id) ?? hashId(sys.id))
-        const newSeed = (cur ^ ((attempt + 1) * 0xc2b2ae3d)) >>> 0
-        if (isBg) {
-          ;(sys as BgSystem).rngSeed = newSeed
-        } else {
-          this.mainSeedOverride.set(sys.id, newSeed)
-        }
-        sig = this.buildSoundSignature(sys)
-        attempt++
-        if (attempt === 10 && sigs.has(sig)) conflicts++
-      }
-      sigs.set(sig, sys.id)
-    }
-    devLog(
-      `[StarMap] sound signatures: ${sigs.size}/${this.allSystems.length} unique, ${conflicts} unresolved conflicts (max 10 attempts)`,
-    )
-  }
-
-  // Phase 7: signature для текстуры BG-планеты — реплицирует первые ~10 rng() calls
-  // в renderBgPoint. Captures: aura/baseRotation/sub-variant choice + первые counts +
-  // флаги universal modifiers. Main races не учитываются (уникальны по id).
-  private buildTextureSignature(sys: Race | BgSystem): string {
-    if (!('archetype' in sys)) return `main:${sys.id}`
-    const bg = sys as BgSystem
-    const rng = mulberry32(bg.rngSeed)
-    // 1) sparkle decision
-    rng()
-    // 2) aura
-    const showAura =
-      bg.archetype !== 'dead' &&
-      bg.archetype !== 'mineral' &&
-      bg.archetype !== 'desert'
-    if (showAura) {
-      rng() // auraR
-      rng() // auraAlpha
-      if (rng() < 0.3) {
-        rng() // double aura
-      }
-    }
-    // 3) base color shift
-    rng() // 0.92 + rng() * 0.07
-    rng() // ringOffsetAng
-    rng() // ringOffsetMag
-    rng() // size factor
-    // 4) baseRotation
-    rng()
-    // 5) sub-variant choice (введём в Task 9 в renderBgPoint, signature заранее реплицирует)
-    const variant = Math.floor(rng() * 3)
-    // 6-7) первые 2 counts (зависит от archetype, но возьмём как general 0-4)
-    const c1 = Math.floor(rng() * 5)
-    const c2 = Math.floor(rng() * 5)
-    // Phase 8: third count для расширения signature space (особенно важно для dead variant 2 — bare)
-    const c3 = Math.floor(rng() * 5)
-    // 8) modifier flags (universal modifiers)
-    const surfaceLines = rng() < 0.15 ? 1 : 0
-    const gradientBands = rng() < 0.12 ? 1 : 0
-    const multiSpots = rng() < 0.15 ? 1 : 0
-    const stackedRings = rng() < 0.08 ? 1 : 0
-    // Phase 8: asymmetric atmosphere + color speckle modifiers (последние 2 universal modifiers)
-    const asym = rng() < 0.2 ? 1 : 0
-    const speckle = rng() < 0.25 ? 1 : 0
-    return `${bg.archetype}:v${variant}:c${c1}-${c2}-${c3}:m${surfaceLines}${gradientBands}${multiSpots}${stackedRings}${asym}${speckle}`
-  }
-
-  // Phase 7: refine seed для текстур. Вызывается ДО refineAnimSeeds() в create().
-  // Phase 8: 10 attempts (вместо 5) — consistent с refineAnimSeeds; используется
-  // расширенный signature space (c3, asym, speckle).
-  private refineTextureSeeds(): void {
-    const sigs = new Map<string, string>()
-    let conflicts = 0
-    let bgCount = 0
-    for (const sys of this.allSystems) {
-      if (!('archetype' in sys)) continue // skip main
-      bgCount++
-      const bg = sys as BgSystem
-      let attempt = 0
-      let sig = this.buildTextureSignature(bg)
-      while (sigs.has(sig) && attempt < 10) {
-        const cur = bg.rngSeed
-        bg.rngSeed = (cur ^ ((attempt + 1) * 0x85ebca6b)) >>> 0
-        sig = this.buildTextureSignature(bg)
-        attempt++
-        if (attempt === 10 && sigs.has(sig)) conflicts++
-      }
-      sigs.set(sig, sys.id)
-    }
-    devLog(
-      `[StarMap] texture signatures: ${sigs.size}/${bgCount} unique BG, ${conflicts} unresolved`,
-    )
-  }
 
   // === PHASE 7: НОВЫЕ КОМПОНЕНТЫ 54-63 ===
 
