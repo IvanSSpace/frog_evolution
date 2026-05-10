@@ -42,6 +42,12 @@ import { setupRandomSignals } from './starmap/ambient/randomSignals'
 import { setupTorRing } from './starmap/ambient/torRing'
 import { setupVeranLightning } from './starmap/ambient/veranLightning'
 import { setupRelictMourning } from './starmap/ambient/relictMourning'
+import {
+  LODManager,
+  type CullableEntry,
+  type MoonEntry,
+  type ZoomCompStarEntry,
+} from './starmap/lod/lodManager'
 import { devWarn } from '../../utils/devLog'
 
 // Phaser-сцена Звёздной карты. Запускается рядом с MainScene через scene-manager.
@@ -77,19 +83,49 @@ export class StarMapScene extends Phaser.Scene {
   allSystems: (Race | BgSystem)[] = []
   systemSprites = new Map<string, Phaser.GameObjects.Container>()
   // selectionMarker мигрировал в PopoverController (Phase 20-04, Wave 4).
-  // Список объектов для manual culling (Phaser не делает frustum culling для Container).
-  // lodMinZoom: если zoom < lodMinZoom → объект скрыт независимо от viewport (LOD).
-  cullableData: Array<{
-    obj: Phaser.GameObjects.GameObject & {
-      visible: boolean
-      setVisible: (v: boolean) => unknown
-    }
-    x: number
-    y: number
-    r: number
-    lodMinZoom?: number
-  }> = []
-  cullTickCounter = 0
+  // Phase 20-XX: LOD-state (cullableData, cullTickCounter, bgArchetypeGfx,
+  // bgBatchGfx, bgInteractiveContainers, bgInteractiveEnabled, moons, zoomCompStars)
+  // вынесен в LODManager. Сцена выставляет наружу через get/set делегацию,
+  // чтобы coordinatesHUD.ts и starfield.ts продолжали работать через scene.X
+  // без переписывания.
+  // lod создаётся в create() ДО renderSystem (а тот пушит в cullableData/moons/etc).
+  private lod!: LODManager
+
+  // ── LOD getters/setters: делегируют в this.lod ──
+  get cullableData(): CullableEntry[] {
+    return this.lod.cullableData
+  }
+  get cullTickCounter(): number {
+    return this.lod.cullTickCounter
+  }
+  set cullTickCounter(v: number) {
+    this.lod.cullTickCounter = v
+  }
+  get bgArchetypeGfx(): Phaser.GameObjects.Graphics[] {
+    return this.lod.bgArchetypeGfx
+  }
+  get bgBatchGfx(): Phaser.GameObjects.Graphics | null {
+    return this.lod.bgBatchGfx
+  }
+  set bgBatchGfx(v: Phaser.GameObjects.Graphics | null) {
+    this.lod.bgBatchGfx = v
+  }
+  get bgInteractiveContainers(): Phaser.GameObjects.Container[] {
+    return this.lod.bgInteractiveContainers
+  }
+  get bgInteractiveEnabled(): boolean {
+    return this.lod.bgInteractiveEnabled
+  }
+  set bgInteractiveEnabled(v: boolean) {
+    this.lod.bgInteractiveEnabled = v
+  }
+  get moons(): MoonEntry[] {
+    return this.lod.moons
+  }
+  get zoomCompStars(): ZoomCompStarEntry[] {
+    return this.lod.zoomCompStars
+  }
+
   // Адаптивный hit-area для главных планет (тап по ним удобен на любом зуме)
   mainPlanetHits: Array<{
     container: Phaser.GameObjects.Container
@@ -106,29 +142,6 @@ export class StarMapScene extends Phaser.Scene {
   private popover?: Phaser.GameObjects.Container
   // bgNamePopup/bgNamePopupTimer мигрировали в PopoverController (Phase 20-04, Wave 4).
   private nebula?: NebulaBackgroundHandle
-  // Звёзды-ромбы, которые компенсируют zoom (видны и при максимальном отдалении)
-  zoomCompStars: Array<{
-    obj: Phaser.GameObjects.Graphics
-    baseScale: number
-  }> = []
-  // Спутники планет — рендерятся только при zoom >= MOON_MIN_ZOOM, иначе скрыты.
-  moons: Array<{
-    obj: Phaser.GameObjects.Arc
-    angle: number
-    radius: number
-    speed: number
-  }> = []
-  // Детализация BG-планет (archetype-specific графика + universal modifiers).
-  // При zoom < BG_DETAIL_MIN_ZOOM скрывается → видны только базовые шары.
-  // Это даёт ~80% сокращение draw calls на zoom-out → +20-30 FPS.
-  bgArchetypeGfx: Phaser.GameObjects.Graphics[] = []
-  // Batch-рендер всех 434 BG как точек в одном Graphics — для экстремального zoom (<0.10).
-  // Заменяет 434 индивидуальных контейнера → 1 draw call. Не кликабелен (звёздное небо).
-  bgBatchGfx: Phaser.GameObjects.Graphics | null = null
-  // Контейнеры BG-планет для быстрого toggle interactive по zoom.
-  // При zoom < BG_INTERACTIVE_MIN_ZOOM — input.enabled = false для всех (нет hit-test overhead).
-  bgInteractiveContainers: Phaser.GameObjects.Container[] = []
-  bgInteractiveEnabled = true
   // Линии связи между главными расами + кэш edges для перерисовки при изменении zoom.
   mainLinesGfx: Phaser.GameObjects.Graphics | null = null
   mainLinesEdges: Array<{
@@ -309,6 +322,17 @@ export class StarMapScene extends Phaser.Scene {
     // Phase 20-XX: вся pipeline вынесена в SeedRefinementEngine.refineAll().
     this.seedEngine = new SeedRefinementEngine(this.THEME_COMPONENTS)
     this.seedEngine.refineAll(this.allSystems)
+
+    // Phase 20-XX: LODManager owns LOD-state (cullableData/moons/bgArchetypeGfx/etc).
+    // Должен быть создан ДО setupStarfield/renderSystem/buildBgBatch/setupCosmicDust —
+    // все они пушат в коллекции через scene.X (делегаты на this.lod.X).
+    this.lod = new LODManager({
+      MOON_FADE_START,
+      MOON_FADE_END,
+      BG_DETAIL_MIN_ZOOM,
+      BG_INTERACTIVE_MIN_ZOOM,
+      BG_PLANET_MIN_ZOOM,
+    })
 
     // Phase 20-05 (Wave 5): CameraController — должен быть создан до setCameraCenter
     // (вызывается ниже на старте + используется ControlsController в setup).
