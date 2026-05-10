@@ -4,8 +4,9 @@
 //
 // Public API:
 //   - mainSeedOverride: readonly Map<string, number> — public для совместимости с
-//     starmap/popovers.ts (читает scene.mainSeedOverride через animRng/effectiveSeed).
-//     Сцена выставляет этот Map наружу через геттер делегацией к engine.
+//     starmap/popovers.ts и starmap/popovers/animationOrchestrator.ts (читают
+//     scene.mainSeedOverride через animRng/effectiveSeed). Сцена выставляет этот
+//     Map наружу через геттер делегацией к engine.
 //   - refineAll(systems): композирует texture → anim → sound → texture
 //     (тот же порядок и двойной texture-pass, что был в StarMapScene.create()).
 //   - refineTextures / refineAnims / refineSounds — индивидуальные проходы,
@@ -14,8 +15,9 @@
 // История:
 // • До рефакторинга все 7 методов (refineTexture/Anim/SoundSeeds, build*Signature,
 //   quantize) и поле mainSeedOverride жили на StarMapScene.
-// • THEME_COMPONENTS остаётся на сцене (его читают также popovers.ts и др.).
-//   Engine получает его через конструктор как readonly reference.
+// • THEME_COMPONENTS остаётся на сцене (его читают также popovers.ts,
+//   animationOrchestrator.ts и др.). Engine получает его через конструктор
+//   как readonly reference.
 
 import type { Race, BgSystem } from '../types'
 import { mulberry32, hashId, effectiveSeed, animRng } from '../helpers'
@@ -25,10 +27,12 @@ import { devLog } from '../../../../utils/devLog'
 export class SeedRefinementEngine {
   // Phase 7: override-карта для main races (которым нельзя мутировать rngSeed как BG).
   // Заполняется в refineAnims() / refineSounds() при коллизиях signatures.
-  // Public — popovers.ts читает через scene.mainSeedOverride (делегация в сцене).
+  // Public — popovers.ts и popovers/animationOrchestrator.ts читают через
+  // scene.mainSeedOverride (делегация в сцене).
   readonly mainSeedOverride = new Map<string, number>()
 
-  // THEME_COMPONENTS живёт на сцене (читают также popovers.ts).
+  // THEME_COMPONENTS живёт на сцене (читают также popovers.ts и
+  // popovers/animationOrchestrator.ts).
   // Engine получает readonly reference — buildAnimSignature только читает.
   constructor(private readonly themeComponents: Record<string, number[]>) {}
 
@@ -72,7 +76,8 @@ export class SeedRefinementEngine {
       0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
     ]
 
-    // (1) recipe size + components — реплицирует playUniqueAnimation:984-992
+    // (1) recipe size + components — реплицирует playUniqueAnimation
+    //     (см. popovers/animationOrchestrator.ts)
     const r1 = rng()
     const targetCount = r1 < 0.5 ? 2 : r1 < 0.85 ? 3 : 4
     const compCount = Math.min(targetCount, pool.length)
@@ -86,7 +91,8 @@ export class SeedRefinementEngine {
       }
     }
 
-    // (2) modifier flag + rotation/scale (реплицирует playUniqueAnimation:997-999)
+    // (2) modifier flag + rotation/scale (реплицирует playUniqueAnimation
+    //     в popovers/animationOrchestrator.ts)
     const useModifier = rng() < 0.25
     const modRotation = useModifier ? (rng() - 0.5) * Math.PI : 0
     const modScale = useModifier ? 0.7 + rng() * 0.6 : 1
@@ -107,8 +113,9 @@ export class SeedRefinementEngine {
       : -1
 
     // (3) hue_bin: дополнительный детерминированный hash от seed (НЕ дёргает rng).
-    // ВАЖНО: pickColor вызывает rng() уже внутри runAnimComponent — мы НЕ можем
-    // повторить этот порядок в signature, т.к. он зависит от внутренностей comp.
+    // ВАЖНО: pickColor вызывает rng() уже внутри runAnimComponent
+    // (popovers/animationOrchestrator.ts) — мы НЕ можем повторить этот порядок
+    // в signature, т.к. он зависит от внутренностей comp.
     // Решение: используем raw seed (как его вычисляет animRng) и проектируем в 8 бинов.
     const seedSource =
       'rngSeed' in sys && typeof (sys as BgSystem).rngSeed === 'number'
@@ -118,8 +125,8 @@ export class SeedRefinementEngine {
     const hueBin = (seedSource >>> 5) & 0x7
 
     // (4) delay_bins per non-first comp (3 бина: <100ms / 100-199ms / ≥200ms)
-    // ВАЖНО: реплицирует playUniqueAnimation:1002 — `Math.floor(rng() * 250) + 50`
-    // (диапазон 50..299), затем мы квантуем в 3 бина.
+    // ВАЖНО: реплицирует playUniqueAnimation (popovers/animationOrchestrator.ts) —
+    // `Math.floor(rng() * 250) + 50` (диапазон 50..299), затем мы квантуем в 3 бина.
     const delayBins: number[] = []
     for (let i = 1; i < components.length; i++) {
       const delay = Math.floor(rng() * 250) + 50
