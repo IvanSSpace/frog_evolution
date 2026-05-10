@@ -9,7 +9,7 @@
 //   - drawLines(scene, mainRaces): K-nearest neighbor связи между главными расами
 //   - redrawMainLines(scene): re-draw линий с zoom-compensated thickness
 //   - buildBgBatch(scene): 1-draw-call звёздное небо для zoom < BG_PLANET_MIN_ZOOM
-//   - renderSystem(scene, sys): dispatcher → renderMainPlanet/renderBgPoint (на сцене)
+//   - renderSystem(scene, sys): dispatcher → scene.planetRenderer.renderMain/renderBg
 //   - createSparkleAt(scene, x, y, size, rng): 8-конечная sparkle-звёздочка над планетой
 //
 // Design rationale: free functions без state — все массивы/Graphics живут на сцене,
@@ -85,7 +85,7 @@ export function setupStarfield(
     scene.cullableData.push({ obj: star, x, y, r: 4 * DPR })
   }
 
-  // Sparkle-звёзды теперь создаются в renderSystem/renderBgPoint как
+  // Sparkle-звёзды теперь создаются в renderSystem/planetRenderer.renderBg как
   // отдельные world-coords Graphics, привязанные к позиции конкретной планеты.
   // См. createSparkleAt(). Старый блок удалён — sparkle на каждой планете.
 
@@ -209,16 +209,17 @@ export function buildBgBatch(scene: StarMapScene): void {
   scene.bgBatchGfx = gfx
 }
 
-// Dispatcher: main planet → renderMainPlanet (in scene), bg planet → renderBgPoint (in scene).
+// Dispatcher: main planet → planetRenderer.renderMain, bg planet → planetRenderer.renderBg.
 // Тонкая обёртка чтобы scene.create() мог вызывать единым callsite.
+// Phase 20-XX (step 4): renderMainPlanet/renderBgPoint вынесены в PlanetRenderer.
 export function renderSystem(
   scene: StarMapScene,
   sys: Race | BgSystem,
   mainRaces: Race[],
 ): void {
   const isMain = mainRaces.some((m) => m.id === sys.id)
-  if (isMain) scene.renderMainPlanet(sys as Race)
-  else scene.renderBgPoint(sys as BgSystem)
+  if (isMain) scene.planetRenderer.renderMain(sys as Race)
+  else scene.planetRenderer.renderBg(sys as BgSystem)
 }
 
 // Создаёт sparkle-звёздочку (8-конечную) над планетой в world-coords.
