@@ -40,12 +40,7 @@ import { setupRandomSignals } from './starmap/ambient/randomSignals'
 import { setupTorRing } from './starmap/ambient/torRing'
 import { setupVeranLightning } from './starmap/ambient/veranLightning'
 import { setupRelictMourning } from './starmap/ambient/relictMourning'
-import {
-  LODManager,
-  type CullableEntry,
-  type MoonEntry,
-  type ZoomCompStarEntry,
-} from './starmap/lod/lodManager'
+import { LODManager } from './starmap/lod/lodManager'
 import { PlanetRenderer } from './starmap/rendering/planetRenderer'
 import { devWarn } from '../../utils/devLog'
 
@@ -84,46 +79,10 @@ export class StarMapScene extends Phaser.Scene {
   // selectionMarker мигрировал в PopoverController (Phase 20-04, Wave 4).
   // Phase 20-XX: LOD-state (cullableData, cullTickCounter, bgArchetypeGfx,
   // bgBatchGfx, bgInteractiveContainers, bgInteractiveEnabled, moons, zoomCompStars)
-  // вынесен в LODManager. Сцена выставляет наружу через get/set делегацию,
-  // чтобы coordinatesHUD.ts и starfield.ts продолжали работать через scene.X
-  // без переписывания.
-  // lod создаётся в create() ДО renderSystem (а тот пушит в cullableData/moons/etc).
-  private lod!: LODManager
-
-  // ── LOD getters/setters: делегируют в this.lod ──
-  get cullableData(): CullableEntry[] {
-    return this.lod.cullableData
-  }
-  get cullTickCounter(): number {
-    return this.lod.cullTickCounter
-  }
-  set cullTickCounter(v: number) {
-    this.lod.cullTickCounter = v
-  }
-  get bgArchetypeGfx(): Phaser.GameObjects.Graphics[] {
-    return this.lod.bgArchetypeGfx
-  }
-  get bgBatchGfx(): Phaser.GameObjects.Graphics | null {
-    return this.lod.bgBatchGfx
-  }
-  set bgBatchGfx(v: Phaser.GameObjects.Graphics | null) {
-    this.lod.bgBatchGfx = v
-  }
-  get bgInteractiveContainers(): Phaser.GameObjects.Container[] {
-    return this.lod.bgInteractiveContainers
-  }
-  get bgInteractiveEnabled(): boolean {
-    return this.lod.bgInteractiveEnabled
-  }
-  set bgInteractiveEnabled(v: boolean) {
-    this.lod.bgInteractiveEnabled = v
-  }
-  get moons(): MoonEntry[] {
-    return this.lod.moons
-  }
-  get zoomCompStars(): ZoomCompStarEntry[] {
-    return this.lod.zoomCompStars
-  }
+  // вынесен в LODManager. Консьюмеры (coordinatesHUD/starfield/planetRenderer)
+  // обращаются напрямую через scene.lod.X — делегаторы удалены.
+  // lod создаётся в create() ДО renderSystem (а тот пушит в lod.cullableData/moons/etc).
+  lod!: LODManager
 
   // Адаптивный hit-area для главных планет (тап по ним удобен на любом зуме)
   mainPlanetHits: Array<{
@@ -412,7 +371,7 @@ export class StarMapScene extends Phaser.Scene {
     setupCosmicDust(this, {
       worldSize: WORLD_SIZE,
       seed: SEED,
-      register: (obj, x, y, r) => this.cullableData.push({ obj, x, y, r }),
+      register: (obj, x, y, r) => this.lod.cullableData.push({ obj, x, y, r }),
     })
     setupRandomSignals(this, MAIN_RACES)
     setupTorRing(this, MAIN_RACES, this.systemSprites)

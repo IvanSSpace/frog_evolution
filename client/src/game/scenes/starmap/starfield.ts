@@ -82,7 +82,7 @@ export function setupStarfield(
       ease: 'Sine.easeInOut',
     })
     // Mid stars видны всегда — это звёздное небо. На сильном отдалении полезно.
-    scene.cullableData.push({ obj: star, x, y, r: 4 * DPR })
+    scene.lod.cullableData.push({ obj: star, x, y, r: 4 * DPR })
   }
 
   // Sparkle-звёзды теперь создаются в renderSystem/planetRenderer.renderBg как
@@ -118,7 +118,7 @@ export function setupStarfield(
       repeat: -1,
       ease: 'Sine.easeInOut',
     })
-    scene.cullableData.push({ obj: g, x, y, r: 12 * DPR })
+    scene.lod.cullableData.push({ obj: g, x, y, r: 12 * DPR })
     // Тап по звезде — вспышка + ⭐
     const starBaseR = 14 * DPR
     const starHit = new Phaser.Geom.Circle(0, 0, starBaseR)
@@ -206,7 +206,7 @@ export function buildBgBatch(scene: StarMapScene): void {
     gfx.fillStyle(sys.color, 0.85)
     gfx.fillCircle(sys.x, sys.y, sys.size * 0.6)
   }
-  scene.bgBatchGfx = gfx
+  scene.lod.bgBatchGfx = gfx
 }
 
 // Dispatcher: main planet → planetRenderer.renderMain, bg planet → planetRenderer.renderBg.
@@ -265,7 +265,7 @@ export function createSparkleAt(
   star.x = planetX + Math.cos(ang) * rad
   star.y = planetY + Math.sin(ang) * rad
   star.setAlpha(0)
-  scene.zoomCompStars.push({ obj: star, baseScale: 1 })
+  scene.lod.zoomCompStars.push({ obj: star, baseScale: 1 })
 
   // Flash в редком ритме. 3 типа поведения (rotate/fade/spin) для разнообразия.
   const flashType: 'rotate' | 'fade' | 'spin' = (() => {

@@ -69,19 +69,19 @@ export class CoordinatesHUDController {
 
       // Spike-детектор: лог в консоль если кадр > 50ms (FPS < 20) — для диагностики лагов.
       if (dt > 50) {
-        const visibleNow = scene.cullableData.filter(
+        const visibleNow = scene.lod.cullableData.filter(
           (c) => c.obj.visible,
         ).length
         devWarn(
-          `[StarMap spike] frame=${dt.toFixed(1)}ms zoom=${cam.zoom.toFixed(3)} visible=${visibleNow}/${scene.cullableData.length} tweens=${scene.tweens.getTweens().length}`,
+          `[StarMap spike] frame=${dt.toFixed(1)}ms zoom=${cam.zoom.toFixed(3)} visible=${visibleNow}/${scene.lod.cullableData.length} tweens=${scene.tweens.getTweens().length}`,
         )
       }
 
       // Culling tick — каждые 6 кадров
-      scene.cullTickCounter++
+      scene.lod.cullTickCounter++
       let visibleCount = 0
-      if (scene.cullTickCounter >= 6) {
-        scene.cullTickCounter = 0
+      if (scene.lod.cullTickCounter >= 6) {
+        scene.lod.cullTickCounter = 0
         const view = cam.worldView
         const margin = 50 * DPR
         const left = view.left - margin
@@ -89,7 +89,7 @@ export class CoordinatesHUDController {
         const top = view.top - margin
         const bottom = view.bottom + margin
         const curZoom = cam.zoom
-        for (const c of scene.cullableData) {
+        for (const c of scene.lod.cullableData) {
           // LOD-cut: при zoom ниже lodMinZoom объект скрыт независимо от viewport.
           // Используется для фоновых планет: при сильном отдалении 434 контейнера
           // не нужны — превращаются в шум, плюс одновременное setVisible(true)
@@ -109,13 +109,13 @@ export class CoordinatesHUDController {
       // Сохраняем для React-HUD overlay
       scene.hudFps = avgFps
       scene.hudVisible = visibleCount
-      scene.hudTotal = scene.cullableData.length
+      scene.hudTotal = scene.lod.cullableData.length
 
       // Компенсация zoom для звёзд-ромбов: при отдалении они растут,
       // при приближении остаются нормального размера. Cap на минимум 1.
       const zoom = scene.cameras.main.zoom
       const zoomComp = Math.max(1, 1 / zoom)
-      for (const s of scene.zoomCompStars) {
+      for (const s of scene.lod.zoomCompStars) {
         if (s.obj.visible) s.obj.setScale(s.baseScale * zoomComp)
       }
 
@@ -133,25 +133,28 @@ export class CoordinatesHUDController {
       const detailVisible = zoom >= config.bgDetailMinZoom
       // Update только если состояние изменилось (раз в zoom-переход, не каждый кадр)
       if (
-        scene.bgArchetypeGfx.length > 0 &&
-        scene.bgArchetypeGfx[0].visible !== detailVisible
+        scene.lod.bgArchetypeGfx.length > 0 &&
+        scene.lod.bgArchetypeGfx[0].visible !== detailVisible
       ) {
-        for (const gd of scene.bgArchetypeGfx) gd.setVisible(detailVisible)
+        for (const gd of scene.lod.bgArchetypeGfx) gd.setVisible(detailVisible)
       }
 
       // Batch BG: видим при zoom < BG_PLANET_MIN_ZOOM (звёздное небо вместо containers).
       // Когда видим — индивидуальные containers скрыты через manual culling LOD-cut.
       const batchVisible = zoom < config.bgPlanetMinZoom
-      if (scene.bgBatchGfx && scene.bgBatchGfx.visible !== batchVisible) {
-        scene.bgBatchGfx.setVisible(batchVisible)
+      if (
+        scene.lod.bgBatchGfx &&
+        scene.lod.bgBatchGfx.visible !== batchVisible
+      ) {
+        scene.lod.bgBatchGfx.setVisible(batchVisible)
       }
 
       // Interactive toggle для BG: при zoom < BG_INTERACTIVE_MIN_ZOOM отключаем
       // input.enabled у всех BG containers — снимает hit-test overhead.
       const wantInteractive = zoom >= config.bgInteractiveMinZoom
-      if (scene.bgInteractiveEnabled !== wantInteractive) {
-        scene.bgInteractiveEnabled = wantInteractive
-        for (const c of scene.bgInteractiveContainers) {
+      if (scene.lod.bgInteractiveEnabled !== wantInteractive) {
+        scene.lod.bgInteractiveEnabled = wantInteractive
+        for (const c of scene.lod.bgInteractiveContainers) {
           if (c.input) c.input.enabled = wantInteractive
         }
       }
@@ -166,7 +169,7 @@ export class CoordinatesHUDController {
       )
       const moonsActive = moonAlpha > 0.001
       const dtSec = dt / 1000
-      for (const m of scene.moons) {
+      for (const m of scene.lod.moons) {
         if (m.obj.visible !== moonsActive) m.obj.setVisible(moonsActive)
         if (!moonsActive) continue
         m.obj.setAlpha(moonAlpha * 0.85) // 0.85 — базовая alpha спутника как было

@@ -586,7 +586,7 @@ export class PlanetRenderer {
 
     this.scene.systemSprites.set(sys.id, container)
     // Регистрируем для culling
-    this.scene.cullableData.push({
+    this.scene.lod.cullableData.push({
       obj: container,
       x: sys.x,
       y: sys.y,
@@ -595,7 +595,7 @@ export class PlanetRenderer {
     // Регистрируем для адаптивного hit-area (увеличивается при zoom-out)
     this.scene.mainPlanetHits.push({ container, baseR, circle: hitArea })
     // Регистрируем для batch-toggle interactive по zoom (как BG)
-    this.scene.bgInteractiveContainers.push(container)
+    this.scene.lod.bgInteractiveContainers.push(container)
   }
 
   // Phase 20-04 (Wave 4): package-public — вызывается из starfield.ts (renderSystem dispatcher).
@@ -655,7 +655,7 @@ export class PlanetRenderer {
     // Детальный Graphics — все остальные узоры. Регистрируется для LOD-toggle.
     const g = this.scene.add.graphics()
     container.add(g)
-    this.scene.bgArchetypeGfx.push(g)
+    this.scene.lod.bgArchetypeGfx.push(g)
 
     // Архетип-специфичная деталировка с большим количеством rng-вариаций.
     // Phase 7: для 9 hot archetypes — sub-variants (3 на каждый).
@@ -1659,7 +1659,7 @@ export class PlanetRenderer {
         0.85,
       )
       container.add(moon)
-      this.scene.moons.push({
+      this.scene.lod.moons.push({
         obj: moon,
         angle: rng() * Math.PI * 2,
         radius: sys.size * 1.5,
@@ -1756,9 +1756,9 @@ export class PlanetRenderer {
 
     this.scene.systemSprites.set(sys.id, container)
     // Регистрируем для batch-toggle interactive по zoom
-    this.scene.bgInteractiveContainers.push(container)
+    this.scene.lod.bgInteractiveContainers.push(container)
     // BG-планеты получают LOD: при zoom < BG_PLANET_MIN_ZOOM скрываются полностью
-    this.scene.cullableData.push({
+    this.scene.lod.cullableData.push({
       obj: container,
       x: sys.x,
       y: sys.y,
