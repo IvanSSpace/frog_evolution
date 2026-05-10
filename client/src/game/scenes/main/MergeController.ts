@@ -561,9 +561,9 @@ export class MergeController {
       case 2:
         return 'Лес'
       case 3:
-        return 'Земля'
+        return 'Континент'
       case 4:
-        return 'Космос'
+        return 'Планета'
       default:
         return ''
     }

@@ -28,8 +28,8 @@
   "locations": {
     "1": "Swamp",
     "2": "Forest",
-    "3": "Earth",
-    "4": "Space"
+    "3": "Continent",
+    "4": "Planet"
   },
   "header": {
     "per_sec": "/sec"

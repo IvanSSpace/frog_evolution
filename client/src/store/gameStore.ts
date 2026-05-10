@@ -102,7 +102,7 @@ interface GameStateBase {
   magnetEnabled: boolean
   toggleMagnet: () => void
 
-  // Текущая локация (1=Болото, 2=Лес, 3=Земля, 4=Космос)
+  // Текущая локация (1=Болото, 2=Лес, 3=Континент, 4=Планета)
   currentLocation: number
   setCurrentLocation: (id: number) => void
 

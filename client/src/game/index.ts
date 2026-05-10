@@ -76,8 +76,8 @@ export function startGame(): Phaser.Game {
 
   // Переключение Phaser-сцен через event bus с плавной анимацией.
   // Логика «полёта»:
-  //   Open  (Земля → Космос): отдаляемся ОТ фермы (zoom OUT) → подлетаем К карте (zoom IN)
-  //   Close (Космос → Земля): отдаляемся ОТ карты (zoom OUT) → подлетаем К ферме (zoom IN)
+  //   Open  (Ферма → StarMap): отдаляемся ОТ фермы (zoom OUT) → подлетаем К карте (zoom IN)
+  //   Close (StarMap → Ферма): отдаляемся ОТ карты (zoom OUT) → подлетаем К ферме (zoom IN)
   const sm = () => game!.scene
   let isTransitioning = false
   // Длительность fade — увеличена до 600мс для плавности (раньше 450, бликало при быстром появлении)

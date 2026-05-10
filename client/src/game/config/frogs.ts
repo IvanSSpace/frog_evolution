@@ -13,7 +13,7 @@ interface FrogLevelConfig {
   growthRate: number // мультипликатор цены за каждую купленную (всегда 1.15)
   poopChances: PoopChances
   tint: number // тинт (Phaser hex)
-  location: number // 1=Болото, 2=Лес, 3=Земля, 4=Космос
+  location: number // 1=Болото, 2=Лес, 3=Континент, 4=Планета
   availableInShop: boolean // true = можно купить за монеты; false = только через мерджи (L19+)
 }
 
@@ -36,9 +36,9 @@ export const TARGET_INCOME_PER_SEC: readonly number[] = [
   0.5, 1.5, 4.0, 9.5, 21.0, 44.5,
   // Лес (L7-12)
   92.0, 187.5, 379.0, 762.5, 1530.0, 3065.5,
-  // Земля (L13-18)
+  // Континент (L13-18)
   6137.0, 12280.5, 24568.0, 49143.5, 98295.0, 196598.5,
-  // Космос (L19-24) — все одинаковые (cap)
+  // Планета (L19-24) — все одинаковые (cap)
   393206.0, 393206.0, 393206.0, 393206.0, 393206.0, 393206.0,
 ]
 
@@ -211,7 +211,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     poopChances: HUGE_CHANCES,
   },
 
-  // ─── Земля (L13-18) — placeholder, землистые оливково-зелёные, светлее ───
+  // ─── Континент (L13-18) — placeholder, землистые оливково-зелёные, светлее ───
   {
     path: PLACEHOLDER,
     name: 'Земляквак',
@@ -279,7 +279,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     poopChances: HUGE_CHANCES,
   },
 
-  // ─── Космос (L19-24) — доступны в shop, цены по формуле 560 × 2.8^(T-1) ───
+  // ─── Планета (L19-24) — доступны в shop, цены по формуле 560 × 2.8^(T-1) ───
   // Тёплый оливково-зелёный: контрастирует с синим фоном космоса,
   // отличается от forest=0x4ade80 (лайм H=142°) по hue (~94° vs 142°).
   {

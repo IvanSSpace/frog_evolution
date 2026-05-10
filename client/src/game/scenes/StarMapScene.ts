@@ -404,7 +404,7 @@ export class StarMapScene extends Phaser.Scene {
       this.selectedMainRaceId = null
     })
 
-    // Центрирование камеры на HOME с плавным tween (повторный клик по кнопке "Космос")
+    // Центрирование камеры на HOME с плавным tween (повторный клик по кнопке открытия StarMap)
     eventBus.on('starmap:centerHome', () => {
       const homeRace = MAIN_RACES.find((r) => r.id === 'home') ?? MAIN_RACES[0]
       const cam = this.cameras.main

@@ -16,8 +16,8 @@ const LOCATION_VISUAL: Record<
 > = {
   1: { emoji: '🌿', from: '#bef264', to: '#65a30d', border: '#365314' }, // Болото
   2: { emoji: '🌲', from: '#86efac', to: '#15803d', border: '#14532d' }, // Лес
-  3: { emoji: '🌍', from: '#7dd3fc', to: '#0369a1', border: '#0c4a6e' }, // Земля
-  4: { emoji: '🪐', from: '#fca5a5', to: '#b91c1c', border: '#7f1d1d' }, // Космос
+  3: { emoji: '🌍', from: '#7dd3fc', to: '#0369a1', border: '#0c4a6e' }, // Континент
+  4: { emoji: '🪐', from: '#fca5a5', to: '#b91c1c', border: '#7f1d1d' }, // Планета
   6: { emoji: '✨', from: '#67e8f9', to: '#0e7490', border: '#164e63' }, // Звёздная карта (тест)
 }
 
