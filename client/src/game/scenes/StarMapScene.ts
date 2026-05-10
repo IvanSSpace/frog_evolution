@@ -6,6 +6,18 @@ import {
 } from '../effects/NebulaBackground'
 import { violetRing } from '../effects/presets'
 import planetMap from '../data/planetMap.json'
+import {
+  DPR,
+  WORLD_SIZE,
+  SEED,
+  MOON_FADE_START,
+  MOON_FADE_END,
+  BG_PLANET_MIN_ZOOM,
+  BG_DETAIL_MIN_ZOOM,
+  BG_INTERACTIVE_MIN_ZOOM,
+  MAIN_RACES,
+  generatePalette,
+} from './starmap/planetarium'
 import { ShipController } from './starmap/shipController'
 // ShipSprite/ShipState — теперь только внутри shipController.ts (Phase 20-04, Wave 4).
 import {
@@ -22,7 +34,7 @@ import { PopoverController } from './starmap/popovers'
 // 96 comp* импортов и DAILY_CAP/useGameStore — теперь только в popovers.ts
 // (Phase 20-04, Wave 4: extracted playUniqueAnimation/runAnimComponent/openBgNamePopup).
 // deriveModulations, hashId, effectiveSeed, animRng — теперь только в SeedRefinementEngine.
-import type { Race, BgSystem, Archetype, PlanetMapEntry } from './starmap/types'
+import type { Race, BgSystem, PlanetMapEntry } from './starmap/types'
 import { mulberry32 } from './starmap/helpers'
 import { SeedRefinementEngine } from './starmap/seedRefinement/engine'
 import { setupCosmicDust } from './starmap/ambient/cosmicDust'
@@ -36,43 +48,12 @@ import { devWarn } from '../../utils/devLog'
 // Ничего о gameStore не знает — это «декоративная карта» для просмотра системы
 // и (в будущем) удобной навигации Скаутов.
 
-const DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 3))
-// Размер мира — 7000 от центра (полный 14000)
-const WORLD_SIZE = 7000 * DPR
+// DPR / WORLD_SIZE / SEED / MOON_FADE_* / BG_*_MIN_ZOOM / MAIN_RACES /
+// ARCHETYPE_HUES / hslToHex / generatePalette — extracted в `./starmap/planetarium.ts`
+// (StarMapScene refactor, step 2). Здесь оставлены только сцена-локальные константы.
+
 // Сколько всего обитаемых планет (16 главных + 51 фоновая обитаемая)
 const TOTAL_INHABITED = 67
-// Спутники появляются плавным fade-in между MOON_FADE_START и MOON_FADE_END.
-// Ниже START — alpha 0, выше END — alpha 1, между — линейный переход.
-// Цель: спутники видны только при близком zoom (>0.85), не грузят сцену при отдалении.
-const MOON_FADE_START = 0.7
-const MOON_FADE_END = 0.85
-// Минимальный zoom, при котором BG-контейнеры (с детальным рендером + interactivity)
-// показываются. Ниже — batch-точки (звёздное небо, 1 draw call). Не кликабельны.
-const BG_PLANET_MIN_ZOOM = 0.08
-// Минимальный zoom, при котором рисуется ДЕТАЛИЗАЦИЯ BG-планет
-// (archetype-specific узоры + universal modifiers).
-// 0.10 — детали видны почти всегда. Ниже порога вступает batch-рендер (звёздное небо).
-const BG_DETAIL_MIN_ZOOM = 0.1
-// Минимальный zoom, при котором планеты (BG + main) кликабельны.
-// Ниже — interactive отключён (планеты выглядят как точки, клики бессмысленны).
-// Это снимает hit-test overhead с pointer events во время drag/pinch.
-const BG_INTERACTIVE_MIN_ZOOM = 0.41
-
-// MAIN_RACES читаются из planetMap.json — источник истины для всех 16 главных рас.
-// Координаты/размеры в JSON хранятся в DPR=1 base, в runtime умножаются на real DPR.
-// Чтобы изменить позицию/цвет/размер главной расы — правь planetMap.json напрямую.
-const MAIN_RACES: Race[] = (planetMap.planets as PlanetMapEntry[])
-  .filter((p) => p.kind === 'main')
-  .map((p) => ({
-    id: p.id,
-    name: p.name,
-    x: p.x * DPR,
-    y: p.y * DPR,
-    type: p.type,
-    color: p.color,
-    accent: p.accent,
-    size: p.size * DPR,
-  }))
 
 // NAMES_POOL устарел — теперь имена берутся из BG_NAME_POOL (data/planetNames.ts).
 // Перемешиваются seed-shuffle в generateBackgroundSystems → каждая планета
@@ -80,52 +61,6 @@ const MAIN_RACES: Race[] = (planetMap.planets as PlanetMapEntry[])
 //
 // TYPE_LABELS, mulberry32, Archetype, BgSystem, Race, PlanetMapEntry — extracted
 // в `./starmap/types.ts` и `./starmap/helpers.ts` (Phase 20-01).
-
-const SEED = 19450707
-
-// Базовые HSL hue по архетипам (диапазон). Цвет генерируется из этого
-// + рандомное смещение, чтобы каждая планета имела УНИКАЛЬНЫЙ оттенок.
-const ARCHETYPE_HUES: Record<Archetype, [number, number]> = {
-  gas_giant: [25, 55], // жёлто-оранжевый
-  gas_ringed: [260, 295], // фиолетовый
-  ice: [180, 220], // голубой
-  ocean: [200, 230], // синий
-  desert: [30, 50], // песочный
-  lava: [0, 25], // красно-оранжевый
-  forest: [90, 140], // зелёный
-  mineral: [200, 280], // серо-синий-фиолет
-  dead: [200, 240], // холодный серый
-  toxic: [80, 130], // ядовито-зелёный
-  plasma: [20, 50], // оранжево-жёлтый
-  binary: [0, 360], // любой (две планеты разных цветов)
-}
-
-function hslToHex(h: number, s: number, l: number): number {
-  s /= 100
-  l /= 100
-  const k = (n: number) => (n + h / 30) % 12
-  const a = s * Math.min(l, 1 - l)
-  const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1))
-  const r = Math.round(f(0) * 255)
-  const g = Math.round(f(8) * 255)
-  const b = Math.round(f(4) * 255)
-  return (r << 16) | (g << 8) | b
-}
-
-function generatePalette(
-  archetype: Archetype,
-  rng: () => number,
-): { color: number; accent: number } {
-  const [hMin, hMax] = ARCHETYPE_HUES[archetype]
-  const h = hMin + rng() * (hMax - hMin)
-  const s = 55 + rng() * 35
-  const l = 55 + rng() * 20
-  const color = hslToHex(h, s, l)
-  // Accent — родственный hue со сдвигом + другая яркость
-  const hAccent = (h + (rng() - 0.5) * 30 + 360) % 360
-  const accent = hslToHex(hAccent, s + 5, Math.max(15, l - 25))
-  return { color, accent }
-}
 
 // TYPE_TO_ARCHETYPES и ARCHETYPE_SIZES перенесены в скрипт регенерации
 // (/tmp/starmap_dump.cjs). Используются только для регенерации planetMap.json.
