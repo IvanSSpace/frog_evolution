@@ -7,7 +7,6 @@ import {
   type LocationConfig,
 } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
-import { getUnlockedLocations } from '../../game/config/locationUnlocks'
 import { hapticSelection } from '../../utils/telegram'
 
 // Эмодзи и цвета для локаций (placeholder — потом юзер заменит на свои картинки)
@@ -35,7 +34,6 @@ const STAR_MAP_PROTOTYPE_LOC: LocationConfig = {
 export function LocationStack() {
   const currentLocation = useGameStore((s) => s.currentLocation)
   const setCurrentLocation = useGameStore((s) => s.setCurrentLocation)
-  const discoveredLevels = useGameStore((s) => s.discoveredLevels)
   const [collapsed, setCollapsed] = useState(false)
   const [transitioning, setTransitioning] = useState(false)
   // Активна ли Звёздная карта (виртуальная 6-я). НЕ хранится в gameStore —
@@ -65,19 +63,14 @@ export function LocationStack() {
   }, [starMapActive])
 
   // Сверху вниз: 6 (Звёздная карта) → 3 → 2 → 1
-  // Forcing currentLocation в unlocked-сет — защита от trap'а:
-  // если игрок каким-то путём оказался на ещё-не-разблокированной
-  // локации (corrupted save / dev-команда / cross-location merge),
-  // он должен видеть кнопки чтобы переключиться обратно.
-  const unlocked = getUnlockedLocations(discoveredLevels)
-  unlocked.add(currentLocation)
+  // Прогрессивный анлок временно отключён (по запросу автора) —
+  // все локации видны всегда. Helper `getUnlockedLocations` и
+  // эмиты `'location:unlocked'` оставлены в коде на месте, но
+  // не гейтят отображение.
   const ordered: LocationConfig[] = [
     STAR_MAP_PROTOTYPE_LOC,
     ...[...LOCATIONS].slice().reverse(),
-  ].filter((loc) => unlocked.has(loc.id))
-
-  // Скрываем весь стек когда открыта только одна локация (Болото)
-  if (ordered.length < 2) return null
+  ]
 
   const handleSelect = (id: number) => {
     if (transitioning || starMapTransitioning) return
