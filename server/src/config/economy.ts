@@ -114,3 +114,11 @@ export function getTractorCapMs(level: number): number {
   const hours = TRACTOR_CAP_HOURS[Math.min(level, TRACTOR_CAP_HOURS.length - 1)]
   return hours * 3600 * 1000
 }
+
+// Возвращает locationId куда переезжает лягушка level (1..18).
+// L1-6 → Болото (1), L7-12 → Лес (2), L13-18 → Планета (3).
+// Для L19 (sentinel) → не используется, special-case в merge endpoint.
+export function getFrogLocation(level: number): number {
+  if (level < 1 || level > MAX_LEVEL) return 1
+  return FROG_ECONOMY[level - 1].location
+}

@@ -24,6 +24,7 @@ export async function gameStateRoutes(app: FastifyInstance) {
           gold: state.gold.toString(),
           offlineIncome: '0',
           offlineMs: 0,
+          elapsedMs: 0,
         }
       }
 
@@ -50,7 +51,8 @@ export async function gameStateRoutes(app: FastifyInstance) {
         ...state,
         gold: state.gold.toString(),
         offlineIncome: offlineIncome.toString(),
-        offlineMs: earnedMs,
+        offlineMs: earnedMs, // capped по tractor
+        elapsedMs, // raw — для box drops calc на клиенте
       }
     },
   )
