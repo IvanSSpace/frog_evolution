@@ -31,6 +31,7 @@ import {
   textureKeyForLevel,
   type PoopType,
 } from '../../config/frogs'
+import { getLocationUnlockedByLevel } from '../../config/locationUnlocks'
 import { hapticImpact, hapticNotification } from '../../../utils/telegram'
 import { mergeEffect } from '../../effects/elements/mergeEffect'
 import { classifyDropTarget } from '../../../utils/carrierFeed'
@@ -222,6 +223,21 @@ export class MergeController {
         mergeEffect(scene, cx, cy, sameElementMerge)
       }
 
+      // L24+L24 — special path: лягушки сгорают (уже удалены removeFrog выше),
+      // L25 НЕ материализуется. Тригерится unlock Звёздной карты через sentinel
+      // markDiscovered(25). См. spec progressive-location-unlock.
+      if (oldLevel === MAX_LEVEL && b.level === MAX_LEVEL) {
+        const storeL25 = useGameStore.getState()
+        const currentLocId = storeL25.currentLocation
+        storeL25.removeFrogFromLocation(currentLocId, MAX_LEVEL)
+        storeL25.removeFrogFromLocation(currentLocId, MAX_LEVEL)
+        const wasNew = storeL25.markDiscovered(25)
+        if (wasNew) {
+          eventBus.emit('location:unlocked', { locationId: 6 })
+        }
+        return
+      }
+
       const newLevel = Math.min(a.level + 1, MAX_LEVEL)
       const newCfg = FROG_LEVELS[newLevel - 1]
       const store = useGameStore.getState()
@@ -266,7 +282,13 @@ export class MergeController {
 
         // Discovery (всегда)
         const wasNew = store.markDiscovered(newLevel)
-        if (wasNew) eventBus.emit('frog:discovered', { level: newLevel })
+        if (wasNew) {
+          eventBus.emit('frog:discovered', { level: newLevel })
+          const unlockedLocId = getLocationUnlockedByLevel(newLevel)
+          if (unlockedLocId !== null) {
+            eventBus.emit('location:unlocked', { locationId: unlockedLocId })
+          }
+        }
       })
     })
   }
@@ -388,7 +410,13 @@ export class MergeController {
         hapticNotification('success')
 
         const wasNew = storeS.markDiscovered(newLevel)
-        if (wasNew) eventBus.emit('frog:discovered', { level: newLevel })
+        if (wasNew) {
+          eventBus.emit('frog:discovered', { level: newLevel })
+          const unlockedLocId = getLocationUnlockedByLevel(newLevel)
+          if (unlockedLocId !== null) {
+            eventBus.emit('location:unlocked', { locationId: unlockedLocId })
+          }
+        }
       } else if (outcome.result === 'fail') {
         // Carrier stays at (cx, cy). Unlock + resume idle.
         carrier.isMerging = false
@@ -521,7 +549,13 @@ export class MergeController {
         hapticNotification('success')
 
         const wasNew = store.markDiscovered(newLevel)
-        if (wasNew) eventBus.emit('frog:discovered', { level: newLevel })
+        if (wasNew) {
+          eventBus.emit('frog:discovered', { level: newLevel })
+          const unlockedLocId = getLocationUnlockedByLevel(newLevel)
+          if (unlockedLocId !== null) {
+            eventBus.emit('location:unlocked', { locationId: unlockedLocId })
+          }
+        }
       })
     })
   }

@@ -10,6 +10,7 @@ type Events = {
   'frog:drop': { level: number; merged: boolean }
   'frog:purchased': { level: number }
   'frog:discovered': { level: number }
+  'location:unlocked': { locationId: number }
   'location:changed': { id: number }
   'location:transitionStart': { from: number; to: number }
   'location:transitionEnd': { id: number }
