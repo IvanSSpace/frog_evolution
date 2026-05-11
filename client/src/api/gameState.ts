@@ -1,0 +1,33 @@
+import { apiJson } from './client'
+
+// Server snapshot. gold приходит как string (BigInt) — клиент преобразует при необходимости.
+export interface ServerGameState {
+  id: number
+  userId: number
+  gold: string
+  upgrades: Record<string, number>
+  frogPurchases: number[]
+  discoveredLevels: number[]
+  magnetEnabled: boolean
+  currentLocation: number
+  locationFrogs: number[][]
+  cosmic: unknown | null
+  lastSessionAt: string
+  createdAt: string
+  updatedAt: string
+}
+
+export async function getServerGameState(): Promise<ServerGameState> {
+  return apiJson<ServerGameState>('/game/state')
+}
+
+export async function putServerGameState(
+  patch: Partial<
+    Omit<ServerGameState, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
+  >,
+): Promise<ServerGameState> {
+  return apiJson<ServerGameState>('/game/state', {
+    method: 'PUT',
+    body: JSON.stringify(patch),
+  })
+}

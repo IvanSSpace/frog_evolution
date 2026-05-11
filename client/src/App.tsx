@@ -32,6 +32,8 @@ import { SerumModal } from './components/CosmicHub/SerumModal'
 import { SerumBar } from './components/SerumBar'
 import { installBestiaryDevHelpers } from './utils/devHelpers'
 import { devLog } from './utils/devLog'
+import { ensureLogin } from './api/auth'
+import { getServerGameState } from './api/gameState'
 
 const queryClient = new QueryClient()
 
@@ -137,6 +139,30 @@ function App() {
       setRareCrate({ minLevel, maxLevel })
     }
     eventBus.on('rareCrate:opened', handleRareCrateOpened)
+
+    // Server connection — dev-only sanity check.
+    // В Telegram среде или с настроенной VITE_API_URL — будет реальный connect.
+    ensureLogin().then(async (auth) => {
+      if (!auth) {
+        console.warn('[server] not connected (login failed)')
+        return
+      }
+      console.log(
+        '[server] logged in as user',
+        auth.user.id,
+        auth.user.telegramId,
+      )
+      try {
+        const state = await getServerGameState()
+        console.log('[server] state loaded:', {
+          gold: state.gold,
+          discoveredLevels: state.discoveredLevels,
+          currentLocation: state.currentLocation,
+        })
+      } catch (e) {
+        console.error('[server] state fetch failed:', e)
+      }
+    })
 
     return () => {
       window.clearInterval(heartbeat)
