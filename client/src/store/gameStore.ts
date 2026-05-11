@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { eventBus } from './eventBus'
+import { buyFrogApi, buyUpgradeApi } from '../api/shop'
 import { getFrogPrice, MAX_LEVEL, FROG_LEVELS } from '../game/config/frogs'
 import {
   UPGRADE_CONFIG,
@@ -74,7 +75,7 @@ interface GameStateBase {
   spendGold: (amount: number) => boolean
 
   upgrades: Upgrades
-  buyUpgrade: (key: keyof Upgrades) => boolean
+  buyUpgrade: (key: keyof Upgrades) => Promise<boolean>
   devResetUpgrades: () => void
   devClearAllFrogs: () => void
 
@@ -88,7 +89,7 @@ interface GameStateBase {
 
   // Сколько раз каждый уровень был куплен (для расчёта цены)
   frogPurchases: number[]
-  buyFrog: (level: number) => BuyFrogResult
+  buyFrog: (level: number) => Promise<BuyFrogResult>
 
   // Открытые уровни — для модалки "Открыта новая лягушка"
   discoveredLevels: number[]
@@ -151,17 +152,24 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ locationFrogs: empty })
     eventBus.emit('dev:clearAllFrogs')
   },
-  buyUpgrade: (key) => {
+  buyUpgrade: async (key) => {
     const state = get()
     const level = state.upgrades[key]
     const cfg = UPGRADE_CONFIG[key]
     if (level >= cfg.maxLevel) return false
     const cost = getUpgradeCost(key, level)
     if (state.gold < cost) return false
-    const next = { ...state.upgrades, [key]: state.upgrades[key] + 1 }
-    saveUpgrades(next)
-    set({ gold: state.gold - cost, upgrades: next })
-    return true
+
+    try {
+      const res = await buyUpgradeApi(key)
+      const next = res.upgrades as Upgrades
+      saveUpgrades(next)
+      set({ gold: Number(res.gold), upgrades: next })
+      return true
+    } catch (e) {
+      console.warn('[shop] buy-upgrade rejected:', e)
+      return false
+    }
   },
 
   entityCount: 0,
@@ -222,7 +230,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     }),
 
   frogPurchases: loadFrogPurchases(),
-  buyFrog: (level) => {
+  buyFrog: async (level) => {
     const state = get()
     if (level < 1 || level > MAX_LEVEL) return { ok: false, reason: 'invalid' }
     const cfg = FROG_LEVELS[level - 1]
@@ -235,13 +243,16 @@ export const useGameStore = create<GameState>((set, get) => ({
     const cost = getFrogPrice(level, purchases)
     if (state.gold < cost) return { ok: false, reason: 'noGold' }
 
-    const next = [...state.frogPurchases]
-    next[level - 1] = purchases + 1
-    saveFrogPurchases(next)
-    set({ gold: state.gold - cost, frogPurchases: next })
-
-    eventBus.emit('frog:purchased', { level })
-    return { ok: true }
+    try {
+      const res = await buyFrogApi(level)
+      saveFrogPurchases(res.frogPurchases)
+      set({ gold: Number(res.gold), frogPurchases: res.frogPurchases })
+      eventBus.emit('frog:purchased', { level })
+      return { ok: true }
+    } catch (e) {
+      console.warn('[shop] buy-frog rejected:', e)
+      return { ok: false, reason: 'noGold' }
+    }
   },
 
   numberFormat: loadNumberFormat(),

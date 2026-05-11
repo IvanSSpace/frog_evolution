@@ -190,7 +190,9 @@ function DropSpeedCard() {
       isMax={isMax}
       canAfford={canAfford}
       onBuy={() =>
-        hapticNotification(buyUpgrade('dropSpeed') ? 'success' : 'error')
+        void buyUpgrade('dropSpeed').then((ok) =>
+          hapticNotification(ok ? 'success' : 'error'),
+        )
       }
     />
   )
@@ -223,7 +225,9 @@ function TractorCard() {
       isMax={isMax}
       canAfford={canAfford}
       onBuy={() =>
-        hapticNotification(buyUpgrade('tractor') ? 'success' : 'error')
+        void buyUpgrade('tractor').then((ok) =>
+          hapticNotification(ok ? 'success' : 'error'),
+        )
       }
     />
   )
@@ -267,7 +271,9 @@ function MagnetCard() {
       isMax={isMax}
       canAfford={canAfford}
       onBuy={() =>
-        hapticNotification(buyUpgrade('magnet') ? 'success' : 'error')
+        void buyUpgrade('magnet').then((ok) =>
+          hapticNotification(ok ? 'success' : 'error'),
+        )
       }
     />
   )
@@ -302,7 +308,9 @@ function CrateQualityCard() {
       isMax={isMax}
       canAfford={canAfford}
       onBuy={() =>
-        hapticNotification(buyUpgrade('crateQuality') ? 'success' : 'error')
+        void buyUpgrade('crateQuality').then((ok) =>
+          hapticNotification(ok ? 'success' : 'error'),
+        )
       }
     />
   )
@@ -334,7 +342,9 @@ function RareBoxSpeedCard() {
       isMax={isMax}
       canAfford={canAfford}
       onBuy={() =>
-        hapticNotification(buyUpgrade('rareBoxSpeed') ? 'success' : 'error')
+        void buyUpgrade('rareBoxSpeed').then((ok) =>
+          hapticNotification(ok ? 'success' : 'error'),
+        )
       }
     />
   )

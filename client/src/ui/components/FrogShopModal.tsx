@@ -134,8 +134,8 @@ function FrogCard({
   const capFull = entityCount >= ENTITY_CAP
   const frogName = t(`frogs.${level}`)
 
-  const handleBuy = () => {
-    const r = buyFrog(level)
+  const handleBuy = async () => {
+    const r = await buyFrog(level)
     if (r.ok) {
       hapticNotification('success')
     } else {
