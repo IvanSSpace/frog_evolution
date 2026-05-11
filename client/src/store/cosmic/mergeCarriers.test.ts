@@ -168,13 +168,13 @@ describe('mergeCarriers — validation rejects', () => {
 })
 
 describe('mergeCarriers — edge cases', () => {
-  it('clamps newLevel at MAX_LEVEL (24)', () => {
+  it('clamps newLevel at MAX_LEVEL (18)', () => {
     const { s } = makeHarness()
-    addStabilized(s, 'A', 24)
-    addStabilized(s, 'B', 24)
+    addStabilized(s, 'A', 18)
+    addStabilized(s, 'B', 18)
     const result = s().mergeCarriers('A', 'B', 'C')
     expect(result).not.toBeNull()
-    expect(result?.level).toBe(24) // clamped, not 25
+    expect(result?.level).toBe(18) // clamped, not 19
   })
 
   it('keeps other carriers untouched', () => {
