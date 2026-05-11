@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { useGameStore } from '../../store/gameStore'
 import {
   ELEMENTS,
@@ -41,30 +42,67 @@ export function GalleryModal({ onClose }: GalleryModalProps) {
     [bitset],
   )
 
-  return (
-    <div className="fixed inset-0 z-[9000] bg-black/85 flex flex-col">
-      <div className="flex items-center justify-between p-4 border-b border-neutral-700">
-        <h2 className="text-xl font-bold text-white">Коллекция архетипов</h2>
-        <button
-          onClick={onClose}
-          className="px-4 py-2 bg-neutral-700 hover:bg-neutral-600 text-white rounded"
+  return createPortal(
+    <div
+      style={{
+        position: 'fixed',
+        top: '12%',
+        bottom: '13%',
+        left: 0,
+        right: 0,
+        zIndex: 100,
+        pointerEvents: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        background: 'linear-gradient(180deg, #f5fbe9 0%, #d9eeb6 100%)',
+        border: '4px solid #4d6b1f',
+        borderRadius: 0,
+        boxShadow: '0 0 0 3px #f7ffe0 inset',
+      }}
+      className="ff-fade"
+    >
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-5 pt-4 pb-3 flex-shrink-0"
+        style={{ borderBottom: '3px dashed rgba(77,107,31,0.4)' }}
+      >
+        <h2
+          className="ff-display ff-stroke-white text-3xl"
+          style={{ color: '#15803d', letterSpacing: 1.5 }}
         >
-          Закрыть
+          Коллекция
+        </h2>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Закрыть"
+          className="ff-tile w-10 h-10 text-xl flex-shrink-0"
+          style={{
+            ['--ff-tile-from' as never]: '#fca5a5',
+            ['--ff-tile-to' as never]: '#dc2626',
+            ['--ff-tile-border' as never]: '#7f1d1d',
+          }}
+        >
+          ✕
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-5">
         {sections.map((section) => (
           <div key={section.archetype}>
-            <div className="flex items-center gap-2 mb-2 text-white">
+            <div
+              className="flex items-center gap-2 mb-2"
+              style={{ color: '#365314' }}
+            >
               <span className="text-2xl">
                 {ARCHETYPE_EMOJI[section.archetype]}
               </span>
-              <span className="text-lg font-semibold">
+              <span className="text-lg font-bold">
                 {ARCHETYPE_NAME_RU[section.archetype]}
               </span>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {section.rarities.map((r) => (
                 <GalleryCard
                   key={r.rarity}
@@ -77,6 +115,7 @@ export function GalleryModal({ onClose }: GalleryModalProps) {
           </div>
         ))}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

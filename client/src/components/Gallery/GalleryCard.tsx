@@ -23,7 +23,8 @@ export function GalleryCard({ archetype, rarity, unlocked }: GalleryCardProps) {
       style={{
         width: 80,
         height: 100,
-        backgroundColor: 'rgba(20, 20, 30, 0.8)',
+        backgroundColor: 'rgba(255, 255, 255, 0.55)',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
         border: `2px solid ${borderColor}`,
       }}
     >
