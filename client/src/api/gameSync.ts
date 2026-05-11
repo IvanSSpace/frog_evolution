@@ -1,4 +1,4 @@
-// Синхронизация состояния игры с сервером.
+// Синхронизация состояния игры с сервером — fetch-based (replaces utils/gameSync).
 // Цикл:
 // 1. На старте — после auth — `loadGameState` тянет состояние с сервера и
 //    применяет его к Zustand-стору (мерж с локальными дефолтами).
@@ -12,25 +12,8 @@
 // dev-юзера. Если /game/state недоступен — синк просто молча выключается.
 
 import { useGameStore } from '../store/gameStore'
-import { api } from './api'
+import { getServerGameState, putServerGameState } from './gameState'
 import { devLog, devWarn } from '../utils/devLog'
-
-interface ServerGameState {
-  gold: string // BigInt → string
-  upgrades: {
-    dropSpeed: number
-    tractor: number
-    magnet: number
-    crateQuality: number
-    rareBoxSpeed?: number
-  }
-  frogPurchases: number[]
-  discoveredLevels: number[]
-  magnetEnabled: boolean
-  currentLocation: number
-  locationFrogs: number[][]
-  lastSessionAt: string // ISO date
-}
 
 const SAVE_THROTTLE_MS = 5000 // максимум один PUT раз в 5 секунд при идле
 let saveTimer: ReturnType<typeof setTimeout> | null = null
@@ -53,20 +36,21 @@ function snapshotForSave() {
 
 export async function loadGameState(): Promise<boolean> {
   try {
-    const { data } = await api.get<ServerGameState>('/game/state')
+    const data = await getServerGameState()
     const store = useGameStore.getState()
 
     // Мержим — приоритет сервера, но с защитой от undefined.
     // gold приходит строкой (BigInt) → парсим как Number (fits до 2^53).
     const goldNum = Number(data.gold) || 0
+    const upg = data.upgrades as Record<string, number>
     useGameStore.setState({
       gold: goldNum,
       upgrades: {
-        dropSpeed: data.upgrades?.dropSpeed ?? 0,
-        tractor: data.upgrades?.tractor ?? 0,
-        magnet: data.upgrades?.magnet ?? 0,
-        crateQuality: data.upgrades?.crateQuality ?? 0,
-        rareBoxSpeed: data.upgrades?.rareBoxSpeed ?? 0,
+        dropSpeed: upg?.dropSpeed ?? 0,
+        tractor: upg?.tractor ?? 0,
+        magnet: upg?.magnet ?? 0,
+        crateQuality: upg?.crateQuality ?? 0,
+        rareBoxSpeed: upg?.rareBoxSpeed ?? 0,
       },
       frogPurchases: Array.isArray(data.frogPurchases)
         ? data.frogPurchases
@@ -93,7 +77,7 @@ export async function saveGameState(force = false): Promise<boolean> {
   if (!syncEnabled && !force) return false
   try {
     const payload = snapshotForSave()
-    await api.put('/game/state', payload)
+    await putServerGameState(payload)
     pendingSave = false
     return true
   } catch (err) {
@@ -107,7 +91,7 @@ function scheduleSave() {
   if (saveTimer) return
   saveTimer = setTimeout(() => {
     saveTimer = null
-    if (pendingSave) saveGameState()
+    if (pendingSave) void saveGameState()
   }, SAVE_THROTTLE_MS)
 }
 
@@ -122,12 +106,12 @@ export function startSync() {
 
   // Финальный сейв при уходе со страницы
   window.addEventListener('beforeunload', () => {
-    if (pendingSave) saveGameState(true)
+    if (pendingSave) void saveGameState(true)
   })
 
   // Сохранить при сворачивании таба
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && pendingSave) saveGameState(true)
+    if (document.hidden && pendingSave) void saveGameState(true)
   })
 }
 

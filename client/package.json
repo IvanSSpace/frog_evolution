@@ -23,7 +23,6 @@
   "dependencies": {
     "@tanstack/react-query": "^5.60.6",
     "@tanstack/react-virtual": "^3.13.24",
-    "axios": "^1.7.7",
     "husky": "^9.1.7",
     "i18next": "^26.0.8",
     "mitt": "^3.0.1",
