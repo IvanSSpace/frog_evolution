@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { Element, Rarity } from '../../store/cosmic/types'
 import { eventBus } from '../../store/eventBus'
 import {
@@ -34,31 +35,68 @@ export function GalleryDetailModal() {
   if (!open) return null
 
   const { archetype, rarity } = open
-  const color = RARITY_COLOR[rarity]
+  const rarityColor = RARITY_COLOR[rarity]
 
-  return (
-    <div className="fixed inset-0 z-[9500] bg-black/95 flex flex-col items-center justify-center p-4">
-      <button
-        onClick={() => setOpen(null)}
-        className="absolute top-4 right-4 px-3 py-1 bg-neutral-700 text-white rounded"
+  return createPortal(
+    <div
+      style={{
+        position: 'fixed',
+        top: '12%',
+        bottom: '13%',
+        left: 0,
+        right: 0,
+        zIndex: 150,
+        pointerEvents: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        background: 'linear-gradient(180deg, #f5fbe9 0%, #d9eeb6 100%)',
+        border: '4px solid #4d6b1f',
+        borderRadius: 0,
+        boxShadow: '0 0 0 3px #f7ffe0 inset',
+      }}
+      className="ff-fade"
+    >
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-5 pt-4 pb-3 flex-shrink-0"
+        style={{ borderBottom: '3px dashed rgba(77,107,31,0.4)' }}
       >
-        Назад
-      </button>
-
-      <div className="text-3xl mb-4 text-white flex items-center gap-2">
-        <span>{ARCHETYPE_EMOJI[archetype]}</span>
-        <span>{ARCHETYPE_NAME_RU[archetype]}</span>
-        <span style={{ color }}>× {RARITY_LABEL[rarity]}</span>
+        <h2
+          className="ff-display ff-stroke-white text-3xl flex items-center gap-2"
+          style={{ color: '#15803d', letterSpacing: 1.5 }}
+        >
+          <span>{ARCHETYPE_EMOJI[archetype]}</span>
+          <span>{ARCHETYPE_NAME_RU[archetype]}</span>
+          <span style={{ color: rarityColor }}>× {RARITY_LABEL[rarity]}</span>
+        </h2>
+        <button
+          type="button"
+          onClick={() => setOpen(null)}
+          aria-label="Закрыть"
+          className="ff-tile w-10 h-10 text-xl flex-shrink-0"
+          style={{
+            ['--ff-tile-from' as never]: '#fca5a5',
+            ['--ff-tile-to' as never]: '#dc2626',
+            ['--ff-tile-border' as never]: '#7f1d1d',
+            pointerEvents: 'auto',
+          }}
+        >
+          ✕
+        </button>
       </div>
 
-      <GalleryDetailPreview archetype={archetype} rarity={rarity} />
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center px-4 py-3">
+        <GalleryDetailPreview archetype={archetype} rarity={rarity} />
 
-      <div className="mt-6 text-center text-white max-w-md">
-        <div className="text-lg font-semibold mb-1">Эффект</div>
-        <div className="text-sm text-neutral-300">
-          Сдесь будет описание что делает эта лягушка
+        <div className="mt-6 text-center max-w-md" style={{ color: '#365314' }}>
+          <div className="text-lg font-bold mb-1">Эффект</div>
+          <div className="text-sm">
+            Сдесь будет описание что делает эта лягушка
+          </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

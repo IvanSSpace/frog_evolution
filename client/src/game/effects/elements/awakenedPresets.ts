@@ -472,6 +472,39 @@ interface ScheduleAwakenedOpts {
 const VALID_AWAKENED_SET: ReadonlySet<string> = new Set<string>(AWAKENED_TIERS)
 
 /**
+ * Fires a single immediate tick of the awakened preset for (element, tier).
+ * Use before scheduleAwakenedIdle to avoid the initial interval delay.
+ */
+export function playAwakenedOnce(
+  scene: Phaser.Scene,
+  container: Phaser.GameObjects.Container,
+  element: Element,
+  tier: AwakenedTier,
+): void {
+  const safeTier: AwakenedTier = VALID_AWAKENED_SET.has(tier) ? tier : 'common'
+  const params = TIER_PARAMS[safeTier]
+  const fakeSys = buildFakeSys(element, params.size, params.brightness)
+
+  let seed = (Date.now() ^ element.length ^ safeTier.length) >>> 0
+  const rng = (): number => {
+    seed = (seed * 1664525 + 1013904223) >>> 0
+    return (seed & 0xffffffff) / 0x100000000
+  }
+
+  const preset = PRESETS[safeTier][element]
+  try {
+    for (const fn of preset.fns) {
+      fn(scene, container, fakeSys, rng)
+    }
+    if (preset.flashes) {
+      for (const flash of preset.flashes) flash(scene, container, rng)
+    }
+  } catch (e) {
+    devWarn('[awakened] playAwakenedOnce failed for', element, safeTier, e)
+  }
+}
+
+/**
  * Запускает повторяющийся awakened idle effect для (element, tier) поверх container.
  * Возвращает OverlayLifecycle с dispose() — отменяет timer.
  */

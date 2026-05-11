@@ -1,7 +1,10 @@
 import { useEffect, useRef } from 'react'
 import Phaser from 'phaser'
 import type { Element, Rarity } from '../../store/cosmic/types'
-import { scheduleAwakenedIdle } from '../../game/effects/elements/awakenedPresets'
+import {
+  playAwakenedOnce,
+  scheduleAwakenedIdle,
+} from '../../game/effects/elements/awakenedPresets'
 
 interface GalleryDetailPreviewProps {
   archetype: Element
@@ -23,6 +26,7 @@ function makePreviewScene(
       const container = this.add.container(SIZE / 2, SIZE / 2)
       const placeholder = this.add.circle(0, 0, 80, 0x4ade80, 1)
       container.add(placeholder)
+      playAwakenedOnce(this, container, archetype, rarity)
       scheduleAwakenedIdle(this, container, archetype, rarity)
     }
   }
@@ -61,7 +65,11 @@ export function GalleryDetailPreview({
   return (
     <div
       ref={ref}
-      style={{ width: SIZE, height: SIZE }}
+      style={{
+        width: SIZE,
+        height: SIZE,
+        pointerEvents: 'none', // canvas не должен ловить клики — UI поверх остаётся кликабельным
+      }}
       className="rounded-lg overflow-hidden"
     />
   )
