@@ -66,7 +66,12 @@ export function LocationStack() {
   }, [starMapActive])
 
   // Сверху вниз: 6 (Звёздная карта) → 4 → 3 → 2 → 1
+  // Forcing currentLocation в unlocked-сет — защита от trap'а:
+  // если игрок каким-то путём оказался на ещё-не-разблокированной
+  // локации (corrupted save / dev-команда / cross-location merge),
+  // он должен видеть кнопки чтобы переключиться обратно.
   const unlocked = getUnlockedLocations(discoveredLevels)
+  unlocked.add(currentLocation)
   const ordered: LocationConfig[] = [
     STAR_MAP_PROTOTYPE_LOC,
     ...[...LOCATIONS].slice().reverse(),
