@@ -7,6 +7,7 @@ import {
   type LocationConfig,
 } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
+import { getUnlockedLocations } from '../../game/config/locationUnlocks'
 import { hapticSelection } from '../../utils/telegram'
 
 // Эмодзи и цвета для локаций (placeholder — потом юзер заменит на свои картинки)
@@ -35,20 +36,14 @@ const STAR_MAP_PROTOTYPE_LOC: LocationConfig = {
 export function LocationStack() {
   const currentLocation = useGameStore((s) => s.currentLocation)
   const setCurrentLocation = useGameStore((s) => s.setCurrentLocation)
+  const discoveredLevels = useGameStore((s) => s.discoveredLevels)
   const [collapsed, setCollapsed] = useState(false)
   const [transitioning, setTransitioning] = useState(false)
   // Активна ли Звёздная карта (виртуальная 6-я). НЕ хранится в gameStore —
   // это локальный UI-режим, не игровая локация.
-  // ВРЕМЕННО: открыта по умолчанию пока разрабатываем 6 этап.
-  const [starMapActive, setStarMapActive] = useState(true)
-
-  // Авто-открытие StarMap при mount (пока разработка)
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      eventBus.emit('starmap:open')
-    }, 200) // даём Phaser game стартовать
-    return () => window.clearTimeout(timer)
-  }, [])
+  const [starMapActive, setStarMapActive] = useState(false)
+  // Локальный лок на время starmap-перехода (~900мс), чтобы не словить двойной клик
+  const [starMapTransitioning, setStarMapTransitioning] = useState(false)
 
   useEffect(() => {
     const onStart = () => setTransitioning(true)
@@ -70,14 +65,15 @@ export function LocationStack() {
     }
   }, [starMapActive])
 
-  // Сверху вниз: 6 (Звёздная карта) → 5 → 4 → 3 → 2 → 1
+  // Сверху вниз: 6 (Звёздная карта) → 4 → 3 → 2 → 1
+  const unlocked = getUnlockedLocations(discoveredLevels)
   const ordered: LocationConfig[] = [
     STAR_MAP_PROTOTYPE_LOC,
     ...[...LOCATIONS].slice().reverse(),
-  ]
+  ].filter((loc) => unlocked.has(loc.id))
 
-  // Локальный лок на время starmap-перехода (~900мс), чтобы не словить двойной клик
-  const [starMapTransitioning, setStarMapTransitioning] = useState(false)
+  // Скрываем весь стек когда открыта только одна локация (Болото)
+  if (ordered.length < 2) return null
 
   const handleSelect = (id: number) => {
     if (transitioning || starMapTransitioning) return
