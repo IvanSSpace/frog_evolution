@@ -121,9 +121,9 @@ function App() {
 
     // Открытие нового вида лягушки
     const onDiscovered = ({ level }: { level: number }) => {
-      // L25 — sentinel для unlock Звёздной карты, не лягушка.
+      // L19 — sentinel для unlock Звёздной карты, не лягушка.
       // Подавляем DiscoveryModal — играется UnlockComic вместо.
-      if (level === 25) return
+      if (level === 19) return
       devLog('[discovery] new level:', level)
       // Лёгкая задержка чтобы pop-анимация на поле успела сыграть
       setTimeout(() => setDiscovered(level), 250)
@@ -131,7 +131,7 @@ function App() {
     eventBus.on('frog:discovered', onDiscovered)
 
     // Progressive location unlock — emit'ится из MergeController после
-    // markDiscovered трогающего trigger-уровень (L7/L13/L19) или L25-sentinel.
+    // markDiscovered трогающего trigger-уровень (L7/L13) или L19-sentinel.
     const onLocationUnlocked = ({ locationId }: { locationId: number }) => {
       setUnlockedLocation(locationId)
     }
@@ -203,7 +203,7 @@ function App() {
     }
 
     w.__unlockAllLocations = () => {
-      const levels = [1, 7, 13, 19, 25]
+      const levels = [1, 7, 13, 19]
       saveDiscovered(levels)
       useGameStore.setState({ discoveredLevels: levels })
       devLog('[dev] all locations unlocked + persisted')

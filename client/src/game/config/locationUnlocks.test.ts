@@ -8,13 +8,12 @@ import {
 } from './locationUnlocks'
 
 describe('LOCATION_UNLOCK_THRESHOLD', () => {
-  it('defines threshold for all 5 locations', () => {
+  it('defines threshold for all 4 locations', () => {
     expect(LOCATION_UNLOCK_THRESHOLD).toEqual({
       1: 0,
       2: 7,
       3: 13,
-      4: 19,
-      6: 25,
+      6: 19,
     })
   })
 })
@@ -24,8 +23,7 @@ describe('LOCATION_BY_TRIGGER_LEVEL', () => {
     expect(LOCATION_BY_TRIGGER_LEVEL).toEqual({
       7: 2,
       13: 3,
-      19: 4,
-      25: 6,
+      19: 6,
     })
   })
 })
@@ -39,22 +37,16 @@ describe('getUnlockedLocations', () => {
     expect(getUnlockedLocations([1, 7])).toEqual(new Set([1, 2]))
   })
 
-  it('Континент opens when L13 discovered', () => {
+  it('Планета opens when L13 discovered', () => {
     expect(getUnlockedLocations([1, 7, 13])).toEqual(new Set([1, 2, 3]))
   })
 
-  it('Планета opens when L19 discovered', () => {
-    expect(getUnlockedLocations([1, 7, 13, 19])).toEqual(new Set([1, 2, 3, 4]))
-  })
-
-  it('Звёздная карта opens when L25 sentinel discovered', () => {
-    expect(getUnlockedLocations([1, 7, 13, 19, 25])).toEqual(
-      new Set([1, 2, 3, 4, 6]),
-    )
+  it('Звёздная карта opens when L19 sentinel discovered', () => {
+    expect(getUnlockedLocations([1, 7, 13, 19])).toEqual(new Set([1, 2, 3, 6]))
   })
 
   it('tolerates non-contiguous discovery (corrupted save)', () => {
-    expect(getUnlockedLocations([1, 25])).toEqual(new Set([1, 6]))
+    expect(getUnlockedLocations([1, 19])).toEqual(new Set([1, 6]))
   })
 
   it('intermediate levels do not unlock locations', () => {
@@ -76,7 +68,7 @@ describe('isLocationUnlocked', () => {
   })
 
   it('returns false for unknown location id', () => {
-    expect(isLocationUnlocked(99, [1, 7, 13, 19, 25])).toBe(false)
+    expect(isLocationUnlocked(99, [1, 7, 13, 19])).toBe(false)
   })
 })
 
@@ -84,13 +76,12 @@ describe('getLocationUnlockedByLevel', () => {
   it('returns location id for trigger levels', () => {
     expect(getLocationUnlockedByLevel(7)).toBe(2)
     expect(getLocationUnlockedByLevel(13)).toBe(3)
-    expect(getLocationUnlockedByLevel(19)).toBe(4)
-    expect(getLocationUnlockedByLevel(25)).toBe(6)
+    expect(getLocationUnlockedByLevel(19)).toBe(6)
   })
 
   it('returns null for non-trigger levels', () => {
     expect(getLocationUnlockedByLevel(1)).toBe(null)
     expect(getLocationUnlockedByLevel(8)).toBe(null)
-    expect(getLocationUnlockedByLevel(24)).toBe(null)
+    expect(getLocationUnlockedByLevel(18)).toBe(null)
   })
 })

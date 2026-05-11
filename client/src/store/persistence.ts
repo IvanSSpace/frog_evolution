@@ -31,7 +31,9 @@ const LOCATION_FROGS_KEY = 'frog_evolution_location_frogs'
 // 19 (Phase 17): bestiaryBitset 24→192 bytes (lossless pad migration); CosmicTab
 //                union extended с 'carriers'; CarrierData расширен
 //                ceiling?/rollHistory? (optional → backward compat).
-const STORAGE_VERSION = 19
+// 20: shrink to 18 frogs + 3 locations; Континент removed; Планета → loc 3;
+//     sentinel for Звёздная карта = L19 (was L25).
+const STORAGE_VERSION = 20
 
 // ─── upgrades ────────────────────────────────────────────────────────────────
 

@@ -11,14 +11,7 @@ export interface LocationConfig {
 export const LOCATIONS: readonly LocationConfig[] = [
   { id: 1, name: 'Болото', minLevel: 1, maxLevel: 6, magnetEnabled: true },
   { id: 2, name: 'Лес', minLevel: 7, maxLevel: 12, magnetEnabled: false },
-  {
-    id: 3,
-    name: 'Континент',
-    minLevel: 13,
-    maxLevel: 18,
-    magnetEnabled: false,
-  },
-  { id: 4, name: 'Планета', minLevel: 19, maxLevel: 24, magnetEnabled: false },
+  { id: 3, name: 'Планета', minLevel: 13, maxLevel: 18, magnetEnabled: false },
 ] as const
 
 export function getLocationById(id: number): LocationConfig {

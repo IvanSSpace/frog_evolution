@@ -2,25 +2,23 @@
 //
 // Болото (id=1) — всегда открыто.
 // Остальные локации открываются когда соответствующий уровень лягушки
-// впервые регистрируется в discoveredLevels. L25 — sentinel
-// (см. MergeController: при merge L24+L24 вызывается markDiscovered(25)
-// без материализации L25).
+// впервые регистрируется в discoveredLevels. L19 — sentinel
+// (см. MergeController: при merge L18+L18 вызывается markDiscovered(19)
+// без материализации L19).
 //
 // См. spec: docs/superpowers/specs/2026-05-11-progressive-location-unlock-design.md
 
 export const LOCATION_UNLOCK_THRESHOLD: Readonly<Record<number, number>> = {
   1: 0, // Болото — всегда открыто (0 = no threshold)
   2: 7, // Лес
-  3: 13, // Континент
-  4: 19, // Планета
-  6: 25, // Звёздная карта (sentinel, merge L24+L24)
+  3: 13, // Планета (была slot 3 = Континент, теперь Планета)
+  6: 19, // Звёздная карта (sentinel, merge L18+L18)
 } as const
 
 export const LOCATION_BY_TRIGGER_LEVEL: Readonly<Record<number, number>> = {
   7: 2,
   13: 3,
-  19: 4,
-  25: 6,
+  19: 6,
 } as const
 
 export function getUnlockedLocations(discovered: number[]): Set<number> {

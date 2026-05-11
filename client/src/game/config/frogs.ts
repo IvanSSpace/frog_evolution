@@ -13,7 +13,7 @@ interface FrogLevelConfig {
   growthRate: number // мультипликатор цены за каждую купленную (всегда 1.15)
   poopChances: PoopChances
   tint: number // тинт (Phaser hex)
-  location: number // 1=Болото, 2=Лес, 3=Континент, 4=Планета
+  location: number // 1=Болото, 2=Лес, 3=Планета
   availableInShop: boolean // true = можно купить за монеты; false = только через мерджи (L19+)
 }
 
@@ -36,9 +36,7 @@ export const TARGET_INCOME_PER_SEC: readonly number[] = [
   0.5, 1.5, 4.0, 9.5, 21.0, 44.5,
   // Лес (L7-12)
   92.0, 187.5, 379.0, 762.5, 1530.0, 3065.5,
-  // Континент (L13-18)
-  6137.0, 12280.5, 24568.0, 49143.5, 98295.0, 196598.5,
-  // Планета (L19-24) — все одинаковые (cap)
+  // Планета (L13-18) — все одинаковые (cap)
   393206.0, 393206.0, 393206.0, 393206.0, 393206.0, 393206.0,
 ]
 
@@ -71,7 +69,6 @@ const HUGE_CHANCES: PoopChances = { regular: 0.05, big: 0.1, huge: 0.85 }
 
 // Цены: формула 560 × 2.8^(T-1), округлено как в референсе.
 // growthRate всегда 1.15 (множитель за каждую купленную лягушку).
-// L19-24 не продаются в shop (availableInShop: false) — только через мерджи.
 export const FROG_LEVELS: readonly FrogLevelConfig[] = [
   // ─── Болото (L1-6) — реальные SVG ───
   // Тёплые жёлто-оливковые зелёные. Светлее к L1, темнее к L6.
@@ -211,75 +208,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     poopChances: HUGE_CHANCES,
   },
 
-  // ─── Континент (L13-18) — placeholder, землистые оливково-зелёные, светлее ───
-  {
-    path: PLACEHOLDER,
-    name: 'Земляквак',
-    size: 2.0,
-    basePrice: 130_000_000,
-    growthRate: 1.15,
-    tint: 0xbddb8d,
-    location: 3,
-    availableInShop: true,
-    poopChances: HUGE_CHANCES,
-  },
-  {
-    path: PLACEHOLDER,
-    name: 'Жаброкус',
-    size: 2.0,
-    basePrice: 364_100_000,
-    growthRate: 1.15,
-    tint: 0xadcd7f,
-    location: 3,
-    availableInShop: true,
-    poopChances: HUGE_CHANCES,
-  },
-  {
-    path: PLACEHOLDER,
-    name: 'Треглаз',
-    size: 2.0,
-    basePrice: 1_000_000_000,
-    growthRate: 1.15,
-    tint: 0x9fbd71,
-    location: 3,
-    availableInShop: true,
-    poopChances: HUGE_CHANCES,
-  },
-  {
-    path: PLACEHOLDER,
-    name: 'Квакзавр',
-    size: 2.0,
-    basePrice: 2_900_000_000,
-    growthRate: 1.15,
-    tint: 0x91ad65,
-    location: 3,
-    availableInShop: true,
-    poopChances: HUGE_CHANCES,
-  },
-  {
-    path: PLACEHOLDER,
-    name: 'Болотница',
-    size: 2.0,
-    basePrice: 8_000_000_000,
-    growthRate: 1.15,
-    tint: 0x819d59,
-    location: 3,
-    availableInShop: true,
-    poopChances: HUGE_CHANCES,
-  },
-  {
-    path: PLACEHOLDER,
-    name: 'Жаб-хан',
-    size: 2.0,
-    basePrice: 22_400_000_000,
-    growthRate: 1.15,
-    tint: 0x718d4f,
-    location: 3,
-    availableInShop: true,
-    poopChances: HUGE_CHANCES,
-  },
-
-  // ─── Планета (L19-24) — доступны в shop, цены по формуле 560 × 2.8^(T-1) ───
+  // ─── Планета (L13-18) — доступны в shop, цены по формуле 560 × 2.8^(T-1) ───
   // Тёплый оливково-зелёный: контрастирует с синим фоном космоса,
   // отличается от forest=0x4ade80 (лайм H=142°) по hue (~94° vs 142°).
   {
@@ -289,7 +218,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     basePrice: 62_700_000_000,
     growthRate: 1.15,
     tint: 0x99db6b,
-    location: 4,
+    location: 3,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
   },
@@ -300,7 +229,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     basePrice: 175_600_000_000,
     growthRate: 1.15,
     tint: 0x89cb5f,
-    location: 4,
+    location: 3,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
   },
@@ -311,7 +240,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     basePrice: 491_500_000_000,
     growthRate: 1.15,
     tint: 0x7bbd55,
-    location: 4,
+    location: 3,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
   },
@@ -322,7 +251,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     basePrice: 1_376_000_000_000,
     growthRate: 1.15,
     tint: 0x6fad4b,
-    location: 4,
+    location: 3,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
   },
@@ -333,7 +262,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     basePrice: 3_853_000_000_000,
     growthRate: 1.15,
     tint: 0x639d43,
-    location: 4,
+    location: 3,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
   },
@@ -344,7 +273,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     basePrice: 10_789_000_000_000,
     growthRate: 1.15,
     tint: 0x578d3b,
-    location: 4,
+    location: 3,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
   },
