@@ -75,6 +75,8 @@ type Events = {
   // Phase 19-01 — box-opened event (BALANCE-01..07 wiring).
   // Emitted by cosmicSlice.openBox после rollRarity/updatePity.
   'cosmic:box-opened': { boxId: string; rarity: Rarity; element: Element }
+  // Offline box drops (boot-time): сколько боксов «упало» пока игрок был away.
+  'box:offline-pending': { count: number }
   // Phase 18 — bestiary milestone (REQ BESTIARY-07)
   'cosmic:bestiary-milestone': {
     threshold: 10 | 24 | 96 | 576

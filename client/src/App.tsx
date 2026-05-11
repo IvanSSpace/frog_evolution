@@ -20,6 +20,7 @@ import {
   saveSessionState,
   getOfflineSession,
   getTractorCapMs,
+  getDropIntervalMs,
 } from './store/gameStore'
 import { saveDiscovered } from './store/persistence'
 import type { Element, Rarity } from './store/cosmic/types'
@@ -103,6 +104,20 @@ function App() {
         }
       }
     }
+
+    // Offline box drops: пока игрок был away, боксы должны были падать.
+    // Расчёт: elapsedMs / dropInterval = сколько боксов «должно было» упасть.
+    // Реальное распределение по полю делает MainScene через pendingBoxCount —
+    // с учётом ENTITY_CAP / MAX_PENDING_BOXES.
+    if (session && session.elapsedMs > 0) {
+      const dropSpeedLvl = useGameStore.getState().upgrades.dropSpeed
+      const dropIntervalMs = getDropIntervalMs(dropSpeedLvl)
+      const droppedBoxCount = Math.floor(session.elapsedMs / dropIntervalMs)
+      if (droppedBoxCount > 0) {
+        eventBus.emit('box:offline-pending', { count: droppedBoxCount })
+      }
+    }
+
     const saveSession = () =>
       saveSessionState(useGameStore.getState().incomePerSec)
     saveSession()

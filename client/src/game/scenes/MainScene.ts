@@ -178,6 +178,8 @@ export class MainScene extends Phaser.Scene {
 
     // Подписка на покупку лягушки из магазина
     eventBus.on('frog:purchased', this.onFrogPurchased)
+    // Offline box drops: App.tsx эмитит при boot, MainScene зачисляет в pendingBoxCount.
+    eventBus.on('box:offline-pending', this.onOfflinePendingBoxes)
     // Phase 21-05: location-changed + dev-clear перенесены в LocationTransition.
     eventBus.on('location:changed', this.locTransition.onLocationChanged)
     eventBus.on('dev:clearAllFrogs', this.locTransition.onDevClearAllFrogs)
@@ -389,6 +391,15 @@ export class MainScene extends Phaser.Scene {
     })
   }
 
+  // Offline box drops: зачисляем «упавшие» боксы пока игрок был away.
+  // Лимит MAX_PENDING_BOXES не даёт копить больше чем сцена может выдать разом.
+  private onOfflinePendingBoxes = ({ count }: { count: number }) => {
+    this.pendingBoxCount = Math.min(
+      this.pendingBoxCount + count,
+      MAX_PENDING_BOXES,
+    )
+  }
+
   // Phase 21-01: package-public — вызывается FrogSpawner (after spawn/remove).
   syncEntityCount() {
     useGameStore
@@ -516,6 +527,7 @@ export class MainScene extends Phaser.Scene {
 
   destroy() {
     eventBus.off('frog:purchased', this.onFrogPurchased)
+    eventBus.off('box:offline-pending', this.onOfflinePendingBoxes)
     // Phase 21-05: location handlers живут в LocationTransition; отписываем
     // bound-методы которые регистрировали в create().
     eventBus.off('location:changed', this.locTransition.onLocationChanged)
