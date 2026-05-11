@@ -160,14 +160,30 @@ export const useGameStore = create<GameState>((set, get) => ({
     const cost = getUpgradeCost(key, level)
     if (state.gold < cost) return false
 
+    // Snapshot для возможного rollback
+    const prevGold = state.gold
+    const prevUpgrades = state.upgrades
+
+    // OPTIMISTIC: применяем локально сразу
+    const next = { ...prevUpgrades, [key]: prevUpgrades[key] + 1 }
+    saveUpgrades(next)
+    set({ gold: prevGold - cost, upgrades: next })
+
     try {
       const res = await buyUpgradeApi(key)
-      const next = res.upgrades as Upgrades
-      saveUpgrades(next)
-      set({ gold: Number(res.gold), upgrades: next })
+      const nextFromServer = res.upgrades as Upgrades
+      saveUpgrades(nextFromServer)
+      set({ gold: Number(res.gold), upgrades: nextFromServer })
       return true
     } catch (e) {
-      console.warn('[shop] buy-upgrade rejected:', e)
+      console.warn('[shop] buy-upgrade rejected, rolling back:', e)
+      saveUpgrades(prevUpgrades)
+      set({ gold: prevGold, upgrades: prevUpgrades })
+      eventBus.emit('cosmic:toast', {
+        type: 'generic',
+        msg: 'Апгрейд отклонён сервером',
+        duration: 2500,
+      })
       return false
     }
   },
@@ -243,14 +259,33 @@ export const useGameStore = create<GameState>((set, get) => ({
     const cost = getFrogPrice(level, purchases)
     if (state.gold < cost) return { ok: false, reason: 'noGold' }
 
+    // Snapshot для возможного rollback
+    const prevGold = state.gold
+    const prevPurchases = state.frogPurchases
+
+    // OPTIMISTIC: применяем локально сразу
+    const nextPurchases = [...prevPurchases]
+    nextPurchases[level - 1] = purchases + 1
+    saveFrogPurchases(nextPurchases)
+    set({ gold: prevGold - cost, frogPurchases: nextPurchases })
+    eventBus.emit('frog:purchased', { level })
+
     try {
       const res = await buyFrogApi(level)
+      // Reconcile: значения сервера авторитетны (gold может отличаться из-за idle income)
       saveFrogPurchases(res.frogPurchases)
       set({ gold: Number(res.gold), frogPurchases: res.frogPurchases })
-      eventBus.emit('frog:purchased', { level })
       return { ok: true }
     } catch (e) {
-      console.warn('[shop] buy-frog rejected:', e)
+      // Rollback
+      console.warn('[shop] buy-frog rejected, rolling back:', e)
+      saveFrogPurchases(prevPurchases)
+      set({ gold: prevGold, frogPurchases: prevPurchases })
+      eventBus.emit('cosmic:toast', {
+        type: 'generic',
+        msg: 'Покупка отклонена сервером',
+        duration: 2500,
+      })
       return { ok: false, reason: 'noGold' }
     }
   },
