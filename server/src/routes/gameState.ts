@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import { prisma } from '../prisma'
+import { MAX_INCOME_PER_SEC, getTractorCapMs } from '../config/economy'
 
 // Anti-cheat threshold для idle income.
 // 100B gold/sec — заведомо больше любого realistic дохода.
@@ -18,10 +19,38 @@ export async function gameStateRoutes(app: FastifyInstance) {
         state = await prisma.gameState.create({
           data: { userId: request.user.id },
         })
+        return {
+          ...state,
+          gold: state.gold.toString(),
+          offlineIncome: '0',
+          offlineMs: 0,
+        }
       }
+
+      // Compute offline income — server time is authoritative.
+      const upgrades = state.upgrades as Record<string, number>
+      const tractorLevel = upgrades.tractor ?? 0
+      const elapsedMs = Date.now() - state.lastSessionAt.getTime()
+      const capMs = getTractorCapMs(tractorLevel)
+      const earnedMs = Math.min(Math.max(0, elapsedMs), capMs)
+      const earnedSec = Math.floor(earnedMs / 1000)
+      const offlineIncome = BigInt(Math.floor(earnedSec * state.incomePerSec))
+
+      if (offlineIncome > 0n) {
+        state = await prisma.gameState.update({
+          where: { userId: request.user.id },
+          data: {
+            gold: state.gold + offlineIncome,
+            lastSessionAt: new Date(),
+          },
+        })
+      }
+
       return {
         ...state,
-        gold: state.gold.toString(), // BigInt → string for JSON
+        gold: state.gold.toString(),
+        offlineIncome: offlineIncome.toString(),
+        offlineMs: earnedMs,
       }
     },
   )
@@ -41,20 +70,25 @@ export async function gameStateRoutes(app: FastifyInstance) {
         'locationFrogs',
         'cosmic',
         'boxOpenCount',
-        'lastSessionAt',
       ]
       const data: Record<string, unknown> = {}
       for (const key of allowed) {
         if (key in body) {
           if (key === 'gold' && typeof body.gold === 'string') {
             data.gold = BigInt(body.gold)
-          } else if (key === 'lastSessionAt' && typeof body.lastSessionAt === 'string') {
-            data.lastSessionAt = new Date(body.lastSessionAt)
           } else {
             data[key] = body[key]
           }
         }
       }
+
+      // Clamp incomePerSec — client value accepted but bounded.
+      if ('incomePerSec' in body && typeof body.incomePerSec === 'number') {
+        data.incomePerSec = Math.min(Math.max(0, body.incomePerSec), MAX_INCOME_PER_SEC)
+      }
+
+      // lastSessionAt always server-time — client value ignored.
+      data.lastSessionAt = new Date()
 
       // Idle income clamp: если новый gold превышает разумный максимум
       // (старый + max_rate * elapsed) — clamp'им к этому максимуму.

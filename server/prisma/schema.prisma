@@ -38,6 +38,7 @@ model GameState {
   locationFrogs    Json     @default("[[1,2,3,4,5,6],[],[]]") @map("location_frogs")
   cosmic           Json? // serums/boxes/ship/carriers/bestiary — лениво (JSONB)
   boxOpenCount     Int      @default(0) @map("box_open_count")
+  incomePerSec     Float    @default(0) @map("income_per_sec")
   lastSessionAt    DateTime @default(now()) @map("last_session_at")
 
   createdAt DateTime @default(now()) @map("created_at")

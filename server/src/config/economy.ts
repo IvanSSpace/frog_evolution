@@ -96,3 +96,21 @@ export function getUpgradeCost(key: UpgradeKey, currentLevel: number): number {
   if (!cfg || currentLevel >= cfg.maxLevel) return Infinity
   return cfg.costs[currentLevel]
 }
+
+// === Tractor offline income ===
+
+// MAX_INCOME_PER_SEC clamp for incomePerSec stored by client.
+// L18 frog with poop interval ~2s → ~5.4e12 gold/sec at full 16-frog cap.
+// 1e14 gives ~18x headroom — blocks absurd cheat values, doesn't trip legit play.
+export const MAX_INCOME_PER_SEC = 1e14
+
+// Tractor cap per level in milliseconds.
+// Mirrored from client/src/game/config/upgrades.ts UPGRADE_CONFIG.tractor.capHours.
+// SYNC POINT: coordinate changes with client.
+// capHours: [0, 2, 3, 3.5, 4, 4.5, 5, 5.5, 6] — index = tractor level.
+const TRACTOR_CAP_HOURS = [0, 2, 3, 3.5, 4, 4.5, 5, 5.5, 6] as const
+
+export function getTractorCapMs(level: number): number {
+  const hours = TRACTOR_CAP_HOURS[Math.min(level, TRACTOR_CAP_HOURS.length - 1)]
+  return hours * 3600 * 1000
+}
