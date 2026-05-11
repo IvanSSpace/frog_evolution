@@ -34,6 +34,7 @@ import { devLog } from './utils/devLog'
 import { pingHealth } from './api/client'
 import { ensureLogin } from './api/auth'
 import { loadGameState, startSync, stopSync } from './api/gameSync'
+import { startGame } from './game/index'
 
 const queryClient = new QueryClient()
 
@@ -57,66 +58,97 @@ function App() {
     minLevel: number
     maxLevel: number
   } | null>(null)
+  const [bootState, setBootState] = useState<'loading' | 'ready' | 'offline'>(
+    'loading',
+  )
+
   useEffect(() => {
+    let cancelled = false
+
     initSfx()
     initPlanetVoice()
 
-    // Liveness check → авторизация → загрузка состояния с сервера → запуск авто-синка
-    pingHealth().then((h) => {
-      if (h) {
-        console.log('[server] ✓ alive at', new Date(h.ts).toISOString())
+    async function boot() {
+      // 1. Ping server
+      const health = await pingHealth()
+      if (cancelled) return
+
+      if (health) {
+        console.log('[server] ✓ alive at', new Date(health.ts).toISOString())
       } else {
-        console.warn('[server] ✗ unreachable (skipping login)')
+        console.warn('[server] ✗ unreachable on boot')
       }
-    })
-    ensureLogin().then(async (auth) => {
+
+      // 2. Login
+      const auth = await ensureLogin()
+      if (cancelled) return
+
       if (!auth) {
-        console.error('[app] auth failed — продолжаем без сервера')
+        console.warn('[server] login failed — entering offline mode')
+        setBootState('offline')
         return
       }
-      console.log(
-        '[server] logged in as user',
-        auth.user.id,
-        auth.user.telegramId,
-      )
-      // Тянем серверное состояние (если доступно) — переписывает локальный стор
-      const loaded = await loadGameState()
-      if (loaded) startSync()
-    })
 
-    // Расчёт офлайн-дохода трактора при загрузке.
-    // Доход теперь считается по сохранённому incomePerSec (фактический доход
-    // фермы на момент ухода), а не по фиксированной таблице уровней трактора.
-    // Уровень трактора всё ещё определяет cap-time через getTractorCapMs.
-    const session = getOfflineSession()
-    const tractorLevel = useGameStore.getState().upgrades.tractor
-    if (session && tractorLevel > 0 && session.elapsedMs > 0) {
-      const capMs = getTractorCapMs(tractorLevel)
-      const earnedMs = Math.min(session.elapsedMs, capMs)
-      const earnedSec = Math.floor(earnedMs / 1000)
-      const income = Math.floor(earnedSec * session.incomePerSec)
-      if (income > 0) {
-        useGameStore.getState().addGold(income)
-        // Модалка показывается только при отсутствии 1+ часа — иначе
-        // мелькала бы при каждом быстром переоткрытии вкладки.
-        if (session.elapsedMs >= 60 * 60 * 1000) {
-          setWelcomeBack({ earned: income, hours: earnedMs / 3_600_000 })
+      console.log('[server] logged in as user', auth.user.id)
+
+      // 3. Load state from server with timeout
+      const TIMEOUT_MS = 5000
+      const loaded = await Promise.race<boolean>([
+        loadGameState(),
+        new Promise<boolean>((r) => setTimeout(() => r(false), TIMEOUT_MS)),
+      ])
+      if (cancelled) return
+
+      if (loaded) {
+        console.log('[server] state loaded — server is primary')
+        setBootState('ready')
+      } else {
+        console.warn(
+          '[server] state load failed or timeout — using localStorage',
+        )
+        setBootState('offline')
+      }
+
+      // 4. Post-load: tractor offline income + box drops
+      // Расчёт после loadGameState — используем canonical lastSessionAt с сервера.
+      // Доход считается по сохранённому incomePerSec (фактический доход фермы
+      // на момент ухода), а не по фиксированной таблице уровней трактора.
+      // Уровень трактора всё ещё определяет cap-time через getTractorCapMs.
+      const session = getOfflineSession()
+      const tractorLevel = useGameStore.getState().upgrades.tractor
+      if (session && tractorLevel > 0 && session.elapsedMs > 0) {
+        const capMs = getTractorCapMs(tractorLevel)
+        const earnedMs = Math.min(session.elapsedMs, capMs)
+        const earnedSec = Math.floor(earnedMs / 1000)
+        const income = Math.floor(earnedSec * session.incomePerSec)
+        if (income > 0) {
+          useGameStore.getState().addGold(income)
+          // Модалка показывается только при отсутствии 1+ часа — иначе
+          // мелькала бы при каждом быстром переоткрытии вкладки.
+          if (session.elapsedMs >= 60 * 60 * 1000) {
+            setWelcomeBack({ earned: income, hours: earnedMs / 3_600_000 })
+          }
         }
       }
+
+      // Offline box drops: пока игрок был away, боксы должны были падать.
+      // Расчёт: elapsedMs / dropInterval = сколько боксов «должно было» упасть.
+      // Реальное распределение по полю делает MainScene через pendingBoxCount —
+      // с учётом ENTITY_CAP / MAX_PENDING_BOXES.
+      if (session && session.elapsedMs > 0) {
+        const dropSpeedLvl = useGameStore.getState().upgrades.dropSpeed
+        const dropIntervalMs = getDropIntervalMs(dropSpeedLvl)
+        const droppedBoxCount = Math.floor(session.elapsedMs / dropIntervalMs)
+        if (droppedBoxCount > 0) {
+          eventBus.emit('box:offline-pending', { count: droppedBoxCount })
+        }
+      }
+
+      // 5. Start auto-sync subscribers
+      startSync()
     }
 
-    // Offline box drops: пока игрок был away, боксы должны были падать.
-    // Расчёт: elapsedMs / dropInterval = сколько боксов «должно было» упасть.
-    // Реальное распределение по полю делает MainScene через pendingBoxCount —
-    // с учётом ENTITY_CAP / MAX_PENDING_BOXES.
-    if (session && session.elapsedMs > 0) {
-      const dropSpeedLvl = useGameStore.getState().upgrades.dropSpeed
-      const dropIntervalMs = getDropIntervalMs(dropSpeedLvl)
-      const droppedBoxCount = Math.floor(session.elapsedMs / dropIntervalMs)
-      if (droppedBoxCount > 0) {
-        eventBus.emit('box:offline-pending', { count: droppedBoxCount })
-      }
-    }
+    boot()
 
     const saveSession = () =>
       saveSessionState(useGameStore.getState().incomePerSec)
@@ -156,6 +188,7 @@ function App() {
     eventBus.on('rareCrate:opened', handleRareCrateOpened)
 
     return () => {
+      cancelled = true
       window.clearInterval(heartbeat)
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('beforeunload', saveSession)
@@ -164,6 +197,12 @@ function App() {
       stopSync()
     }
   }, [])
+
+  // Start Phaser only after state is hydrated (server or localStorage fallback)
+  useEffect(() => {
+    if (bootState === 'loading') return
+    startGame()
+  }, [bootState])
 
   // Phase 16 (REQ UX-09): DEV-mode unlocks all sentinel flags + window dev helpers.
   // Production: флаги управляются gameplay (hasFirstMission через investigatePlanet,
@@ -252,8 +291,24 @@ function App() {
     eventBus.emit('rareCrate:claim', { level: wonLevel })
   }
 
+  if (bootState === 'loading') {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-neutral-900 text-white">
+        <div className="text-center">
+          <div className="text-2xl font-bold mb-2">Загрузка...</div>
+          <div className="text-sm text-neutral-400">Подключение к серверу</div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
+      {bootState === 'offline' && (
+        <div className="fixed top-4 left-4 z-50 bg-amber-700/90 text-white px-3 py-2 rounded text-xs">
+          Offline режим — изменения не сохраняются
+        </div>
+      )}
       <div className="w-full h-full flex flex-col">
         <div style={{ height: '12%' }}>
           <Header />

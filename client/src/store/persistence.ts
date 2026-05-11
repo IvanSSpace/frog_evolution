@@ -1,8 +1,7 @@
 // All localStorage load/save helpers for the game store.
 //
-// Schema versioning: STORAGE_VERSION is bumped when persisted shape changes
-// in a backward-incompatible way. On version mismatch, all keys are wiped
-// (loadUpgrades does the wipe + sets new version).
+// localStorage is now emergency fallback only — server is primary source of truth.
+// Per-key validation replaces version-based wipe: corrupt keys fall back to defaults.
 
 import { MAX_LEVEL } from '../game/config/frogs'
 import { UPGRADE_CONFIG, type Upgrades } from '../game/config/upgrades'
@@ -16,25 +15,12 @@ const UPGRADES_KEY = 'frog_evolution_upgrades'
 const PURCHASES_KEY = 'frog_evolution_frog_purchases'
 const DISCOVERED_KEY = 'frog_evolution_discovered'
 const MAGNET_ENABLED_KEY = 'frog_evolution_magnet_enabled'
-const VERSION_KEY = 'frog_evolution_storage_version'
 const SESSION_KEY = 'frog_evolution_last_session'
 const FORMAT_KEY = 'frog_format'
 const COSMIC_KEY = 'frog_evolution_cosmic'
 const LOCATION_KEY = 'frog_evolution_current_location'
 const LOCATION_FROGS_KEY = 'frog_evolution_location_frogs'
 const BOX_OPEN_COUNT_KEY = 'frog_evolution_box_open_count'
-
-// Bumped when configs change → old saves wiped.
-// 16 (Phase 11): добавлен COSMIC_KEY для CosmicSlice (Cosmic Frogs System)
-// 17 (Phase 16): ShipState discriminated union + sentinel flags + bonusRarity
-// 18 (Phase 15): BoxData shape extended (planetId/planetName/archetype/createdAt);
-//                bonusRarity changed number → 'rare'|'epic'|'legendary' enum.
-// 19 (Phase 17): bestiaryBitset 24→192 bytes (lossless pad migration); CosmicTab
-//                union extended с 'carriers'; CarrierData расширен
-//                ceiling?/rollHistory? (optional → backward compat).
-// 20: shrink to 18 frogs + 3 locations; Континент removed; Планета → loc 3;
-//     sentinel for Звёздная карта = L19 (was L25).
-const STORAGE_VERSION = 20
 
 // ─── upgrades ────────────────────────────────────────────────────────────────
 
@@ -47,18 +33,6 @@ export function loadUpgrades(): Upgrades {
     rareBoxSpeed: 0,
   }
   try {
-    const ver = parseInt(localStorage.getItem(VERSION_KEY) ?? '0', 10)
-    if (ver !== STORAGE_VERSION) {
-      localStorage.setItem(VERSION_KEY, String(STORAGE_VERSION))
-      localStorage.removeItem(UPGRADES_KEY)
-      localStorage.removeItem(PURCHASES_KEY)
-      localStorage.removeItem(DISCOVERED_KEY)
-      localStorage.removeItem(LOCATION_FROGS_KEY)
-      localStorage.removeItem(LOCATION_KEY)
-      localStorage.removeItem(COSMIC_KEY)
-      localStorage.removeItem(BOX_OPEN_COUNT_KEY)
-      return defaults
-    }
     const raw = localStorage.getItem(UPGRADES_KEY)
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Upgrades>
