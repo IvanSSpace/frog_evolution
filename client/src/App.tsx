@@ -22,6 +22,7 @@ import {
   getOfflineSession,
   getTractorCapMs,
 } from './store/gameStore'
+import { saveDiscovered } from './store/persistence'
 import type { Element, Rarity } from './store/cosmic/types'
 import { StabilizationModal } from './components/CosmicHub/StabilizationModal'
 import { MilestoneToast } from './components/CosmicHub/bestiary/MilestoneToast'
@@ -202,13 +203,16 @@ function App() {
     }
 
     w.__unlockAllLocations = () => {
-      useGameStore.setState({ discoveredLevels: [1, 7, 13, 19, 25] })
-      devLog('[dev] all locations unlocked')
+      const levels = [1, 7, 13, 19, 25]
+      saveDiscovered(levels)
+      useGameStore.setState({ discoveredLevels: levels })
+      devLog('[dev] all locations unlocked + persisted')
     }
 
     w.__lockAllLocations = () => {
+      saveDiscovered([])
       useGameStore.setState({ discoveredLevels: [] })
-      devLog('[dev] all locations locked (back to start)')
+      devLog('[dev] all locations locked (back to start) + persisted')
     }
 
     w.__shipTo = (planetId: string) => {
