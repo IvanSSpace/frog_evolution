@@ -79,6 +79,8 @@ type Events = {
   'box:offline-pending': { count: number }
   // Server-authoritative tractor offline income (boot-time).
   'server:welcome-back': { earned: number; durationMs: number }
+  // Gallery — open detail panel for a specific archetype/rarity
+  'gallery:open-detail': { archetype: Element; rarity: Rarity }
   // Phase 18 — bestiary milestone (REQ BESTIARY-07)
   'cosmic:bestiary-milestone': {
     threshold: 10 | 24 | 96 | 576

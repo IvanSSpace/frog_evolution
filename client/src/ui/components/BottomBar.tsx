@@ -86,6 +86,7 @@ type BottomBarProps = {
   onOpenSettings?: () => void
   onOpenCosmicHub?: () => void
   onOpenSerumModal?: () => void
+  onOpenGallery?: () => void
 }
 
 export function BottomBar({
@@ -94,6 +95,7 @@ export function BottomBar({
   onOpenSettings,
   onOpenCosmicHub,
   onOpenSerumModal,
+  onOpenGallery,
 }: BottomBarProps) {
   // Phase 11 (COSMIC-HUB-04): badge на 🧬 = число неоткрытых боксов.
   // Реактивен: при addBox/openBox селектор пере-рендерит компонент.
@@ -112,7 +114,7 @@ export function BottomBar({
       {/* Центр — действия */}
       <div className="flex gap-2 items-center">
         <Tile emoji="⬆️" skin="green" onClick={onOpenShop} />
-        <Tile emoji="🎨" skin="purple" badge />
+        <Tile emoji="🎨" skin="purple" onClick={onOpenGallery} />
         <Tile emoji="🎁" skin="red" badge onClick={onOpenSerumModal} />
         {/* 🧬 — Cosmic Hub (Phase 11). Badge = число неоткрытых боксов. */}
         <Tile

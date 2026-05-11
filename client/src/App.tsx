@@ -18,6 +18,8 @@ import { initPlanetVoice } from './audio/planetVoice'
 import { useGameStore } from './store/gameStore'
 import { saveDiscovered } from './store/persistence'
 import type { Element, Rarity } from './store/cosmic/types'
+import { GalleryModal } from './components/Gallery/GalleryModal'
+import { GalleryDetailModal } from './components/Gallery/GalleryDetailModal'
 import { StabilizationModal } from './components/CosmicHub/StabilizationModal'
 import { MilestoneToast } from './components/CosmicHub/bestiary/MilestoneToast'
 import { TutorialOverlay } from './components/Tutorial/TutorialOverlay'
@@ -43,6 +45,7 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [cosmicHubOpen, setCosmicHubOpen] = useState(false)
   const [serumOpen, setSerumOpen] = useState(false)
+  const [galleryOpen, setGalleryOpen] = useState(false)
   const [welcomeBack, setWelcomeBack] = useState<{
     earned: number
     hours: number
@@ -284,6 +287,7 @@ function App() {
             onOpenSettings={() => setSettingsOpen(true)}
             onOpenCosmicHub={() => setCosmicHubOpen(true)}
             onOpenSerumModal={() => setSerumOpen(true)}
+            onOpenGallery={() => setGalleryOpen(true)}
           />
         </div>
       </div>
@@ -294,6 +298,8 @@ function App() {
       <SerumBar />
       <LocationStack />
 
+      {galleryOpen && <GalleryModal onClose={() => setGalleryOpen(false)} />}
+      <GalleryDetailModal />
       {shopOpen && <ShopModal onClose={() => setShopOpen(false)} />}
       {frogShopOpen && <FrogShopModal onClose={() => setFrogShopOpen(false)} />}
       {serumOpen && <SerumModal onClose={() => setSerumOpen(false)} />}
