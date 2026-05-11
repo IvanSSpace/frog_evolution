@@ -6,7 +6,6 @@ import { ShopModal } from './ui/components/ShopModal'
 import { FrogShopModal } from './ui/components/FrogShopModal'
 import { WelcomeBackModal } from './ui/components/WelcomeBackModal'
 import { DiscoveryModal } from './ui/components/DiscoveryModal'
-import { UnlockComic } from './ui/components/UnlockComic/UnlockComic'
 import { RareCrateModal } from './ui/components/RareCrateModal'
 import { SettingsModal } from './ui/components/SettingsModal'
 import { LocationStack } from './ui/components/LocationStack'
@@ -53,7 +52,6 @@ function App() {
     hours: number
   } | null>(null)
   const [discovered, setDiscovered] = useState<number | null>(null)
-  const [unlockedLocation, setUnlockedLocation] = useState<number | null>(null)
   const [rareCrate, setRareCrate] = useState<{
     minLevel: number
     maxLevel: number
@@ -121,21 +119,11 @@ function App() {
 
     // Открытие нового вида лягушки
     const onDiscovered = ({ level }: { level: number }) => {
-      // L19 — sentinel для unlock Звёздной карты, не лягушка.
-      // Подавляем DiscoveryModal — играется UnlockComic вместо.
-      if (level === 19) return
       devLog('[discovery] new level:', level)
       // Лёгкая задержка чтобы pop-анимация на поле успела сыграть
       setTimeout(() => setDiscovered(level), 250)
     }
     eventBus.on('frog:discovered', onDiscovered)
-
-    // Progressive location unlock — emit'ится из MergeController после
-    // markDiscovered трогающего trigger-уровень (L7/L13) или L19-sentinel.
-    const onLocationUnlocked = ({ locationId }: { locationId: number }) => {
-      setUnlockedLocation(locationId)
-    }
-    eventBus.on('location:unlocked', onLocationUnlocked)
 
     const handleRareCrateOpened = ({
       x: _x,
@@ -157,7 +145,6 @@ function App() {
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('beforeunload', saveSession)
       eventBus.off('frog:discovered', onDiscovered)
-      eventBus.off('location:unlocked', onLocationUnlocked)
       eventBus.off('rareCrate:opened', handleRareCrateOpened)
       stopSync()
     }
@@ -295,12 +282,6 @@ function App() {
         <DiscoveryModal
           level={discovered}
           onClose={() => setDiscovered(null)}
-        />
-      )}
-      {unlockedLocation !== null && (
-        <UnlockComic
-          locationId={unlockedLocation}
-          onClose={() => setUnlockedLocation(null)}
         />
       )}
       {rareCrate && (
