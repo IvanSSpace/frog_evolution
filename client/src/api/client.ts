@@ -43,3 +43,18 @@ export async function apiJson<T>(
   }
   return (await res.json()) as T
 }
+
+export interface HealthResponse {
+  status: string
+  ts: number
+}
+
+export async function pingHealth(): Promise<HealthResponse | null> {
+  try {
+    const res = await fetch(`${API_URL}/health`)
+    if (!res.ok) return null
+    return (await res.json()) as HealthResponse
+  } catch {
+    return null
+  }
+}

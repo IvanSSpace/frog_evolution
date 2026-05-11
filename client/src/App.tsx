@@ -16,8 +16,6 @@ import { ShipFollowButton } from './ui/components/ShipFollowButton'
 import { eventBus } from './store/eventBus'
 import { initSfx } from './audio/sfxBootstrap'
 import { initPlanetVoice } from './audio/planetVoice'
-import { authenticate } from './utils/auth'
-import { loadGameState, startSync, stopSync } from './utils/gameSync'
 import {
   useGameStore,
   saveSessionState,
@@ -32,8 +30,9 @@ import { SerumModal } from './components/CosmicHub/SerumModal'
 import { SerumBar } from './components/SerumBar'
 import { installBestiaryDevHelpers } from './utils/devHelpers'
 import { devLog } from './utils/devLog'
+import { pingHealth } from './api/client'
 import { ensureLogin } from './api/auth'
-import { getServerGameState } from './api/gameState'
+import { loadGameState, startSync, stopSync } from './api/gameSync'
 
 const queryClient = new QueryClient()
 
@@ -62,12 +61,24 @@ function App() {
     initSfx()
     initPlanetVoice()
 
-    // Авторизация → загрузка состояния с сервера → запуск авто-синка
-    authenticate().then(async (result) => {
-      if (result.mode === 'failed') {
+    // Liveness check → авторизация → загрузка состояния с сервера → запуск авто-синка
+    pingHealth().then((h) => {
+      if (h) {
+        console.log('[server] ✓ alive at', new Date(h.ts).toISOString())
+      } else {
+        console.warn('[server] ✗ unreachable (skipping login)')
+      }
+    })
+    ensureLogin().then(async (auth) => {
+      if (!auth) {
         console.error('[app] auth failed — продолжаем без сервера')
         return
       }
+      console.log(
+        '[server] logged in as user',
+        auth.user.id,
+        auth.user.telegramId,
+      )
       // Тянем серверное состояние (если доступно) — переписывает локальный стор
       const loaded = await loadGameState()
       if (loaded) startSync()
@@ -139,30 +150,6 @@ function App() {
       setRareCrate({ minLevel, maxLevel })
     }
     eventBus.on('rareCrate:opened', handleRareCrateOpened)
-
-    // Server connection — dev-only sanity check.
-    // В Telegram среде или с настроенной VITE_API_URL — будет реальный connect.
-    ensureLogin().then(async (auth) => {
-      if (!auth) {
-        console.warn('[server] not connected (login failed)')
-        return
-      }
-      console.log(
-        '[server] logged in as user',
-        auth.user.id,
-        auth.user.telegramId,
-      )
-      try {
-        const state = await getServerGameState()
-        console.log('[server] state loaded:', {
-          gold: state.gold,
-          discoveredLevels: state.discoveredLevels,
-          currentLocation: state.currentLocation,
-        })
-      } catch (e) {
-        console.error('[server] state fetch failed:', e)
-      }
-    })
 
     return () => {
       window.clearInterval(heartbeat)
