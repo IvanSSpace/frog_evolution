@@ -223,15 +223,15 @@ export class MergeController {
         mergeEffect(scene, cx, cy, sameElementMerge)
       }
 
-      // L24+L24 — special path: лягушки сгорают (уже удалены removeFrog выше),
-      // L25 НЕ материализуется. Тригерится unlock Звёздной карты через sentinel
-      // markDiscovered(25). См. spec progressive-location-unlock.
+      // L18+L18 — special path: лягушки сгорают (уже удалены removeFrog выше),
+      // L19 НЕ материализуется. Тригерится unlock Звёздной карты через sentinel
+      // markDiscovered(19). См. spec progressive-location-unlock.
       if (oldLevel === MAX_LEVEL && b.level === MAX_LEVEL) {
         const storeL25 = useGameStore.getState()
         const currentLocId = storeL25.currentLocation
         storeL25.removeFrogFromLocation(currentLocId, MAX_LEVEL)
         storeL25.removeFrogFromLocation(currentLocId, MAX_LEVEL)
-        const wasNew = storeL25.markDiscovered(25)
+        const wasNew = storeL25.markDiscovered(19)
         if (wasNew) {
           eventBus.emit('location:unlocked', { locationId: 6 })
         }
