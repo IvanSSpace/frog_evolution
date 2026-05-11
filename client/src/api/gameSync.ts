@@ -31,6 +31,7 @@ function snapshotForSave() {
     magnetEnabled: s.magnetEnabled,
     currentLocation: s.currentLocation,
     locationFrogs: s.locationFrogs,
+    boxOpenCount: s.boxOpenCount,
   }
 }
 
@@ -64,6 +65,10 @@ export async function loadGameState(): Promise<boolean> {
         Array.isArray(data.locationFrogs) && data.locationFrogs.length === 4
           ? data.locationFrogs
           : store.locationFrogs,
+      boxOpenCount:
+        typeof data.boxOpenCount === 'number'
+          ? data.boxOpenCount
+          : store.boxOpenCount,
     })
     devLog('[gameSync] loaded state from server')
     return true

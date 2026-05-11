@@ -13,7 +13,7 @@
 //   - onBoxTapped(box): открыть коробку → frog spawn / rareCrate event
 //
 // Coupling: класс хранит ссылку на MainScene + FrogSpawner + MergeController.
-// Использует scene.boxes (package-public read+write), scene.boxOpenCount,
+// Использует scene.boxes (package-public read+write),
 // scene.pendingBoxCount, scene.frogs.length (через canSpawnBox), scene.cameras.
 // Вызывает spawner.spawnFrog и merge.flashAt.
 
@@ -260,16 +260,15 @@ export class BoxController {
     // Считаем открытые обычные боксы → мега-бокс каждые N открытий (только на Болоте)
     const storeForCount = useGameStore.getState()
     if (storeForCount.currentLocation === 1) {
-      scene.boxOpenCount++
+      const newCount = storeForCount.boxOpenCount + 1
       const threshold = getRareBoxThreshold(storeForCount.upgrades.rareBoxSpeed)
-      if (scene.boxOpenCount >= threshold && this.canSpawnBox()) {
+      if (newCount >= threshold && this.canSpawnBox()) {
         this.spawnBox(true)
-        scene.boxOpenCount = 0
+        storeForCount.setBoxOpenCount(0)
         storeForCount.setRareBoxProgress(0)
       } else {
-        storeForCount.setRareBoxProgress(
-          Math.min(scene.boxOpenCount / threshold, 1),
-        )
+        storeForCount.setBoxOpenCount(newCount)
+        storeForCount.setRareBoxProgress(Math.min(newCount / threshold, 1))
       }
     }
 

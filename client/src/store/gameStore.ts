@@ -41,6 +41,8 @@ import {
   saveNumberFormat,
   saveSessionState,
   getOfflineSession,
+  loadBoxOpenCount,
+  saveBoxOpenCount,
 } from './persistence'
 
 export { saveSessionState, getOfflineSession }
@@ -117,6 +119,8 @@ interface GameStateBase {
   setBoxWaiting: (v: boolean) => void
   rareBoxProgress: number
   setRareBoxProgress: (v: number) => void
+  boxOpenCount: number
+  setBoxOpenCount: (n: number) => void
 }
 
 // Полный GameState = базовые поля + Cosmic Frogs System (Phase 11+)
@@ -303,6 +307,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   setBoxWaiting: (v) => set({ boxWaiting: v }),
   rareBoxProgress: 0,
   setRareBoxProgress: (v) => set({ rareBoxProgress: v }),
+  boxOpenCount: loadBoxOpenCount(),
+  setBoxOpenCount: (n) => {
+    saveBoxOpenCount(n)
+    set({ boxOpenCount: n })
+  },
 
   // ============== COSMIC FROGS SYSTEM (Phase 11+) ==============
   // createCosmicSlice сначала кладёт actions + дефолтные данные,

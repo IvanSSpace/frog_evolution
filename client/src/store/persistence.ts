@@ -22,6 +22,7 @@ const FORMAT_KEY = 'frog_format'
 const COSMIC_KEY = 'frog_evolution_cosmic'
 const LOCATION_KEY = 'frog_evolution_current_location'
 const LOCATION_FROGS_KEY = 'frog_evolution_location_frogs'
+const BOX_OPEN_COUNT_KEY = 'frog_evolution_box_open_count'
 
 // Bumped when configs change → old saves wiped.
 // 16 (Phase 11): добавлен COSMIC_KEY для CosmicSlice (Cosmic Frogs System)
@@ -55,6 +56,7 @@ export function loadUpgrades(): Upgrades {
       localStorage.removeItem(LOCATION_FROGS_KEY)
       localStorage.removeItem(LOCATION_KEY)
       localStorage.removeItem(COSMIC_KEY)
+      localStorage.removeItem(BOX_OPEN_COUNT_KEY)
       return defaults
     }
     const raw = localStorage.getItem(UPGRADES_KEY)
@@ -364,6 +366,21 @@ export function saveCosmicSlice(state: CosmicPersist) {
   } catch {
     // QuotaExceededError → silent ignore (T-11-03 mitigation)
   }
+}
+
+// ─── box open count (mega-box progress) ─────────────────────────────────────
+
+export function loadBoxOpenCount(): number {
+  if (typeof localStorage === 'undefined') return 0
+  const raw = localStorage.getItem(BOX_OPEN_COUNT_KEY)
+  if (!raw) return 0
+  const n = parseInt(raw, 10)
+  return Number.isFinite(n) && n >= 0 ? n : 0
+}
+
+export function saveBoxOpenCount(n: number): void {
+  if (typeof localStorage === 'undefined') return
+  localStorage.setItem(BOX_OPEN_COUNT_KEY, String(n))
 }
 
 // ─── number format ───────────────────────────────────────────────────────────

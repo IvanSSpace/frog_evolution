@@ -54,13 +54,12 @@ export class MainScene extends Phaser.Scene {
   //   frogs, overlayManager, selectionLayer, cachedSerumDragActive,
   //   isLocationTransitioning  — читает FrogSpawner
   frogs: FrogData[] = []
-  // Phase 21-03 (Wave 3): boxes/boxOpenCount/pendingBoxCount пакеджед-public —
+  // Phase 21-03 (Wave 3): boxes/pendingBoxCount пакеджед-public —
   // используются BoxController + LocationTransition.
   boxes: BoxData[] = []
   // Phase 21-05 (Wave 5): boxProgressMs/pendingBoxCount package-public —
   // мутируется LocationTransition (snap-end resets).
   boxProgressMs = 0
-  boxOpenCount = 0
   pendingBoxCount = 0
 
   // Phase 21-04 (Wave 4): magnet state перенесён в MagnetController.

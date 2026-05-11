@@ -11,6 +11,7 @@ export interface ServerGameState {
   magnetEnabled: boolean
   currentLocation: number
   locationFrogs: number[][]
+  boxOpenCount: number
   cosmic: unknown | null
   lastSessionAt: string
   createdAt: string

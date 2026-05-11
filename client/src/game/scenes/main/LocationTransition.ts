@@ -17,7 +17,7 @@
 //   - onDevClearAllFrogs: () => void
 //
 // Coupling: класс знает почти всё о scene — frogs, boxes, poops, bg,
-// pendingBoxCount, boxProgressMs, boxOpenCount, isLocationTransitioning,
+// pendingBoxCount, boxProgressMs, isLocationTransitioning,
 // prevLocation, overlayManager, selectionLayer, cachedSerumDragActive,
 // lastHaptiHover. Эти поля все package-public (см. MainScene class header).
 // Вызывает spawner.spawnFrog/spawnLocationFrogs/rebindCarriers/removeFrog/
@@ -97,8 +97,9 @@ export class LocationTransition {
     scene.poops = []
 
     scene.boxProgressMs = 0
-    scene.boxOpenCount = 0
-    useGameStore.getState().setRareBoxProgress(0)
+    const storeForReset = useGameStore.getState()
+    storeForReset.setBoxOpenCount(0)
+    storeForReset.setRareBoxProgress(0)
     this.magnet.resetSpawnTimer()
     scene.syncEntityCount()
   }
@@ -372,8 +373,9 @@ export class LocationTransition {
         scene.input.enabled = true
         scene.isLocationTransitioning = false
         scene.boxProgressMs = 0
-        scene.boxOpenCount = 0
-        useGameStore.getState().setRareBoxProgress(0)
+        const storeForTransitionEnd = useGameStore.getState()
+        storeForTransitionEnd.setBoxOpenCount(0)
+        storeForTransitionEnd.setRareBoxProgress(0)
         this.magnet.resetSpawnTimer()
         scene.syncEntityCount()
 
