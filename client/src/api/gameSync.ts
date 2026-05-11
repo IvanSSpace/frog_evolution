@@ -32,6 +32,21 @@ function snapshotForSave() {
     currentLocation: s.currentLocation,
     locationFrogs: s.locationFrogs,
     boxOpenCount: s.boxOpenCount,
+    cosmic: {
+      serums: s.serums,
+      boxes: s.boxes,
+      ship: s.ship,
+      carriers: s.carriers,
+      bestiaryBitset: s.bestiaryBitset,
+      pityCounters: s.pityCounters,
+      lastActiveTab: s.lastActiveTab,
+      crew: s.crew,
+      hasFirstFeed: s.hasFirstFeed,
+      hasFirstMission: s.hasFirstMission,
+      hasOpenedAnyBox: s.hasOpenedAnyBox,
+      frogExclusiveUnlocked: s.frogExclusiveUnlocked,
+      tutorialState: s.tutorialState,
+    },
   }
 }
 
@@ -70,6 +85,31 @@ export async function loadGameState(): Promise<boolean> {
           ? data.boxOpenCount
           : store.boxOpenCount,
     })
+    // Hydrate cosmic state if server returned it
+    if (data.cosmic && typeof data.cosmic === 'object') {
+      const c = data.cosmic as Record<string, unknown>
+      const cosmicUpdate: Record<string, unknown> = {}
+      if ('serums' in c) cosmicUpdate.serums = c.serums
+      if ('boxes' in c) cosmicUpdate.boxes = c.boxes
+      if ('ship' in c) cosmicUpdate.ship = c.ship
+      if ('carriers' in c) cosmicUpdate.carriers = c.carriers
+      if ('bestiaryBitset' in c) cosmicUpdate.bestiaryBitset = c.bestiaryBitset
+      if ('pityCounters' in c) cosmicUpdate.pityCounters = c.pityCounters
+      if ('lastActiveTab' in c) cosmicUpdate.lastActiveTab = c.lastActiveTab
+      if ('crew' in c) cosmicUpdate.crew = c.crew
+      if ('hasFirstFeed' in c) cosmicUpdate.hasFirstFeed = c.hasFirstFeed
+      if ('hasFirstMission' in c)
+        cosmicUpdate.hasFirstMission = c.hasFirstMission
+      if ('hasOpenedAnyBox' in c)
+        cosmicUpdate.hasOpenedAnyBox = c.hasOpenedAnyBox
+      if ('frogExclusiveUnlocked' in c)
+        cosmicUpdate.frogExclusiveUnlocked = c.frogExclusiveUnlocked
+      if ('tutorialState' in c) cosmicUpdate.tutorialState = c.tutorialState
+      if (Object.keys(cosmicUpdate).length > 0) {
+        useGameStore.setState(cosmicUpdate as Partial<typeof store>)
+      }
+    }
+
     devLog('[gameSync] loaded state from server')
     return true
   } catch (err) {
