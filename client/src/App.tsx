@@ -6,6 +6,7 @@ import { ShopModal } from './ui/components/ShopModal'
 import { FrogShopModal } from './ui/components/FrogShopModal'
 import { WelcomeBackModal } from './ui/components/WelcomeBackModal'
 import { DiscoveryModal } from './ui/components/DiscoveryModal'
+import { UnlockComic } from './ui/components/UnlockComic/UnlockComic'
 import { RareCrateModal } from './ui/components/RareCrateModal'
 import { SettingsModal } from './ui/components/SettingsModal'
 import { LocationStack } from './ui/components/LocationStack'
@@ -50,6 +51,7 @@ function App() {
     hours: number
   } | null>(null)
   const [discovered, setDiscovered] = useState<number | null>(null)
+  const [unlockedLocation, setUnlockedLocation] = useState<number | null>(null)
   const [rareCrate, setRareCrate] = useState<{
     minLevel: number
     maxLevel: number
@@ -105,11 +107,21 @@ function App() {
 
     // Открытие нового вида лягушки
     const onDiscovered = ({ level }: { level: number }) => {
+      // L25 — sentinel для unlock Звёздной карты, не лягушка.
+      // Подавляем DiscoveryModal — играется UnlockComic вместо.
+      if (level === 25) return
       devLog('[discovery] new level:', level)
       // Лёгкая задержка чтобы pop-анимация на поле успела сыграть
       setTimeout(() => setDiscovered(level), 250)
     }
     eventBus.on('frog:discovered', onDiscovered)
+
+    // Progressive location unlock — emit'ится из MergeController после
+    // markDiscovered трогающего trigger-уровень (L7/L13/L19) или L25-sentinel.
+    const onLocationUnlocked = ({ locationId }: { locationId: number }) => {
+      setUnlockedLocation(locationId)
+    }
+    eventBus.on('location:unlocked', onLocationUnlocked)
 
     const handleRareCrateOpened = ({
       x: _x,
@@ -131,6 +143,7 @@ function App() {
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('beforeunload', saveSession)
       eventBus.off('frog:discovered', onDiscovered)
+      eventBus.off('location:unlocked', onLocationUnlocked)
       eventBus.off('rareCrate:opened', handleRareCrateOpened)
       stopSync()
     }
@@ -175,6 +188,16 @@ function App() {
       devLog('[dev] all tabs locked (simulating fresh prod install)')
     }
 
+    w.__unlockAllLocations = () => {
+      useGameStore.setState({ discoveredLevels: [1, 7, 13, 19, 25] })
+      devLog('[dev] all locations unlocked')
+    }
+
+    w.__lockAllLocations = () => {
+      useGameStore.setState({ discoveredLevels: [] })
+      devLog('[dev] all locations locked (back to start)')
+    }
+
     w.__shipTo = (planetId: string) => {
       useGameStore.getState().arriveShipAt(planetId)
     }
@@ -195,6 +218,8 @@ function App() {
       delete w.__resetCrewToday
       delete w.__unlockAllTabs
       delete w.__lockAllTabs
+      delete w.__unlockAllLocations
+      delete w.__lockAllLocations
       delete w.__shipTo
       delete w.__grantSerum
       delete w.__unlockBestiaryCells
@@ -253,6 +278,12 @@ function App() {
         <DiscoveryModal
           level={discovered}
           onClose={() => setDiscovered(null)}
+        />
+      )}
+      {unlockedLocation !== null && (
+        <UnlockComic
+          locationId={unlockedLocation}
+          onClose={() => setUnlockedLocation(null)}
         />
       )}
       {rareCrate && (
