@@ -1,8 +1,14 @@
-import { User } from '@prisma/client'
+import '@fastify/jwt'
+
+declare module 'fastify' {
+  interface FastifyRequest {
+    user: { id: number; telegramId: string }
+  }
+}
 
 declare module '@fastify/jwt' {
   interface FastifyJWT {
-    payload: { telegramId: string }
-    user: User
+    payload: { id: number; telegramId: string }
+    user: { id: number; telegramId: string }
   }
 }

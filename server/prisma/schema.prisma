@@ -18,30 +18,25 @@ model User {
   updatedAt  DateTime @updatedAt @map("updated_at")
 
   gameState GameState?
+  pityState PityState?
 
   @@map("users")
 }
 
-// Полное состояние игры — синхронизирует localStorage клиента
+// Cloud snapshot — клиент пишет туда полное состояние (gold, upgrades, frogs).
+// Не source of truth для критичных операций — только для cross-device sync.
 model GameState {
-  id         Int      @id @default(autoincrement())
-  userId     Int      @unique @map("user_id")
+  id     Int @id @default(autoincrement())
+  userId Int @unique @map("user_id")
 
   gold              BigInt   @default(0)
-  // Все апгрейды (включая crateQuality)
-  upgrades          Json     @default("{\"dropSpeed\":0,\"tractor\":0,\"magnet\":0,\"crateQuality\":0}")
-  // Сколько раз каждая лягушка куплена (массив длины 24, 0-индекс = L1)
+  upgrades          Json     @default("{\"dropSpeed\":0,\"tractor\":0,\"magnet\":0,\"crateQuality\":0,\"rareBoxSpeed\":0}")
   frogPurchases     Json     @default("[]")
-  // Какие уровни лягушек открыты (для DiscoveryModal)
-  discoveredLevels  Json     @default("[]")
-  // Включён ли магнит юзером (тоггл)
+  discoveredLevels  Json     @default("[1]")
   magnetEnabled     Boolean  @default(true) @map("magnet_enabled")
-  // Текущая локация (1=Болото, 2=Лес, 3=Земля, 4=Космос)
   currentLocation   Int      @default(1) @map("current_location")
-  // Лягушки на каждой локации — массив из 4 массивов уровней.
-  // Дефолт: Болото с одной L1..L6, остальные пустые.
   locationFrogs     Json     @default("[[1,2,3,4,5,6],[],[],[]]") @map("location_frogs")
-  // Когда юзер последний раз был онлайн — для расчёта офлайн-дохода трактора
+  cosmic            Json?    // serums/boxes/ship/carriers/bestiary — лениво (JSONB)
   lastSessionAt     DateTime @default(now()) @map("last_session_at")
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -50,4 +45,23 @@ model GameState {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("game_states")
+}
+
+// Server-authoritative pity-state для роллов rarity на сервере.
+// Изолирован от GameState — обновляется через action endpoint'ы (box open),
+// клиент не пишет туда напрямую.
+model PityState {
+  id     Int @id @default(autoincrement())
+  userId Int @unique @map("user_id")
+
+  rare       Int @default(0)
+  epic       Int @default(0)
+  legendary  Int @default(0)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("pity_states")
 }

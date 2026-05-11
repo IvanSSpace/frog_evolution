@@ -1,78 +1,61 @@
-import * as crypto from 'crypto'
-import prisma from '../db/prisma'
-import { User } from '@prisma/client'
+import crypto from 'node:crypto'
+import { config, isDev } from '../config'
 
-export interface TelegramUser {
-  id: number
-  first_name?: string
-  last_name?: string
+// Validate Telegram WebApp initData per https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
+export interface ParsedInitData {
+  telegramId: string
   username?: string
-  photo_url?: string
+  firstName?: string
+  lastName?: string
+  photoUrl?: string
 }
 
-const DEV_MOCK_USER: TelegramUser = {
-  id: 1,
-  first_name: 'Dev',
-  username: 'devuser',
-}
-
-// Валидация initData от Telegram Mini App
-export function validateInitData(initData: string, botToken: string): TelegramUser | null {
-  // Dev-байпас: без токена бота принимаем мок
-  if (!botToken && process.env.NODE_ENV !== 'production') {
-    try {
-      const params = new URLSearchParams(initData)
-      const userParam = params.get('user')
-      if (userParam) return JSON.parse(userParam) as TelegramUser
-    } catch {}
-    return DEV_MOCK_USER
+export function validateInitData(initData: string): ParsedInitData | null {
+  // Dev fallback: no bot token, no real validation. Accept mock initData like "telegramId=dev".
+  if (isDev && !config.telegramBotToken) {
+    const params = new URLSearchParams(initData)
+    return {
+      telegramId: params.get('telegramId') ?? 'dev',
+      username: params.get('username') ?? 'dev-user',
+      firstName: params.get('firstName') ?? 'Dev',
+    }
   }
 
+  const urlParams = new URLSearchParams(initData)
+  const hash = urlParams.get('hash')
+  if (!hash) return null
+  urlParams.delete('hash')
+
+  const dataCheckString = Array.from(urlParams.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${k}=${v}`)
+    .join('\n')
+
+  const secretKey = crypto
+    .createHmac('sha256', 'WebAppData')
+    .update(config.telegramBotToken)
+    .digest()
+
+  const computed = crypto
+    .createHmac('sha256', secretKey)
+    .update(dataCheckString)
+    .digest('hex')
+
+  if (computed !== hash) return null
+
+  const userRaw = urlParams.get('user')
+  if (!userRaw) return null
+
   try {
-    const params = new URLSearchParams(initData)
-    const hash = params.get('hash')
-    if (!hash) return null
-
-    params.delete('hash')
-
-    const dataCheckString = Array.from(params.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, value]) => `${key}=${value}`)
-      .join('\n')
-
-    const secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest()
-    const expectedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex')
-
-    if (expectedHash !== hash) return null
-
-    const userParam = params.get('user')
-    if (!userParam) return null
-
-    return JSON.parse(userParam) as TelegramUser
+    const user = JSON.parse(userRaw)
+    return {
+      telegramId: String(user.id),
+      username: user.username,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      photoUrl: user.photo_url,
+    }
   } catch {
     return null
   }
-}
-
-// Создаёт юзера + пустой GameState при первой авторизации
-export async function upsertUser(telegramUser: TelegramUser): Promise<User> {
-  const telegramId = String(telegramUser.id)
-
-  return prisma.user.upsert({
-    where: { telegramId },
-    update: {
-      username: telegramUser.username ?? null,
-      firstName: telegramUser.first_name ?? null,
-      lastName: telegramUser.last_name ?? null,
-      photoUrl: telegramUser.photo_url ?? null,
-    },
-    create: {
-      telegramId,
-      username: telegramUser.username ?? null,
-      firstName: telegramUser.first_name ?? null,
-      lastName: telegramUser.last_name ?? null,
-      photoUrl: telegramUser.photo_url ?? null,
-      gameState: { create: {} },
-    },
-  })
 }

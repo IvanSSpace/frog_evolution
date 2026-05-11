@@ -1,10 +1,14 @@
 import { FastifyInstance } from 'fastify'
+import { healthRoutes } from './health'
 import { authRoutes } from './auth'
-import { usersRoutes } from './users'
+import { userRoutes } from './users'
 import { gameStateRoutes } from './gameState'
+import { boxRoutes } from './box'
 
-export async function registerRoutes(fastify: FastifyInstance) {
-  await fastify.register(authRoutes)
-  await fastify.register(usersRoutes)
-  await fastify.register(gameStateRoutes)
+export async function registerRoutes(app: FastifyInstance) {
+  await app.register(healthRoutes)
+  await app.register(authRoutes)
+  await app.register(userRoutes)
+  await app.register(gameStateRoutes)
+  await app.register(boxRoutes)
 }

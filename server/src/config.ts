@@ -1,11 +1,11 @@
-import * as dotenv from 'dotenv'
-dotenv.config()
+import 'dotenv/config'
 
 export const config = {
-  port: parseInt(process.env.PORT ?? '3000'),
-  nodeEnv: process.env.NODE_ENV ?? 'development',
-  jwtSecret: process.env.JWT_SECRET ?? 'dev_secret',
+  port: parseInt(process.env.PORT ?? '3000', 10),
+  jwtSecret: process.env.JWT_SECRET ?? 'dev-secret-change-me',
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? '',
-  clientUrl: process.env.CLIENT_URL ?? 'http://localhost:5173',
-  isProd: process.env.NODE_ENV === 'production',
+  nodeEnv: process.env.NODE_ENV ?? 'development',
+  databaseUrl: process.env.DATABASE_URL ?? '',
 }
+
+export const isDev = config.nodeEnv !== 'production'

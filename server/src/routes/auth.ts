@@ -1,28 +1,37 @@
 import { FastifyInstance } from 'fastify'
-import { validateInitData, upsertUser } from '../services/telegram'
-import { config } from '../config'
+import { prisma } from '../prisma'
+import { validateInitData } from '../services/telegram'
 
-export async function authRoutes(fastify: FastifyInstance) {
-  fastify.post('/auth/telegram', async (request, reply) => {
-    const { initData } = request.body as { initData: string }
-
-    if (!initData) {
-      return reply.code(400).send({ error: 'initData is required' })
+export async function authRoutes(app: FastifyInstance) {
+  app.post('/auth/telegram', async (request, reply) => {
+    const body = request.body as { initData?: string }
+    if (!body.initData) {
+      return reply.code(400).send({ error: 'missing initData' })
     }
 
-    const telegramUser = validateInitData(initData, config.telegramBotToken)
-
-    if (!telegramUser) {
-      return reply.code(401).send({ error: 'Invalid initData' })
+    const parsed = validateInitData(body.initData)
+    if (!parsed) {
+      return reply.code(401).send({ error: 'invalid initData' })
     }
 
-    const user = await upsertUser(telegramUser)
+    const user = await prisma.user.upsert({
+      where: { telegramId: parsed.telegramId },
+      update: {
+        username: parsed.username,
+        firstName: parsed.firstName,
+        lastName: parsed.lastName,
+        photoUrl: parsed.photoUrl,
+      },
+      create: {
+        telegramId: parsed.telegramId,
+        username: parsed.username,
+        firstName: parsed.firstName,
+        lastName: parsed.lastName,
+        photoUrl: parsed.photoUrl,
+      },
+    })
 
-    const token = fastify.jwt.sign(
-      { telegramId: user.telegramId },
-      { expiresIn: '30d' }
-    )
-
-    return reply.send({ payload: { token }, user })
+    const token = app.jwt.sign({ id: user.id, telegramId: user.telegramId })
+    return { token, user }
   })
 }
