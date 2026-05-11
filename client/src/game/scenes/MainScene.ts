@@ -3,6 +3,7 @@ import {
   useGameStore,
   getDropIntervalMs,
   getLocationById,
+  ENTITY_CAP,
 } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
 import {
@@ -34,6 +35,15 @@ import { PoopController } from './main/PoopController'
 import { MagnetController } from './main/MagnetController'
 import { LocationTransition } from './main/LocationTransition'
 import { FrogInteraction } from './main/FrogInteraction'
+
+// Буфер offline box drops: App.tsx эмитит 'box:offline-pending' синхронно в
+// useEffect, а MainScene.create() регистрирует handler позже (после preload).
+// Модульный listener ловит count до того, как scene готова к спавну — create()
+// дренирует буфер сразу после spawnLocationFrogs().
+let _offlineBoxBuffer = 0
+eventBus.on('box:offline-pending', ({ count }: { count: number }) => {
+  _offlineBoxBuffer += count
+})
 
 export class MainScene extends Phaser.Scene {
   // Phase 21 (Wave 1+): несколько полей переведены с `private` на package-public,
@@ -178,7 +188,10 @@ export class MainScene extends Phaser.Scene {
 
     // Подписка на покупку лягушки из магазина
     eventBus.on('frog:purchased', this.onFrogPurchased)
-    // Offline box drops: App.tsx эмитит при boot, MainScene зачисляет в pendingBoxCount.
+    // Offline box drops: модульный listener (выше класса) пишет в _offlineBoxBuffer
+    // с момента загрузки модуля — ловит emit даже если он пришёл до create().
+    // Инстанс-handler дренирует буфер при каждом новом emit (маловероятен,
+    // но корректно обрабатывает повторные вызовы).
     eventBus.on('box:offline-pending', this.onOfflinePendingBoxes)
     // Phase 21-05: location-changed + dev-clear перенесены в LocationTransition.
     eventBus.on('location:changed', this.locTransition.onLocationChanged)
@@ -219,6 +232,10 @@ export class MainScene extends Phaser.Scene {
     })
 
     this.spawnLocationFrogs()
+
+    // Дренируем offline-drop буфер: боксы которые должны были упасть пока
+    // игрок был away (count пришёл в _offlineBoxBuffer через модульный listener).
+    this.drainOfflineBoxBuffer()
 
     // Phase 12: overlay manager — создаётся ПОСЛЕ spawnLocationFrogs так что
     // первый sync видит уже живых лягушек, и для их frogId-match с CarrierData.
@@ -391,13 +408,30 @@ export class MainScene extends Phaser.Scene {
     })
   }
 
-  // Offline box drops: зачисляем «упавшие» боксы пока игрок был away.
-  // Лимит MAX_PENDING_BOXES не даёт копить больше чем сцена может выдать разом.
-  private onOfflinePendingBoxes = ({ count }: { count: number }) => {
-    this.pendingBoxCount = Math.min(
-      this.pendingBoxCount + count,
-      MAX_PENDING_BOXES,
-    )
+  // Offline box drops: спавним боксы прямо на поле Болота до лимита ENTITY_CAP.
+  // Cap'имся на ENTITY_CAP минус текущее число лягушек на Болоте.
+  // Боксы и мегабоксы не persist'ятся, поэтому учитываем только frogs.
+  // Остаток сверх cap теряется — поле физически не вмещает больше.
+  // Примечание: count уже аккумулирован в _offlineBoxBuffer модульным listener'ом;
+  // здесь только дренируем (не добавляем снова, чтобы не задвоить).
+  private onOfflinePendingBoxes = (_evt: { count: number }) => {
+    this.drainOfflineBoxBuffer()
+  }
+
+  private drainOfflineBoxBuffer() {
+    if (_offlineBoxBuffer <= 0) return
+    const store = useGameStore.getState()
+    const bolotoFrogs = store.locationFrogs[0]?.length ?? 0
+    const slots = Math.max(0, ENTITY_CAP - bolotoFrogs)
+    const toSpawn = Math.min(_offlineBoxBuffer, slots)
+    _offlineBoxBuffer = 0
+    for (let i = 0; i < toSpawn; i++) {
+      if (this.canSpawnBox()) {
+        this.spawnBox(false, true) // preLanded — без анимации падения
+      } else {
+        break
+      }
+    }
   }
 
   // Phase 21-01: package-public — вызывается FrogSpawner (after spawn/remove).
