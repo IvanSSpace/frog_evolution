@@ -8,6 +8,7 @@ import {
   type Element,
   type Rarity,
 } from '../store/cosmic/types'
+import { MAX_LEVEL } from '../game/config/frogs'
 
 declare global {
   interface Window {
@@ -52,7 +53,7 @@ function unlockRandomCells(count: number): void {
     const rarity = RARITIES[
       Math.floor(Math.random() * RARITIES.length)
     ] as Rarity
-    const level = Math.floor(Math.random() * 24) + 1
+    const level = Math.floor(Math.random() * MAX_LEVEL) + 1
 
     const before = bitCount(useGameStore.getState().bestiaryBitset)
     setBestiaryBit(element, rarity, level)
@@ -72,7 +73,7 @@ export function installBestiaryDevHelpers(): void {
     bitCount(useGameStore.getState().bestiaryBitset)
   window.__resetBestiary = () => {
     useGameStore.setState({
-      bestiaryBitset: new Array(192).fill(0),
+      bestiaryBitset: new Array(144).fill(0),
       frogExclusiveUnlocked: false,
     })
     console.log('[bestiary-dev] bitset reset')

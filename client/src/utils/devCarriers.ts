@@ -14,6 +14,7 @@
 import type Phaser from 'phaser'
 import { useGameStore } from '../store/gameStore'
 import { ELEMENTS, type Element, type Rarity } from '../store/cosmic/types'
+import { BESTIARY_BIT_COUNT } from '../store/cosmic/bestiary'
 import { burstEffect } from '../game/effects/elements/burstEffect'
 import { mergeEffect } from '../game/effects/elements/mergeEffect'
 
@@ -238,8 +239,10 @@ if (import.meta.env.DEV) {
     console.log(
       '[dev] bestiary bits set:',
       count,
-      '/ 1536 (',
-      ((count / 1536) * 100).toFixed(2),
+      '/',
+      BESTIARY_BIT_COUNT,
+      '(',
+      ((count / BESTIARY_BIT_COUNT) * 100).toFixed(2),
       '%)',
     )
     return count

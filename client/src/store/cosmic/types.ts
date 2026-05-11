@@ -145,10 +145,10 @@ export interface CosmicSlice {
   // Карьеры (Phase 14/17)
   carriers: CarrierData[]
 
-  // Бестиарий bitset: Phase 17 расширен до 192 байт = 1536 битов.
-  // Layout: 16 elements × 4 rarities × 24 levels = 1536 уникальных combos.
+  // Бестиарий bitset: Phase 20 shrink до 144 байт = 1152 битов (24→18 frog levels).
+  // Layout: 16 elements × 4 rarities × 18 levels = 1152 уникальных combos.
   // Хранится как number[] (JSON-serializable).
-  bestiaryBitset: number[] // length = 192
+  bestiaryBitset: number[] // length = 144
 
   // Pity counters (Phase 19)
   pityCounters: PityCounters
@@ -216,7 +216,7 @@ export function makeInitialCosmicSlice(): CosmicSlice {
     boxes: [],
     ship: null,
     carriers: [],
-    bestiaryBitset: new Array(192).fill(0), // Phase 17: full 1536 bits = 192 bytes
+    bestiaryBitset: new Array(144).fill(0), // Phase 20: 1152 bits = 144 bytes (18 levels)
     pityCounters: { common: 0, rare: 0, epic: 0, legendary: 0 },
     lastActiveTab: 'scouts',
     crew: { missionsToday: 0, lastResetDay: '' },

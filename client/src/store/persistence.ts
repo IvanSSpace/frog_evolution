@@ -272,6 +272,9 @@ export function loadCosmicSlice(): CosmicPersist {
       ship,
       carriers: Array.isArray(parsed.carriers) ? parsed.carriers : [],
       // Phase 17: bitset extended 24 → 192 bytes (1536 bits). Pad-only migration.
+      // Phase 20: shrink to 144 bytes (1152 bits) после 24→18 frog levels.
+      //   NOTE: migration code below still pads/truncates to 192 — needs a separate
+      //   Phase 20 migration step to truncate old saves to 144. See open issue.
       bestiaryBitset: (() => {
         if (!Array.isArray(parsed.bestiaryBitset))
           return defaults.bestiaryBitset

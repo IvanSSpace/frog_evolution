@@ -2,7 +2,7 @@
 // Возвращает memoized список cells для рендеринга.
 //
 // Layout decision (D-04 в master PLAN.md):
-//   6 columns × 64 rows = 384 cells (1 rarity × 16 elements × 24 levels).
+//   6 columns × 48 rows = 288 cells (1 rarity × 16 elements × 18 levels).
 //   Order по умолчанию: level ascending, затем element order (ELEMENTS array).
 
 import { useMemo, useState } from 'react'
@@ -13,6 +13,7 @@ import {
   type Rarity,
 } from '../../../store/cosmic/types'
 import { bestiaryIndex, readBit } from '../../../store/cosmic/bestiary'
+import { MAX_LEVEL } from '../../../game/config/frogs'
 
 export type SortKey = 'level-asc' | 'level-desc' | 'element' | 'rarity'
 
@@ -64,7 +65,7 @@ export function useBestiaryView({
   // showLocked=false если уже есть прогресс (REQ BESTIARY-05 «Discovered only» по умолчанию).
   const initialUnlocked = useMemo(() => {
     let count = 0
-    for (let level = 1; level <= 24; level++) {
+    for (let level = 1; level <= MAX_LEVEL; level++) {
       for (let e = 0; e < ELEMENTS.length; e++) {
         const idx = bestiaryIndex(ELEMENTS[e], location, level)
         if (readBit(bitset, idx)) count++
@@ -85,7 +86,7 @@ export function useBestiaryView({
     const out: BestiaryCellRef[] = []
     const search = elementSearch.trim().toLowerCase()
 
-    for (let level = 1; level <= 24; level++) {
+    for (let level = 1; level <= MAX_LEVEL; level++) {
       for (let e = 0; e < ELEMENTS.length; e++) {
         const element = ELEMENTS[e]
         const rarity = location // tab = rarity
@@ -146,10 +147,10 @@ export function useBestiaryView({
   }, [bitset, location, rarityFilter, elementSearch, showLocked, sortBy])
 
   // Totals (для badge)
-  const totalInLocation = ELEMENTS.length * 24 // 384
+  const totalInLocation = ELEMENTS.length * MAX_LEVEL // 288
   const unlockedInLocationVal = useMemo(() => {
     let count = 0
-    for (let level = 1; level <= 24; level++) {
+    for (let level = 1; level <= MAX_LEVEL; level++) {
       for (let e = 0; e < ELEMENTS.length; e++) {
         const idx = bestiaryIndex(ELEMENTS[e], location, level)
         if (readBit(bitset, idx)) count++

@@ -4,17 +4,18 @@
 // Phase 18 — read-side UI (TanStack Virtual, filter pills).
 
 import { ELEMENTS, RARITIES, type Element, type Rarity } from './types'
+import { MAX_LEVEL } from '../../game/config/frogs'
 
-/** 16 elements × 4 rarities × 24 levels = 1536 уникальных combos. */
-export const BESTIARY_BIT_COUNT = ELEMENTS.length * RARITIES.length * 24
-/** Bytes = 1536 / 8. */
+/** 16 elements × 4 rarities × 18 levels = 1152 уникальных combos. */
+export const BESTIARY_BIT_COUNT = ELEMENTS.length * RARITIES.length * MAX_LEVEL
+/** Bytes = 1152 / 8. */
 export const BESTIARY_BYTE_COUNT = BESTIARY_BIT_COUNT / 8
 
 /**
  * Linear bit index для (element, rarity, level).
- * Layout: 24 уровня × 64 cells/уровень (16 elements × 4 rarities = 64).
+ * Layout: 18 уровней × 64 cells/уровень (16 elements × 4 rarities = 64).
  *   index = (level - 1) * 64 + ELEMENTS.indexOf(element) * 4 + RARITIES.indexOf(rarity)
- * Range: 0..1535. Returns -1 если invalid.
+ * Range: 0..1151. Returns -1 если invalid.
  */
 export function bestiaryIndex(
   element: Element,
@@ -23,7 +24,7 @@ export function bestiaryIndex(
 ): number {
   const e = ELEMENTS.indexOf(element)
   const r = RARITIES.indexOf(rarity)
-  if (e < 0 || r < 0 || level < 1 || level > 24) return -1
+  if (e < 0 || r < 0 || level < 1 || level > MAX_LEVEL) return -1
   return (level - 1) * 64 + e * 4 + r
 }
 
@@ -62,7 +63,7 @@ export function isBitSet(bitset: ReadonlyArray<number>, idx: number): boolean {
 /**
  * Phase 18: подсчёт unlocked cells в bitset.
  * Использует popcount (Brian Kernighan) на каждом byte.
- * O(BESTIARY_BYTE_COUNT) = O(192) worst case.
+ * O(BESTIARY_BYTE_COUNT) = O(144) worst case.
  */
 export function countUnlocked(bitset: ReadonlyArray<number>): number {
   let count = 0
@@ -81,7 +82,7 @@ export function countUnlocked(bitset: ReadonlyArray<number>): number {
  * Phase 18: подсчёт unlocked cells для одной rarity (= одной локации).
  * 4 локации = 4 rarity tiers (BESTIARY-01 + REQUIREMENTS:109-111):
  *   common = Болото, rare = Лес, epic = Континент, legendary = Планета.
- * Каждая локация = 16 elements × 24 levels = 384 cells.
+ * Каждая локация = 16 elements × 18 levels = 288 cells.
  */
 export function unlockedInLocation(
   bitset: ReadonlyArray<number>,
@@ -90,7 +91,7 @@ export function unlockedInLocation(
   let count = 0
   const r = RARITIES.indexOf(rarity)
   if (r < 0) return 0
-  for (let level = 1; level <= 24; level++) {
+  for (let level = 1; level <= MAX_LEVEL; level++) {
     for (let e = 0; e < ELEMENTS.length; e++) {
       const idx = (level - 1) * 64 + e * 4 + r
       if (readBit(bitset, idx)) count++
@@ -103,11 +104,13 @@ export function unlockedInLocation(
  * Phase 18 sub-completion milestones (REQ BESTIARY-07).
  * Triggered в cosmicSlice.setBestiaryBit когда cross threshold.
  */
+// Milestones rebalanced для 1152 total (ratio 0.75 от старых значений при 1536):
+//   10 → 8, 24 → 18, 96 → 72, 576 → 432.
 export const BESTIARY_MILESTONES = [
-  { threshold: 10, reward: { type: 'coins', amount: 1000 } },
-  { threshold: 24, reward: { type: 'serum', rarity: 'epic' } },
-  { threshold: 96, reward: { type: 'serum', rarity: 'legendary' } },
-  { threshold: 576, reward: { type: 'frog-exclusive' } },
+  { threshold: 8, reward: { type: 'coins', amount: 1000 } },
+  { threshold: 18, reward: { type: 'serum', rarity: 'epic' } },
+  { threshold: 72, reward: { type: 'serum', rarity: 'legendary' } },
+  { threshold: 432, reward: { type: 'frog-exclusive' } },
 ] as const
 
 export type BestiaryMilestone = (typeof BESTIARY_MILESTONES)[number]

@@ -10,6 +10,7 @@ import {
   unlockedInLocation,
   readBit,
   bestiaryIndex,
+  BESTIARY_BIT_COUNT,
 } from '../../store/cosmic/bestiary'
 import {
   BestiaryGrid,
@@ -98,11 +99,11 @@ export function BestiaryTab() {
         <span>
           {t('cosmic_hub.bestiary.discovered_total', {
             count: totalUnlocked,
-            total: 1536,
+            total: BESTIARY_BIT_COUNT,
           })}
         </span>
         <span className="text-white/40 tabular-nums">
-          {Math.round((totalUnlocked / 1536) * 100)}%
+          {Math.round((totalUnlocked / BESTIARY_BIT_COUNT) * 100)}%
         </span>
       </div>
 
@@ -126,7 +127,7 @@ export function BestiaryTab() {
               <span className="block text-base">{loc.icon}</span>
               <span>{t(loc.labelKey)}</span>
               <span className="block text-[10px] text-white/50 tabular-nums">
-                {locUnlocked}/384
+                {locUnlocked}/288
               </span>
             </button>
           )
