@@ -14,6 +14,7 @@
 import { useGameStore } from '../store/gameStore'
 import { getServerGameState, putServerGameState } from './gameState'
 import { devLog, devWarn } from '../utils/devLog'
+import { eventBus } from '../store/eventBus'
 
 const SAVE_THROTTLE_MS = 5000 // максимум один PUT раз в 5 секунд при идле
 let saveTimer: ReturnType<typeof setTimeout> | null = null
@@ -32,6 +33,7 @@ function snapshotForSave() {
     currentLocation: s.currentLocation,
     locationFrogs: s.locationFrogs,
     boxOpenCount: s.boxOpenCount,
+    incomePerSec: s.incomePerSec,
     cosmic: {
       serums: s.serums,
       boxes: s.boxes,
@@ -107,6 +109,17 @@ export async function loadGameState(): Promise<boolean> {
       if ('tutorialState' in c) cosmicUpdate.tutorialState = c.tutorialState
       if (Object.keys(cosmicUpdate).length > 0) {
         useGameStore.setState(cosmicUpdate as Partial<typeof store>)
+      }
+    }
+
+    // Server compute offline income (tractor) — server-authoritative
+    if (data.offlineIncome && typeof data.offlineMs === 'number') {
+      const earned = Number(data.offlineIncome)
+      if (earned > 0 && data.offlineMs > 0) {
+        eventBus.emit('server:welcome-back', {
+          earned,
+          durationMs: data.offlineMs,
+        })
       }
     }
 

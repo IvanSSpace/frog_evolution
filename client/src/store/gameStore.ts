@@ -39,13 +39,9 @@ import {
   saveCosmicSlice,
   loadNumberFormat,
   saveNumberFormat,
-  saveSessionState,
-  getOfflineSession,
   loadBoxOpenCount,
   saveBoxOpenCount,
 } from './persistence'
-
-export { saveSessionState, getOfflineSession }
 
 // Re-exports for backward compat — many consumers import these from gameStore.
 // New code should import directly from game/config/upgrades or game/config/locations.

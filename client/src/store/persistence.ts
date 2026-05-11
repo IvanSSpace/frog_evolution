@@ -15,7 +15,6 @@ const UPGRADES_KEY = 'frog_evolution_upgrades'
 const PURCHASES_KEY = 'frog_evolution_frog_purchases'
 const DISCOVERED_KEY = 'frog_evolution_discovered'
 const MAGNET_ENABLED_KEY = 'frog_evolution_magnet_enabled'
-const SESSION_KEY = 'frog_evolution_last_session'
 const FORMAT_KEY = 'frog_format'
 const COSMIC_KEY = 'frog_evolution_cosmic'
 const LOCATION_KEY = 'frog_evolution_current_location'
@@ -381,62 +380,3 @@ export function saveNumberFormat(f: NumberFormat) {
 // uses the user's preferred number format (1.5K vs 1,500).
 const _initialFormat = loadNumberFormat()
 setGlobalFormat(_initialFormat)
-
-// ─── session state (for offline tractor income) ─────────────────────────────
-//
-// SESSION_KEY now stores JSON { ts, incomePerSec } so the tractor offline
-// payout uses the player's actual farm income/sec at the moment of leaving
-// rather than a fixed table tied to upgrade level. The shape change is
-// ephemeral (not migration-tracked) — a legacy plain-number string is read
-// back as { ts: <number>, incomePerSec: 0 } so old sessions just get zero
-// offline gold once and are then upgraded on the next save.
-
-export function saveSessionState(incomePerSec: number) {
-  try {
-    localStorage.setItem(
-      SESSION_KEY,
-      JSON.stringify({ ts: Date.now(), incomePerSec }),
-    )
-  } catch {
-    /* ignore */
-  }
-}
-
-export function getOfflineSession(): {
-  elapsedMs: number
-  incomePerSec: number
-} | null {
-  try {
-    const raw = localStorage.getItem(SESSION_KEY)
-    if (!raw) return null
-    let ts: number
-    let incomePerSec = 0
-    try {
-      const parsed = JSON.parse(raw)
-      if (
-        parsed &&
-        typeof parsed === 'object' &&
-        typeof parsed.ts === 'number'
-      ) {
-        ts = parsed.ts
-        if (typeof parsed.incomePerSec === 'number') {
-          incomePerSec = parsed.incomePerSec
-        }
-      } else if (typeof parsed === 'number' && Number.isFinite(parsed)) {
-        // JSON.parse of a plain numeric string — legacy format.
-        ts = parsed
-      } else {
-        return null
-      }
-    } catch {
-      // Not JSON — try legacy plain-number string format.
-      const legacy = parseInt(raw, 10)
-      if (!Number.isFinite(legacy)) return null
-      ts = legacy
-    }
-    if (!Number.isFinite(ts)) return null
-    return { elapsedMs: Math.max(0, Date.now() - ts), incomePerSec }
-  } catch {
-    return null
-  }
-}

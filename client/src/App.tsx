@@ -15,13 +15,7 @@ import { ShipFollowButton } from './ui/components/ShipFollowButton'
 import { eventBus } from './store/eventBus'
 import { initSfx } from './audio/sfxBootstrap'
 import { initPlanetVoice } from './audio/planetVoice'
-import {
-  useGameStore,
-  saveSessionState,
-  getOfflineSession,
-  getTractorCapMs,
-  getDropIntervalMs,
-} from './store/gameStore'
+import { useGameStore } from './store/gameStore'
 import { saveDiscovered } from './store/persistence'
 import type { Element, Rarity } from './store/cosmic/types'
 import { StabilizationModal } from './components/CosmicHub/StabilizationModal'
@@ -109,60 +103,18 @@ function App() {
         setBootState('offline')
       }
 
-      // 4. Post-load: tractor offline income + box drops
-      // Расчёт после loadGameState — используем canonical lastSessionAt с сервера.
-      // Доход считается по сохранённому incomePerSec (фактический доход фермы
-      // на момент ухода), а не по фиксированной таблице уровней трактора.
-      // Уровень трактора всё ещё определяет cap-time через getTractorCapMs.
-      const session = getOfflineSession()
-      const tractorLevel = useGameStore.getState().upgrades.tractor
-      if (session && tractorLevel > 0 && session.elapsedMs > 0) {
-        const capMs = getTractorCapMs(tractorLevel)
-        const earnedMs = Math.min(session.elapsedMs, capMs)
-        const earnedSec = Math.floor(earnedMs / 1000)
-        const income = Math.floor(earnedSec * session.incomePerSec)
-        if (income > 0) {
-          useGameStore.getState().addGold(income)
-          // Модалка показывается только при отсутствии 1+ часа — иначе
-          // мелькала бы при каждом быстром переоткрытии вкладки.
-          if (session.elapsedMs >= 60 * 60 * 1000) {
-            setWelcomeBack({ earned: income, hours: earnedMs / 3_600_000 })
-          }
-        }
-      }
-
+      // 4. Post-load: offline box drops
       // Offline box drops: пока игрок был away, боксы должны были падать.
-      // Расчёт: elapsedMs / dropInterval = сколько боксов «должно было» упасть.
+      // Расчёт: offlineMs с сервера / dropInterval = сколько боксов «должно было» упасть.
       // Реальное распределение по полю делает MainScene через pendingBoxCount —
       // с учётом ENTITY_CAP / MAX_PENDING_BOXES.
-      if (session && session.elapsedMs > 0) {
-        const dropSpeedLvl = useGameStore.getState().upgrades.dropSpeed
-        const dropIntervalMs = getDropIntervalMs(dropSpeedLvl)
-        const droppedBoxCount = Math.floor(session.elapsedMs / dropIntervalMs)
-        if (droppedBoxCount > 0) {
-          eventBus.emit('box:offline-pending', { count: droppedBoxCount })
-        }
-      }
+      // Tractor offline income теперь server-authoritative — см. gameSync.ts.
 
       // 5. Start auto-sync subscribers
       startSync()
     }
 
     boot()
-
-    const saveSession = () =>
-      saveSessionState(useGameStore.getState().incomePerSec)
-    saveSession()
-
-    // Heartbeat — пишем timestamp + текущий incomePerSec каждые 5 сек
-    const heartbeat = window.setInterval(saveSession, 5000)
-
-    // Сохраняем когда таб уходит в фон
-    const onVisibility = () => {
-      if (document.hidden) saveSession()
-    }
-    document.addEventListener('visibilitychange', onVisibility)
-    window.addEventListener('beforeunload', saveSession)
 
     // Открытие нового вида лягушки
     const onDiscovered = ({ level }: { level: number }) => {
@@ -187,13 +139,24 @@ function App() {
     }
     eventBus.on('rareCrate:opened', handleRareCrateOpened)
 
+    const onWelcomeBack = ({
+      earned,
+      durationMs,
+    }: {
+      earned: number
+      durationMs: number
+    }) => {
+      if (durationMs >= 60 * 60 * 1000) {
+        setWelcomeBack({ earned, hours: durationMs / 3_600_000 })
+      }
+    }
+    eventBus.on('server:welcome-back', onWelcomeBack)
+
     return () => {
       cancelled = true
-      window.clearInterval(heartbeat)
-      document.removeEventListener('visibilitychange', onVisibility)
-      window.removeEventListener('beforeunload', saveSession)
       eventBus.off('frog:discovered', onDiscovered)
       eventBus.off('rareCrate:opened', handleRareCrateOpened)
+      eventBus.off('server:welcome-back', onWelcomeBack)
       stopSync()
     }
   }, [])

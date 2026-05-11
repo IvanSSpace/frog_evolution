@@ -77,6 +77,8 @@ type Events = {
   'cosmic:box-opened': { boxId: string; rarity: Rarity; element: Element }
   // Offline box drops (boot-time): сколько боксов «упало» пока игрок был away.
   'box:offline-pending': { count: number }
+  // Server-authoritative tractor offline income (boot-time).
+  'server:welcome-back': { earned: number; durationMs: number }
   // Phase 18 — bestiary milestone (REQ BESTIARY-07)
   'cosmic:bestiary-milestone': {
     threshold: 10 | 24 | 96 | 576
