@@ -15,6 +15,7 @@ import { useGameStore } from '../store/gameStore'
 import { getServerGameState, putServerGameState } from './gameState'
 import { devLog, devWarn } from '../utils/devLog'
 import { eventBus } from '../store/eventBus'
+import { getDropIntervalMs } from '../game/config/upgrades'
 
 const SAVE_THROTTLE_MS = 5000 // максимум один PUT раз в 5 секунд при идле
 let saveTimer: ReturnType<typeof setTimeout> | null = null
@@ -120,6 +121,18 @@ export async function loadGameState(): Promise<boolean> {
           earned,
           durationMs: data.offlineMs,
         })
+      }
+    }
+
+    // Offline box drops — server возвращает raw elapsedMs.
+    // Считаем сколько боксов «должно было» упасть, эмитим event для MainScene.
+    if (typeof data.elapsedMs === 'number' && data.elapsedMs > 0) {
+      const store = useGameStore.getState()
+      const dropSpeedLvl = store.upgrades.dropSpeed ?? 0
+      const dropIntervalMs = getDropIntervalMs(dropSpeedLvl)
+      const droppedCount = Math.floor(data.elapsedMs / dropIntervalMs)
+      if (droppedCount > 0) {
+        eventBus.emit('box:offline-pending', { count: droppedCount })
       }
     }
 

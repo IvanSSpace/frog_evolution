@@ -17,6 +17,7 @@ export interface ServerGameState {
   // Server-computed offline income при boot (только в GET response):
   offlineIncome?: string // BigInt-string
   offlineMs?: number
+  elapsedMs?: number
   lastSessionAt: string
   createdAt: string
   updatedAt: string

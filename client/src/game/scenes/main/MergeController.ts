@@ -38,6 +38,7 @@ import { classifyDropTarget } from '../../../utils/carrierFeed'
 import i18next from 'i18next'
 import type { Element } from '../../../store/cosmic/types'
 import { devLog, devWarn } from '../../../utils/devLog'
+import { mergeApi } from '../../../api/merge'
 import { BASE_SCALE, DPR, MERGE_RADIUS, type FrogData } from './types'
 import type { MainScene } from '../MainScene'
 import type { FrogSpawner } from './FrogSpawner'
@@ -235,6 +236,22 @@ export class MergeController {
         if (wasNew) {
           eventBus.emit('location:unlocked', { locationId: 6 })
         }
+        // Server-authoritative merge — fire-and-forget с reconcile при ответе.
+        // Optimistic state уже применён выше. Server проверит и тихо обновит.
+        mergeApi(MAX_LEVEL, currentLocId)
+          .then((res) => {
+            // Reconcile: server values authoritative
+            useGameStore.setState({
+              locationFrogs: res.locationFrogs,
+              discoveredLevels: res.discoveredLevels,
+            })
+          })
+          .catch((e) => {
+            console.warn('[merge] server sync failed:', e)
+            // НЕ откатываем optimistic state — пользователь видит свой merge.
+            // Server eventually catch up через PUT. Может быть drift если cheat;
+            // legit play не пострадает.
+          })
         return
       }
 
@@ -248,6 +265,23 @@ export class MergeController {
       store.removeFrogFromLocation(currentLocId, oldLevel)
       // +1 новый уровень в его родной локации (может отличаться от текущей)
       store.addFrogToLocation(newCfg.location, newLevel)
+
+      // Server-authoritative merge — fire-and-forget с reconcile при ответе.
+      // Optimistic state уже применён выше. Server проверит и тихо обновит.
+      mergeApi(oldLevel, currentLocId)
+        .then((res) => {
+          // Reconcile: server values authoritative
+          useGameStore.setState({
+            locationFrogs: res.locationFrogs,
+            discoveredLevels: res.discoveredLevels,
+          })
+        })
+        .catch((e) => {
+          console.warn('[merge] server sync failed:', e)
+          // НЕ откатываем optimistic state — пользователь видит свой merge.
+          // Server eventually catch up через PUT. Может быть drift если cheat;
+          // legit play не пострадает.
+        })
 
       const isCrossLocation = newCfg.location !== currentLocId
 
@@ -504,6 +538,23 @@ export class MergeController {
       const newLevel = Math.min(oldLevel + 1, MAX_LEVEL)
       const newCfg = FROG_LEVELS[newLevel - 1]
       store.addFrogToLocation(newCfg.location, newLevel)
+
+      // Server-authoritative merge — fire-and-forget с reconcile при ответе.
+      // Optimistic state уже применён выше. Server проверит и тихо обновит.
+      mergeApi(oldLevel, store.currentLocation)
+        .then((res) => {
+          // Reconcile: server values authoritative
+          useGameStore.setState({
+            locationFrogs: res.locationFrogs,
+            discoveredLevels: res.discoveredLevels,
+          })
+        })
+        .catch((e) => {
+          console.warn('[merge] server sync failed:', e)
+          // НЕ откатываем optimistic state — пользователь видит свой merge.
+          // Server eventually catch up через PUT. Может быть drift если cheat;
+          // legit play не пострадает.
+        })
 
       const isCrossLocation = newCfg.location !== store.currentLocation
 
