@@ -8,7 +8,7 @@ interface GalleryDetailPreviewProps {
   rarity: Rarity
 }
 
-const SIZE = 300
+const SIZE = 480
 
 function makePreviewScene(
   archetype: Element,
@@ -21,7 +21,7 @@ function makePreviewScene(
 
     create() {
       const container = this.add.container(SIZE / 2, SIZE / 2)
-      const placeholder = this.add.circle(0, 0, 40, 0x4ade80, 1)
+      const placeholder = this.add.circle(0, 0, 80, 0x4ade80, 1)
       container.add(placeholder)
       scheduleAwakenedIdle(this, container, archetype, rarity)
     }

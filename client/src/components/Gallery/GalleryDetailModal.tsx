@@ -56,7 +56,7 @@ export function GalleryDetailModal() {
       <div className="mt-6 text-center text-white max-w-md">
         <div className="text-lg font-semibold mb-1">Эффект</div>
         <div className="text-sm text-neutral-300">
-          (Механический эффект будет добавлен позже. Сейчас — preview анимации.)
+          Сдесь будет описание что делает эта лягушка
         </div>
       </div>
     </div>
