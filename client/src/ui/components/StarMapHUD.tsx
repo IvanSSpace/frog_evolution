@@ -60,16 +60,17 @@ export function StarMapHUD() {
   }
   return (
     <>
+      {/* Верхний блок — оригинальный layout, X Y Z FPS vis в одной строке. */}
       <div style={{ ...baseStyle, top: 6, left: 8 }}>
         <span>X:{data.x}</span>
         <span>Y:{data.y}</span>
         <span>Z:{data.zoom.toFixed(2)}</span>
+        <span style={{ color: fpsColor }}>FPS:{Math.round(data.fps)}</span>
         <span style={{ opacity: 0.7 }}>
           {data.vis}/{data.total}
         </span>
       </div>
-      {/* FPS чуть выше BottomBar (она занимает ~13% низа viewport),
-          иначе индикатор был бы спрятан за кнопками. */}
+      {/* Дублирующий FPS над BottomBar — основной для слежения за perf. */}
       <div style={{ ...baseStyle, bottom: 'calc(13% + 6px)', left: 8 }}>
         <span style={{ color: fpsColor }}>FPS:{Math.round(data.fps)}</span>
       </div>
