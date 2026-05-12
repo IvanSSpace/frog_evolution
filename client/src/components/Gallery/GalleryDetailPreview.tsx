@@ -35,7 +35,7 @@ function makePreviewScene(
     }
 
     preload() {
-      this.load.svg(textureKey, svgPath, { width: 160, height: 160 })
+      this.load.svg(textureKey, svgPath, { width: 80, height: 80 })
     }
 
     create() {
