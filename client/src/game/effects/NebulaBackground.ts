@@ -452,21 +452,39 @@ export interface NebulaBackgroundHandle {
   destroy: () => void
 }
 
+// Внутреннее разрешение для static (RT) режима. 2048×2048 = 16MB RGBA texture,
+// безопасно для mobile GPU. Туманность визуально мягкая, scale-up до WORLD_SIZE
+// почти незаметен.
+const STATIC_RT_RES = 2048
+
 export function attachNebulaBackground(
   scene: Phaser.Scene,
   preset: NebulaPreset,
-  options?: { width?: number; height?: number; x?: number; y?: number },
+  options?: {
+    width?: number
+    height?: number
+    x?: number
+    y?: number
+    /** Если true — шейдер рендерится один раз в RenderTexture и уничтожается.
+     *  Mobile GPU не справляется с per-frame fragment shader такого размера. */
+    static?: boolean
+  },
 ): NebulaBackgroundHandle {
   const w = options?.width ?? scene.scale.width
   const h = options?.height ?? scene.scale.height
   const cx = options?.x ?? w / 2
   const cy = options?.y ?? h / 2
+  const isStatic = options?.static === true
+  // В static режиме рендерим в фиксированный буфер RT_RES×RT_RES,
+  // потом скейлим до w×h. В live режиме — full world size, рендер каждый кадр.
+  const renderW = isStatic ? STATIC_RT_RES : w
+  const renderH = isStatic ? STATIC_RT_RES : h
 
   const state = {
     preset,
-    blobs: generateBlobs(preset, w, h),
-    width: w,
-    height: h,
+    blobs: generateBlobs(preset, renderW, renderH),
+    width: renderW,
+    height: renderH,
     startTime: performance.now(),
     blobPosFlat: new Float32Array(MAX_BLOBS * 4),
     blobColFlat: new Float32Array(MAX_BLOBS * 4),
@@ -581,11 +599,16 @@ export function attachNebulaBackground(
       h: number,
     ) => Phaser.GameObjects.Shader
   }
-  const shader = sceneAdd.shader(shaderConfig, cx, cy, w, h)
+  const shader = sceneAdd.shader(shaderConfig, cx, cy, renderW, renderH)
   if (typeof shader.setDepth === 'function') shader.setDepth(-10000)
   if (typeof shader.setOrigin === 'function') shader.setOrigin(0.5, 0.5)
+  // Static: визуально показываем во весь world size, внутри рендерим RT_RES
+  if (isStatic && typeof shader.setDisplaySize === 'function') {
+    shader.setDisplaySize(w, h)
+  }
 
   const onResize = (gameSize: Phaser.Structs.Size) => {
+    if (isStatic) return // static RT не реагирует на resize
     state.width = gameSize.width
     state.height = gameSize.height
     state.blobs = generateBlobs(state.preset, gameSize.width, gameSize.height)
@@ -596,6 +619,38 @@ export function attachNebulaBackground(
   }
   scene.scale.on('resize', onResize)
 
+  // Static mode: после первого POST_RENDER снимаем shader output в RenderTexture,
+  // уничтожаем shader. Дальше backgound = статичная текстура, 0 фрагмент-cost.
+  let staticRt: Phaser.GameObjects.RenderTexture | null = null
+  if (isStatic) {
+    // 'postrender' — после того как scene полностью отрендерилась первый раз.
+    // К этому моменту shader.setupUniforms() уже вызван и шейдер скомпилирован.
+    scene.events.once('postrender', () => {
+      try {
+        const sceneAddRt = scene.add as unknown as {
+          renderTexture: (
+            x: number,
+            y: number,
+            w: number,
+            h: number,
+          ) => Phaser.GameObjects.RenderTexture
+        }
+        staticRt = sceneAddRt.renderTexture(cx, cy, renderW, renderH)
+        staticRt.setOrigin(0.5, 0.5)
+        staticRt.setDepth(-10000)
+        staticRt.setDisplaySize(w, h) // scale до world size
+        // Рендерим shader (текущее состояние) в RT
+        staticRt.draw(shader, renderW / 2, renderH / 2)
+        // Шейдер больше не нужен — уничтожаем чтобы GPU не тратил такты
+        if (typeof shader.destroy === 'function') shader.destroy()
+      } catch (e) {
+        // Fallback: если RT не получился, оставляем live shader. Лучше лагать
+        // чем не показать туманность совсем.
+        console.warn('[NebulaBackground] static RT snapshot failed, falling back to live shader', e)
+      }
+    })
+  }
+
   return {
     shader,
     setPreset: (newPreset: NebulaPreset) => {
@@ -605,7 +660,9 @@ export function attachNebulaBackground(
     },
     destroy: () => {
       scene.scale.off('resize', onResize)
-      if (typeof shader.destroy === 'function') shader.destroy()
+      if (staticRt && typeof staticRt.destroy === 'function') staticRt.destroy()
+      // shader может быть уже destroyed в static режиме
+      if (typeof shader.destroy === 'function' && shader.scene) shader.destroy()
     },
   }
 }
