@@ -226,10 +226,10 @@ export class StarMapScene extends Phaser.Scene {
 
     // Туманность — static RtT режим: шейдер рендерится один раз в текстуру,
     // потом уничтожается. GPU per-frame = просто sampling текстуры (~0 cost).
-    // NEBULA_SIZE снижен с 2.5× до 1.8× WORLD_SIZE — меньший охват, легче
-    // sampling. Если визуально мало — поднять до 2.0.
+    // NEBULA_SIZE 2.5× WORLD_SIZE для большого охвата. Качество компенсируется
+    // через низкий STATIC_RT_RES — туманность размытая, scale-up незаметен.
     try {
-      const NEBULA_SIZE = WORLD_SIZE * 1.8
+      const NEBULA_SIZE = WORLD_SIZE * 2.5
       this.nebula = attachNebulaBackground(this, violetRing, {
         width: NEBULA_SIZE,
         height: NEBULA_SIZE,
