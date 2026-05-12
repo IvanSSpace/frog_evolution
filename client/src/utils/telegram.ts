@@ -27,6 +27,9 @@ export function initTelegram(): void {
   tg.disableVerticalSwipes?.()
   tg.setHeaderColor?.('#1a2e1a')
   tg.setBackgroundColor?.('#1a2e1a')
+  // Bot API 8.0+: true fullscreen на мобильном (no-op на desktop/старых клиентах).
+  // Связан с DPR cap в game/index.ts — без cap=2 фуллскрин убивает FPS StarMap'а.
+  tg.requestFullscreen?.()
 }
 
 // ============== HAPTIC FEEDBACK ==============

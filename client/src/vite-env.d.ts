@@ -35,6 +35,12 @@ interface TelegramWebApp {
   setBackgroundColor?(color: string): void
   openLink?(url: string): void
   openTelegramLink?(url: string): void
+  // Bot API 8.0+ — true fullscreen без header'а Telegram (только mobile).
+  isFullscreen?: boolean
+  requestFullscreen?(): void
+  exitFullscreen?(): void
+  onEvent?(eventType: string, handler: (...args: unknown[]) => void): void
+  offEvent?(eventType: string, handler: (...args: unknown[]) => void): void
 }
 
 interface Window {

@@ -9,9 +9,10 @@
 import planetMap from '../../data/planetMap.json'
 import type { Race, Archetype, PlanetMapEntry } from './types'
 
-// Device pixel ratio — clamp [1..3]. Все DPR-зависимые координаты/размеры
+// Device pixel ratio — clamp [1..2]. Все DPR-зависимые координаты/размеры
 // в planetMap.json хранятся в DPR=1 base, в runtime умножаются на real DPR.
-export const DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 3))
+// Cap=2 синхронизирован с game/index.ts — выше DPR mobile WebView не вытягивает.
+export const DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 2))
 
 // Размер мира — 7000 от центра (полный 14000)
 export const WORLD_SIZE = 7000 * DPR
