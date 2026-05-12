@@ -30,9 +30,9 @@ export function ShipGotoButton() {
       aria-label="К кораблю"
       style={{
         position: 'fixed',
-        top: 'calc(12% + 10px)',
-        left: 140,
-        zIndex: 200,
+        top: 'calc(12% + 60px)', // под ShipFollowButton (он на top: calc(12% + 10px), высота ~36px)
+        left: 12,
+        zIndex: 1000, // bumped from 200 на случай overlap'а
         display: 'flex',
         alignItems: 'center',
         gap: 6,

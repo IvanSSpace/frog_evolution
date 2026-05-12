@@ -48,7 +48,7 @@ export function ShipFollowButton() {
         position: 'fixed',
         top: 'calc(12% + 10px)',
         left: 12,
-        zIndex: 200,
+        zIndex: 1000,
         display: 'flex',
         alignItems: 'center',
         gap: 6,
