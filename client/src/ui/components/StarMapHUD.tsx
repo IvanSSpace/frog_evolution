@@ -68,7 +68,9 @@ export function StarMapHUD() {
           {data.vis}/{data.total}
         </span>
       </div>
-      <div style={{ ...baseStyle, bottom: 6, left: 8 }}>
+      {/* FPS чуть выше BottomBar (она занимает ~13% низа viewport),
+          иначе индикатор был бы спрятан за кнопками. */}
+      <div style={{ ...baseStyle, bottom: 'calc(13% + 6px)', left: 8 }}>
         <span style={{ color: fpsColor }}>FPS:{Math.round(data.fps)}</span>
       </div>
     </>
