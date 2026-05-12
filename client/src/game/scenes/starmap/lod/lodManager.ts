@@ -43,11 +43,11 @@ export interface LODConstants {
 }
 
 export interface CullableEntry {
+  // addToDisplayList/removeFromDisplayList наследуются от GameObject
+  // (через Components.Visible). Не передекларируем — signature variance ломает TS.
   obj: Phaser.GameObjects.GameObject & {
     visible: boolean
     setVisible: (v: boolean) => unknown
-    removeFromDisplayList: () => unknown
-    addToDisplayList: (list?: unknown) => unknown
   }
   x: number
   y: number
