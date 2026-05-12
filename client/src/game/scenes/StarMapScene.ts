@@ -1,10 +1,9 @@
 import Phaser from 'phaser'
 import { eventBus } from '../../store/eventBus'
-import {
-  attachNebulaBackground,
-  type NebulaBackgroundHandle,
-} from '../effects/NebulaBackground'
-import { violetRing } from '../effects/presets'
+// ВРЕМЕННО: nebula отключена для теста FPS. Импорты сохранены типы.
+// import { attachNebulaBackground } from '../effects/NebulaBackground'
+// import { violetRing } from '../effects/presets'
+import type { NebulaBackgroundHandle } from '../effects/NebulaBackground'
 import planetMap from '../data/planetMap.json'
 import {
   DPR,
@@ -42,7 +41,7 @@ import { setupVeranLightning } from './starmap/ambient/veranLightning'
 import { setupRelictMourning } from './starmap/ambient/relictMourning'
 import { LODManager } from './starmap/lod/lodManager'
 import { PlanetRenderer } from './starmap/rendering/planetRenderer'
-import { devWarn } from '../../utils/devLog'
+// import { devWarn } from '../../utils/devLog' // ВРЕМЕННО: unused (nebula off)
 
 // Phaser-сцена Звёздной карты. Запускается рядом с MainScene через scene-manager.
 // Ничего о gameStore не знает — это «декоративная карта» для просмотра системы
@@ -226,20 +225,22 @@ export class StarMapScene extends Phaser.Scene {
     // Туманность — закреплена в центре вселенной (0, 0), там где чёрная дыра.
     // Двигается и зумится с камерой — часть мира.
     // ↓ Размер туманности (множитель WORLD_SIZE). Увеличить — поменяй коэффициент.
-    try {
-      const NEBULA_SIZE = WORLD_SIZE * 2.5
-      this.nebula = attachNebulaBackground(this, violetRing, {
-        width: NEBULA_SIZE,
-        height: NEBULA_SIZE,
-        x: 0,
-        y: 0,
-      })
-      const shader = this.nebula.shader
-      if (shader && typeof shader.setDepth === 'function')
-        shader.setDepth(-9000)
-    } catch (err) {
-      devWarn('[NebulaBackground] failed to attach:', err)
-    }
+    // ВРЕМЕННО ОТКЛЮЧЕНА — тест FPS impact. Если FPS подскочит — виноват шейдер
+    // и следующий шаг render-to-texture (рендерим один раз → текстура).
+    // try {
+    //   const NEBULA_SIZE = WORLD_SIZE * 2.5
+    //   this.nebula = attachNebulaBackground(this, violetRing, {
+    //     width: NEBULA_SIZE,
+    //     height: NEBULA_SIZE,
+    //     x: 0,
+    //     y: 0,
+    //   })
+    //   const shader = this.nebula.shader
+    //   if (shader && typeof shader.setDepth === 'function')
+    //     shader.setDepth(-9000)
+    // } catch (err) {
+    //   devWarn('[NebulaBackground] failed to attach:', err)
+    // }
 
     // Starfield перенесён ниже — нужны this.allSystems для кластеризации звёзд
 
