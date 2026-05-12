@@ -5,7 +5,7 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <title>Frog Evolution</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -354,6 +354,11 @@
         position: relative;
         width: 100%;
         height: 100%;
+        /* Safe-area сверху: освобождает место под iOS notch / Android status bar
+           когда Telegram открыт в fullscreen. Снизу TG WebView сам корректно
+           ограничивает — добавлять не надо. */
+        padding-top: env(safe-area-inset-top, 0px);
+        box-sizing: border-box;
       }
       #game-canvas {
         position: absolute;
