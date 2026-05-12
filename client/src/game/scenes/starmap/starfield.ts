@@ -31,63 +31,8 @@ export function setupStarfield(
 ): void {
   const { worldSize, seed } = opts
   const bgRng = mulberry32(seed + 1)
-  const farStars = scene.add.graphics()
-  farStars.setDepth(-100)
-  // Дальние звёзды (один Graphics — 1 draw call). Снижено с 5000.
-  for (let i = 0; i < 2000; i++) {
-    const x = (bgRng() - 0.5) * worldSize * 1.9
-    const y = (bgRng() - 0.5) * worldSize * 1.9
-    const a = 0.15 + bgRng() * 0.4
-    farStars.fillStyle(0xffffff, a)
-    farStars.fillCircle(x, y, 1 * DPR)
-  }
-  // Helper: gauss-распределение от центра одной из переданных планет (radius в DPR-px)
-  const sampleNearPlanetIn = (
-    pool: ReadonlyArray<{ x: number; y: number }>,
-    clusterRadius: number,
-  ): { x: number; y: number } => {
-    const planet = pool[Math.floor(bgRng() * pool.length)]
-    let u = 0,
-      v = 0
-    while (u === 0) u = bgRng()
-    while (v === 0) v = bgRng()
-    const g = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v)
-    const angle = bgRng() * Math.PI * 2
-    const dist = Math.abs(g) * clusterRadius
-    return {
-      x: planet.x + Math.cos(angle) * dist,
-      y: planet.y + Math.sin(angle) * dist,
-    }
-  }
-  const allPlanets = scene.allSystems
-  const sampleNearPlanet = (clusterRadius: number) =>
-    sampleNearPlanetIn(allPlanets, clusterRadius)
-
-  // Средние мерцающие — кластеризуются вокруг планет, не рандомно
-  for (let i = 0; i < 200; i++) {
-    const { x, y } = sampleNearPlanet(180 * DPR)
-    const tint = [0xffffff, 0xfff7ed, 0xa5f3fc, 0xfde047, 0xfdba74][
-      Math.floor(bgRng() * 5)
-    ]
-    const radius = (1.2 + bgRng() * 1.4) * DPR
-    const star = scene.add.circle(x, y, radius, tint, 0.85)
-    star.setDepth(-90)
-    scene.tweens.add({
-      targets: star,
-      alpha: { from: 0.35, to: 1 },
-      duration: 900 + bgRng() * 2200,
-      yoyo: true,
-      repeat: -1,
-      delay: bgRng() * 2500,
-      ease: 'Sine.easeInOut',
-    })
-    // Mid stars видны всегда — это звёздное небо. На сильном отдалении полезно.
-    scene.lod.cullableData.push({ obj: star, x, y, r: 4 * DPR })
-  }
-
-  // Sparkle-звёзды теперь создаются в renderSystem/planetRenderer.renderBg как
-  // отдельные world-coords Graphics, привязанные к позиции конкретной планеты.
-  // См. createSparkleAt(). Старый блок удалён — sparkle на каждой планете.
+  // Far stars (2000 микро-точек) и mid stars (200 мерцающих) убраны по запросу.
+  // -200 infinite tweens, -2200 GameObjects из cullableData.
 
   // Близкие крупные с лучами и tween-анимациями. Снижено с 40.
   for (let i = 0; i < 16; i++) {
