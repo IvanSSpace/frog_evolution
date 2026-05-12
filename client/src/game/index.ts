@@ -55,10 +55,16 @@ export function startGame(): Phaser.Game {
       zoom: 1 / dpr,
     },
     render: {
+      // antialias=true для canvas-fallback (мягкие линии); antialiasGL=false
+      // выключает MSAA на WebGL — на mobile GPU MSAA даёт ~30-40% накладных
+      // на каждый пиксель. На сцене с blur/glow визуально незаметно.
       antialias: true,
-      antialiasGL: true,
+      antialiasGL: false,
       pixelArt: false,
       roundPixels: false,
+      // На устройствах с двумя GPU (флагман-телефоны, ноуты) подсказывает браузеру
+      // использовать дискретный GPU для WebGL вместо интегрированного.
+      powerPreference: 'high-performance',
     },
     // MainScene стартует автоматически. StarMapScene регистрируется,
     // но автостарт=false — запускается вручную через event bus.

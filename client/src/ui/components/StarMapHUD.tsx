@@ -42,34 +42,35 @@ export function StarMapHUD() {
 
   const fpsColor =
     data.fps > 50 ? '#86efac' : data.fps > 30 ? '#fde047' : '#fca5a5'
+  const baseStyle: React.CSSProperties = {
+    position: 'fixed',
+    zIndex: 200,
+    pointerEvents: 'none',
+    fontFamily: 'JetBrains Mono, monospace',
+    fontSize: 10,
+    lineHeight: 1.3,
+    color: '#ffd700',
+    textShadow: '0 0 3px rgba(0,0,0,0.95), 0 1px 2px rgba(0,0,0,0.95)',
+    userSelect: 'none',
+    WebkitUserSelect: 'none',
+    WebkitTapHighlightColor: 'transparent',
+    outline: 'none',
+    display: 'flex',
+    gap: 8,
+  }
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 6,
-        left: 8,
-        zIndex: 200,
-        pointerEvents: 'none',
-        fontFamily: 'JetBrains Mono, monospace',
-        fontSize: 10,
-        lineHeight: 1.3,
-        color: '#ffd700',
-        textShadow: '0 0 3px rgba(0,0,0,0.95), 0 1px 2px rgba(0,0,0,0.95)',
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
-        WebkitTapHighlightColor: 'transparent',
-        outline: 'none',
-        display: 'flex',
-        gap: 8,
-      }}
-    >
-      <span>X:{data.x}</span>
-      <span>Y:{data.y}</span>
-      <span>Z:{data.zoom.toFixed(2)}</span>
-      <span style={{ color: fpsColor }}>FPS:{Math.round(data.fps)}</span>
-      <span style={{ opacity: 0.7 }}>
-        {data.vis}/{data.total}
-      </span>
-    </div>
+    <>
+      <div style={{ ...baseStyle, top: 6, left: 8 }}>
+        <span>X:{data.x}</span>
+        <span>Y:{data.y}</span>
+        <span>Z:{data.zoom.toFixed(2)}</span>
+        <span style={{ opacity: 0.7 }}>
+          {data.vis}/{data.total}
+        </span>
+      </div>
+      <div style={{ ...baseStyle, bottom: 6, left: 8 }}>
+        <span style={{ color: fpsColor }}>FPS:{Math.round(data.fps)}</span>
+      </div>
+    </>
   )
 }
