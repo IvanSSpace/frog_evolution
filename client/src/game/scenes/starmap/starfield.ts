@@ -202,9 +202,15 @@ export function buildBgBatch(scene: StarMapScene): void {
   gfx.setVisible(false) // visible toggle через update
   for (const sys of scene.allSystems) {
     if (!('archetype' in sys)) continue // только BG, не main
-    // Точка цветом sys.color, радиус ~ половине size (silhouette)
+    // Двухслойная точка чтобы соответствовать визуалу детальной планеты на LOD-границе:
+    // — outer faint halo (имитирует ауру детального рендера, sys.size * 1.4)
+    // — inner solid disk (соответствует базовому шару, sys.size * 1.0)
+    // Раньше было sys.size * 0.6 — точка была вдвое меньше планеты, скачок при
+    // пересечении LOD-порога бросался в глаза.
+    gfx.fillStyle(sys.color, 0.18)
+    gfx.fillCircle(sys.x, sys.y, sys.size * 1.4)
     gfx.fillStyle(sys.color, 0.85)
-    gfx.fillCircle(sys.x, sys.y, sys.size * 0.6)
+    gfx.fillCircle(sys.x, sys.y, sys.size * 1.0)
   }
   scene.lod.bgBatchGfx = gfx
 }
