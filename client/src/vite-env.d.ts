@@ -39,6 +39,10 @@ interface TelegramWebApp {
   isFullscreen?: boolean
   requestFullscreen?(): void
   exitFullscreen?(): void
+  // Bot API 8.0+ — lock orientation (portrait | landscape). Не работает на всех клиентах.
+  lockOrientation?(orientation?: 'portrait' | 'landscape'): void
+  unlockOrientation?(): void
+  isOrientationLocked?: boolean
   onEvent?(eventType: string, handler: (...args: unknown[]) => void): void
   offEvent?(eventType: string, handler: (...args: unknown[]) => void): void
 }

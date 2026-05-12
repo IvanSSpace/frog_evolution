@@ -30,6 +30,9 @@ export function initTelegram(): void {
   // Bot API 8.0+: true fullscreen на мобильном (no-op на desktop/старых клиентах).
   // Связан с DPR cap в game/index.ts — без cap=2 фуллскрин убивает FPS StarMap'а.
   tg.requestFullscreen?.()
+  // Lock в portrait (Bot API 8.0+). Не работает на всех клиентах (особенно iOS) —
+  // fallback overlay <OrientationLock/> ловит landscape и просит повернуть.
+  tg.lockOrientation?.('portrait')
 }
 
 // ============== HAPTIC FEEDBACK ==============

@@ -12,6 +12,7 @@ import { LocationStack } from './ui/components/LocationStack'
 import { StarMapHUD } from './ui/components/StarMapHUD'
 import { MagnetToggle } from './ui/components/MagnetToggle'
 import { ShipFollowButton } from './ui/components/ShipFollowButton'
+import { OrientationLock } from './ui/components/OrientationLock'
 import { eventBus } from './store/eventBus'
 import { initSfx } from './audio/sfxBootstrap'
 import { initPlanetVoice } from './audio/planetVoice'
@@ -259,17 +260,21 @@ function App() {
 
   if (bootState === 'loading') {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-neutral-900 text-white">
-        <div className="text-center">
-          <div className="text-2xl font-bold mb-2">Загрузка...</div>
-          <div className="text-sm text-neutral-400">Подключение к серверу</div>
+      <>
+        <OrientationLock />
+        <div className="fixed inset-0 flex items-center justify-center bg-neutral-900 text-white">
+          <div className="text-center">
+            <div className="text-2xl font-bold mb-2">Загрузка...</div>
+            <div className="text-sm text-neutral-400">Подключение к серверу</div>
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 
   return (
     <QueryClientProvider client={queryClient}>
+      <OrientationLock />
       {bootState === 'offline' && (
         <div className="fixed top-4 left-4 z-50 bg-amber-700/90 text-white px-3 py-2 rounded text-xs">
           Offline режим — изменения не сохраняются
