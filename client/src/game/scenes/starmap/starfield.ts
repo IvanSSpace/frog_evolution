@@ -34,62 +34,8 @@ export function setupStarfield(
   // Far stars (2000 микро-точек) и mid stars (200 мерцающих) убраны по запросу.
   // -200 infinite tweens, -2200 GameObjects из cullableData.
 
-  // Близкие крупные с лучами и tween-анимациями. Снижено с 40.
-  for (let i = 0; i < 16; i++) {
-    const x = (bgRng() - 0.5) * worldSize * 1.6
-    const y = (bgRng() - 0.5) * worldSize * 1.6
-    const color = [0xfff7ed, 0xa5f3fc, 0xfed7aa][Math.floor(bgRng() * 3)]
-    const g = scene.add.graphics()
-    g.fillStyle(color, 0.9)
-    g.fillCircle(0, 0, 2.5 * DPR)
-    g.lineStyle(1 * DPR, color, 0.5)
-    g.lineBetween(-6 * DPR, 0, 6 * DPR, 0)
-    g.lineBetween(0, -6 * DPR, 0, 6 * DPR)
-    g.x = x
-    g.y = y
-    g.setDepth(-85)
-    scene.tweens.add({
-      targets: g,
-      angle: 360,
-      duration: 30000 + bgRng() * 30000,
-      repeat: -1,
-      ease: 'Linear',
-    })
-    scene.tweens.add({
-      targets: g,
-      alpha: { from: 0.6, to: 1 },
-      duration: 2200 + bgRng() * 2000,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    })
-    scene.lod.cullableData.push({ obj: g, x, y, r: 12 * DPR })
-    // Тап по звезде — вспышка + ⭐
-    const starBaseR = 14 * DPR
-    const starHit = new Phaser.Geom.Circle(0, 0, starBaseR)
-    g.setInteractive(starHit, Phaser.Geom.Circle.Contains)
-    let dt = 0,
-      dx = 0,
-      dy = 0
-    g.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      dt = Date.now()
-      dx = p.x
-      dy = p.y
-    })
-    g.on('pointerup', (p: Phaser.Input.Pointer) => {
-      const elapsed = Date.now() - dt
-      const moved = Math.abs(p.x - dx) + Math.abs(p.y - dy)
-      if (elapsed < 300 && moved < 8 * DPR) {
-        scene.tapHandledThisFrame = true
-        scene.popEmojiAt(x, y, '⭐', g)
-      }
-    })
-    scene.mainPlanetHits.push({
-      container: g as unknown as Phaser.GameObjects.Container,
-      baseR: starBaseR,
-      circle: starHit,
-    })
-  }
+  // 16 крупных таппабельных звёзд тоже убраны — юзер хотел чистый фон.
+  // Каждая была с rotation+pulse infinite tweens (32 tweens суммарно).
 }
 
 // ============== СВЯЗИ И СИСТЕМЫ ==============

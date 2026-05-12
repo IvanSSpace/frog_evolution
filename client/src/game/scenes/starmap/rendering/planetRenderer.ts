@@ -604,18 +604,10 @@ export class PlanetRenderer {
     const container = this.scene.add.container(sys.x, sys.y)
     const rng = mulberry32(sys.rngSeed)
 
-    // Sparkle над планетой — у ~20% фоновых планет (раньше 40%).
-    // Снижено для perf: каждый sparkle = GameObject в display list + recursive
-    // timer chain. На 564 BG 40% = 226 sparkles, 20% = 113 — экономия 113 объектов.
-    if (rng() < 0.2) {
-      createSparkleAt(
-        this.scene,
-        sys.x,
-        sys.y,
-        sys.size,
-        mulberry32(sys.rngSeed + 17),
-      )
-    }
+    // Sparkle над планетой отключены полностью — каждый = GameObject +
+    // recursive timer chain + flash tweens. Юзер хотел чистый фон без
+    // мерцающих микро-звёзд.
+    // if (rng() < 0.2) { createSparkleAt(this.scene, sys.x, sys.y, sys.size, ...) }
 
     // ── Разделение на 2 Graphics для LOD ──
     // gBase — aura + базовый шар + блик. ВСЕГДА видим (минимальный draw cost).
