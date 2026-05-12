@@ -1,11 +1,26 @@
 import { useEffect, useRef } from 'react'
 import Phaser from 'phaser'
 import type { Element, Rarity } from '../../store/cosmic/types'
-import {
-  playAwakenedOnce,
-  scheduleAwakenedIdle,
-} from '../../game/effects/elements/awakenedPresets'
 import { textureKeyForLevel, configForLevel } from '../../game/config/frogs'
+import { ELEMENT_TINTS } from '../../game/effects/elements/elementTints'
+import type { AuraSpec } from '../../game/effects/ElementAuraOverlay'
+import {
+  fireSpec,
+  waterSpec,
+  forestSpec,
+  toxicSpec,
+  plasmaSpec,
+  shadowSpec,
+  crystalSpec,
+  desertSpec,
+  gasSpec,
+  ringSpec,
+  binarySpec,
+  arcaneSpec,
+  mechanicalSpec,
+  warSpec,
+  voidSpec,
+} from '../../game/effects/elementAuraSpecs'
 
 interface GalleryDetailPreviewProps {
   archetype: Element
@@ -28,7 +43,27 @@ const NATIVE_LOAD_SIZE = 256
 //   L1 (cfg.size 0.8) → ~70px
 //   L7 (cfg.size 2.0) → ~170px
 // Формула: displayPx = cfg.size × DISPLAY_BASE_PX
-const DISPLAY_BASE_PX = 85 // L1 (0.8 × 85 = 68px), L7 (2.0 × 85 = 170px), L13 (2.0 × 85 = 170px)
+const DISPLAY_BASE_PX = 85
+
+// Маппинг archetype → AuraSpec. Используется тот же spec что и в main scene
+// (ElementAuraOverlay), визуал гарантированно одинаковый.
+const AURA_SPECS: Partial<Record<Element, AuraSpec>> = {
+  fire: fireSpec,
+  water: waterSpec,
+  forest: forestSpec,
+  toxic: toxicSpec,
+  plasma: plasmaSpec,
+  shadow: shadowSpec,
+  crystal: crystalSpec,
+  desert: desertSpec,
+  gas: gasSpec,
+  ring: ringSpec,
+  binary: binarySpec,
+  arcane: arcaneSpec,
+  mechanical: mechanicalSpec,
+  war: warSpec,
+  void: voidSpec,
+}
 
 function makePreviewScene(
   archetype: Element,
@@ -37,6 +72,7 @@ function makePreviewScene(
   const level = RARITY_TO_LEVEL[rarity]
   const textureKey = textureKeyForLevel(level)
   const svgPath = configForLevel(level).path
+  const spec = AURA_SPECS[archetype]
 
   class PreviewScene extends Phaser.Scene {
     constructor() {
@@ -51,20 +87,25 @@ function makePreviewScene(
     }
 
     create() {
-      const container = this.add.container(SIZE / 2, SIZE / 2)
-      const frog = this.add.image(0, 0, textureKey)
-      // cfg.size из FROG_LEVELS — тот же множитель, что и в игре
-      const cfg = configForLevel(level)
-      if (cfg && typeof cfg.size === 'number') {
-        // Display size = cfg.size × DISPLAY_BASE_PX
-        // Scale = displaySize / nativeSize (downscale, sharp)
-        const displayPx = cfg.size * DISPLAY_BASE_PX
-        const scale = displayPx / NATIVE_LOAD_SIZE
-        frog.setScale(scale)
+      // Aura спавнится первой (ниже по depth) — лягушка автоматически поверх.
+      if (spec) {
+        spec.ensureTextures(this)
+        const aura = spec.createAura(this, rarity)
+        aura.container.setPosition(SIZE / 2, SIZE / 2 - 20)
+        aura.container.setScale(2.4) // увеличить для preview canvas (главная сцена меньше)
+        aura.container.setDepth(0)
       }
+
+      // Лягушка
+      const container = this.add.container(SIZE / 2, SIZE / 2)
+      container.setDepth(10)
+      const frog = this.add.image(0, 0, textureKey)
+      const displayPx = 2.0 * DISPLAY_BASE_PX // 170px
+      const scale = displayPx / NATIVE_LOAD_SIZE
+      frog.setScale(scale)
+      frog.setTint(ELEMENT_TINTS[archetype])
+      frog.setTintMode(0)
       container.add(frog)
-      playAwakenedOnce(this, container, archetype, rarity)
-      scheduleAwakenedIdle(this, container, archetype, rarity)
     }
   }
   return PreviewScene
@@ -102,11 +143,7 @@ export function GalleryDetailPreview({
   return (
     <div
       ref={ref}
-      style={{
-        width: SIZE,
-        height: SIZE,
-        pointerEvents: 'none', // canvas не должен ловить клики — UI поверх остаётся кликабельным
-      }}
+      style={{ width: SIZE, height: SIZE, pointerEvents: 'none' }}
       className="rounded-lg overflow-hidden"
     />
   )

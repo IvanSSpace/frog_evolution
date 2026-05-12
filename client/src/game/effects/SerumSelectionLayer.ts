@@ -36,34 +36,12 @@ export class SerumSelectionLayer {
     this.scene = scene
   }
 
-  /** Показать halos под eligible frogs. color — hex number (0xRRGGBB) элемента сыворотки. */
-  show(eligibleFrogs: ReadonlyArray<FrogLike>, color = 0x4ade80): void {
+  /** Phase 22: visual halos отключены — carrier'ы достаточно различимы по
+   *  tint лягушки и element aura (ElementAuraOverlay). Логика tap-to-apply
+   *  сохранена в FrogInteraction (handleSerumTap → eligible/mis-tap branching).
+   *  Параметр eligibleFrogs принят для API-совместимости, не используется. */
+  show(_eligibleFrogs: ReadonlyArray<FrogLike>, _color = 0x4ade80): void {
     this.hide()
-    for (const f of eligibleFrogs) {
-      const g = this.scene.add.graphics()
-
-      // Внутренняя мягкая заливка
-      g.fillStyle(color, 0.2)
-      g.fillEllipse(0, OVAL_Y, OVAL_RX * 2, OVAL_RY * 2)
-
-      // Контур овала
-      g.lineStyle(4.5, color, 0.9)
-      g.strokeEllipse(0, OVAL_Y, OVAL_RX * 2, OVAL_RY * 2)
-
-      g.setDepth(-1)
-      f.container.addAt(g, 0)
-
-      // Тихий pulse — narrow alpha range, не мерцает
-      const tw = this.scene.tweens.add({
-        targets: g,
-        alpha: { from: 0.8, to: 1.0 },
-        duration: 1100,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut',
-      })
-      this.halos.set(f.id, { frogId: f.id, graphics: g, tween: tw })
-    }
   }
 
   /** Скрыть все halos: kill tweens + destroy graphics. */

@@ -1,6 +1,9 @@
 import { apiJson } from './client'
 
 // Server snapshot. gold приходит как string (BigInt) — клиент преобразует при необходимости.
+// upgrades: на сервере хранится как Json (Record<string, number>), клиент конвертирует
+// через toUpgrades() при необходимости. При отправке в PUT клиент может посылать как
+// Upgrades, так и Record<string, number> — JSON-сериализация идентична.
 export interface ServerGameState {
   id: number
   userId: number

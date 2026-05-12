@@ -11,6 +11,21 @@ export interface Upgrades {
   rareBoxSpeed: number
 }
 
+/** Безопасная конверсия "сырого" upgrades-объекта (например, с сервера) в Upgrades.
+ *  Отсутствующие поля заполняются нулями. */
+export function toUpgrades(
+  raw: Record<string, number> | null | undefined,
+): Upgrades {
+  const r = raw ?? {}
+  return {
+    dropSpeed: r.dropSpeed ?? 0,
+    tractor: r.tractor ?? 0,
+    magnet: r.magnet ?? 0,
+    crateQuality: r.crateQuality ?? 0,
+    rareBoxSpeed: r.rareBoxSpeed ?? 0,
+  }
+}
+
 export const UPGRADE_CONFIG = {
   dropSpeed: {
     maxLevel: 8,

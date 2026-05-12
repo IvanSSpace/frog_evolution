@@ -1,10 +1,10 @@
 // Phase 15 (UX-06): persisted Settings toggles для Cosmic Frogs System.
 // Phase 19-04 (UX-04, UX-05): добавлены calmFarmMode + reducedEffects.
-//
-// Все 3 toggle хранятся индивидуально в localStorage; default = false.
-// Subscribe pattern идентичен — useSyncExternalStore reactive из SettingsModal.
-// Consumer wiring (FrogOverlayManager, awakened presets, SerumSlotMachine) —
-// читают через get* функции; verify в Phase 19-07 audit.
+// Phase 22: каждый setter дополнительно force-PUT'ит state на сервер через
+// saveGameState(true) → preferences sync'ятся cross-device. localStorage остаётся
+// как fast initial cache (читается до server load).
+
+import { saveGameState } from '../api/gameSync'
 
 const KEY_INSTANT_BOXES = 'frog_evolution_cosmic_instant_boxes'
 const KEY_CALM_FARM = 'frog_evolution_cosmic_calm_farm'
@@ -28,6 +28,7 @@ export function setInstantBoxes(value: boolean): void {
     // ignore quota or private mode failures
   }
   window.dispatchEvent(new CustomEvent(EVENT_NAME))
+  void saveGameState(true)
 }
 
 export function subscribeInstantBoxes(cb: () => void): () => void {
@@ -52,6 +53,7 @@ export function setCalmFarmMode(value: boolean): void {
     /* ignore */
   }
   window.dispatchEvent(new CustomEvent(EVENT_NAME))
+  void saveGameState(true)
 }
 
 export function subscribeCalmFarmMode(cb: () => void): () => void {
@@ -76,6 +78,7 @@ export function setReducedEffects(value: boolean): void {
     /* ignore */
   }
   window.dispatchEvent(new CustomEvent(EVENT_NAME))
+  void saveGameState(true)
 }
 
 export function subscribeReducedEffects(cb: () => void): () => void {

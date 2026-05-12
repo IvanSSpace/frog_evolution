@@ -16,6 +16,18 @@ import { getServerGameState, putServerGameState } from './gameState'
 import { devLog, devWarn } from '../utils/devLog'
 import { eventBus } from '../store/eventBus'
 import { getDropIntervalMs } from '../game/config/upgrades'
+import {
+  getInstantBoxes,
+  setInstantBoxes,
+  getCalmFarmMode,
+  setCalmFarmMode,
+  getReducedEffects,
+  setReducedEffects,
+} from '../utils/cosmicSettings'
+import { sfx } from '../audio/sfx'
+import i18next from 'i18next'
+import { setLang, type Lang } from '../i18n/index'
+import type { NumberFormat } from '../utils/formatting'
 
 const SAVE_THROTTLE_MS = 5000 // максимум один PUT раз в 5 секунд при идле
 let saveTimer: ReturnType<typeof setTimeout> | null = null
@@ -27,7 +39,9 @@ function snapshotForSave() {
   const s = useGameStore.getState()
   return {
     gold: Math.floor(s.gold).toString(),
-    upgrades: s.upgrades,
+    // Upgrades — struct тип, но при сериализации идентичен Record<string,number>,
+    // которое ожидает ServerGameState. Cast безопасен — JSON shape совпадает.
+    upgrades: s.upgrades as unknown as Record<string, number>,
     frogPurchases: s.frogPurchases,
     discoveredLevels: s.discoveredLevels,
     magnetEnabled: s.magnetEnabled,
@@ -49,6 +63,15 @@ function snapshotForSave() {
       hasOpenedAnyBox: s.hasOpenedAnyBox,
       frogExclusiveUnlocked: s.frogExclusiveUnlocked,
       tutorialState: s.tutorialState,
+      // Phase 22: user preferences (cross-device sync).
+      preferences: {
+        numberFormat: s.numberFormat,
+        language: i18next.language || 'ru',
+        sfxMuted: sfx.isMuted(),
+        instantBoxes: getInstantBoxes(),
+        calmFarmMode: getCalmFarmMode(),
+        reducedEffects: getReducedEffects(),
+      },
     },
   }
 }
@@ -110,6 +133,45 @@ export async function loadGameState(): Promise<boolean> {
       if ('tutorialState' in c) cosmicUpdate.tutorialState = c.tutorialState
       if (Object.keys(cosmicUpdate).length > 0) {
         useGameStore.setState(cosmicUpdate as Partial<typeof store>)
+      }
+
+      // Phase 22: восстанавливаем user preferences с сервера через те же setters
+      // что и UI пользует — они обновят localStorage + триггернут события.
+      if (
+        'preferences' in c &&
+        c.preferences &&
+        typeof c.preferences === 'object'
+      ) {
+        const p = c.preferences as Record<string, unknown>
+        if (typeof p.numberFormat === 'string') {
+          useGameStore
+            .getState()
+            .setNumberFormat(p.numberFormat as NumberFormat)
+        }
+        if (typeof p.language === 'string' && p.language !== i18next.language) {
+          setLang(p.language as Lang)
+        }
+        if (typeof p.sfxMuted === 'boolean' && p.sfxMuted !== sfx.isMuted()) {
+          sfx.setMuted(p.sfxMuted)
+        }
+        if (
+          typeof p.instantBoxes === 'boolean' &&
+          p.instantBoxes !== getInstantBoxes()
+        ) {
+          setInstantBoxes(p.instantBoxes)
+        }
+        if (
+          typeof p.calmFarmMode === 'boolean' &&
+          p.calmFarmMode !== getCalmFarmMode()
+        ) {
+          setCalmFarmMode(p.calmFarmMode)
+        }
+        if (
+          typeof p.reducedEffects === 'boolean' &&
+          p.reducedEffects !== getReducedEffects()
+        ) {
+          setReducedEffects(p.reducedEffects)
+        }
       }
     }
 

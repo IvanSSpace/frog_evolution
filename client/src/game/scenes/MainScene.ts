@@ -13,6 +13,24 @@ import {
   type PoopType,
 } from '../config/frogs'
 import { FrogOverlayManager } from '../effects/FrogOverlayManager'
+import { ElementAuraOverlay } from '../effects/ElementAuraOverlay'
+import {
+  fireSpec,
+  waterSpec,
+  forestSpec,
+  toxicSpec,
+  plasmaSpec,
+  shadowSpec,
+  crystalSpec,
+  desertSpec,
+  gasSpec,
+  ringSpec,
+  binarySpec,
+  arcaneSpec,
+  mechanicalSpec,
+  warSpec,
+  voidSpec,
+} from '../effects/elementAuraSpecs'
 import { SerumSelectionLayer } from '../effects/SerumSelectionLayer'
 import type { Element, Rarity } from '../../store/cosmic/types'
 import { devLog } from '../../utils/devLog'
@@ -79,6 +97,12 @@ export class MainScene extends Phaser.Scene {
 
   // Phase 12: overlay manager для carrier-лягушек.
   overlayManager: FrogOverlayManager | null = null
+
+  // Phase 22: Phaser-native fire aura overlay (baked radial gradient textures).
+  // Phaser-native aura'ы для carrier'ов разных элементов. Рисуются прямо
+  // в сцене под лягушкой, без bridge через DOM. Каждый элемент имеет свой
+  // визуальный паттерн (пламя/ripples/листья/токсичные облака).
+  private elementAuras: ElementAuraOverlay[] = []
 
   // Phase 14: serum selection layer (зелёные halo + red flash).
   selectionLayer: SerumSelectionLayer | null = null
@@ -239,6 +263,30 @@ export class MainScene extends Phaser.Scene {
     // Phase 12: overlay manager — создаётся ПОСЛЕ spawnLocationFrogs так что
     // первый sync видит уже живых лягушек, и для их frogId-match с CarrierData.
     this.overlayManager = new FrogOverlayManager(this, () => this.frogs)
+    // Phase 22: element aura'ы — все 15 архетипов (кроме ice — пока не реализован).
+    // Каждый со своим визуальным паттерном через AuraSpec.
+    this.elementAuras = [
+      new ElementAuraOverlay(this, () => this.frogs, 'fire', fireSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'water', waterSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'forest', forestSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'toxic', toxicSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'plasma', plasmaSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'shadow', shadowSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'crystal', crystalSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'desert', desertSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'gas', gasSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'ring', ringSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'binary', binarySpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'arcane', arcaneSpec),
+      new ElementAuraOverlay(
+        this,
+        () => this.frogs,
+        'mechanical',
+        mechanicalSpec,
+      ),
+      new ElementAuraOverlay(this, () => this.frogs, 'war', warSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'void', voidSpec),
+    ]
     this.rebindCarriers()
 
     // Phase 14: serum selection layer + subscribe на serumDragActive.
@@ -555,6 +603,9 @@ export class MainScene extends Phaser.Scene {
     // Phase 12: тикаем overlay manager (sync carriers + viewport culling).
     this.overlayManager?.tick()
 
+    // Phase 22: Phaser-native element aura'ы (baked radial gradient textures).
+    for (const aura of this.elementAuras) aura.tick()
+
     // Какашки auto-collect через onComplete твинов — никакой ручной очистки не нужно
   }
 
@@ -569,6 +620,9 @@ export class MainScene extends Phaser.Scene {
     // Phase 12: освобождаем все overlay'ы и dropAll pool.
     this.overlayManager?.dispose()
     this.overlayManager = null
+    // Phase 22: dispose element aura overlay'ев (release tweens + canvas children).
+    for (const aura of this.elementAuras) aura.dispose()
+    this.elementAuras = []
     // Phase 14: cleanup selection layer.
     this.selectionLayer?.dispose()
     this.selectionLayer = null

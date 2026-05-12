@@ -8,8 +8,8 @@ import type Phaser from 'phaser'
 import type { Element } from '../../store/cosmic/types'
 import type { ElementTier, OverlayLifecycle } from './elements/types'
 import { ELEMENT_TINTS } from './elements/elementTints'
-import { scheduleDormantIdle } from './elements/dormantPresets'
-import { scheduleAwakenedIdle } from './elements/awakenedPresets'
+// Phase 22: idle preset imports removed — startIdleForTier is a no-op now,
+// see comment in startIdleForTier.
 
 // ORB_DEPTH: выше body, ниже UI overlay.
 const ORB_DEPTH = 50
@@ -74,23 +74,12 @@ export class FrogElementOverlay {
    * Запускает idle-цикл для текущего (element, tier) поверх контейнера.
    * Выкидывает предыдущий lifecycle если был.
    */
-  private startIdleForTier(scene: Phaser.Scene, tier: ElementTier): void {
+  private startIdleForTier(_scene: Phaser.Scene, _tier: ElementTier): void {
+    // Phase 22: idle particles отключены — заменены ElementAuraOverlay
+    // для fire/water/forest/toxic (см. game/effects/elementAuraSpecs.ts).
+    // Tint лягушки (в attach()) сохраняется — это часть FrogElementOverlay.
     this.idleLifecycle?.dispose()
     this.idleLifecycle = null
-    if (tier === 'dormant') {
-      this.idleLifecycle = scheduleDormantIdle(
-        scene,
-        this.container,
-        this.element,
-      )
-    } else {
-      this.idleLifecycle = scheduleAwakenedIdle(
-        scene,
-        this.container,
-        this.element,
-        tier,
-      )
-    }
   }
 
   /**

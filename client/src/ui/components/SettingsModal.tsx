@@ -9,6 +9,7 @@ import { ELEMENTS, RARITIES } from '../../store/cosmic/types'
 import { fmtRate } from '../../utils/formatting'
 import { PlayerPanel } from '../../audio/components/PlayerPanel'
 import { sfx } from '../../audio/sfx'
+import { saveGameState } from '../../api/gameSync'
 import {
   getInstantBoxes,
   setInstantBoxes,
@@ -229,6 +230,13 @@ function SettingsTab() {
   const crew = useGameStore((s) => s.crew)
   const resetCrew = () =>
     useGameStore.setState((s) => ({ crew: { ...s.crew, missionsToday: 0 } }))
+
+  // Phase 22: dev-кнопки делают local mutation + немедленный PUT на сервер
+  // (минуя throttle), чтобы изменения сразу видны после reload.
+  const devSync = (action: () => void) => async () => {
+    action()
+    await saveGameState(true)
+  }
   const currentLang = i18n.language as Lang
   const sfxMuted = useSyncExternalStore(sfxSubscribe, getSfxMuted, getSfxMuted)
   // Phase 15 (UX-06): instant-boxes toggle reactive через cosmicSettings.
@@ -374,37 +382,37 @@ function SettingsTab() {
             DEV TOOLS
           </div>
           <button
-            onClick={devResetUpgrades}
+            onClick={devSync(devResetUpgrades)}
             className="ff-btn ff-btn-red text-sm w-full"
           >
             Сбросить апгрейды
           </button>
           <button
-            onClick={devClearAllFrogs}
+            onClick={devSync(devClearAllFrogs)}
             className="ff-btn ff-btn-red text-sm w-full"
           >
             Удалить всех лягушат
           </button>
           <button
-            onClick={() => addGold(500_000_000)}
+            onClick={devSync(() => addGold(500_000_000))}
             className="ff-btn ff-btn-green text-sm w-full"
           >
             +500 000 000
           </button>
           <button
-            onClick={resetCrew}
+            onClick={devSync(resetCrew)}
             className="ff-btn ff-btn-green text-sm w-full"
           >
             Сбросить усталость экипажа ({crew.missionsToday}/4)
           </button>
           <button
-            onClick={() => {
+            onClick={devSync(() => {
               for (const el of ELEMENTS) {
                 for (const r of RARITIES) {
                   addSerum(el, r, 1)
                 }
               }
-            }}
+            })}
             className="ff-btn ff-btn-green text-sm w-full"
           >
             Выдать по 1 сыворотке каждого типа

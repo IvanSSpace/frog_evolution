@@ -65,6 +65,8 @@ class SfxEngine {
     this.muted = v
     saveMuted(v)
     this.notify()
+    // Phase 22: sync preferences with server.
+    void import('../api/gameSync').then((m) => m.saveGameState(true))
   }
 
   setVolume(db: number): void {

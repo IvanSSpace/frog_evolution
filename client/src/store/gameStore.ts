@@ -13,6 +13,7 @@ import {
   getMagnetMergesPerCycle,
   getCrateLevel,
   getRareBoxThreshold,
+  toUpgrades,
   type Upgrades,
 } from '../game/config/upgrades'
 import {
@@ -66,6 +67,18 @@ export type { LocationConfig }
 export type BuyFrogResult =
   | { ok: true }
   | { ok: false; reason: 'noGold' | 'capFull' | 'invalid' }
+
+// Phase 22: user preferences хранимые на сервере (cosmic.preferences).
+// Каждое поле всё ещё имеет свой "primary" source (localStorage helpers /
+// специализированные setters), но store держит snapshot для sync.
+export interface Preferences {
+  numberFormat: NumberFormat
+  language: string // 'ru' | 'en' | 'es'
+  sfxMuted: boolean
+  instantBoxes: boolean
+  calmFarmMode: boolean
+  reducedEffects: boolean
+}
 
 interface GameStateBase {
   gold: number
@@ -171,7 +184,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     try {
       const res = await buyUpgradeApi(key)
-      const nextFromServer = res.upgrades as Upgrades
+      const nextFromServer = toUpgrades(res.upgrades)
       saveUpgrades(nextFromServer)
       set({ gold: Number(res.gold), upgrades: nextFromServer })
       return true
@@ -295,6 +308,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     saveNumberFormat(f)
     setGlobalFormat(f)
     set({ numberFormat: f })
+    // Phase 22: sync preferences with server (dynamic import избегает circular).
+    void import('../api/gameSync').then((m) => m.saveGameState(true))
   },
 
   boxProgress: 0,

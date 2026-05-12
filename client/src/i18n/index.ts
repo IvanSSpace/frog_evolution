@@ -24,6 +24,8 @@ export function setLang(lang: Lang) {
     /* ignore */
   }
   i18n.changeLanguage(lang)
+  // Phase 22: sync preferences with server.
+  void import('../api/gameSync').then((m) => m.saveGameState(true))
 }
 
 i18n.use(initReactI18next).init({

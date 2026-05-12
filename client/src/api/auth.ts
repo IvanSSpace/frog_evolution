@@ -5,13 +5,7 @@ interface AuthResponse {
   user: { id: number; telegramId: string; username?: string | null }
 }
 
-declare global {
-  interface Window {
-    Telegram?: {
-      WebApp?: { initData?: string }
-    }
-  }
-}
+// Window.Telegram уже типизирован в vite-env.d.ts (TelegramWebApp shape).
 
 export async function loginWithTelegram(
   initData: string,

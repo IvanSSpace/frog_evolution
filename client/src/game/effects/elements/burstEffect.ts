@@ -5,7 +5,9 @@
 
 import type Phaser from 'phaser'
 import type { Element } from '../../../store/cosmic/types'
-import { compRing, compSparkle, compFlash, compStarBurst } from '../anim/shared'
+// Phase 22: compFlash убран — он tween'ил alpha frog.container, что вызывало
+// «полупрозрачное мерцание» лягушки при тапе на carrier. Юзеру не нужно.
+import { compRing, compSparkle, compStarBurst } from '../anim/shared'
 import type { SharedBgSystem } from '../anim/shared/types'
 import { ELEMENT_TINTS } from './elementTints'
 import { archetypeForElement } from './elementMapping'
@@ -59,7 +61,6 @@ export function burstEffect(
   try {
     compRing(scene, container, fakeSys, rng)
     compSparkle(scene, container, fakeSys, rng)
-    compFlash(scene, container, rng)
     if (STAR_BURST_ELEMENTS.has(element)) {
       compStarBurst(scene, container, fakeSys, rng)
     }

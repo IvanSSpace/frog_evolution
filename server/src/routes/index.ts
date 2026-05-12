@@ -6,6 +6,7 @@ import { gameStateRoutes } from './gameState'
 import { boxRoutes } from './box'
 import { shopRoutes } from './shop'
 import { mergeRoutes } from './merge'
+import { cosmicRoutes } from './cosmic'
 
 export async function registerRoutes(app: FastifyInstance) {
   await app.register(healthRoutes)
@@ -15,4 +16,5 @@ export async function registerRoutes(app: FastifyInstance) {
   await app.register(boxRoutes)
   await app.register(shopRoutes)
   await app.register(mergeRoutes)
+  await app.register(cosmicRoutes)
 }

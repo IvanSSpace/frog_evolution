@@ -42,13 +42,15 @@ export interface CosmicSliceActions {
     payload?: { element: Element; rarity: Rarity } | null,
   ) => void
 
-  // Phase 14: atomic apply (decrement serum + addCarrier + clear selection)
+  // Phase 14 / Phase 22: server-validated apply. Optimistic UI + rollback при сбое.
+  // Decrement serum + addCarrier + clear selection — атомарно локально, затем
+  // POST /game/cosmic/apply-serum для валидации (level matches rarity, serum в инвентаре, не carrier).
   applySerum: (
     frogId: string,
     element: Element,
     rarity: Rarity,
     level: number,
-  ) => void
+  ) => Promise<void>
 
   // Box actions (Phase 15)
   addBox: (params: {
