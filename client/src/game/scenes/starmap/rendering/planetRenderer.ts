@@ -604,9 +604,10 @@ export class PlanetRenderer {
     const container = this.scene.add.container(sys.x, sys.y)
     const rng = mulberry32(sys.rngSeed)
 
-    // Sparkle над планетой — у ~40% фоновых планет.
-    // Создаётся в world coords (НЕ child container), чтобы не исчезать при LOD-скрытии планеты.
-    if (rng() < 0.4) {
+    // Sparkle над планетой — у ~20% фоновых планет (раньше 40%).
+    // Снижено для perf: каждый sparkle = GameObject в display list + recursive
+    // timer chain. На 564 BG 40% = 226 sparkles, 20% = 113 — экономия 113 объектов.
+    if (rng() < 0.2) {
       createSparkleAt(
         this.scene,
         sys.x,
