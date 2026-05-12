@@ -34,7 +34,8 @@ import { PopoverController } from './starmap/popovers'
 import type { Race, BgSystem, PlanetMapEntry } from './starmap/types'
 import { mulberry32 } from './starmap/helpers'
 import { SeedRefinementEngine } from './starmap/seedRefinement/engine'
-import { setupCosmicDust } from './starmap/ambient/cosmicDust'
+// import { setupCosmicDust } from './starmap/ambient/cosmicDust' // отключено
+
 import { setupRandomSignals } from './starmap/ambient/randomSignals'
 import { setupTorRing } from './starmap/ambient/torRing'
 import { setupVeranLightning } from './starmap/ambient/veranLightning'
@@ -405,12 +406,13 @@ export class StarMapScene extends Phaser.Scene {
     eventBus.on('starmap:goto-ship', this.onEbGotoShip)
 
     // Живые анимации (ambient effects). Вынесены в starmap/ambient/* (Wave 3).
-    setupCosmicDust(this, {
-      worldSize: WORLD_SIZE,
-      seed: SEED,
-      register: (obj, x, y, r, lodMinZoom) =>
-        this.lod.cullableData.push({ obj, x, y, r, lodMinZoom }),
-    })
+    // Космическая пыль убрана — perf trade-off, визуально не критично.
+    // setupCosmicDust(this, {
+    //   worldSize: WORLD_SIZE,
+    //   seed: SEED,
+    //   register: (obj, x, y, r, lodMinZoom) =>
+    //     this.lod.cullableData.push({ obj, x, y, r, lodMinZoom }),
+    // })
     setupRandomSignals(this, MAIN_RACES)
     setupTorRing(this, MAIN_RACES, this.systemSprites)
     setupVeranLightning(this, MAIN_RACES)

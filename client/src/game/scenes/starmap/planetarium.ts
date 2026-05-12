@@ -35,9 +35,8 @@ export const BG_PLANET_MIN_ZOOM = 0
 
 // Минимальный zoom, при котором рисуется ДЕТАЛИЗАЦИЯ BG-планет
 // (archetype-specific узоры + universal modifiers).
-// 0.5 (раньше 0.10) — детали реально видны только при close-up, на mid-zoom они
-// микроскопические но дорогие. Когда планета меньше 5px на экране — детали бесполезны.
-export const BG_DETAIL_MIN_ZOOM = 0.5
+// 0.3 (по запросу юзера) — детали видны раньше, planet looks richer at mid-zoom.
+export const BG_DETAIL_MIN_ZOOM = 0.3
 
 // Минимальный zoom, при котором планеты (BG + main) кликабельны.
 // Ниже — interactive отключён (планеты выглядят как точки, клики бессмысленны).
