@@ -1,6 +1,3 @@
-// ShipFollowButton — toggle camera-follow-ship mode on StarMap.
-// Only visible when StarMap is open AND ship is in transit.
-
 import { useEffect, useState } from 'react'
 import { useGameStore } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
@@ -24,7 +21,6 @@ export function ShipFollowButton() {
     }
   }, [])
 
-  // Scene cancels follow (e.g. drag or ship docked)
   useEffect(() => {
     const handler = ({ following: f }: { following: boolean }) =>
       setFollowing(f)
@@ -32,20 +28,45 @@ export function ShipFollowButton() {
     return () => eventBus.off('starmap:follow-changed', handler)
   }, [])
 
-  if (!starMapActive || shipState !== 'transit') return null
+  // Reset following когда ship меняет state с transit на docked
+  useEffect(() => {
+    if (shipState !== 'transit') setFollowing(false)
+  }, [shipState])
 
-  const toggle = () => {
-    console.log('[ShipFollowButton] click fired')
-    const next = !following
-    setFollowing(next)
-    eventBus.emit('starmap:follow-ship', { enable: next })
+  if (!starMapActive) return null
+
+  const isTransit = shipState === 'transit'
+
+  const handleClick = () => {
+    if (isTransit) {
+      const next = !following
+      setFollowing(next)
+      eventBus.emit('starmap:follow-ship', { enable: next })
+    } else {
+      // Docked — one-shot center
+      eventBus.emit('starmap:goto-ship')
+    }
+  }
+
+  // Label + style по контексту
+  let label: string
+  let icon: string
+  let isActive: boolean
+
+  if (isTransit) {
+    icon = following ? '📍' : '🚀'
+    label = following ? 'Следую' : 'Следовать'
+    isActive = following
+  } else {
+    icon = '🚀'
+    label = 'К кораблю'
+    isActive = false
   }
 
   return (
     <button
-      onClick={toggle}
-      onPointerDown={() => console.log('[ShipFollowButton] pointerdown')}
-      aria-label={following ? 'Отключить слежение' : 'Следовать за кораблём'}
+      onClick={handleClick}
+      aria-label={label}
       style={{
         position: 'fixed',
         top: 'calc(12% + 10px)',
@@ -56,11 +77,11 @@ export function ShipFollowButton() {
         gap: 6,
         padding: '6px 12px',
         borderRadius: 20,
-        border: following
+        border: isActive
           ? '1.5px solid #34d399'
           : '1.5px solid rgba(255,255,255,0.25)',
-        background: following ? 'rgba(16,185,129,0.18)' : 'rgba(0,0,0,0.55)',
-        color: following ? '#34d399' : 'rgba(255,255,255,0.7)',
+        background: isActive ? 'rgba(16,185,129,0.18)' : 'rgba(0,0,0,0.55)',
+        color: isActive ? '#34d399' : 'rgba(255,255,255,0.7)',
         fontSize: 12,
         fontWeight: 600,
         backdropFilter: 'blur(6px)',
@@ -72,8 +93,8 @@ export function ShipFollowButton() {
         WebkitUserSelect: 'none',
       }}
     >
-      <span style={{ fontSize: 14 }}>{following ? '📍' : '🚀'}</span>
-      {following ? 'Следую' : 'Следовать'}
+      <span style={{ fontSize: 14 }}>{icon}</span>
+      {label}
     </button>
   )
 }

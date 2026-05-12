@@ -12,7 +12,6 @@ import { LocationStack } from './ui/components/LocationStack'
 import { StarMapHUD } from './ui/components/StarMapHUD'
 import { MagnetToggle } from './ui/components/MagnetToggle'
 import { ShipFollowButton } from './ui/components/ShipFollowButton'
-import { ShipGotoButton } from './ui/components/ShipGotoButton'
 import { eventBus } from './store/eventBus'
 import { initSfx } from './audio/sfxBootstrap'
 import { initPlanetVoice } from './audio/planetVoice'
@@ -296,7 +295,6 @@ function App() {
       <MagnetToggle />
       <StarMapHUD />
       <ShipFollowButton />
-      <ShipGotoButton />
       <SerumBar />
       <LocationStack />
 
