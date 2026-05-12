@@ -41,7 +41,8 @@ export const BG_DETAIL_MIN_ZOOM = 0.3
 // Минимальный zoom, при котором планеты (BG + main) кликабельны.
 // Ниже — interactive отключён (планеты выглядят как точки, клики бессмысленны).
 // Это снимает hit-test overhead с pointer events во время drag/pinch.
-export const BG_INTERACTIVE_MIN_ZOOM = 0.41
+// 0.30 (раньше 0.41) — юзер хочет тапы на mid-zoom тоже работали.
+export const BG_INTERACTIVE_MIN_ZOOM = 0.3
 
 // MAIN_RACES читаются из planetMap.json — источник истины для всех 16 главных рас.
 // Координаты/размеры в JSON хранятся в DPR=1 base, в runtime умножаются на real DPR.
