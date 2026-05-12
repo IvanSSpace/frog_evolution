@@ -27,12 +27,20 @@ export function initTelegram(): void {
   tg.disableVerticalSwipes?.()
   tg.setHeaderColor?.('#1a2e1a')
   tg.setBackgroundColor?.('#1a2e1a')
-  // Bot API 8.0+: true fullscreen на мобильном (no-op на desktop/старых клиентах).
+  // requestFullscreen / lockOrientation — Bot API 8.0+. На старых клиентах (≤6.x)
+  // метод СУЩЕСТВУЕТ на объекте но кидает WebAppMethodUnsupported при вызове —
+  // optional chaining не помогает, оборачиваем в try/catch.
   // Связан с DPR cap в game/index.ts — без cap=2 фуллскрин убивает FPS StarMap'а.
-  tg.requestFullscreen?.()
-  // Lock в portrait (Bot API 8.0+). Не работает на всех клиентах (особенно iOS) —
-  // fallback overlay <OrientationLock/> ловит landscape и просит повернуть.
-  tg.lockOrientation?.('portrait')
+  try {
+    tg.requestFullscreen?.()
+  } catch {
+    // Старый клиент — fullscreen недоступен, остаёмся в expand() режиме.
+  }
+  try {
+    tg.lockOrientation?.('portrait')
+  } catch {
+    // Старый клиент — orientation lock недоступен, fallback overlay сработает.
+  }
 }
 
 // ============== HAPTIC FEEDBACK ==============
