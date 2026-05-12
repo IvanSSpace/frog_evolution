@@ -19,23 +19,21 @@
 import Phaser from 'phaser'
 import type { StarMapScene } from '../StarMapScene'
 import type { Race, BgSystem } from './types'
-import { mulberry32 } from './helpers'
+// mulberry32 больше не нужен — starfield пустой
 
 const DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 3))
 
 // ============== STARFIELD ==============
 
 export function setupStarfield(
-  scene: StarMapScene,
-  opts: { worldSize: number; seed: number },
+  _scene: StarMapScene,
+  _opts: { worldSize: number; seed: number },
 ): void {
-  const { worldSize, seed } = opts
-  const bgRng = mulberry32(seed + 1)
-  // Far stars (2000 микро-точек) и mid stars (200 мерцающих) убраны по запросу.
-  // -200 infinite tweens, -2200 GameObjects из cullableData.
-
-  // 16 крупных таппабельных звёзд тоже убраны — юзер хотел чистый фон.
-  // Каждая была с rotation+pulse infinite tweens (32 tweens суммарно).
+  // Все слои starfield убраны по запросу:
+  // — Far stars (2000 микро-точек в 1 Graphics)
+  // — Mid stars (200 мерцающих с tween-yoyo)
+  // — 16 крупных таппабельных звёзд (32 infinite tween'а)
+  // Функция оставлена пустой, чтобы не править все call-sites.
 }
 
 // ============== СВЯЗИ И СИСТЕМЫ ==============
