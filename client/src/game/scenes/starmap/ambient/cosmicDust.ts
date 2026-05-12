@@ -15,23 +15,25 @@ export interface CullableRegister {
     x: number,
     y: number,
     r: number,
+    lodMinZoom?: number,
   ): void
 }
 
-// Создаёт 50 частиц космической пыли с tween-движением, регистрирует их
-// в cullable-списке через register-callback. Снижено со 140 для производительности.
+// 15 статичных частиц пыли (раньше 50 с infinite-repeat tween'ами — убраны
+// для perf). При zoom < 0.20 полностью убираются из display list через
+// lodMinZoom (на дальнем zoom пыль и так не видна, размер субпиксельный).
+const PARTICLE_COUNT = 15
+const LOD_MIN_ZOOM = 0.2
+
 export function setupCosmicDust(
   scene: Phaser.Scene,
   opts: { worldSize: number; seed: number; register: CullableRegister },
 ): void {
   const { worldSize, seed, register } = opts
   const dustRng = mulberry32(seed + 3)
-  // Космическая пыль — каждая частица tween. Снижено с 140.
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
     const startX = (dustRng() - 0.5) * worldSize * 2
     const startY = (dustRng() - 0.5) * worldSize * 2
-    const dx = (dustRng() - 0.5) * 200 * DPR
-    const dy = (dustRng() - 0.5) * 200 * DPR
     const alpha = 0.2 + dustRng() * 0.4
     const color = [0xa5f3fc, 0xfde047, 0xc4b5fd, 0xfecaca][
       Math.floor(dustRng() * 4)
@@ -44,16 +46,8 @@ export function setupCosmicDust(
       alpha,
     )
     dust.setDepth(-50)
-    scene.tweens.add({
-      targets: dust,
-      x: startX + dx,
-      y: startY + dy,
-      duration: 18000 + dustRng() * 18000,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    })
-    // Радиус culling-сферы должен охватывать tween-движение
-    register(dust, startX, startY, 300 * DPR)
+    // Без tween-анимации — статичная точка. Cull-радиус минимальный,
+    // только сама точка. lodMinZoom скрывает на дальнем zoom.
+    register(dust, startX, startY, 4 * DPR, LOD_MIN_ZOOM)
   }
 }

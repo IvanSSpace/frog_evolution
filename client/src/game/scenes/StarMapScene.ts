@@ -408,7 +408,8 @@ export class StarMapScene extends Phaser.Scene {
     setupCosmicDust(this, {
       worldSize: WORLD_SIZE,
       seed: SEED,
-      register: (obj, x, y, r) => this.lod.cullableData.push({ obj, x, y, r }),
+      register: (obj, x, y, r, lodMinZoom) =>
+        this.lod.cullableData.push({ obj, x, y, r, lodMinZoom }),
     })
     setupRandomSignals(this, MAIN_RACES)
     setupTorRing(this, MAIN_RACES, this.systemSprites)
