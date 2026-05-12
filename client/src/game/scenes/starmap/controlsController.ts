@@ -90,13 +90,24 @@ export class ControlsController {
   }
 
   private onPointerMove(p: Phaser.Input.Pointer): void {
-    const ps = this.scene.input.manager.pointers.filter(
-      (pt) => pt.active && pt.isDown,
-    )
+    // Counter-loop вместо .filter() — pointermove на mobile фаерится 60+/сек,
+    // .filter() на каждом аллоцирует array и закрытие → GC давление в hot path.
+    const pointers = this.scene.input.manager.pointers
+    let activeCount = 0
+    let p0: Phaser.Input.Pointer | null = null
+    let p1: Phaser.Input.Pointer | null = null
+    for (let i = 0; i < pointers.length; i++) {
+      const pt = pointers[i]
+      if (pt.active && pt.isDown) {
+        if (activeCount === 0) p0 = pt
+        else if (activeCount === 1) p1 = pt
+        activeCount++
+      }
+    }
     const cam = this.scene.cameras.main
-    if (ps.length === 2) {
-      const dx = ps[0].x - ps[1].x
-      const dy = ps[0].y - ps[1].y
+    if (activeCount === 2 && p0 && p1) {
+      const dx = p0.x - p1.x
+      const dy = p0.y - p1.y
       const d = Math.sqrt(dx * dx + dy * dy)
       if (this.initialPinchDist == null) {
         this.initialPinchDist = d
@@ -116,7 +127,7 @@ export class ControlsController {
       }
       this.velX = 0
       this.velY = 0
-    } else if (this.isDragging && ps.length === 1) {
+    } else if (this.isDragging && activeCount === 1) {
       const dx = p.x - this.lastX
       const dy = p.y - this.lastY
       const now = Date.now()

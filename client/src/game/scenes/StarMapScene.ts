@@ -100,6 +100,11 @@ export class StarMapScene extends Phaser.Scene {
   private popover?: Phaser.GameObjects.Container
   // bgNamePopup/bgNamePopupTimer мигрировали в PopoverController (Phase 20-04, Wave 4).
   private nebula?: NebulaBackgroundHandle
+  // eventBus handler refs — нужны для off() в shutdown(). Без этого слушатели
+  // утекают при каждом open/close StarMap и накапливаются.
+  private onEbPopoverClose?: () => void
+  private onEbCenterHome?: () => void
+  private onEbGotoShip?: () => void
   // Линии связи между главными расами + кэш edges для перерисовки при изменении zoom.
   mainLinesGfx: Phaser.GameObjects.Graphics | null = null
   mainLinesEdges: Array<{
@@ -332,13 +337,15 @@ export class StarMapScene extends Phaser.Scene {
     this.camera.setCenter(home.x, home.y)
     this.camera.updatePlanetHitAreas()
 
-    // Сброс выбранной планеты при закрытии popover извне
-    eventBus.on('starmap:popover-close', () => {
+    // Сброс выбранной планеты при закрытии popover извне.
+    // Handler сохранён как поле — нужен для off() в shutdown().
+    this.onEbPopoverClose = () => {
       this.selectedMainRaceId = null
-    })
+    }
+    eventBus.on('starmap:popover-close', this.onEbPopoverClose)
 
     // Центрирование камеры на HOME с плавным tween (повторный клик по кнопке открытия StarMap)
-    eventBus.on('starmap:centerHome', () => {
+    this.onEbCenterHome = () => {
       const homeRace = MAIN_RACES.find((r) => r.id === 'home') ?? MAIN_RACES[0]
       const cam = this.cameras.main
       // Плавный zoom-back до 1.0 + центрирование на HOME
@@ -365,10 +372,11 @@ export class StarMapScene extends Phaser.Scene {
           this.camera.updatePlanetHitAreas() // финальное обновление под точный zoom 1.0
         },
       })
-    })
+    }
+    eventBus.on('starmap:centerHome', this.onEbCenterHome)
 
     // Центрирование камеры на текущую позицию корабля (без follow-mode)
-    eventBus.on('starmap:goto-ship', () => {
+    this.onEbGotoShip = () => {
       const shipSprite = this.shipController.sprite
       if (!shipSprite) {
         return
@@ -395,7 +403,8 @@ export class StarMapScene extends Phaser.Scene {
           this.camera.updatePlanetHitAreas()
         },
       })
-    })
+    }
+    eventBus.on('starmap:goto-ship', this.onEbGotoShip)
 
     // Живые анимации (ambient effects). Вынесены в starmap/ambient/* (Wave 3).
     setupCosmicDust(this, {
@@ -739,6 +748,25 @@ export class StarMapScene extends Phaser.Scene {
     this.closePhaserPopover()
     this.nebula?.destroy()
     this.nebula = undefined
+    // Cleanup leaks (perf audit findings #4, #5):
+    // — eventBus подписки удерживают reference на старую инстанцию scene
+    // — scene.time.delayedCall цепочки (sparkle/signals/lightning) самовоспроизводятся
+    //   вечно. removeAllEvents() убирает их все.
+    // — tweens нужно явно убить иначе они держат references на destroyed objects.
+    if (this.onEbPopoverClose) {
+      eventBus.off('starmap:popover-close', this.onEbPopoverClose)
+      this.onEbPopoverClose = undefined
+    }
+    if (this.onEbCenterHome) {
+      eventBus.off('starmap:centerHome', this.onEbCenterHome)
+      this.onEbCenterHome = undefined
+    }
+    if (this.onEbGotoShip) {
+      eventBus.off('starmap:goto-ship', this.onEbGotoShip)
+      this.onEbGotoShip = undefined
+    }
+    this.time.removeAllEvents()
+    this.tweens.killAll()
   }
 
   // Лёгкая реакция на тап по второстепенному объекту (звезда, лягушка-спутник)

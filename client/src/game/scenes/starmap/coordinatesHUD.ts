@@ -55,25 +55,38 @@ export class CoordinatesHUDController {
   setup(): void {
     const scene = this.scene
     const config = this.config
-    // Сглаженный FPS (скользящее среднее по 30 кадрам)
-    const fpsHistory: number[] = []
+    // Сглаженный FPS — circular buffer (Float32Array) + running sum.
+    // Заменяет push/shift/reduce каждый кадр (O(n) + GC давление) на O(1).
     const FPS_WINDOW = 30
+    const fpsRing = new Float32Array(FPS_WINDOW)
+    let fpsIdx = 0
+    let fpsCount = 0
+    let fpsSum = 0
+    // Кэш для оптимизаций «обновляй только при изменении» — see ниже.
+    let prevMoonAlpha = -1
+    let prevZoomComp = -1
 
     scene.events.on('update', (_t: number, dt: number) => {
       const cam = scene.cameras.main
 
       const instantFps = dt > 0 ? 1000 / dt : 60
-      fpsHistory.push(instantFps)
-      if (fpsHistory.length > FPS_WINDOW) fpsHistory.shift()
-      const avgFps = fpsHistory.reduce((a, b) => a + b, 0) / fpsHistory.length
+      fpsSum -= fpsRing[fpsIdx]
+      fpsRing[fpsIdx] = instantFps
+      fpsSum += instantFps
+      fpsIdx = (fpsIdx + 1) % FPS_WINDOW
+      if (fpsCount < FPS_WINDOW) fpsCount++
+      const avgFps = fpsSum / fpsCount
 
       // Spike-детектор: лог в консоль если кадр > 50ms (FPS < 20) — для диагностики лагов.
+      // Counter loop вместо .filter() — мы уже во frame spike, не аллоцируем лишнего.
       if (dt > 50) {
-        const visibleNow = scene.lod.cullableData.filter(
-          (c) => c.obj.visible,
-        ).length
+        let visibleNow = 0
+        const cd = scene.lod.cullableData
+        for (let i = 0; i < cd.length; i++) {
+          if (cd[i].obj.visible) visibleNow++
+        }
         devWarn(
-          `[StarMap spike] frame=${dt.toFixed(1)}ms zoom=${cam.zoom.toFixed(3)} visible=${visibleNow}/${scene.lod.cullableData.length} tweens=${scene.tweens.getTweens().length}`,
+          `[StarMap spike] frame=${dt.toFixed(1)}ms zoom=${cam.zoom.toFixed(3)} visible=${visibleNow}/${cd.length} tweens=${scene.tweens.getTweens().length}`,
         )
       }
 
@@ -113,10 +126,15 @@ export class CoordinatesHUDController {
 
       // Компенсация zoom для звёзд-ромбов: при отдалении они растут,
       // при приближении остаются нормального размера. Cap на минимум 1.
+      // Loop пропускается если zoom стабилен — было setScale на 450+ объектов
+      // каждый кадр даже при идеально неподвижной камере.
       const zoom = scene.cameras.main.zoom
       const zoomComp = Math.max(1, 1 / zoom)
-      for (const s of scene.lod.zoomCompStars) {
-        if (s.obj.visible) s.obj.setScale(s.baseScale * zoomComp)
+      if (Math.abs(zoomComp - prevZoomComp) > 0.001) {
+        prevZoomComp = zoomComp
+        for (const s of scene.lod.zoomCompStars) {
+          if (s.obj.visible) s.obj.setScale(s.baseScale * zoomComp)
+        }
       }
 
       // Линии связи между главными расами: re-draw с новой толщиной если zoom
@@ -169,10 +187,15 @@ export class CoordinatesHUDController {
       )
       const moonsActive = moonAlpha > 0.001
       const dtSec = dt / 1000
+      const targetMoonAlpha = moonAlpha * 0.85 // 0.85 — базовая alpha спутника
+      const moonAlphaChanged =
+        Math.abs(targetMoonAlpha - prevMoonAlpha) > 0.001
+      if (moonAlphaChanged) prevMoonAlpha = targetMoonAlpha
       for (const m of scene.lod.moons) {
         if (m.obj.visible !== moonsActive) m.obj.setVisible(moonsActive)
         if (!moonsActive) continue
-        m.obj.setAlpha(moonAlpha * 0.85) // 0.85 — базовая alpha спутника как было
+        // setAlpha только при изменении (zoom стабилен → не дёргаем dirty flag).
+        if (moonAlphaChanged) m.obj.setAlpha(targetMoonAlpha)
         m.angle += dtSec * m.speed
         m.obj.x = Math.cos(m.angle) * m.radius
         m.obj.y = Math.sin(m.angle) * m.radius * 0.6 // эллиптическая орбита
