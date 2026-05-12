@@ -109,7 +109,10 @@ export function startGame(): Phaser.Game {
     main.time.delayedCall(FADE_MS, () => {
       mainCam.setZoom(startZoom)
       mainCam.resetFX()
-      sm().pause('MainScene')
+      // sleep() вместо pause(): останавливает И render И update. pause() стопает
+      // только update, поэтому MainScene продолжала бы рисоваться в GPU параллельно
+      // с тяжёлой StarMap → двойная нагрузка на mobile.
+      sm().sleep('MainScene')
 
       const wasSleeping = sm().isSleeping('StarMapScene')
       if (wasSleeping) sm().wake('StarMapScene')
@@ -163,7 +166,8 @@ export function startGame(): Phaser.Game {
       // alpha остаётся 0 — при следующем wake/open опять подкрутим к 1
       sm().sleep('StarMapScene')
 
-      sm().resume('MainScene')
+      // wake() парный к sleep() — поднимает MainScene из sleep, состояние сохранено.
+      sm().wake('MainScene')
       const main = sm().getScene('MainScene') as Phaser.Scene
       const mainCam = main.cameras.main
       // Шаг 2: ПОДЛЕТАЕМ к ферме — стартуем издалека, приближаемся (zoom IN)

@@ -5,11 +5,14 @@ export const violetRing: NebulaPreset = {
   seed: 851572,
   resolution: 2048,
   params: {
-    count: 40,
-    size: 90,
+    // count: 40 → 20, detail: 6 → 4 — половина blob'ов в шейдере + меньше fbm
+    // octaves. Это main bottleneck для mobile WebView (см. план оптимизации).
+    // Визуально кольцо туманности всё ещё плотное за счёт большего size.
+    count: 20,
+    size: 110,
     vary: 0.6,
     bright: 1.05,
-    detail: 6,
+    detail: 4,
     contrast: 3,
     edge: 1.6,
   },

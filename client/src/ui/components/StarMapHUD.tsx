@@ -28,15 +28,14 @@ export function StarMapHUD() {
 
   useEffect(() => {
     if (!active) return
-    let raf = 0
-    const tick = async () => {
+    // 10Hz вместо 60Hz: HUD это координаты/FPS — глаз не отличит обновление
+    // чаще. Снимает React re-render каждый кадр (~1-2ms на mobile).
+    const id = window.setInterval(async () => {
       const { getStarMapHUD } = await import('../../game')
       const d = getStarMapHUD()
       if (d) setData(d)
-      raf = requestAnimationFrame(tick)
-    }
-    tick()
-    return () => cancelAnimationFrame(raf)
+    }, 100)
+    return () => window.clearInterval(id)
   }, [active])
 
   if (!active) return null
