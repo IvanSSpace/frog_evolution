@@ -49,6 +49,7 @@ type Events = {
   }
   'starmap:popover-close': void
   'starmap:centerHome': void
+  'starmap:goto-ship': void
   'starmap:follow-ship': { enable: boolean }
   'starmap:follow-changed': { following: boolean }
   'dev:clearAllFrogs': void

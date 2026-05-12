@@ -367,6 +367,34 @@ export class StarMapScene extends Phaser.Scene {
       })
     })
 
+    // Центрирование камеры на текущую позицию корабля (без follow-mode)
+    eventBus.on('starmap:goto-ship', () => {
+      const shipSprite = this.shipController.sprite
+      if (!shipSprite) return
+      const cam = this.cameras.main
+      this.tweens.add({
+        targets: {
+          z: cam.zoom,
+          x: this.camera.centerX,
+          y: this.camera.centerY,
+        },
+        z: 1.0,
+        x: shipSprite.worldX,
+        y: shipSprite.worldY,
+        duration: 700,
+        ease: 'Cubic.easeInOut',
+        onUpdate: (tween) => {
+          const tgt = tween.targets[0] as { z: number; x: number; y: number }
+          cam.setZoom(tgt.z)
+          this.camera.setCenter(tgt.x, tgt.y)
+          this.camera.scheduleBoundsUpdate()
+        },
+        onComplete: () => {
+          this.camera.updatePlanetHitAreas()
+        },
+      })
+    })
+
     // Живые анимации (ambient effects). Вынесены в starmap/ambient/* (Wave 3).
     setupCosmicDust(this, {
       worldSize: WORLD_SIZE,
