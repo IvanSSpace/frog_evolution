@@ -35,6 +35,7 @@ export function ShipFollowButton() {
   if (!starMapActive || shipState !== 'transit') return null
 
   const toggle = () => {
+    console.log('[ShipFollowButton] click fired')
     const next = !following
     setFollowing(next)
     eventBus.emit('starmap:follow-ship', { enable: next })
@@ -43,6 +44,7 @@ export function ShipFollowButton() {
   return (
     <button
       onClick={toggle}
+      onPointerDown={() => console.log('[ShipFollowButton] pointerdown')}
       aria-label={following ? 'Отключить слежение' : 'Следовать за кораблём'}
       style={{
         position: 'fixed',

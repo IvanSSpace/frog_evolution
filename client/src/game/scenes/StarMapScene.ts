@@ -369,8 +369,17 @@ export class StarMapScene extends Phaser.Scene {
 
     // Центрирование камеры на текущую позицию корабля (без follow-mode)
     eventBus.on('starmap:goto-ship', () => {
+      console.log(
+        '[StarMapScene] goto-ship handler entry, shipController:',
+        !!this.shipController,
+        'sprite:',
+        !!this.shipController?.sprite,
+      )
       const shipSprite = this.shipController.sprite
-      if (!shipSprite) return
+      if (!shipSprite) {
+        console.warn('[StarMapScene] goto-ship: no shipSprite')
+        return
+      }
       const cam = this.cameras.main
       this.tweens.add({
         targets: {

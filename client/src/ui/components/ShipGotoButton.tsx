@@ -21,12 +21,15 @@ export function ShipGotoButton() {
   if (!starMapActive) return null
 
   const handleClick = () => {
+    console.log('[ShipGotoButton] click fired')
     eventBus.emit('starmap:goto-ship')
+    console.log('[ShipGotoButton] event emitted')
   }
 
   return (
     <button
       onClick={handleClick}
+      onPointerDown={() => console.log('[ShipGotoButton] pointerdown')}
       aria-label="К кораблю"
       style={{
         position: 'fixed',
