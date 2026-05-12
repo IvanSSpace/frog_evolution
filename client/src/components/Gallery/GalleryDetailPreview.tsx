@@ -21,6 +21,15 @@ const RARITY_TO_LEVEL: Record<Rarity, number> = {
   legendary: 1, // disabled — fallback на L1
 }
 
+// Native rasterization size — высокое разрешение для sharpness при downscale
+const NATIVE_LOAD_SIZE = 256
+
+// Целевой display size в canvas:
+//   L1 (cfg.size 0.8) → ~70px
+//   L7 (cfg.size 2.0) → ~170px
+// Формула: displayPx = cfg.size × DISPLAY_BASE_PX
+const DISPLAY_BASE_PX = 85 // L1 (0.8 × 85 = 68px), L7 (2.0 × 85 = 170px), L13 (2.0 × 85 = 170px)
+
 function makePreviewScene(
   archetype: Element,
   rarity: Rarity,
@@ -35,7 +44,10 @@ function makePreviewScene(
     }
 
     preload() {
-      this.load.svg(textureKey, svgPath, { width: 80, height: 80 })
+      this.load.svg(textureKey, svgPath, {
+        width: NATIVE_LOAD_SIZE,
+        height: NATIVE_LOAD_SIZE,
+      })
     }
 
     create() {
@@ -44,7 +56,11 @@ function makePreviewScene(
       // cfg.size из FROG_LEVELS — тот же множитель, что и в игре
       const cfg = configForLevel(level)
       if (cfg && typeof cfg.size === 'number') {
-        frog.setScale(cfg.size)
+        // Display size = cfg.size × DISPLAY_BASE_PX
+        // Scale = displaySize / nativeSize (downscale, sharp)
+        const displayPx = cfg.size * DISPLAY_BASE_PX
+        const scale = displayPx / NATIVE_LOAD_SIZE
+        frog.setScale(scale)
       }
       container.add(frog)
       playAwakenedOnce(this, container, archetype, rarity)
