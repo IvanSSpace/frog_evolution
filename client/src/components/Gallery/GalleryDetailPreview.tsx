@@ -41,7 +41,11 @@ function makePreviewScene(
     create() {
       const container = this.add.container(SIZE / 2, SIZE / 2)
       const frog = this.add.image(0, 0, textureKey)
-      frog.setScale(1.5)
+      // cfg.size из FROG_LEVELS — тот же множитель, что и в игре
+      const cfg = configForLevel(level)
+      if (cfg && typeof cfg.size === 'number') {
+        frog.setScale(cfg.size)
+      }
       container.add(frog)
       playAwakenedOnce(this, container, archetype, rarity)
       scheduleAwakenedIdle(this, container, archetype, rarity)
