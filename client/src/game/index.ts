@@ -71,6 +71,9 @@ export function startGame(): Phaser.Game {
     input: {
       touch: true,
       mouse: true,
+      // По умолчанию Phaser слышит 1 active pointer — для pinch-zoom (StarMap)
+      // нужно минимум 2. Без этого второй палец просто игнорируется.
+      activePointers: 3,
     },
   }
 
