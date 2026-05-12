@@ -11,7 +11,7 @@ export const RARITY_TO_STARTING_LEVEL: Record<Rarity, number> = {
   common: 1,
   rare: 7,
   epic: 13,
-  legendary: 19,
+  legendary: 999, // disabled — нет лягушек этого уровня после shrink
 }
 
 /** Minimal frog shape — accepts MainScene FrogData без import cycle. */

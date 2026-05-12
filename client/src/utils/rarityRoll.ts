@@ -9,9 +9,9 @@ import type { Rarity } from '../store/cosmic/types'
 
 export const RARITY_WEIGHTS: Record<Rarity, number> = {
   common: 70,
-  rare: 20,
+  rare: 22, // +2 от убранного legendary
   epic: 8,
-  legendary: 2,
+  legendary: 0, // disabled — никогда не выпадает
 }
 
 export interface PityState {

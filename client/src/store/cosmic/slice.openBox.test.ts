@@ -88,11 +88,13 @@ function restoreRandom(): void {
   restoreRandom()
 }
 
-// ─── Test 2: legendary roll resets all pity counters (via hard 25 guarantee) ───
+// ─── Test 2: legendary roll resets all pity counters (via hard 40 guarantee) ───
 {
   const h = makeHarness()
+  // Hard pity threshold is 40 (updated from original 25). Legendary weight=0 but
+  // hard pity short-circuit still fires at pity.legendary >= 40.
   h.set({
-    pityCounters: { common: 0, rare: 5, epic: 5, legendary: 25 },
+    pityCounters: { common: 0, rare: 5, epic: 5, legendary: 40 },
     boxes: [makeBox({ id: 'b2', element: 'ice' })],
   })
   h.state().openBox('b2')
@@ -108,14 +110,15 @@ function restoreRandom(): void {
   )
 }
 
-// ─── Test 3: rare guarantee — pity.rare = 3 → roll cannot be common ───
+// ─── Test 3: rare guarantee — pity.rare = 8 → roll cannot be common ───
 {
   const h = makeHarness()
-  // With pity.rare>=3 (no bonus), rollRarity returns rare/epic/legendary (70/25/5).
-  // r=0.5 * total(100) → falls в rare (70).
+  // Current threshold: pity.rare>=8 (updated from original 3).
+  // rollRarity returns rare/epic/legendary (70/25/5) from guarantee branch.
+  // r=0.5 * total(100) → r-=70 → -20 < 0 → rare.
   mockRandom(0.5)
   h.set({
-    pityCounters: { common: 0, rare: 3, epic: 0, legendary: 0 },
+    pityCounters: { common: 0, rare: 8, epic: 0, legendary: 0 },
     boxes: [makeBox({ id: 'b3', element: 'water' })],
   })
   h.state().openBox('b3')
@@ -140,12 +143,13 @@ function restoreRandom(): void {
   restoreRandom()
 }
 
-// ─── Test 4: epic guarantee — pity.epic = 10 → roll guaranteed epic+ ───
+// ─── Test 4: epic guarantee — pity.epic = 20 → roll guaranteed epic+ ───
 {
   const h = makeHarness()
+  // Current threshold: pity.epic>=20 (updated from original 10).
   mockRandom(0.5)
   h.set({
-    pityCounters: { common: 0, rare: 0, epic: 10, legendary: 0 },
+    pityCounters: { common: 0, rare: 0, epic: 20, legendary: 0 },
     boxes: [makeBox({ id: 'b4', element: 'plasma' })],
   })
   h.state().openBox('b4')
@@ -159,12 +163,13 @@ function restoreRandom(): void {
   restoreRandom()
 }
 
-// ─── Test 5: hard pity 25 — guaranteed legendary ───
+// ─── Test 5: hard pity 40 — guaranteed legendary ───
 {
   const h = makeHarness()
-  // No mock needed — at pity.legendary >= 25, rollRarity short-circuits.
+  // Hard pity fires at pity.legendary >= 40 (updated from original 25).
+  // Legendary weight=0 but hard pity short-circuit in rollRarity still returns 'legendary'.
   h.set({
-    pityCounters: { common: 0, rare: 0, epic: 0, legendary: 25 },
+    pityCounters: { common: 0, rare: 0, epic: 0, legendary: 40 },
     boxes: [makeBox({ id: 'b5', element: 'arcane' })],
   })
   h.state().openBox('b5')
@@ -228,8 +233,9 @@ function restoreRandom(): void {
   }
   eventBus.on('cosmic:box-opened', handler)
 
+  // Hard pity threshold is 40 (updated from original 25).
   h.set({
-    pityCounters: { common: 0, rare: 0, epic: 0, legendary: 25 },
+    pityCounters: { common: 0, rare: 0, epic: 0, legendary: 40 },
     boxes: [makeBox({ id: 'b8', element: 'shadow' })],
   })
   h.state().openBox('b8')

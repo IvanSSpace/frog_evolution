@@ -40,12 +40,9 @@ export const ELEMENTS: readonly Element[] = [
   'void',
 ]
 
-export const RARITIES: readonly Rarity[] = [
-  'common',
-  'rare',
-  'epic',
-  'legendary',
-]
+// NOTE: 'legendary' temporarily disabled (юзер уберёт epic тир после shrink 24→18).
+// Тип Rarity сохраняет 4 значения для будущего возврата legendary.
+export const RARITIES: readonly Rarity[] = ['common', 'rare', 'epic']
 
 // Phase 15 (REQ BOX-01): полный shape для inventory + cascade reveal flow.
 // Phase 11 stub имел { id, element, opened, sourceArchetype? } — расширено

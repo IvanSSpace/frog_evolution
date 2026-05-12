@@ -5,6 +5,7 @@ import {
   playAwakenedOnce,
   scheduleAwakenedIdle,
 } from '../../game/effects/elements/awakenedPresets'
+import { textureKeyForLevel, configForLevel } from '../../game/config/frogs'
 
 interface GalleryDetailPreviewProps {
   archetype: Element
@@ -13,19 +14,35 @@ interface GalleryDetailPreviewProps {
 
 const SIZE = 480
 
+const RARITY_TO_LEVEL: Record<Rarity, number> = {
+  common: 1,
+  rare: 7,
+  epic: 13,
+  legendary: 1, // disabled — fallback на L1
+}
+
 function makePreviewScene(
   archetype: Element,
   rarity: Rarity,
 ): typeof Phaser.Scene {
+  const level = RARITY_TO_LEVEL[rarity]
+  const textureKey = textureKeyForLevel(level)
+  const svgPath = configForLevel(level).path
+
   class PreviewScene extends Phaser.Scene {
     constructor() {
       super({ key: 'GalleryPreview' })
     }
 
+    preload() {
+      this.load.svg(textureKey, svgPath, { width: 160, height: 160 })
+    }
+
     create() {
       const container = this.add.container(SIZE / 2, SIZE / 2)
-      const placeholder = this.add.circle(0, 0, 80, 0x4ade80, 1)
-      container.add(placeholder)
+      const frog = this.add.image(0, 0, textureKey)
+      frog.setScale(1.5)
+      container.add(frog)
       playAwakenedOnce(this, container, archetype, rarity)
       scheduleAwakenedIdle(this, container, archetype, rarity)
     }
