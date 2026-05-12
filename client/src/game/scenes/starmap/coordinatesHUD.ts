@@ -103,13 +103,23 @@ export class CoordinatesHUDController {
         const bottom = view.bottom + margin
         const curZoom = cam.zoom
         for (const c of scene.lod.cullableData) {
-          // LOD-cut: при zoom ниже lodMinZoom объект скрыт независимо от viewport.
-          // Используется для фоновых планет: при сильном отдалении 434 контейнера
-          // не нужны — превращаются в шум, плюс одновременное setVisible(true)
-          // при возврате zoom давало FPS-spike.
+          // LOD-cut: при zoom ниже lodMinZoom объект полностью УБИРАЕТСЯ из
+          // display list (не только setVisible). Phaser иначе обходит все 600+
+          // скрытых контейнеров каждый кадр — display list iteration cost.
+          // При возврате zoom выше порога — addToDisplayList обратно.
           const lodOk = c.lodMinZoom === undefined || curZoom >= c.lodMinZoom
+          const wasInList = c.inDisplayList !== false // default true
+          if (lodOk && !wasInList) {
+            c.obj.addToDisplayList()
+            c.inDisplayList = true
+          } else if (!lodOk && wasInList) {
+            c.obj.removeFromDisplayList()
+            c.inDisplayList = false
+            continue // объект больше не в дереве — viewport-cull неактуален
+          }
+          if (!lodOk) continue // already out of display list
+
           const inView =
-            lodOk &&
             c.x + c.r > left &&
             c.x - c.r < right &&
             c.y + c.r > top &&

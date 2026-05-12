@@ -46,12 +46,18 @@ export interface CullableEntry {
   obj: Phaser.GameObjects.GameObject & {
     visible: boolean
     setVisible: (v: boolean) => unknown
+    removeFromDisplayList: () => unknown
+    addToDisplayList: (list?: unknown) => unknown
   }
   x: number
   y: number
   r: number
   /** Если zoom < lodMinZoom → объект скрыт независимо от viewport (LOD). */
   lodMinZoom?: number
+  /** Внутреннее состояние: находится ли объект в display list сцены сейчас.
+   *  При LOD-cut объект полностью removeFromDisplayList — Phaser не итерирует
+   *  его в render-loop. Иначе 600+ скрытых контейнеров обходятся каждый кадр. */
+  inDisplayList?: boolean
 }
 
 export interface MoonEntry {
