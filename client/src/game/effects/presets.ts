@@ -20,15 +20,18 @@ export const violetRing: NebulaPreset = {
     col2: '#5a189a',
     col3: '#e0aaff',
   },
+  // Все эффекты отключены — статичная туманность, GLSL компилятор выкидывает
+  // time-зависимые ветви через dead-code elimination. Помогает на mobile WebView
+  // где fragment shader был основным боттлнеком (см. план оптимизации StarMap).
   effects: {
-    breathe: { enabled: true, speed: 0.35, depth: 0.04 },
+    breathe: { enabled: false, speed: 0.35, depth: 0.04 },
     drift: { enabled: false, speed: 0.8, depth: 0 },
     swirl: { enabled: false, speed: 1, depth: 0 },
-    flow: { enabled: true, speed: 0.2, depth: 0, reverse: true },
-    twinkle: { enabled: true, speed: 0.7, depth: 0.28 },
+    flow: { enabled: false, speed: 0.2, depth: 0, reverse: true },
+    twinkle: { enabled: false, speed: 0.7, depth: 0.28 },
     wobble: { enabled: false, speed: 1, depth: 0.12 },
     pulse: { enabled: false, speed: 1, depth: 0.4 },
-    shimmer: { enabled: true, speed: 0.45, depth: 0.14 },
+    shimmer: { enabled: false, speed: 0.45, depth: 0.14 },
     zoom: { enabled: false, speed: 1, depth: 0.08 },
   },
   layout: {
@@ -42,6 +45,6 @@ export const violetRing: NebulaPreset = {
     type: 'maelstrom',
     size: 0.035,
     strength: 0.8,
-    speed: 0.05,
+    speed: 0, // 0 = чёрная дыра тоже статична, спирали не вращаются
   },
 }
