@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { eventBus } from '../store/eventBus'
 import { ELEMENTS, type Element, type Rarity } from '../store/cosmic/types'
@@ -26,6 +27,19 @@ export function SerumBar() {
   const serumDragActive = useGameStore((s) => s.serumDragActive)
   const currentLocation = useGameStore((s) => s.currentLocation)
 
+  const [starMapActive, setStarMapActive] = useState(false)
+
+  useEffect(() => {
+    const onOpen = () => setStarMapActive(true)
+    const onClose = () => setStarMapActive(false)
+    eventBus.on('starmap:open', onOpen)
+    eventBus.on('starmap:close', onClose)
+    return () => {
+      eventBus.off('starmap:open', onOpen)
+      eventBus.off('starmap:close', onClose)
+    }
+  }, [])
+
   // Показываем только редкость текущей локации
   const locationRarity = LOCATION_RARITY[currentLocation]
 
@@ -37,6 +51,7 @@ export function SerumBar() {
     }
   }
 
+  if (starMapActive) return null
   if (slots.length === 0) return null
 
   const handleTap = (element: Element, rarity: Rarity) => {
