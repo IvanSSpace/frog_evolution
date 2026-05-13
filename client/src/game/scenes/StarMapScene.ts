@@ -217,6 +217,7 @@ export class StarMapScene extends Phaser.Scene {
 
   preload() {
     this.load.image('spaceShip', '/spaceShip.webp')
+    this.load.image('nebulaBg', '/nebula_bh_maelstrom.png')
   }
 
   create() {
@@ -224,22 +225,18 @@ export class StarMapScene extends Phaser.Scene {
     // Стартуем с alpha 0 — game/index.ts сделает fade-in после create.
     this.cameras.main.setAlpha(0)
 
-    // Туманность через static RtT: шейдер запускается один раз, snapshot в RT,
-    // шейдер уничтожается. Console.log в NebulaBackground.ts покажет успех/fallback.
+    // Туманность — pre-baked PNG (nebula_bh_maelstrom.png, 605 KB).
+    // Static RtT шейдер не работал на mobile Phaser 4: rt.draw(shader) тихо
+    // не убивал live shader → лагало. PNG = гарантированно нулевая стоимость
+    // per-frame, обычное texture sampling.
     try {
       const NEBULA_SIZE = WORLD_SIZE * 2.5
-      this.nebula = attachNebulaBackground(this, violetRing, {
-        width: NEBULA_SIZE,
-        height: NEBULA_SIZE,
-        x: 0,
-        y: 0,
-        static: true,
-      })
-      const shader = this.nebula.shader
-      if (shader && typeof shader.setDepth === 'function')
-        shader.setDepth(-9000)
+      const bg = this.add.image(0, 0, 'nebulaBg')
+      bg.setOrigin(0.5, 0.5)
+      bg.setDepth(-9000)
+      bg.setDisplaySize(NEBULA_SIZE, NEBULA_SIZE)
     } catch (err) {
-      devWarn('[NebulaBackground] failed to attach:', err)
+      devWarn('[Nebula image] failed to attach:', err)
     }
 
     // Starfield перенесён ниже — нужны this.allSystems для кластеризации звёзд
