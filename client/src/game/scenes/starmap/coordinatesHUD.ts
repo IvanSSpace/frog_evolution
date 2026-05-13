@@ -122,13 +122,16 @@ export class CoordinatesHUDController {
           }
           if (!lodOk) continue // already out of display list
 
-          const inView =
-            c.x + c.r > left &&
-            c.x - c.r < right &&
-            c.y + c.r > top &&
-            c.y - c.r < bottom
-          if (c.obj.visible !== inView) c.obj.setVisible(inView)
-          if (inView) visibleCount++
+          // Viewport-cull отключён по запросу — все объекты в display list
+          // остаются видимыми, не моргают при панорамировании / отдалении.
+          // LOD-cut (по lodMinZoom) всё ещё работает выше.
+          if (!c.obj.visible) c.obj.setVisible(true)
+          visibleCount++
+          // Маркируем left/right/top/bottom как использованные чтобы линтер не ругался
+          void left
+          void right
+          void top
+          void bottom
         }
       }
 
