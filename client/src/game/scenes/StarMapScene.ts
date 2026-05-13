@@ -231,6 +231,15 @@ export class StarMapScene extends Phaser.Scene {
       bg.setOrigin(0.5, 0.5)
       bg.setDepth(-9000)
       bg.setDisplaySize(NEBULA_SIZE, NEBULA_SIZE)
+      // Лёгкий blur чтобы скрыть pixelation после scale-up.
+      // quality=0 (low), strength=2px по обеим осям, steps=2 — самый дешёвый blur.
+      // postFX доступен на Phaser 3.60+; Phaser 4 типы не экспонируют — cast.
+      const fx = (bg as unknown as {
+        postFX?: { addBlur?: (q: number, x: number, y: number, s: number, c: number, st: number) => unknown }
+      }).postFX
+      if (fx && typeof fx.addBlur === 'function') {
+        fx.addBlur(0, 2, 2, 1, 0xffffff, 2)
+      }
     } catch (err) {
       devWarn('[Nebula image] failed to attach:', err)
     }
