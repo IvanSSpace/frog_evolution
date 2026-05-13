@@ -1,6 +1,10 @@
 import Phaser from 'phaser'
 import { eventBus } from '../../store/eventBus'
-import type { NebulaBackgroundHandle } from '../effects/NebulaBackground'
+import {
+  attachNebulaBackground,
+  type NebulaBackgroundHandle,
+} from '../effects/NebulaBackground'
+import { violetRing } from '../effects/presets'
 import planetMap from '../data/planetMap.json'
 import {
   DPR,
@@ -213,7 +217,6 @@ export class StarMapScene extends Phaser.Scene {
 
   preload() {
     this.load.image('spaceShip', '/spaceShip.webp')
-    this.load.image('nebulaBg', '/nebula_bh_maelstrom.png')
   }
 
   create() {
@@ -225,23 +228,25 @@ export class StarMapScene extends Phaser.Scene {
     // Zero per-frame GPU cost: просто texture sampling из cached WebP (10 KB).
     // На mobile это самый дешёвый возможный фон. Если визуал надоест —
     // можно сгенерировать новые варианты nebula_NN.webp оффлайн.
+    // Туманность через шейдер с RtT (static mode):
+    // — Шейдер запускается ОДИН РАЗ при создании сцены, рендерит в 2048×2048 RT
+    // — RT отображается scaled до NEBULA_SIZE
+    // — Шейдер уничтожается, дальше только texture sampling (cheap)
+    // Это даёт визуал процедурного шейдера + perf статичной картинки.
     try {
       const NEBULA_SIZE = WORLD_SIZE * 2.5
-      const bg = this.add.image(0, 0, 'nebulaBg')
-      bg.setOrigin(0.5, 0.5)
-      bg.setDepth(-9000)
-      bg.setDisplaySize(NEBULA_SIZE, NEBULA_SIZE)
-      // Лёгкий blur чтобы скрыть pixelation после scale-up.
-      // quality=0 (low), strength=2px по обеим осям, steps=2 — самый дешёвый blur.
-      // postFX доступен на Phaser 3.60+; Phaser 4 типы не экспонируют — cast.
-      const fx = (bg as unknown as {
-        postFX?: { addBlur?: (q: number, x: number, y: number, s: number, c: number, st: number) => unknown }
-      }).postFX
-      if (fx && typeof fx.addBlur === 'function') {
-        fx.addBlur(0, 2, 2, 1, 0xffffff, 2)
-      }
+      this.nebula = attachNebulaBackground(this, violetRing, {
+        width: NEBULA_SIZE,
+        height: NEBULA_SIZE,
+        x: 0,
+        y: 0,
+        static: true,
+      })
+      const shader = this.nebula.shader
+      if (shader && typeof shader.setDepth === 'function')
+        shader.setDepth(-9000)
     } catch (err) {
-      devWarn('[Nebula image] failed to attach:', err)
+      devWarn('[NebulaBackground] failed to attach:', err)
     }
 
     // Starfield перенесён ниже — нужны this.allSystems для кластеризации звёзд
