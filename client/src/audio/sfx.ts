@@ -91,45 +91,62 @@ class SfxEngine {
           /* noop */
         }
       }
+      // Bus с soft-shelf filter — режет резкие высокие частоты выше 4 kHz,
+      // снимает "ухорезный" эффект bell/shimmer.
       const bus = new Tone.Volume(this.volume).toDestination()
+      const masterFilter = new Tone.Filter({
+        frequency: 4200,
+        type: 'lowpass',
+        rolloff: -12,
+      }).connect(bus)
 
-      const pluckRev = new Tone.Reverb({ decay: 1.2, wet: 0.25 }).connect(bus)
+      const pluckRev = new Tone.Reverb({ decay: 1.0, wet: 0.18 }).connect(
+        masterFilter,
+      )
       await pluckRev.generate()
       const pluck = new Tone.Synth({
         oscillator: { type: 'triangle' },
-        envelope: { attack: 0.005, decay: 0.12, sustain: 0, release: 0.12 },
+        // Softer attack — было 0.005 (clicky), теперь 0.02
+        envelope: { attack: 0.02, decay: 0.12, sustain: 0, release: 0.15 },
       }).connect(pluckRev)
-      pluck.volume.value = -8
+      pluck.volume.value = -12 // было -8
 
       const membrane = new Tone.MembraneSynth({
         pitchDecay: 0.06,
         octaves: 4,
-        envelope: { attack: 0.002, decay: 0.18, sustain: 0, release: 0.08 },
-      }).connect(new Tone.Filter(600, 'lowpass').connect(bus))
-      membrane.volume.value = -10
+        envelope: { attack: 0.005, decay: 0.18, sustain: 0, release: 0.08 },
+      }).connect(new Tone.Filter(500, 'lowpass').connect(masterFilter))
+      membrane.volume.value = -12 // было -10
 
-      const bellRev = new Tone.Reverb({ decay: 2.5, wet: 0.45 }).connect(bus)
+      const bellRev = new Tone.Reverb({ decay: 2.0, wet: 0.32 }).connect(
+        masterFilter,
+      )
       await bellRev.generate()
-      const bellEcho = new Tone.FeedbackDelay('16n', 0.25).connect(bellRev)
+      const bellEcho = new Tone.FeedbackDelay('16n', 0.2).connect(bellRev)
       const bell = new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: 'sine' },
-        envelope: { attack: 0.005, decay: 0.4, sustain: 0.15, release: 0.6 },
+        // Softer attack (было 0.005)
+        envelope: { attack: 0.03, decay: 0.4, sustain: 0.15, release: 0.7 },
       }).connect(bellEcho)
-      bell.volume.value = -6
+      bell.volume.value = -12 // было -6 (на 6 dB тише)
 
-      const shimmerRev = new Tone.Reverb({ decay: 4, wet: 0.65 }).connect(bus)
+      const shimmerRev = new Tone.Reverb({ decay: 3.5, wet: 0.5 }).connect(
+        masterFilter,
+      )
       await shimmerRev.generate()
-      const shimmerEcho = new Tone.FeedbackDelay('8n', 0.35).connect(shimmerRev)
+      const shimmerEcho = new Tone.FeedbackDelay('8n', 0.3).connect(shimmerRev)
       const shimmer = new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: 'triangle' },
-        envelope: { attack: 0.02, decay: 0.6, sustain: 0.3, release: 1.4 },
+        envelope: { attack: 0.05, decay: 0.6, sustain: 0.3, release: 1.4 },
       }).connect(shimmerEcho)
-      shimmer.volume.value = -10
+      shimmer.volume.value = -14 // было -10
 
-      const tapPlayer = new Tone.Player('/frogTap.mp3').connect(bus)
-      tapPlayer.volume.value = -10
-      const mergePlayer = new Tone.Player('/frogMerge.mp3').connect(bus)
-      mergePlayer.volume.value = -10
+      const tapPlayer = new Tone.Player('/frogTap.mp3').connect(masterFilter)
+      tapPlayer.volume.value = -14 // было -10
+      const mergePlayer = new Tone.Player('/frogMerge.mp3').connect(
+        masterFilter,
+      )
+      mergePlayer.volume.value = -14 // было -10
       await Tone.loaded()
 
       this.kit = { pluck, membrane, bell, shimmer, tapPlayer, mergePlayer, bus }
@@ -182,45 +199,40 @@ class SfxEngine {
           break
         }
         case 'evolve': {
-          // Триумфальный major + октавный шиммер сверху
-          const root = 60 + Math.min(level, 14)
+          // Триумфальный major. Убрали лишние октавные bell-stabs — было слишком ярко.
+          const root = 58 + Math.min(level, 12) // на 2 полутона ниже
           const triad = [root, root + 4, root + 7, root + 12].map((n) =>
             Tone.Frequency(n, 'midi').toFrequency(),
           )
-          k.shimmer.triggerAttackRelease(triad, 1.4, now, 0.6)
-          // Сверху — звезда: октавная нота через 0.15s
-          k.bell.triggerAttackRelease(
-            Tone.Frequency(root + 24, 'midi').toFrequency(),
-            0.6,
-            now + 0.15,
-            0.5,
-          )
+          k.shimmer.triggerAttackRelease(triad, 1.4, now, 0.5)
+          // Один мягкий "ping" сверху вместо двух
           k.bell.triggerAttackRelease(
             Tone.Frequency(root + 19, 'midi').toFrequency(),
-            0.5,
-            now + 0.3,
-            0.4,
+            0.7,
+            now + 0.2,
+            0.35,
           )
           break
         }
         case 'boxOpen': {
-          // Удар + восходящий каскад колоколов для открытия бокса
-          k.membrane.triggerAttackRelease('C2', '8n', now, 0.5)
-          const cascade = [60, 64, 67, 72] // C4 E4 G4 C5
+          // Удар + 3-нотный каскад (было 4 + shimmer). Меньше резких bell stabs.
+          k.membrane.triggerAttackRelease('C2', '8n', now, 0.45)
+          const cascade = [60, 64, 67] // C4 E4 G4 (убрана C5 — была пиковая)
           cascade.forEach((midi, i) => {
             const freq = Tone.Frequency(midi, 'midi').toFrequency()
             k.bell.triggerAttackRelease(
               freq,
-              0.5,
+              0.45,
               now + 0.08 + i * 0.1,
-              0.55 + i * 0.05,
+              0.4,
             )
           })
+          // Мягкий shimmer tail
           k.shimmer.triggerAttackRelease(
-            Tone.Frequency(72, 'midi').toFrequency(),
-            1.2,
-            now + 0.45,
-            0.45,
+            Tone.Frequency(67, 'midi').toFrequency(),
+            1.0,
+            now + 0.35,
+            0.3,
           )
           break
         }
