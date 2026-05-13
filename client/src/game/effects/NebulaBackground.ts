@@ -452,14 +452,12 @@ export interface NebulaBackgroundHandle {
   destroy: () => void
 }
 
-// Внутреннее разрешение для static (RT) режима. 1024×1024 = 4MB RGBA.
+// Внутреннее разрешение для static (RT) режима. 512×512 = 1MB RGBA.
 // Шейдер запускается один раз → snapshot в RT → шейдер уничтожается.
 // Per-frame cost дальше = просто texture sampling (~0).
-// 1024 безопаснее для mobile GPU memory чем 2048 (4× меньше).
-// Туманность размытая по природе — scale-up до WORLD_SIZE почти не виден.
-// Чёрная дыра сохраняет резкость т.к. её центр в середине текстуры,
-// scale-up на ядре минимальный.
-const STATIC_RT_RES = 1024
+// 512 — самый дешёвый вариант для mobile GPU. Туманность размытая,
+// scale-up до WORLD_SIZE визуально не виден из-за blur от bilinear filter.
+const STATIC_RT_RES = 512
 
 export function attachNebulaBackground(
   scene: Phaser.Scene,
@@ -647,6 +645,12 @@ export function attachNebulaBackground(
         staticRt.draw(shader, renderW / 2, renderH / 2)
         // Шейдер больше не нужен — уничтожаем чтобы GPU не тратил такты
         if (typeof shader.destroy === 'function') shader.destroy()
+        // eslint-disable-next-line no-console
+        console.log(
+          '[NebulaBackground] ✓ static RT snapshot built, shader destroyed (RT_RES=' +
+            renderW +
+            ')',
+        )
       } catch (e) {
         // Fallback: если RT не получился, оставляем live shader. Лучше лагать
         // чем не показать туманность совсем.

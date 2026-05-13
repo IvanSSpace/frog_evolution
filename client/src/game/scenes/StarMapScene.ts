@@ -1,9 +1,10 @@
 import Phaser from 'phaser'
 import { eventBus } from '../../store/eventBus'
-// FLOOR TEST imports neutered:
-// import { attachNebulaBackground } from '../effects/NebulaBackground'
-// import { violetRing } from '../effects/presets'
-import type { NebulaBackgroundHandle } from '../effects/NebulaBackground'
+import {
+  attachNebulaBackground,
+  type NebulaBackgroundHandle,
+} from '../effects/NebulaBackground'
+import { violetRing } from '../effects/presets'
 import planetMap from '../data/planetMap.json'
 import {
   DPR,
@@ -42,7 +43,7 @@ import { setupVeranLightning } from './starmap/ambient/veranLightning'
 import { setupRelictMourning } from './starmap/ambient/relictMourning'
 import { LODManager } from './starmap/lod/lodManager'
 import { PlanetRenderer } from './starmap/rendering/planetRenderer'
-// import { devWarn } from '../../utils/devLog' // FLOOR TEST: nebula off
+import { devWarn } from '../../utils/devLog'
 
 // Phaser-сцена Звёздной карты. Запускается рядом с MainScene через scene-manager.
 // Ничего о gameStore не знает — это «декоративная карта» для просмотра системы
@@ -223,8 +224,23 @@ export class StarMapScene extends Phaser.Scene {
     // Стартуем с alpha 0 — game/index.ts сделает fade-in после create.
     this.cameras.main.setAlpha(0)
 
-    // FLOOR TEST: nebula отключена.
-    // try { ... attachNebulaBackground ... } catch { ... }
+    // Туманность через static RtT: шейдер запускается один раз, snapshot в RT,
+    // шейдер уничтожается. Console.log в NebulaBackground.ts покажет успех/fallback.
+    try {
+      const NEBULA_SIZE = WORLD_SIZE * 2.5
+      this.nebula = attachNebulaBackground(this, violetRing, {
+        width: NEBULA_SIZE,
+        height: NEBULA_SIZE,
+        x: 0,
+        y: 0,
+        static: true,
+      })
+      const shader = this.nebula.shader
+      if (shader && typeof shader.setDepth === 'function')
+        shader.setDepth(-9000)
+    } catch (err) {
+      devWarn('[NebulaBackground] failed to attach:', err)
+    }
 
     // Starfield перенесён ниже — нужны this.allSystems для кластеризации звёзд
 
