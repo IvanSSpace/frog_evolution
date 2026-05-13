@@ -1660,19 +1660,13 @@ export class PlanetRenderer {
       })
     }
 
-    // Маркер обитаемости — над планетой значок цивилизации
+    // Маркер обитаемости — только жёлтое кольцо вокруг планеты.
+    // Emoji-значки убраны: каждый был отдельным Text = уникальная текстура
+    // = отдельный draw call. 67 обитаемых × 1 draw call = серьёзный налог
+    // на mobile GPU (state switches between unique textures).
     if (sys.isInhabited) {
-      // Контур-кольцо подсвечивает обитаемую планету
       g.lineStyle(1.5 * DPR, 0xfde047, 0.6)
       g.strokeCircle(0, 0, sys.size + 4 * DPR)
-      // Значок цивилизации
-      const civIcons = ['🏛', '📡', '⚙', '🛰', '🏯', '🪐']
-      const icon = civIcons[Math.floor(rng() * civIcons.length)]
-      const tag = this.scene.add.text(0, -sys.size - 14 * DPR, icon, {
-        fontSize: 14 * DPR,
-      })
-      tag.setOrigin(0.5)
-      container.add(tag)
     }
 
     // Idle-анимации у фоновых планет ОТКЛЮЧЕНЫ — было 454 активных tween (227 × 2),
