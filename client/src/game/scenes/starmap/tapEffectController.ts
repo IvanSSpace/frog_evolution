@@ -1,47 +1,169 @@
-// Pooled tap-effect controller. Один разделяемый instance на сцену.
-// При тапе планеты — берёт rings/particles из preallocated пула, проигрывает
-// короткий эффект (300-600ms) и возвращает в пул через setVisible(false).
-// Zero allocations на runtime → нет GC pressure → не лагает.
+// Pooled tap-effect controller — расширенная версия.
+// Каждый архетип получает уникальную комбинацию из примитивов:
+//   - rings: расширяющиеся кольца (multi-color, multi-ring, staggered, optional spin)
+//   - particles: частицы по pattern'у (radial / spiral / random / arc)
+//   - lines: короткие линии (lightning, beams)
+//   - emoji floater: всплывающий emoji-символ
 //
-// Per-archetype presets: каждый тип планеты получает свой "акцент"
-// (цвет, кол-во rings, particles), сверху общий squish (см. renderMain/renderBg).
+// Pool sizes increased для concurrent taps:
+//   12 rings, 20 particles, 6 lines, 4 emoji texts
+// Все preallocated, recycled circularly → zero allocations runtime.
 
 import type Phaser from 'phaser'
 import type { StarMapScene } from '../StarMapScene'
 
 const DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 2))
 
-const RING_POOL = 6
-const PARTICLE_POOL = 12
+const RING_POOL = 12
+const PARTICLE_POOL = 20
+const LINE_POOL = 6
+const EMOJI_POOL = 4
 
-interface ArchetypePreset {
-  ringCount: 1 | 2
-  ringDelayMs: number
-  ringDurationMs: number
-  ringScaleTo: number
-  ringAlphaStart: number
-  ringColor: number | 'inherit' // 'inherit' = sys.color
-  particleCount: 0 | 2 | 3 | 4
+type ParticlePattern = 'radial' | 'spiral' | 'random' | 'arc'
+
+interface RingSpec {
+  color: number | 'inherit'
+  delay: number
+  duration: number
+  scaleTo: number
+  alphaStart: number
+  thickness?: number
+  spin?: number // angle to rotate during scale (radians)
 }
 
-// Палитра + поведение на архетип. 'inherit' = используем sys.color.
+interface ParticleSpec {
+  count: number
+  color: number | 'inherit'
+  pattern: ParticlePattern
+  distMul: number // multiplier of planet size
+  size?: number // particle radius in DPR
+  duration: number
+  scatter?: number // angle scatter in radians for 'arc'/'random'
+}
+
+interface LineSpec {
+  count: number
+  color: number | 'inherit'
+  lengthMul: number
+  duration: number
+  zigzag?: boolean
+}
+
+interface ArchetypePreset {
+  rings: RingSpec[]
+  particles?: ParticleSpec
+  lines?: LineSpec
+  emoji?: string
+}
+
 const PRESETS: Record<string, ArchetypePreset> = {
-  // BG archetypes
-  lava: { ringCount: 1, ringDelayMs: 0, ringDurationMs: 380, ringScaleTo: 2.4, ringAlphaStart: 0.95, ringColor: 0xff6b1a, particleCount: 4 },
-  ocean: { ringCount: 2, ringDelayMs: 90, ringDurationMs: 500, ringScaleTo: 2.6, ringAlphaStart: 0.75, ringColor: 0x3b82f6, particleCount: 0 },
-  ice: { ringCount: 1, ringDelayMs: 0, ringDurationMs: 350, ringScaleTo: 2.2, ringAlphaStart: 0.9, ringColor: 0xa5f3fc, particleCount: 3 },
-  forest: { ringCount: 1, ringDelayMs: 0, ringDurationMs: 450, ringScaleTo: 2.2, ringAlphaStart: 0.75, ringColor: 0x10b981, particleCount: 0 },
-  desert: { ringCount: 1, ringDelayMs: 0, ringDurationMs: 400, ringScaleTo: 2.0, ringAlphaStart: 0.7, ringColor: 0xd97706, particleCount: 2 },
-  toxic: { ringCount: 1, ringDelayMs: 0, ringDurationMs: 400, ringScaleTo: 2.4, ringAlphaStart: 0.85, ringColor: 0xa3e635, particleCount: 2 },
-  plasma: { ringCount: 1, ringDelayMs: 0, ringDurationMs: 300, ringScaleTo: 2.6, ringAlphaStart: 1.0, ringColor: 0xfde047, particleCount: 4 },
-  binary: { ringCount: 2, ringDelayMs: 100, ringDurationMs: 350, ringScaleTo: 2.4, ringAlphaStart: 0.9, ringColor: 0xfacc15, particleCount: 0 },
-  mineral: { ringCount: 1, ringDelayMs: 0, ringDurationMs: 350, ringScaleTo: 1.8, ringAlphaStart: 0.85, ringColor: 0xc4b5fd, particleCount: 0 },
-  dead: { ringCount: 1, ringDelayMs: 0, ringDurationMs: 600, ringScaleTo: 1.8, ringAlphaStart: 0.5, ringColor: 0x9ca3af, particleCount: 0 },
-  gas_giant: { ringCount: 1, ringDelayMs: 0, ringDurationMs: 450, ringScaleTo: 2.4, ringAlphaStart: 0.75, ringColor: 0xfb923c, particleCount: 0 },
-  gas_ringed: { ringCount: 2, ringDelayMs: 60, ringDurationMs: 450, ringScaleTo: 2.4, ringAlphaStart: 0.7, ringColor: 0xa855f7, particleCount: 0 },
-  shadow: { ringCount: 1, ringDelayMs: 0, ringDurationMs: 500, ringScaleTo: 2.0, ringAlphaStart: 0.65, ringColor: 0x6b21a8, particleCount: 0 },
-  // Main race types — наследуем цвет от расы
-  default: { ringCount: 1, ringDelayMs: 0, ringDurationMs: 400, ringScaleTo: 2.2, ringAlphaStart: 0.8, ringColor: 'inherit', particleCount: 2 },
+  // 🔥 Lava — горячая взрывная вспышка
+  lava: {
+    rings: [
+      { color: 0xff6b1a, delay: 0, duration: 380, scaleTo: 2.4, alphaStart: 0.95, thickness: 2.5 },
+      { color: 0xfacc15, delay: 80, duration: 320, scaleTo: 1.8, alphaStart: 0.7, thickness: 1.5 },
+    ],
+    particles: { count: 6, color: 0xff8c1a, pattern: 'radial', distMul: 2.2, duration: 500, size: 2.5 },
+    emoji: '✨',
+  },
+  // 💧 Ocean — рябь по воде (3 кольца ripple)
+  ocean: {
+    rings: [
+      { color: 0x3b82f6, delay: 0, duration: 500, scaleTo: 2.6, alphaStart: 0.75 },
+      { color: 0x60a5fa, delay: 100, duration: 500, scaleTo: 2.2, alphaStart: 0.6 },
+      { color: 0x93c5fd, delay: 200, duration: 500, scaleTo: 1.8, alphaStart: 0.45 },
+    ],
+  },
+  // ❄️ Ice — кристаллический разлёт
+  ice: {
+    rings: [
+      { color: 0xa5f3fc, delay: 0, duration: 350, scaleTo: 2.2, alphaStart: 0.9, thickness: 2 },
+    ],
+    particles: { count: 6, color: 0xe0f2fe, pattern: 'radial', distMul: 2.4, duration: 600, size: 1.8 },
+    lines: { count: 4, color: 0xa5f3fc, lengthMul: 1.5, duration: 350 },
+  },
+  // 🌲 Forest — мягкий растекающийся glow
+  forest: {
+    rings: [
+      { color: 0x10b981, delay: 0, duration: 500, scaleTo: 2.4, alphaStart: 0.7 },
+      { color: 0x86efac, delay: 80, duration: 450, scaleTo: 2.0, alphaStart: 0.5 },
+    ],
+    particles: { count: 4, color: 0x86efac, pattern: 'random', distMul: 1.8, scatter: Math.PI * 0.6, duration: 600 },
+  },
+  // 🏜️ Desert — песчаная пыль
+  desert: {
+    rings: [
+      { color: 0xd97706, delay: 0, duration: 400, scaleTo: 2.0, alphaStart: 0.7 },
+    ],
+    particles: { count: 6, color: 0xfbbf24, pattern: 'random', distMul: 1.6, scatter: Math.PI * 2, duration: 700, size: 1.5 },
+  },
+  // ☠️ Toxic — болезненное зелёное облако
+  toxic: {
+    rings: [
+      { color: 0xa3e635, delay: 0, duration: 420, scaleTo: 2.4, alphaStart: 0.85 },
+      { color: 0x4ade80, delay: 120, duration: 380, scaleTo: 2.0, alphaStart: 0.6 },
+    ],
+    particles: { count: 3, color: 0xa3e635, pattern: 'spiral', distMul: 2.0, duration: 550 },
+  },
+  // 🌋 Plasma — молниеносная вспышка
+  plasma: {
+    rings: [
+      { color: 0xfde047, delay: 0, duration: 280, scaleTo: 2.6, alphaStart: 1.0, thickness: 3 },
+    ],
+    particles: { count: 6, color: 0xfde047, pattern: 'radial', distMul: 2.4, duration: 380, size: 2 },
+    lines: { count: 5, color: 0xfacc15, lengthMul: 1.8, duration: 240, zigzag: true },
+  },
+  // ⚡ Binary — двойная вспышка
+  binary: {
+    rings: [
+      { color: 0xfacc15, delay: 0, duration: 320, scaleTo: 2.4, alphaStart: 0.9, thickness: 2 },
+      { color: 0xfde047, delay: 130, duration: 320, scaleTo: 2.4, alphaStart: 0.9, thickness: 2 },
+    ],
+    particles: { count: 4, color: 0xfde047, pattern: 'arc', scatter: Math.PI, distMul: 2.0, duration: 400 },
+  },
+  // ⛏️ Mineral — кристаллический холодный sparkle
+  mineral: {
+    rings: [
+      { color: 0xc4b5fd, delay: 0, duration: 360, scaleTo: 1.8, alphaStart: 0.85, thickness: 2 },
+    ],
+    lines: { count: 6, color: 0xc4b5fd, lengthMul: 1.4, duration: 380 },
+  },
+  // 💀 Dead — тусклый медленный фейд
+  dead: {
+    rings: [
+      { color: 0x9ca3af, delay: 0, duration: 700, scaleTo: 1.8, alphaStart: 0.5 },
+    ],
+  },
+  // 🌀 Gas giant — закручивающийся свирл
+  gas_giant: {
+    rings: [
+      { color: 0xfb923c, delay: 0, duration: 500, scaleTo: 2.4, alphaStart: 0.75, spin: Math.PI * 0.6 },
+    ],
+    particles: { count: 5, color: 0xfdba74, pattern: 'spiral', distMul: 2.0, duration: 650 },
+  },
+  // 🪐 Gas ringed — Saturn-like, 2 кольца + spiral particles
+  gas_ringed: {
+    rings: [
+      { color: 0xa855f7, delay: 0, duration: 480, scaleTo: 2.4, alphaStart: 0.75, spin: Math.PI * 0.4 },
+      { color: 0xd8b4fe, delay: 80, duration: 420, scaleTo: 2.0, alphaStart: 0.55, spin: Math.PI * 0.4 },
+    ],
+    particles: { count: 6, color: 0xc4b5fd, pattern: 'spiral', distMul: 2.4, duration: 600 },
+  },
+  // 🌑 Shadow — тёмный мистический свирл
+  shadow: {
+    rings: [
+      { color: 0x6b21a8, delay: 0, duration: 550, scaleTo: 2.0, alphaStart: 0.7, spin: Math.PI * 0.5 },
+    ],
+    particles: { count: 3, color: 0xa855f7, pattern: 'spiral', distMul: 1.8, duration: 700 },
+  },
+  // Default для main races — наследуем цвет
+  default: {
+    rings: [
+      { color: 'inherit', delay: 0, duration: 400, scaleTo: 2.2, alphaStart: 0.8, thickness: 2 },
+      { color: 'inherit', delay: 90, duration: 380, scaleTo: 1.7, alphaStart: 0.5 },
+    ],
+    particles: { count: 4, color: 'inherit', pattern: 'radial', distMul: 2.0, duration: 500 },
+  },
 }
 
 export class TapEffectController {
@@ -50,6 +172,10 @@ export class TapEffectController {
   private ringIdx = 0
   private particlePool: Phaser.GameObjects.Graphics[] = []
   private particleIdx = 0
+  private linePool: Phaser.GameObjects.Graphics[] = []
+  private lineIdx = 0
+  private emojiPool: Phaser.GameObjects.Text[] = []
+  private emojiIdx = 0
   private initialized = false
 
   constructor(scene: StarMapScene) {
@@ -71,6 +197,190 @@ export class TapEffectController {
       g.setVisible(false)
       this.particlePool.push(g)
     }
+    for (let i = 0; i < LINE_POOL; i++) {
+      const g = this.scene.add.graphics()
+      g.setDepth(32)
+      g.setVisible(false)
+      this.linePool.push(g)
+    }
+    for (let i = 0; i < EMOJI_POOL; i++) {
+      const t = this.scene.add.text(0, 0, '', { fontSize: `${14 * DPR}px` })
+      t.setOrigin(0.5)
+      t.setDepth(33)
+      t.setVisible(false)
+      this.emojiPool.push(t)
+    }
+  }
+
+  private resolveColor(c: number | 'inherit', fallback: number): number {
+    return c === 'inherit' ? fallback : c
+  }
+
+  private playRing(
+    x: number,
+    y: number,
+    baseR: number,
+    spec: RingSpec,
+    fallbackColor: number,
+  ): void {
+    const ring = this.ringPool[this.ringIdx]
+    this.ringIdx = (this.ringIdx + 1) % RING_POOL
+    this.scene.tweens.killTweensOf(ring)
+    const color = this.resolveColor(spec.color, fallbackColor)
+    ring.clear()
+    ring.lineStyle((spec.thickness ?? 2) * DPR, color, 1)
+    ring.strokeCircle(0, 0, baseR)
+    ring.setPosition(x, y)
+    ring.setScale(0.85)
+    ring.setAlpha(spec.alphaStart)
+    ring.setRotation(0)
+    ring.setVisible(true)
+    const target: Record<string, number> = {
+      scale: spec.scaleTo,
+      alpha: 0,
+    }
+    if (spec.spin !== undefined) target.rotation = spec.spin
+    this.scene.tweens.add({
+      targets: ring,
+      ...target,
+      duration: spec.duration,
+      delay: spec.delay,
+      ease: 'Quad.easeOut',
+      onComplete: () => ring.setVisible(false),
+    })
+  }
+
+  private playParticles(
+    x: number,
+    y: number,
+    baseR: number,
+    spec: ParticleSpec,
+    fallbackColor: number,
+  ): void {
+    const color = this.resolveColor(spec.color, fallbackColor)
+    const baseAngle = Math.random() * Math.PI * 2
+    const size = spec.size ?? 2
+    for (let i = 0; i < spec.count; i++) {
+      const part = this.particlePool[this.particleIdx]
+      this.particleIdx = (this.particleIdx + 1) % PARTICLE_POOL
+      this.scene.tweens.killTweensOf(part)
+      part.clear()
+      part.fillStyle(color, 1)
+      part.fillCircle(0, 0, size * DPR)
+      let angle: number
+      if (spec.pattern === 'radial') {
+        angle = baseAngle + (i / spec.count) * Math.PI * 2
+      } else if (spec.pattern === 'spiral') {
+        angle = baseAngle + (i / spec.count) * Math.PI * 2
+      } else if (spec.pattern === 'arc') {
+        const arc = spec.scatter ?? Math.PI
+        angle = baseAngle - arc / 2 + (i / Math.max(1, spec.count - 1)) * arc
+      } else {
+        // random
+        const scatter = spec.scatter ?? Math.PI * 2
+        angle = baseAngle + (Math.random() - 0.5) * scatter
+      }
+      const dist = baseR * spec.distMul * (spec.pattern === 'random' ? 0.7 + Math.random() * 0.6 : 1)
+      part.setPosition(x, y)
+      part.setAlpha(1)
+      part.setVisible(true)
+      const targetX = x + Math.cos(angle) * dist
+      const targetY = y + Math.sin(angle) * dist
+      // Spiral: добавить кривизну через промежуточный onUpdate (без него — то же что radial)
+      if (spec.pattern === 'spiral') {
+        // Параметризованная спираль: t от 0 до 1, угол = baseAngle + t * twist
+        const twist = Math.PI * 0.8
+        const tweenObj = { t: 0 }
+        this.scene.tweens.add({
+          targets: tweenObj,
+          t: 1,
+          duration: spec.duration,
+          ease: 'Quad.easeOut',
+          onUpdate: () => {
+            const a = angle + tweenObj.t * twist
+            const r = dist * tweenObj.t
+            part.x = x + Math.cos(a) * r
+            part.y = y + Math.sin(a) * r
+            part.alpha = 1 - tweenObj.t
+          },
+          onComplete: () => part.setVisible(false),
+        })
+      } else {
+        this.scene.tweens.add({
+          targets: part,
+          x: targetX,
+          y: targetY,
+          alpha: 0,
+          duration: spec.duration,
+          ease: 'Quad.easeOut',
+          onComplete: () => part.setVisible(false),
+        })
+      }
+    }
+  }
+
+  private playLines(
+    x: number,
+    y: number,
+    baseR: number,
+    spec: LineSpec,
+    fallbackColor: number,
+  ): void {
+    const color = this.resolveColor(spec.color, fallbackColor)
+    const baseAngle = Math.random() * Math.PI * 2
+    for (let i = 0; i < spec.count; i++) {
+      const line = this.linePool[this.lineIdx]
+      this.lineIdx = (this.lineIdx + 1) % LINE_POOL
+      this.scene.tweens.killTweensOf(line)
+      line.clear()
+      line.lineStyle(2 * DPR, color, 1)
+      const angle = baseAngle + (i / spec.count) * Math.PI * 2
+      const sx = Math.cos(angle) * baseR
+      const sy = Math.sin(angle) * baseR
+      const ex = Math.cos(angle) * baseR * spec.lengthMul
+      const ey = Math.sin(angle) * baseR * spec.lengthMul
+      if (spec.zigzag) {
+        const midA = (sx + ex) / 2 + Math.cos(angle + Math.PI / 2) * 3 * DPR
+        const midB = (sy + ey) / 2 + Math.sin(angle + Math.PI / 2) * 3 * DPR
+        line.beginPath()
+        line.moveTo(sx, sy)
+        line.lineTo(midA, midB)
+        line.lineTo(ex, ey)
+        line.strokePath()
+      } else {
+        line.lineBetween(sx, sy, ex, ey)
+      }
+      line.setPosition(x, y)
+      line.setAlpha(1)
+      line.setVisible(true)
+      this.scene.tweens.add({
+        targets: line,
+        alpha: 0,
+        duration: spec.duration,
+        ease: 'Quad.easeOut',
+        onComplete: () => line.setVisible(false),
+      })
+    }
+  }
+
+  private playEmoji(x: number, y: number, baseR: number, emoji: string): void {
+    const t = this.emojiPool[this.emojiIdx]
+    this.emojiIdx = (this.emojiIdx + 1) % EMOJI_POOL
+    this.scene.tweens.killTweensOf(t)
+    t.setText(emoji)
+    t.setPosition(x, y - baseR * 0.6)
+    t.setAlpha(1)
+    t.setScale(0.6)
+    t.setVisible(true)
+    this.scene.tweens.add({
+      targets: t,
+      y: y - baseR * 2,
+      alpha: 0,
+      scale: 1.2,
+      duration: 600,
+      ease: 'Quad.easeOut',
+      onComplete: () => t.setVisible(false),
+    })
   }
 
   /** archetypeOrType: для BG — sys.archetype, для main — sys.type. */
@@ -83,57 +393,18 @@ export class TapEffectController {
   ): void {
     if (!this.initialized) this.init()
     const preset = PRESETS[archetypeOrType] ?? PRESETS.default
-    const color =
-      preset.ringColor === 'inherit' ? fallbackColor : preset.ringColor
-
-    // ── Rings ──
-    for (let r = 0; r < preset.ringCount; r++) {
-      const ring = this.ringPool[this.ringIdx]
-      this.ringIdx = (this.ringIdx + 1) % RING_POOL
-      this.scene.tweens.killTweensOf(ring)
-      ring.clear()
-      ring.lineStyle(2 * DPR, color, 1)
-      ring.strokeCircle(0, 0, planetSize + 4 * DPR)
-      ring.setPosition(x, y)
-      ring.setScale(0.85)
-      ring.setAlpha(preset.ringAlphaStart)
-      ring.setVisible(true)
-      this.scene.tweens.add({
-        targets: ring,
-        scale: preset.ringScaleTo,
-        alpha: 0,
-        duration: preset.ringDurationMs,
-        delay: preset.ringDelayMs * r,
-        ease: 'Quad.easeOut',
-        onComplete: () => ring.setVisible(false),
-      })
+    const baseR = planetSize + 4 * DPR
+    for (const ring of preset.rings) {
+      this.playRing(x, y, baseR, ring, fallbackColor)
     }
-
-    // ── Particles (outward dots) ──
-    if (preset.particleCount > 0) {
-      const baseAngle = Math.random() * Math.PI * 2
-      for (let p = 0; p < preset.particleCount; p++) {
-        const part = this.particlePool[this.particleIdx]
-        this.particleIdx = (this.particleIdx + 1) % PARTICLE_POOL
-        this.scene.tweens.killTweensOf(part)
-        part.clear()
-        part.fillStyle(color, 1)
-        part.fillCircle(0, 0, 2 * DPR)
-        const angle = baseAngle + (p / preset.particleCount) * Math.PI * 2
-        const dist = planetSize * 1.8
-        part.setPosition(x, y)
-        part.setAlpha(1)
-        part.setVisible(true)
-        this.scene.tweens.add({
-          targets: part,
-          x: x + Math.cos(angle) * dist,
-          y: y + Math.sin(angle) * dist,
-          alpha: 0,
-          duration: 420,
-          ease: 'Quad.easeOut',
-          onComplete: () => part.setVisible(false),
-        })
-      }
+    if (preset.particles) {
+      this.playParticles(x, y, planetSize, preset.particles, fallbackColor)
+    }
+    if (preset.lines) {
+      this.playLines(x, y, baseR, preset.lines, fallbackColor)
+    }
+    if (preset.emoji) {
+      this.playEmoji(x, y, planetSize, preset.emoji)
     }
   }
 }
