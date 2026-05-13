@@ -529,6 +529,7 @@ export class PlanetRenderer {
     let downTime = 0
     let downX = 0,
       downY = 0
+    let springTween: Phaser.Tweens.Tween | null = null
     container.on('pointerdown', (p: Phaser.Input.Pointer) => {
       downTime = Date.now()
       downX = p.x
@@ -548,6 +549,29 @@ export class PlanetRenderer {
         this.scene.popoverController.selectSystem(sys)
         // Main planet: показать тот же popup что у bg-планет (имя + тип + Лететь/Изучить)
         this.scene.popoverController.scheduleBgNamePopup(sys)
+        // Spring-анимация (как у BG): squish по вертикали → bounce-back.
+        if (springTween) {
+          springTween.stop()
+          springTween = null
+        }
+        container.scaleY = 1.0
+        springTween = this.scene.tweens.add({
+          targets: container,
+          scaleY: 0.78,
+          duration: 55,
+          ease: 'Power2.easeIn',
+          onComplete: () => {
+            springTween = this.scene.tweens.add({
+              targets: container,
+              scaleY: 1.0,
+              duration: 150,
+              ease: 'Back.easeOut',
+              onComplete: () => {
+                springTween = null
+              },
+            })
+          },
+        })
       }
     })
 
