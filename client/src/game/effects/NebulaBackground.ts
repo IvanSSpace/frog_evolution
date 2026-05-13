@@ -452,11 +452,14 @@ export interface NebulaBackgroundHandle {
   destroy: () => void
 }
 
-// Внутреннее разрешение для static (RT) режима. 2048×2048 = 16MB RGBA.
+// Внутреннее разрешение для static (RT) режима. 1024×1024 = 4MB RGBA.
 // Шейдер запускается один раз → snapshot в RT → шейдер уничтожается.
 // Per-frame cost дальше = просто texture sampling (~0).
-// Высокое разрешение даёт хорошее качество при scale-up до WORLD_SIZE.
-const STATIC_RT_RES = 2048
+// 1024 безопаснее для mobile GPU memory чем 2048 (4× меньше).
+// Туманность размытая по природе — scale-up до WORLD_SIZE почти не виден.
+// Чёрная дыра сохраняет резкость т.к. её центр в середине текстуры,
+// scale-up на ядре минимальный.
+const STATIC_RT_RES = 1024
 
 export function attachNebulaBackground(
   scene: Phaser.Scene,
