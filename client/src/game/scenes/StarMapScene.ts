@@ -300,9 +300,8 @@ export class StarMapScene extends Phaser.Scene {
     // Starfield — после генерации систем, чтобы кластеризовать звёзды вокруг планет
     setupStarfield(this, { worldSize: WORLD_SIZE, seed: SEED })
 
-    // FLOOR TEST: connection lines отключены
-    // drawLines(this, MAIN_RACES)
-    void drawLines
+    // STEP 1: connection lines включены
+    drawLines(this, MAIN_RACES)
 
     // Phase 20-XX (step 4): PlanetRenderer instance — должен быть создан ДО renderSystem
     // (диспетчер вызывает scene.planetRenderer.renderMain/renderBg). Инстанцируется
