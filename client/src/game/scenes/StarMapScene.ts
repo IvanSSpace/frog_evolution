@@ -39,6 +39,7 @@ import { setupVeranLightning } from './starmap/ambient/veranLightning'
 import { setupRelictMourning } from './starmap/ambient/relictMourning'
 import { LODManager } from './starmap/lod/lodManager'
 import { PlanetRenderer } from './starmap/rendering/planetRenderer'
+import { TapEffectController } from './starmap/tapEffectController'
 import { devWarn } from '../../utils/devLog'
 
 // Phaser-сцена Звёздной карты. Запускается рядом с MainScene через scene-manager.
@@ -206,6 +207,8 @@ export class StarMapScene extends Phaser.Scene {
   // вынесены в PlanetRenderer. Public — starfield.ts (renderSystem dispatcher) вызывает
   // scene.planetRenderer.renderMain / renderBg напрямую (TS не имеет `friend`).
   planetRenderer!: PlanetRenderer
+  // Pooled tap-effects shared by main + BG planets.
+  tapEffects!: TapEffectController
 
   constructor() {
     super({ key: 'StarMapScene' })
@@ -318,6 +321,10 @@ export class StarMapScene extends Phaser.Scene {
     // после seedEngine/lod/popoverController, поскольку методы рендера читают через
     // this.scene.X (cullableData, moons, bgArchetypeGfx, popoverController, и т.д.).
     this.planetRenderer = new PlanetRenderer(this)
+    // Tap-effect pool — должен быть создан ДО renderSystem (pointerup handlers
+    // в renderMain/renderBg обращаются к scene.tapEffects).
+    this.tapEffects = new TapEffectController(this)
+    this.tapEffects.init()
 
     // STEP 4+5: все планеты включены (16 main + 435 BG = 451 total)
     for (const sys of this.allSystems) renderSystem(this, sys, MAIN_RACES)

@@ -549,6 +549,8 @@ export class PlanetRenderer {
         this.scene.popoverController.selectSystem(sys)
         // Main planet: показать тот же popup что у bg-планет (имя + тип + Лететь/Изучить)
         this.scene.popoverController.scheduleBgNamePopup(sys)
+        // Tap-effect: rings + particles per-type (pooled, zero alloc)
+        this.scene.tapEffects.play(sys.x, sys.y, sys.size, sys.type ?? '', sys.color)
         // Spring-анимация (как у BG): squish по вертикали → bounce-back.
         if (springTween) {
           springTween.stop()
@@ -1705,6 +1707,8 @@ export class PlanetRenderer {
         this.scene.popoverController.selectSystem(sys)
         // BG: показать модалку с именем через 400ms
         this.scene.popoverController.scheduleBgNamePopup(sys)
+        // Tap-effect: rings + particles per-archetype (pooled, zero alloc)
+        this.scene.tapEffects.play(sys.x, sys.y, sys.size, sys.archetype, sys.color)
         // Spring-анимация: squish по вертикали → bounce, как у лягушек
         if (springTween) {
           springTween.stop()
