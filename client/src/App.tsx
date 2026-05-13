@@ -13,6 +13,7 @@ import { StarMapHUD } from './ui/components/StarMapHUD'
 import { MagnetToggle } from './ui/components/MagnetToggle'
 import { ShipFollowButton } from './ui/components/ShipFollowButton'
 import { OrientationLock } from './ui/components/OrientationLock'
+import { LoadingScreen } from './ui/components/LoadingScreen'
 import { eventBus } from './store/eventBus'
 import { initSfx } from './audio/sfxBootstrap'
 import { initPlanetVoice } from './audio/planetVoice'
@@ -262,12 +263,7 @@ function App() {
     return (
       <>
         <OrientationLock />
-        <div className="fixed inset-0 flex items-center justify-center bg-neutral-900 text-white">
-          <div className="text-center">
-            <div className="text-2xl font-bold mb-2">Загрузка...</div>
-            <div className="text-sm text-neutral-400">Подключение к серверу</div>
-          </div>
-        </div>
+        <LoadingScreen />
       </>
     )
   }
