@@ -21,8 +21,8 @@ import { ShipController } from './starmap/shipController'
 import {
   setupStarfield,
   drawLines,
-  // buildBgBatch,  // FLOOR TEST
-  // renderSystem,  // FLOOR TEST
+  buildBgBatch,
+  renderSystem,
 } from './starmap/starfield'
 import { CoordinatesHUDController } from './starmap/coordinatesHUD'
 import { CameraController } from './starmap/cameraController'
@@ -309,9 +309,9 @@ export class StarMapScene extends Phaser.Scene {
     // this.scene.X (cullableData, moons, bgArchetypeGfx, popoverController, и т.д.).
     this.planetRenderer = new PlanetRenderer(this)
 
-    // FLOOR TEST: планеты + batch отключены.
-    // for (const sys of this.allSystems) renderSystem(this, sys, MAIN_RACES)
-    // buildBgBatch(this)
+    // STEP 4+5: все планеты включены (16 main + 435 BG = 451 total)
+    for (const sys of this.allSystems) renderSystem(this, sys, MAIN_RACES)
+    buildBgBatch(this)
 
     // Камера: ставим zoom 1.0 и центрируем на HOME (родной планете).
     // Координаты HOME — из planetMap.json, поэтому камера автоматически
