@@ -1,10 +1,9 @@
 import Phaser from 'phaser'
 import { eventBus } from '../../store/eventBus'
-import {
-  attachNebulaBackground,
-  type NebulaBackgroundHandle,
-} from '../effects/NebulaBackground'
-import { violetRing } from '../effects/presets'
+// FLOOR TEST imports neutered:
+// import { attachNebulaBackground } from '../effects/NebulaBackground'
+// import { violetRing } from '../effects/presets'
+import type { NebulaBackgroundHandle } from '../effects/NebulaBackground'
 import planetMap from '../data/planetMap.json'
 import {
   DPR,
@@ -22,8 +21,8 @@ import { ShipController } from './starmap/shipController'
 import {
   setupStarfield,
   drawLines,
-  buildBgBatch,
-  renderSystem,
+  // buildBgBatch,  // FLOOR TEST
+  // renderSystem,  // FLOOR TEST
 } from './starmap/starfield'
 import { CoordinatesHUDController } from './starmap/coordinatesHUD'
 import { CameraController } from './starmap/cameraController'
@@ -43,7 +42,7 @@ import { setupVeranLightning } from './starmap/ambient/veranLightning'
 import { setupRelictMourning } from './starmap/ambient/relictMourning'
 import { LODManager } from './starmap/lod/lodManager'
 import { PlanetRenderer } from './starmap/rendering/planetRenderer'
-import { devWarn } from '../../utils/devLog'
+// import { devWarn } from '../../utils/devLog' // FLOOR TEST: nebula off
 
 // Phaser-сцена Звёздной карты. Запускается рядом с MainScene через scene-manager.
 // Ничего о gameStore не знает — это «декоративная карта» для просмотра системы
@@ -224,30 +223,8 @@ export class StarMapScene extends Phaser.Scene {
     // Стартуем с alpha 0 — game/index.ts сделает fade-in после create.
     this.cameras.main.setAlpha(0)
 
-    // Туманность — pre-baked PNG/WebP вместо процедурного шейдера.
-    // Zero per-frame GPU cost: просто texture sampling из cached WebP (10 KB).
-    // На mobile это самый дешёвый возможный фон. Если визуал надоест —
-    // можно сгенерировать новые варианты nebula_NN.webp оффлайн.
-    // Туманность через шейдер с RtT (static mode):
-    // — Шейдер запускается ОДИН РАЗ при создании сцены, рендерит в 2048×2048 RT
-    // — RT отображается scaled до NEBULA_SIZE
-    // — Шейдер уничтожается, дальше только texture sampling (cheap)
-    // Это даёт визуал процедурного шейдера + perf статичной картинки.
-    try {
-      const NEBULA_SIZE = WORLD_SIZE * 2.5
-      this.nebula = attachNebulaBackground(this, violetRing, {
-        width: NEBULA_SIZE,
-        height: NEBULA_SIZE,
-        x: 0,
-        y: 0,
-        static: true,
-      })
-      const shader = this.nebula.shader
-      if (shader && typeof shader.setDepth === 'function')
-        shader.setDepth(-9000)
-    } catch (err) {
-      devWarn('[NebulaBackground] failed to attach:', err)
-    }
+    // FLOOR TEST: nebula отключена.
+    // try { ... attachNebulaBackground ... } catch { ... }
 
     // Starfield перенесён ниже — нужны this.allSystems для кластеризации звёзд
 
@@ -323,7 +300,9 @@ export class StarMapScene extends Phaser.Scene {
     // Starfield — после генерации систем, чтобы кластеризовать звёзды вокруг планет
     setupStarfield(this, { worldSize: WORLD_SIZE, seed: SEED })
 
-    drawLines(this, MAIN_RACES)
+    // FLOOR TEST: connection lines отключены
+    // drawLines(this, MAIN_RACES)
+    void drawLines
 
     // Phase 20-XX (step 4): PlanetRenderer instance — должен быть создан ДО renderSystem
     // (диспетчер вызывает scene.planetRenderer.renderMain/renderBg). Инстанцируется
@@ -331,11 +310,9 @@ export class StarMapScene extends Phaser.Scene {
     // this.scene.X (cullableData, moons, bgArchetypeGfx, popoverController, и т.д.).
     this.planetRenderer = new PlanetRenderer(this)
 
-    for (const sys of this.allSystems) renderSystem(this, sys, MAIN_RACES)
-
-    // Batch-рендер всех BG-планет как точек (один Graphics, 1 draw call).
-    // Виден при zoom < BG_PLANET_MIN_ZOOM, заменяет 434 индивидуальных контейнера.
-    buildBgBatch(this)
+    // FLOOR TEST: планеты + batch отключены.
+    // for (const sys of this.allSystems) renderSystem(this, sys, MAIN_RACES)
+    // buildBgBatch(this)
 
     // Камера: ставим zoom 1.0 и центрируем на HOME (родной планете).
     // Координаты HOME — из planetMap.json, поэтому камера автоматически
@@ -422,10 +399,15 @@ export class StarMapScene extends Phaser.Scene {
     //   register: (obj, x, y, r, lodMinZoom) =>
     //     this.lod.cullableData.push({ obj, x, y, r, lodMinZoom }),
     // })
-    setupRandomSignals(this, MAIN_RACES)
-    setupTorRing(this, MAIN_RACES, this.systemSprites)
-    setupVeranLightning(this, MAIN_RACES)
-    setupRelictMourning(this, MAIN_RACES)
+    // FLOOR TEST: все ambient effects отключены
+    // setupRandomSignals(this, MAIN_RACES)
+    // setupTorRing(this, MAIN_RACES, this.systemSprites)
+    // setupVeranLightning(this, MAIN_RACES)
+    // setupRelictMourning(this, MAIN_RACES)
+    void setupRandomSignals
+    void setupTorRing
+    void setupVeranLightning
+    void setupRelictMourning
 
     // Phase 20-04 (Wave 4): per-frame update tick + HUD данных делегированы CoordinatesHUDController.
     new CoordinatesHUDController(this, {
