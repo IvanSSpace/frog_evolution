@@ -1,10 +1,6 @@
 import Phaser from 'phaser'
 import { eventBus } from '../../store/eventBus'
-import {
-  attachNebulaBackground,
-  type NebulaBackgroundHandle,
-} from '../effects/NebulaBackground'
-import { violetRing } from '../effects/presets'
+import type { NebulaBackgroundHandle } from '../effects/NebulaBackground'
 import planetMap from '../data/planetMap.json'
 import {
   DPR,
