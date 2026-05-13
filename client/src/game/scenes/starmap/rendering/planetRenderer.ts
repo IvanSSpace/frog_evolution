@@ -554,42 +554,9 @@ export class PlanetRenderer {
 
     container.add(g)
 
-    // Idle-анимации
-    if (sys.id === 'home') {
-      this.scene.tweens.add({
-        targets: container,
-        scale: { from: 1, to: 1.04 },
-        duration: 3500,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut',
-      })
-    } else if (sys.id === 'relict') {
-      this.scene.tweens.add({
-        targets: g,
-        alpha: { from: 1, to: 0.6 },
-        duration: 2200,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut',
-      })
-    } else {
-      this.scene.tweens.add({
-        targets: g,
-        angle: 360,
-        duration: 30000 + Math.random() * 30000,
-        repeat: -1,
-        ease: 'Linear',
-      })
-      this.scene.tweens.add({
-        targets: container,
-        scale: { from: 0.97, to: 1.03 },
-        duration: 2500 + Math.random() * 2000,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut',
-      })
-    }
+    // Idle-анимации отключены — 30 infinite tweens (rotation + scale yoyo на
+    // 14 main race планет) убрано для mobile perf. Планеты статичны визуально,
+    // tap-анимации (selectSystem) и emoji-вспышки продолжают работать.
 
     // Подсказка пульсации для bliks (с задержкой, чтобы не вспыхивать при открытии сцены)
     if (sys.id === 'bliks') {

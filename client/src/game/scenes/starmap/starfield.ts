@@ -68,18 +68,17 @@ export function drawLines(scene: StarMapScene, mainRaces: Race[]): void {
 // Цель: линии плавно растут при отдалении камеры, остаются видимыми.
 export function redrawMainLines(scene: StarMapScene): void {
   if (!scene.mainLinesGfx) return
-  const zoom = scene.cameras.main.zoom
-  // Smooth zoom compensation. При zoom=1 → толщина 2*DPR. При zoom=0.05 → ~24*DPR.
-  // sqrt сглаживает рост — иначе линии бы стали гигантскими при сильном отдалении.
-  const zoomComp = 1 / Math.max(0.05, Math.sqrt(zoom))
-  const thickness = 2 * DPR * Math.max(1, zoomComp)
-  const alpha = 0.55
+  // Толщина теперь константная — больше не пересчитываем при каждом zoom.
+  // Это убирает Graphics.clear() + 16 lineBetween каждое 2% zoom change.
+  // Лёгкое визуальное несовершенство (линии тонкие на far zoom) терпимо.
+  // Если уже отрисованы — skip.
+  if (scene.mainLinesLastZoom !== -1) return
   scene.mainLinesGfx.clear()
-  scene.mainLinesGfx.lineStyle(thickness, 0x67e8f9, alpha)
+  scene.mainLinesGfx.lineStyle(3 * DPR, 0x67e8f9, 0.55)
   for (const e of scene.mainLinesEdges) {
     scene.mainLinesGfx.lineBetween(e.ax, e.ay, e.bx, e.by)
   }
-  scene.mainLinesLastZoom = zoom
+  scene.mainLinesLastZoom = 1
 }
 
 // Batch-рендер всех 434 BG как точек в одном Graphics.

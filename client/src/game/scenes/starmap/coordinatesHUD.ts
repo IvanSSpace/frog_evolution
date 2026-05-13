@@ -93,7 +93,10 @@ export class CoordinatesHUDController {
       // Culling tick — каждые 6 кадров
       scene.lod.cullTickCounter++
       let visibleCount = 0
-      if (scene.lod.cullTickCounter >= 6) {
+      // Cull tick — раз в 12 кадров (раньше 6). 500+ entries × 5/сек = ~2500
+      // iterations/сек вместо 5000. Глазом разница невидима т.к. cull при
+      // быстром zoom плавно догоняет.
+      if (scene.lod.cullTickCounter >= 12) {
         scene.lod.cullTickCounter = 0
         const view = cam.worldView
         const margin = 50 * DPR

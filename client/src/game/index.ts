@@ -73,7 +73,10 @@ export function startGame(): Phaser.Game {
       default: 'arcade',
       arcade: { gravity: { x: 0, y: 0 }, debug: false },
     },
-    fps: { target: 60 },
+    // Mobile: cap to 30 FPS для стабильности. Mobile WebView не вытягивает 60
+    // на сложной сцене StarMap; вместо рваных 15-25 → стабильные 30, гораздо
+    // приятнее перцептивно. На десктопе detect через touch — там 60.
+    fps: { target: 'ontouchstart' in window ? 30 : 60 },
     input: {
       touch: true,
       mouse: true,
