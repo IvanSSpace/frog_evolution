@@ -23,7 +23,7 @@ import {
   setupStarfield,
   drawLines,
   buildBgBatch,
-  // renderSystem, // ВРЕМЕННО: планеты отключены для Test B
+  renderSystem,
 } from './starmap/starfield'
 import { CoordinatesHUDController } from './starmap/coordinatesHUD'
 import { CameraController } from './starmap/cameraController'
@@ -331,8 +331,7 @@ export class StarMapScene extends Phaser.Scene {
     // this.scene.X (cullableData, moons, bgArchetypeGfx, popoverController, и т.д.).
     this.planetRenderer = new PlanetRenderer(this)
 
-    // ВРЕМЕННО для Test B: skip всех планет чтобы измерить FPS без них.
-    // for (const sys of this.allSystems) renderSystem(this, sys, MAIN_RACES)
+    for (const sys of this.allSystems) renderSystem(this, sys, MAIN_RACES)
 
     // Batch-рендер всех BG-планет как точек (один Graphics, 1 draw call).
     // Виден при zoom < BG_PLANET_MIN_ZOOM, заменяет 434 индивидуальных контейнера.

@@ -26,64 +26,9 @@ import { DPR, BG_PLANET_MIN_ZOOM, generatePalette } from '../planetarium'
 
 export class PlanetRenderer {
   private scene: StarMapScene
-  // Atlas-base relative size: base sphere в текстуре нарисована радиусом 0.28×SIZE.
-  // Используется для setScale (нужно чтобы базовый шар = sys.size в world units).
-  private static readonly ATLAS_SIZE = 256
-  private static readonly ATLAS_BASE_RADIUS =
-    PlanetRenderer.ATLAS_SIZE * 0.28
-  private static atlasBuilt = false
 
   constructor(scene: StarMapScene) {
     this.scene = scene
-  }
-
-  /** Один раз при первом renderBg — создаёт shared canvas-текстуру для базовой
-   *  планеты (aura + sphere + highlight). Все 435 BG используют её как Image
-   *  с разным setTint → Phaser батчит в 1 draw call вместо 435 Graphics. */
-  private ensureBgPlanetAtlas() {
-    if (PlanetRenderer.atlasBuilt) return
-    PlanetRenderer.atlasBuilt = true
-
-    const SIZE = PlanetRenderer.ATLAS_SIZE
-    const BASE_R = PlanetRenderer.ATLAS_BASE_RADIUS
-    const AURA_R = SIZE * 0.48
-    const C = SIZE / 2
-
-    const canvas = document.createElement('canvas')
-    canvas.width = SIZE
-    canvas.height = SIZE
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    // Аура — мягкий halo вокруг сферы
-    const auraGrad = ctx.createRadialGradient(C, C, BASE_R, C, C, AURA_R)
-    auraGrad.addColorStop(0, 'rgba(255,255,255,0.32)')
-    auraGrad.addColorStop(0.5, 'rgba(255,255,255,0.12)')
-    auraGrad.addColorStop(1, 'rgba(255,255,255,0)')
-    ctx.fillStyle = auraGrad
-    ctx.beginPath()
-    ctx.arc(C, C, AURA_R, 0, Math.PI * 2)
-    ctx.fill()
-
-    // Сфера — radial gradient с highlight'ом сверху-слева, тенью снизу-справа
-    const sphereGrad = ctx.createRadialGradient(
-      C - BASE_R * 0.35,
-      C - BASE_R * 0.35,
-      BASE_R * 0.05,
-      C,
-      C,
-      BASE_R,
-    )
-    sphereGrad.addColorStop(0, 'rgba(255,255,255,1)')
-    sphereGrad.addColorStop(0.45, 'rgba(210,210,210,1)')
-    sphereGrad.addColorStop(0.85, 'rgba(140,140,140,1)')
-    sphereGrad.addColorStop(1, 'rgba(80,80,80,1)')
-    ctx.fillStyle = sphereGrad
-    ctx.beginPath()
-    ctx.arc(C, C, BASE_R, 0, Math.PI * 2)
-    ctx.fill()
-
-    this.scene.textures.addCanvas('bgPlanetBase', canvas)
   }
 
   // Phase 20-04 (Wave 4): package-public — вызывается из starfield.ts (renderSystem dispatcher).
@@ -631,33 +576,40 @@ export class PlanetRenderer {
     // мерцающих микро-звёзд.
     // if (rng() < 0.2) { createSparkleAt(this.scene, sys.x, sys.y, sys.size, ...) }
 
-    // ── Atlas-based база ──
-    // Вместо 4-8 fillCircle на Graphics (свой draw call на планету) — одна
-    // shared canvas-текстура 'bgPlanetBase', tinted в цвет планеты.
-    // 435 BG → 1 текстура → Phaser батчит в ~1 draw call.
-    // gDetail (узоры архетипа) остаётся как Graphics, скрывается при zoom < 0.3.
-    this.ensureBgPlanetAtlas()
-    const baseImg = this.scene.add.image(0, 0, 'bgPlanetBase')
-    baseImg.setScale(sys.size / PlanetRenderer.ATLAS_BASE_RADIUS)
-    baseImg.setTint(sys.color)
-    container.add(baseImg)
+    // ── Базовый рендер — Graphics с ФИКСИРОВАННЫМИ параметрами ──
+    // Atlas-pilot откачен. Все BG одного архетипа выглядят похоже (без рандом
+    // asymmetric scale, без рандом highlight position) → визуальная
+    // согласованность + меньше rng-работы.
+    const gBase = this.scene.add.graphics()
+    container.add(gBase)
 
-    // RNG-bookkeeping: вызвать rng() ровно столько же раз сколько делал
-    // прежний gBase-блок, чтобы downstream variant choice (на rng() ниже)
-    // не сдвинулся → texture signatures остаются прежними.
+    // Аура — фиксированный размер 1.5× для всех (кроме dead/mineral/desert).
     const showAura =
       sys.archetype !== 'dead' &&
       sys.archetype !== 'mineral' &&
       sys.archetype !== 'desert'
     if (showAura) {
-      rng() // bypass auraR
-      rng() // bypass auraAlpha
-      if (rng() < 0.3) rng() // bypass double-aura check + radius
+      gBase.fillStyle(sys.color, 0.15 * sys.brightness)
+      gBase.fillCircle(0, 0, sys.size * 1.5)
     }
-    rng() // bypass color alpha
-    rng() // bypass ringOffsetAng
-    rng() // bypass ringOffsetMag
-    rng() // bypass highlight radius
+
+    // Базовый шар — фиксированный highlight сверху-слева.
+    gBase.fillStyle(sys.accent, 1)
+    gBase.fillCircle(0, 0, sys.size)
+    gBase.fillStyle(sys.color, 0.95)
+    gBase.fillCircle(-sys.size * 0.08, -sys.size * 0.08, sys.size * 0.9)
+
+    // RNG-bookkeeping: тратим столько же rng() сколько прежний код, чтобы
+    // downstream variant choice не сдвинулся (texture signatures сохраняются).
+    if (showAura) {
+      rng()
+      rng()
+      if (rng() < 0.3) rng()
+    }
+    rng()
+    rng()
+    rng()
+    rng()
 
     // Детальный Graphics — все остальные узоры. Регистрируется для LOD-toggle.
     const g = this.scene.add.graphics()
@@ -1646,14 +1598,14 @@ export class PlanetRenderer {
       )
     }
 
-    // === ФИНАЛЬНЫЕ ТРАНСФОРМАЦИИ G — главный источник разнообразия ===
-    // Каждая планета получает случайный поворот всего рисунка + асимметричный scale.
-    // Это означает что две планеты одного архетипа НЕ выглядят одинаково.
+    // === Трансформации g упрощены ===
+    // Был случайный поворот + asymmetric scale (4 rng() вызова + 2 transform).
+    // Теперь: фиксированный scale 1.0, только лёгкий поворот для разнообразия
+    // (1 rng() — компромисс между однообразием и читаемостью).
     g.rotation = rng() * Math.PI * 2
-    const aspectX = 0.85 + rng() * 0.3 // 0.85-1.15
-    const aspectY = 0.85 + rng() * 0.3
-    g.scaleX = aspectX
-    g.scaleY = aspectY
+    rng() // bypass aspectX
+    rng() // bypass aspectY
+    // scaleX/Y не меняем — остаются 1 (planet круглая, не приплюснутая).
 
     // Спутник у некоторых планет — обновляется в общем update-loop scene,
     // чтобы один раз проверить zoom-порог и пропустить орбит-калькуляцию при отдалении.
