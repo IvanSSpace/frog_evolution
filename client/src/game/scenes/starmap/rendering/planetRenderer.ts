@@ -499,9 +499,40 @@ export class PlanetRenderer {
 
     container.add(g)
 
-    // Idle-анимации отключены — 30 infinite tweens (rotation + scale yoyo на
-    // 14 main race планет) убрано для mobile perf. Планеты статичны визуально,
-    // tap-анимации (selectSystem) и emoji-вспышки продолжают работать.
+    // Idle-анимации на 50% от оригинала (16 tweens vs 30):
+    //   - home: scale yoyo (breathing)
+    //   - relict: alpha yoyo (signature)
+    //   - other 14 main: scale yoyo ONLY (rotation отброшена, она почти невидима)
+    // Все tweens — infinite repeat. На mobile + iOS WebView 16 tweens терпимо.
+    if (sys.id === 'home') {
+      this.scene.tweens.add({
+        targets: container,
+        scale: { from: 1, to: 1.04 },
+        duration: 3500,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      })
+    } else if (sys.id === 'relict') {
+      this.scene.tweens.add({
+        targets: g,
+        alpha: { from: 1, to: 0.6 },
+        duration: 2200,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      })
+    } else {
+      // Scale yoyo с разной фазой для рассинхронизации (планеты не дышат в унисон)
+      this.scene.tweens.add({
+        targets: container,
+        scale: { from: 0.97, to: 1.03 },
+        duration: 2500 + Math.random() * 2000,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      })
+    }
 
     // Подсказка пульсации для bliks (с задержкой, чтобы не вспыхивать при открытии сцены)
     if (sys.id === 'bliks') {
