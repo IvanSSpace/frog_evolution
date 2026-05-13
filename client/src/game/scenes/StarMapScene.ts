@@ -1,10 +1,6 @@
 import Phaser from 'phaser'
 import { eventBus } from '../../store/eventBus'
-import {
-  attachNebulaBackground,
-  type NebulaBackgroundHandle,
-} from '../effects/NebulaBackground'
-import { violetRing } from '../effects/presets'
+import type { NebulaBackgroundHandle } from '../effects/NebulaBackground'
 import planetMap from '../data/planetMap.json'
 import {
   DPR,
@@ -217,6 +213,7 @@ export class StarMapScene extends Phaser.Scene {
 
   preload() {
     this.load.image('spaceShip', '/spaceShip.webp')
+    this.load.image('nebulaBg', '/nebula_10.webp')
   }
 
   create() {
@@ -224,24 +221,18 @@ export class StarMapScene extends Phaser.Scene {
     // Стартуем с alpha 0 — game/index.ts сделает fade-in после create.
     this.cameras.main.setAlpha(0)
 
-    // Туманность — static RtT режим: шейдер рендерится один раз в текстуру,
-    // потом уничтожается. GPU per-frame = просто sampling текстуры (~0 cost).
-    // NEBULA_SIZE 2.5× WORLD_SIZE для большого охвата. Качество компенсируется
-    // через низкий STATIC_RT_RES — туманность размытая, scale-up незаметен.
+    // Туманность — pre-baked PNG/WebP вместо процедурного шейдера.
+    // Zero per-frame GPU cost: просто texture sampling из cached WebP (10 KB).
+    // На mobile это самый дешёвый возможный фон. Если визуал надоест —
+    // можно сгенерировать новые варианты nebula_NN.webp оффлайн.
     try {
       const NEBULA_SIZE = WORLD_SIZE * 2.5
-      this.nebula = attachNebulaBackground(this, violetRing, {
-        width: NEBULA_SIZE,
-        height: NEBULA_SIZE,
-        x: 0,
-        y: 0,
-        static: true,
-      })
-      const shader = this.nebula.shader
-      if (shader && typeof shader.setDepth === 'function')
-        shader.setDepth(-9000)
+      const bg = this.add.image(0, 0, 'nebulaBg')
+      bg.setOrigin(0.5, 0.5)
+      bg.setDepth(-9000)
+      bg.setDisplaySize(NEBULA_SIZE, NEBULA_SIZE)
     } catch (err) {
-      devWarn('[NebulaBackground] failed to attach:', err)
+      devWarn('[Nebula image] failed to attach:', err)
     }
 
     // Starfield перенесён ниже — нужны this.allSystems для кластеризации звёзд
