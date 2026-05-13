@@ -28,7 +28,8 @@ import type { StarMapScene } from '../StarMapScene'
 import { redrawMainLines } from './starfield'
 import { devWarn } from '../../../utils/devLog'
 
-const DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 3))
+// DPR больше не используется напрямую — margin теперь % от viewport.
+// const DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 3))
 
 export interface CoordinatesHUDConfig {
   /** Минимальный zoom при котором рисуется детализация BG-планет. */
@@ -99,11 +100,16 @@ export class CoordinatesHUDController {
       if (scene.lod.cullTickCounter >= 12) {
         scene.lod.cullTickCounter = 0
         const view = cam.worldView
-        const margin = 50 * DPR
-        const left = view.left - margin
-        const right = view.right + margin
-        const top = view.top - margin
-        const bottom = view.bottom + margin
+        // Margin = 30% от viewport ширины/высоты. На far zoom margin огромный
+        // в world coords → планеты вдалеке от viewport остаются visible, не
+        // моргают при паннинге. На close zoom margin маленький → off-screen
+        // планеты культятся нормально, FPS восстанавливается.
+        const marginX = view.width * 0.3
+        const marginY = view.height * 0.3
+        const left = view.left - marginX
+        const right = view.right + marginX
+        const top = view.top - marginY
+        const bottom = view.bottom + marginY
         const curZoom = cam.zoom
         for (const c of scene.lod.cullableData) {
           // LOD-cut: при zoom ниже lodMinZoom объект полностью УБИРАЕТСЯ из
@@ -120,18 +126,15 @@ export class CoordinatesHUDController {
             c.inDisplayList = false
             continue // объект больше не в дереве — viewport-cull неактуален
           }
-          if (!lodOk) continue // already out of display list
+          if (!lodOk) continue
 
-          // Viewport-cull отключён по запросу — все объекты в display list
-          // остаются видимыми, не моргают при панорамировании / отдалении.
-          // LOD-cut (по lodMinZoom) всё ещё работает выше.
-          if (!c.obj.visible) c.obj.setVisible(true)
-          visibleCount++
-          // Маркируем left/right/top/bottom как использованные чтобы линтер не ругался
-          void left
-          void right
-          void top
-          void bottom
+          const inView =
+            c.x + c.r > left &&
+            c.x - c.r < right &&
+            c.y + c.r > top &&
+            c.y - c.r < bottom
+          if (c.obj.visible !== inView) c.obj.setVisible(inView)
+          if (inView) visibleCount++
         }
       }
 

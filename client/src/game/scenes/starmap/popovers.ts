@@ -116,7 +116,8 @@ export class PopoverController {
       // Phase 16 (REQ SHIP-07): parallel emit для Cosmic Hub flight flow.
       // App-side subscriber решает, открыт ли Hub, и показывает confirm dialog.
       eventBus.emit('cosmic:request-flight', { planetId: sys.id })
-      this.animOrchestrator.playUniqueAnimation(sys)
+      // ВРЕМЕННО: tap-анимация отключена для теста perf-impact.
+      // this.animOrchestrator.playUniqueAnimation(sys)
       st.count = 0
       st.threshold = 2 + Math.floor(Math.random() * 5) // 2-6
     }
@@ -125,6 +126,11 @@ export class PopoverController {
   // ============== SELECTION ==============
 
   selectSystem(sys: Race | BgSystem): void {
+    // ВРЕМЕННО: tap-эффекты выбора отключены для perf-теста.
+    // Selection marker, sprite squish, emoji float — все skipped.
+    // Popup с именем планеты (bgNamePopup) — отдельный канал, работает.
+    void sys
+    if (false as boolean) {
     const scene = this.scene
     if (this.selectionMarker) this.selectionMarker.destroy()
     const m = scene.add.graphics()
@@ -194,6 +200,7 @@ export class PopoverController {
       ease: 'Sine.easeOut',
       onComplete: () => float.destroy(),
     })
+    } // closing if(false) для ВРЕМЕННОГО отключения tap-эффектов
   }
 
   // ============== BG NAME POPUP ==============
