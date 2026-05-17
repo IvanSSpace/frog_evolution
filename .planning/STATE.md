@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: cosmic-frogs-system
 current_phase: 19 (closed); Phase 20 (Pre-release safety net) deferred до prod-релиза
 status: completed
-last_updated: "2026-05-17T21:18:41.512Z"
+last_updated: "2026-05-17T21:45:00.000Z"
 progress:
   total_phases: 14
   completed_phases: 1
   total_plans: 25
-  completed_plans: 9
-  percent: 36
+  completed_plans: 12
+  percent: 48
 ---
 
 # Project State
@@ -172,11 +172,13 @@ progress:
 |------|------|---------|-------|-------------------|
 | 1 | 23-01 (foundation: store + persistence + controller shell + dev helpers + i18n + 11 vitest specs) | 3 (c98ed34, e74dffe, 578db00) | 5 created + 5 modified | **-1.32 KB** (cap +50 KB ✓; main `index-vffWbdF3.js` 659.67 KB / 194.65 KB gzip) |
 | 2 | 23-02 (Beat 1 Welcome modal: WelcomeModal.tsx + welcomeModal.css + OnboardingController wire) | 2 (c580d2f, ed93d22) | 2 created + 1 modified | TBD (vite build deferred — parallel-agent TS6133 in BoxController блокирует bundle measure, см. deferred-items.md) |
-| **Subtotal** | — | **5 commits** | **7 created + 6 modified** | -1.32 KB gzip so far (23-02 measure pending) |
+| 2 | 23-05 (Beat 4 location celebration: ConfettiBurst + LocationUnlockCelebration + LocationStack pulse + scene-bridge) | 3 (fb1b50a, 79545f1, fc5f256) | 3 created + 7 modified | OK (vite build 4.04s clean) |
+| **Subtotal** | — | **8 commits** | **10 created + 13 modified** | OK (23-02 measure still pending, 23-05 build clean) |
 
-**Phase 23 REQ coverage so far:** 3/6 ✓ (PHASE23-STATE, PHASE23-CONTROLLER, PHASE23-BEAT1-WELCOME).
+**Phase 23 REQ coverage so far:** 4/6 ✓ (PHASE23-STATE, PHASE23-CONTROLLER, PHASE23-BEAT1-WELCOME, PHASE23-BEAT4-LOCATION).
 **Plan 23-01 outcome:** Foundation ready — Plan 23-02/03/05 (Wave 2) can proceed in parallel against the live store; 23-04 still gated by 23-03; 23-06 finalize last. Onboarding lives in its own per-device slice (separate from cosmic), so it cannot affect Phase 22 carrier migration or any server-synced state. 97/97 vitest green.
 **Plan 23-02 outcome:** Beat 1 active — игрок при first app open (welcomeSeen=false) видит centered modal с pastel gradient + bobbing frog SVG + pink CTA «Начать». Single-action: backdrop click ignored. CTA → fade-out 400ms → markWelcomeSeen → modal unmounts. Persistence через onboarding slice (Plan 23-01) гарантирует one-shot per device. Pattern для onboarding overlays установлен (createPortal, CSS keyframes only, per-flag selector, exit-animation-aware unmount) — Plan 23-04/05 могут reuse. tsc clean по моим файлам; vite build blocked by parallel Plan 23-03 unused-imports (deferred-items.md).
+**Plan 23-05 outcome:** Beat 4 active — на каждый первый `location:unlocked` для {2, 3, 6} триггерится coordinated celebration: (1) Phaser confetti burst в центре canvas (palette per location: swamp green/yellow, forest green/brown, cosmos cyan/violet, 40 particles, 1.2s gravity decay), (2) LocationStack pulse — pink glow (`0 0 16px 4px #ec4899`) + bobble scale 1.0↔1.1 (1200ms infinite), persists ДО tap на pulsing button, (3) DOM toast snizu (pill `#ec4899`, slide-up 350ms, 7s auto-fade OR tap-dismiss). Per-location flag (`locationsCelebrated[id]`) обеспечивает idempotency. Сделано production-ready: `window.__mainScene` exposed unconditional (был только DEV), React↔Phaser bridge documented. tsc clean + vite build 4.04s.
 
 ### Plan 23-01 Decisions Logged
 
@@ -194,3 +196,14 @@ progress:
 - Backdrop intentionally без onClick handler — single-action UX (это первый и единственный blocking onboarding step). Cliclability checklist выполнен другими механизмами: `type="button"`, z-index 100, touchAction manipulation, stopPropagation на inner modal.
 - CSS keyframes only (не Lottie) per memory feedback_animations. Frog bob — DOM SVG, отдельная сущность от Phaser frog.container, никакого риска мерцания (memory feedback_frog_container_alpha n/a здесь).
 - Reused pink CTA gradient (#f9a8d4 → #ec4899) и pastel bg (lake-blue #bae6fd → swamp-green #bef264) от LocationStack/LOCATION_VISUAL для визуальной consistency с остальным миром локаций.
+
+### Plan 23-05 Decisions Logged
+
+- Pulse persists ДО tap на location button — toast auto-fade его НЕ гасит. Это per CONTEXT.md design intent: «положительное приглашение, а не таймер давления». Toast и pulse имеют независимые жизненные циклы (toast 7s OR tap; pulse — только button tap).
+- `window.__mainScene` exposed в production (не только DEV) — Plan 23-05 первое production-bridge использование. Документировано inline в `MainScene.create()` / `destroy()` (ownership check `if (w.__mainScene === this) delete`).
+- Phaser particle texture генерируется один раз на scene (4x4 white pixel, key `onb-confetti-pixel`) — tint накладывается per-particle через emitter `tint: palette`. Это избегает зависимости от ассета `confetti.png` и работает на любой instance MainScene/StarMapScene без preload.
+- LocationUnlockCelebration mount unconditional (НЕ conditional через store flag) — event-driven visibility избегает race между `eventBus.emit('location:unlocked')` и React's store-subscription re-render cycle.
+- Confetti depth=6000 (выше TutorialPulseRing=5000) — confetti всегда поверх tutorial visual hints, но depth conservative: не лезет в HUD space.
+- `LOC_INFO` table (locationId → emoji+nameKey) пока внутри `LocationUnlockCelebration.tsx`. Если Plan 23-06 smoke-test захочет reuse (manual `eventBus.emit('location:unlocked', {locationId: 2})`), извлечь в shared util.
+- CSS keyframes для DOM pulse + Phaser tweens для confetti (memory feedback_animations) — никакого Lottie. Pulse bobble keyframe inline `<style>` в LocationStack JSX (один раз), toast keyframes в отдельном `locationCelebration.css`.
+- Cliclability: добавлен `type="button"` к LocationButton и collapse-toggle, `z-index: 101` для toast (выше LocationStack=50), `touchAction: manipulation` чтобы избежать iOS double-tap-zoom delay.
