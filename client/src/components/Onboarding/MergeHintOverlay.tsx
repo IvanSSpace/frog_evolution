@@ -189,7 +189,9 @@ export function MergeSuccessToast() {
           pointerEvents: 'none',
           opacity: exiting ? 0 : 1,
           transition: `opacity ${TOAST_FADE_MS}ms ease-out`,
-          animation: exiting ? undefined : 'onb-merge-toast-slide-up 300ms ease-out',
+          animation: exiting
+            ? undefined
+            : 'onb-merge-toast-slide-up 300ms ease-out',
           whiteSpace: 'nowrap',
         }}
       >

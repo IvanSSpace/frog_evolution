@@ -49,10 +49,10 @@ import type { FrogSpawner } from './FrogSpawner'
 
 /** Classify drop-target relationship without importing deleted carrierFeed module. */
 type MergeKind =
-  | 'normal'             // normal + normal → standard merge
-  | 'carrier-normal'     // carrier + normal (same level) → Plan 22-02 rule
-  | 'carrier-carrier'    // carrier + carrier (same level, any element) → Plan 22-02 (target-wins)
-  | 'blocked-mismatch'   // different levels
+  | 'normal' // normal + normal → standard merge
+  | 'carrier-normal' // carrier + normal (same level) → Plan 22-02 rule
+  | 'carrier-carrier' // carrier + carrier (same level, any element) → Plan 22-02 (target-wins)
+  | 'blocked-mismatch' // different levels
 
 function classifyMerge(
   a: FrogData,
@@ -360,19 +360,23 @@ export class MergeController {
         // Plan 22-02: dispatch carrier merge action AFTER spawn so we know
         // newFrogId. Standard-merge frog (normal+normal) — no action needed.
         if (carrierMergePlan?.kind === 'carrier-normal') {
-          useGameStore.getState().mergeCarrierWithNormal(
-            carrierMergePlan.carrierFrogId,
-            carrierMergePlan.normalFrogId,
-            newFrogId,
-            newLevel,
-          )
+          useGameStore
+            .getState()
+            .mergeCarrierWithNormal(
+              carrierMergePlan.carrierFrogId,
+              carrierMergePlan.normalFrogId,
+              newFrogId,
+              newLevel,
+            )
         } else if (carrierMergePlan?.kind === 'carrier-carrier') {
-          useGameStore.getState().mergeCarrierWithCarrier(
-            carrierMergePlan.droppedFrogId,
-            carrierMergePlan.targetFrogId,
-            newFrogId,
-            newLevel,
-          )
+          useGameStore
+            .getState()
+            .mergeCarrierWithCarrier(
+              carrierMergePlan.droppedFrogId,
+              carrierMergePlan.targetFrogId,
+              newFrogId,
+              newLevel,
+            )
         }
 
         // Plan 22-03: L18 ascension trigger. Только после carrier-merge'а

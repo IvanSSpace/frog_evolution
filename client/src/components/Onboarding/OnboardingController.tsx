@@ -139,10 +139,7 @@ export function OnboardingController() {
     const carrierIds = new Set(carriers.map((c) => c.frogId))
     const l1Free = scene.frogs.filter(
       (f) =>
-        f.level === 1 &&
-        !f.isMerging &&
-        !f.isDragging &&
-        !carrierIds.has(f.id),
+        f.level === 1 && !f.isMerging && !f.isDragging && !carrierIds.has(f.id),
     )
     if (l1Free.length < 2) return
 
@@ -263,7 +260,9 @@ export function OnboardingController() {
     <>
       {!welcomeSeen && <WelcomeModal />}
       {welcomeSeen && !firstBoxTapSeen && <TapHintOverlay />}
-      {welcomeSeen && firstBoxTapSeen && !firstMergeSeen && <MergeHintOverlay />}
+      {welcomeSeen && firstBoxTapSeen && !firstMergeSeen && (
+        <MergeHintOverlay />
+      )}
       <MergeSuccessToast />
       <LocationUnlockCelebration />
     </>
