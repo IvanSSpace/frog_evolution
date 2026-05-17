@@ -101,16 +101,23 @@ export function MergeSuccessToast() {
 
   if (!visible) return null
 
+  // Centering pattern по образцу WelcomeModal: fixed flex container.
   return (
     <div
       style={{
         position: 'fixed',
         bottom: 100,
-        left: '50%',
-        transform: 'translateX(-50%)',
+        left: 0,
+        right: 0,
         zIndex: 101,
-        maxWidth: 'calc(100vw - 32px)',
-        padding: '6px 14px',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '0 16px',
+        pointerEvents: 'none',
+      }}
+    >
+      <div style={{
         color: '#fff',
         fontWeight: 800,
         fontSize: 16,
@@ -123,11 +130,9 @@ export function MergeSuccessToast() {
           '0 1px 0 rgba(0,0,0,0.85), 0 0 4px rgba(0,0,0,0.7), 0 0 8px rgba(0,0,0,0.5)',
         opacity: exiting ? 0 : 1,
         transition: `opacity ${TOAST_FADE_MS}ms ease-out`,
-        pointerEvents: 'none',
-        boxSizing: 'border-box',
-      }}
-    >
-      {t('onboarding.mergeHint.success')}
+      }}>
+        {t('onboarding.mergeHint.success')}
+      </div>
     </div>
   )
 }

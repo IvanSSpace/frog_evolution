@@ -153,19 +153,25 @@ export function OnboardingHintBanner() {
       ? t('onboarding.tapHint.label')
       : t('onboarding.mergeHint.label')
 
-  // Center horizontally через transform translateX(-50%) — самый надёжный
-  // способ центрирования fixed элемента (flex-center иногда не работает с
-  // длинным текстом + maxWidth: 100%).
+  // Centering pattern по образцу WelcomeModal: fixed full-width container с
+  // flex justifyContent center, inner element рисуется по content size.
+  // Самый надёжный pattern в проекте.
   return (
     <div
       style={{
         position: 'fixed',
-        bottom: 100, // над BottomBar ~80px + small gap
-        left: '50%',
-        transform: 'translateX(-50%)',
+        bottom: 100,
+        left: 0,
+        right: 0,
         zIndex: 100,
-        maxWidth: 'calc(100vw - 32px)',
-        padding: '6px 14px',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '0 16px',
+        pointerEvents: 'none',
+      }}
+    >
+      <div style={{
         color: '#fff',
         fontWeight: 800,
         fontSize: 16,
@@ -180,9 +186,9 @@ export function OnboardingHintBanner() {
         transition: `opacity ${FADE_OUT_MS}ms ease-out`,
         pointerEvents: 'none',
         boxSizing: 'border-box',
-      }}
-    >
-      {text}
+      }}>
+        {text}
+      </div>
     </div>
   )
 }

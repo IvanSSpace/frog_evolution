@@ -132,14 +132,21 @@ export function LocationUnlockCelebration() {
       aria-live="polite"
       onClick={beginExit}
       style={{
-        // Text-only banner, viewport-center via translateX.
+        // Centering pattern по образцу WelcomeModal: fixed flex container.
         position: 'fixed',
         bottom: 100,
-        left: '50%',
-        transform: 'translateX(-50%)',
+        left: 0,
+        right: 0,
         zIndex: 101,
-        maxWidth: 'calc(100vw - 32px)',
-        padding: '6px 14px',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '0 16px',
+        cursor: 'pointer',
+        touchAction: 'manipulation',
+      }}
+    >
+      <div style={{
         color: '#fff',
         fontWeight: 800,
         fontSize: 16,
@@ -148,14 +155,11 @@ export function LocationUnlockCelebration() {
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         textAlign: 'center',
-        cursor: 'pointer',
-        touchAction: 'manipulation',
         textShadow:
           '0 1px 0 rgba(0,0,0,0.85), 0 0 4px rgba(0,0,0,0.7), 0 0 8px rgba(0,0,0,0.5)',
-        boxSizing: 'border-box',
-      }}
-    >
-      {t('onboarding.location.unlocked', { name: `${info.emoji} ${name}` })}
+      }}>
+        {t('onboarding.location.unlocked', { name: `${info.emoji} ${name}` })}
+      </div>
     </div>
   )
 }
