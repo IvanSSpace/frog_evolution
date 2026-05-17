@@ -40,8 +40,8 @@ import { GhostFrogTrail } from '../../game/effects/GhostFrogTrail'
 import { textureKeyForLevel } from '../../game/config/frogs'
 import type { MainScene } from '../../game/scenes/MainScene'
 import { WelcomeModal } from './WelcomeModal'
-import { TapHintOverlay } from './TapHintOverlay'
-import { MergeHintOverlay, MergeSuccessToast } from './MergeHintOverlay'
+import { OnboardingHintBanner } from './OnboardingHintBanner'
+import { MergeSuccessToast } from './MergeHintOverlay'
 import { LocationUnlockCelebration } from './LocationUnlockCelebration'
 
 // Confetti palettes per location (per CONTEXT.md):
@@ -270,10 +270,10 @@ export function OnboardingController() {
   return (
     <>
       {!welcomeSeen && <WelcomeModal />}
-      {welcomeSeen && !firstBoxTapSeen && <TapHintOverlay />}
-      {welcomeSeen && firstBoxTapSeen && !firstMergeSeen && (
-        <MergeHintOverlay />
-      )}
+      {/* Unified banner — заменяет отдельные TapHintOverlay + MergeHintOverlay.
+          Слушает eventBus, conditional self-renders. Без dark backdrop —
+          per user feedback убирает «серые блоки которые закрывают обзор». */}
+      <OnboardingHintBanner />
       <MergeSuccessToast />
       <LocationUnlockCelebration />
     </>
