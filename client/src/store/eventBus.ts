@@ -122,6 +122,26 @@ type Events = {
   // гасит pulse + dismiss'ит toast если он ещё не auto-faded.
   'onboarding:locationCelebrationStart': { locationId: number }
   'onboarding:locationCelebrationDismiss': { locationId: number }
+  // Phase 23 Plan 23-04 — Beat 3 (Merge demo).
+  // 'mergeDemoStart' эмитит OnboardingController когда trigger совпал
+  // (welcomeSeen + firstBoxTapSeen + !firstMergeSeen + ≥2 L1 carrier-free frogs).
+  // Используется DOM-overlay'ем MergeHintOverlay для anchor'а pill-label'а
+  // между двумя frogs.
+  // Game coords (Phaser pixels) — overlay сам конвертит в DOM через canvas rect.
+  'tutorial:mergeDemoStart': {
+    sourceX: number
+    sourceY: number
+    targetX: number
+    targetY: number
+  }
+  // 'firstMerge' эмитит MergeController при первом successful merge ЛЮБЫХ
+  // двух frogs (normal+normal / carrier+normal / carrier+carrier — все варианты).
+  // Подписчики:
+  //   - OnboardingController (cleanup rings + ghost trail, помечает firstMergeSeen
+  //     если ещё не помечен auto-fade'ом).
+  //   - MergeHintOverlay (hide label, показывает one-time success toast).
+  // Idempotent — повторные merges после mark — no-op для подписчиков.
+  'tutorial:firstMerge': void
 }
 
 export const eventBus = mitt<Events>()
