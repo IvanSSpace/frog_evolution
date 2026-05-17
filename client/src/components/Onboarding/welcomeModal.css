@@ -1,0 +1,59 @@
+/*
+ * Phase 23 Beat 1: WelcomeModal animations & micro-interactions.
+ *
+ * Animation policy (memory feedback_animations): CSS keyframes only.
+ * Lottie deliberately not used — kept lean and synchronous with React lifecycle.
+ *
+ * Naming convention: `onb-welcome-*` to avoid bleed into other Onboarding
+ * components (Plan 23-03 tap hint, Plan 23-04 merge hint, Plan 23-05
+ * location celebration each get their own prefix).
+ */
+
+@keyframes onb-welcome-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes onb-welcome-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Frog bobbing — gentle scale pulse, 1.5s loop, ease-in-out for natural bounce. */
+@keyframes onb-welcome-frog-bob {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.onb-welcome-backdrop {
+  animation: onb-welcome-fade-in 300ms ease-out forwards;
+}
+
+.onb-welcome-backdrop.is-exiting {
+  animation: onb-welcome-fade-out 400ms ease-in forwards;
+}
+
+.onb-welcome-frog {
+  animation: onb-welcome-frog-bob 1500ms ease-in-out infinite;
+  transform-origin: center;
+  display: block;
+}
+
+/* Press feedback — subtle scale on active, mirrors LocationStack CTA pattern. */
+.onb-welcome-cta:active {
+  transform: scale(0.96);
+  transition: transform 80ms ease-out;
+}
