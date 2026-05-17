@@ -90,10 +90,20 @@ export function TapHintOverlay() {
   // а CSS-rect — в CSS-pixel'ах. scaleX/scaleY переводит game→DOM.
   const scaleX = rect.width / canvas.width
   const scaleY = rect.height / canvas.height
-  const domX = rect.left + spawn.x * scaleX
+  const rawDomX = rect.left + spawn.x * scaleX
   // Y под боксом: spawn.y + (width * 0.7) даёт центр ring'а внизу + небольшой
   // visual gap 12 CSS px.
-  const domY = rect.top + (spawn.y + spawn.width * 0.7) * scaleY + 12
+  const rawDomY = rect.top + (spawn.y + spawn.width * 0.7) * scaleY + 12
+
+  // Viewport clamp + integer round — иначе pill уезжает за края экрана если
+  // бокс падает у края, и subpixel translateX даёт blur.
+  // PILL_HALF_W_ESTIMATE — консервативная оценка ширины («Тапни 👆» ≈ 70px).
+  const VIEWPORT_PADDING = 12
+  const PILL_HALF_W_ESTIMATE = 60
+  const minX = PILL_HALF_W_ESTIMATE + VIEWPORT_PADDING
+  const maxX = window.innerWidth - PILL_HALF_W_ESTIMATE - VIEWPORT_PADDING
+  const domX = Math.round(Math.max(minX, Math.min(maxX, rawDomX)))
+  const domY = Math.round(rawDomY)
 
   return (
     <div
@@ -101,7 +111,8 @@ export function TapHintOverlay() {
         position: 'fixed',
         left: domX,
         top: domY,
-        transform: 'translateX(-50%)',
+        // translate3d вместо translateX → GPU layer + убирает subpixel text blur.
+        transform: 'translate3d(-50%, 0, 0)',
         zIndex: 100,
         padding: '6px 12px',
         borderRadius: 999,
@@ -110,12 +121,14 @@ export function TapHintOverlay() {
         fontWeight: 700,
         fontSize: 14,
         lineHeight: 1.2,
+        textAlign: 'center',
         // pointer-events: none — label НЕ блокирует tap по боксу под ним
         // (memory: feedback_clickability).
         pointerEvents: 'none',
         opacity: exiting ? 0 : 1,
         transition: `opacity ${FADE_OUT_MS}ms ease-out`,
         whiteSpace: 'nowrap',
+        maxWidth: `calc(100vw - ${VIEWPORT_PADDING * 2}px)`,
         boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
       }}
     >

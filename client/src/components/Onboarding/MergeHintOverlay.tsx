@@ -98,8 +98,19 @@ export function MergeHintOverlay() {
   // плюс отступ 50px CSS чтобы pill не накладывался на frog body.
   const midGameX = (anchor.sourceX + anchor.targetX) / 2
   const lowerGameY = Math.max(anchor.sourceY, anchor.targetY)
-  const domX = rect.left + midGameX * scaleX
-  const domY = rect.top + lowerGameY * scaleY + 50
+  const rawDomX = rect.left + midGameX * scaleX
+  const rawDomY = rect.top + lowerGameY * scaleY + 50
+
+  // Viewport clamp + integer round — иначе pill уезжает за края экрана если frogs
+  // у краёв, и subpixel translateX даёт blur (memory: ловили на скриншоте 2026-05-18).
+  // PILL_HALF_W_ESTIMATE — консервативная оценка ширины pill'а / 2 (текст
+  // "Перетащи одну на другую" ≈ 200px, half ≈ 100, + padding).
+  const VIEWPORT_PADDING = 12
+  const PILL_HALF_W_ESTIMATE = 110
+  const minX = PILL_HALF_W_ESTIMATE + VIEWPORT_PADDING
+  const maxX = window.innerWidth - PILL_HALF_W_ESTIMATE - VIEWPORT_PADDING
+  const domX = Math.round(Math.max(minX, Math.min(maxX, rawDomX)))
+  const domY = Math.round(rawDomY)
 
   return (
     <div
@@ -107,7 +118,9 @@ export function MergeHintOverlay() {
         position: 'fixed',
         left: domX,
         top: domY,
-        transform: 'translateX(-50%)',
+        // translate3d вместо translateX чтобы триггернуть GPU layer
+        // и убрать subpixel text blur.
+        transform: 'translate3d(-50%, 0, 0)',
         zIndex: 100,
         padding: '6px 14px',
         borderRadius: 999,
@@ -116,11 +129,15 @@ export function MergeHintOverlay() {
         fontWeight: 700,
         fontSize: 14,
         lineHeight: 1.2,
+        textAlign: 'center',
         // pointer-events: none — pill не блокирует drag по frog'ам под ним.
         pointerEvents: 'none',
         opacity: exiting ? 0 : 1,
         transition: `opacity ${FADE_OUT_MS}ms ease-out`,
         whiteSpace: 'nowrap',
+        // Жёсткий cap на ширину чтобы текст не вылезал за viewport на узких
+        // экранах даже если оценка PILL_HALF_W_ESTIMATE окажется маленькой.
+        maxWidth: `calc(100vw - ${VIEWPORT_PADDING * 2}px)`,
         boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
       }}
     >
