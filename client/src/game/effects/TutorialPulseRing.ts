@@ -65,10 +65,14 @@ export class TutorialPulseRing {
     const duration = opts.duration ?? 800
     const maxScale = opts.maxScale ?? 1.15
     const depth = opts.depth ?? 5000
+    // Defensive: cap radius в [4, 120] CSS px — иначе при некорректном
+    // displayWidth target'а ring может перекрыть весь viewport.
+    // 120 px = достаточно для большого frog/box visual'но не overflow'ит.
+    const safeRadius = Math.max(4, Math.min(opts.radius, 120))
 
     const ring = this.scene.add.graphics()
     ring.lineStyle(stroke, color, 1)
-    ring.strokeCircle(0, 0, opts.radius)
+    ring.strokeCircle(0, 0, safeRadius)
 
     this.container = this.scene.add.container(this.target.x, this.target.y, [
       ring,

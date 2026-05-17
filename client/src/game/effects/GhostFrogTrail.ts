@@ -78,7 +78,11 @@ export class GhostFrogTrail {
     const durationMs = this.opts.durationMs ?? 1200
     const alpha = this.opts.alpha ?? 0.5
     const depth = this.opts.depth ?? 5000
-    const scale = this.opts.scale ?? 1
+    // Defensive: scale clamped в [0.1, 1.5] чтобы ghost не вырастал в pol-viewport
+    // даже если caller передал безумное значение (баг 2026-05-18: container.scaleX
+    // может быть negative из-за frog FlipX → ghost фliповался + scaled).
+    const rawScale = this.opts.scale ?? 1
+    const scale = Math.max(0.1, Math.min(Math.abs(rawScale), 1.5))
 
     // Arc-up curve: control point поднят на 50px ВВЕРХ от higher из двух точек
     // (в Phaser Y возрастает вниз — поэтому Math.min(source.y, target.y) даёт
@@ -114,7 +118,8 @@ export class GhostFrogTrail {
         this.currentTween = null
         if (this.destroyed || !this.ghost) return
         // Burst на прибытии: масштабируем + fade-out.
-        const burstTargetScale = scale * 1.3
+        // Reduced 1.3 → 1.1 чтобы burst оставался скромным.
+        const burstTargetScale = scale * 1.1
         this.burstTween = this.scene.tweens.add({
           targets: this.ghost,
           alpha: 0,

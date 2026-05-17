@@ -180,10 +180,14 @@ export function OnboardingController() {
 
     // Ghost trail — same texture как L1 frog. textureKeyForLevel(1) даёт
     // загруженный key из MainScene.preload (frog_lvl_1).
-    // scale match'ит реальный frog (src.container scale — обычно BASE_SCALE,
-    // но frog.body внутри container'а уже наследует scale; для ghost'а просто
-    // берём scale source container'а если он не 1).
-    const ghostScale = src.container.scale || 1
+    // ВАЖНО: container.scaleX может быть НЕГАТИВНЫМ из-за FrogSpawner FlipX
+    // (`(movingRight ? 1 : -1) * BASE_SCALE`). Negative scale на ghost даёт
+    // огромный flipped frog + burst×1.3 → перекрывает весь viewport
+    // (баг наблюдался 2026-05-18 — pink/тёмный полукруг на screenshot'е).
+    // Используем Math.abs чтобы получить magnitude, и hard cap чтобы
+    // защититься от случайных огромных scale значений.
+    const rawScale = Math.abs(src.container.scaleX) || 1
+    const ghostScale = Math.min(rawScale, 1.2)
     let ghost: GhostFrogTrail | null = new GhostFrogTrail({
       scene,
       textureKey: textureKeyForLevel(src.level),
