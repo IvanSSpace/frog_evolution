@@ -1,5 +1,6 @@
 // Cosmic Frogs System — типы для Phase 11+
 // Pure types + constants. Не импортирует из gameStore (избегаем циклов).
+// Phase 22: Rarity removed. Carrier развивается через стандартный merge до L18 → ascension.
 
 export type Element =
   | 'fire'
@@ -18,8 +19,6 @@ export type Element =
   | 'mechanical'
   | 'war'
   | 'void'
-
-export type Rarity = 'common' | 'rare' | 'epic' | 'legendary'
 
 export const ELEMENTS: readonly Element[] = [
   'fire',
@@ -40,14 +39,8 @@ export const ELEMENTS: readonly Element[] = [
   'void',
 ]
 
-// NOTE: 'legendary' temporarily disabled (юзер уберёт epic тир после shrink 24→18).
-// Тип Rarity сохраняет 4 значения для будущего возврата legendary.
-export const RARITIES: readonly Rarity[] = ['common', 'rare', 'epic']
-
 // Phase 15 (REQ BOX-01): полный shape для inventory + cascade reveal flow.
-// Phase 11 stub имел { id, element, opened, sourceArchetype? } — расширено
-// до 8 полей (planetId/planetName/archetype/createdAt/bonusRarity).
-// STORAGE_VERSION 17 wipes Phase 11 boxes на load (clean migration).
+// Phase 22: bonusRarity legacy kept as cosmetic-only flag (boxSlice cleanup в Task 2).
 export interface BoxData {
   id: string
   planetId: string // origin planet (Phase 16 source)
@@ -56,36 +49,17 @@ export interface BoxData {
   element: Element // computed at addBox via elementFromPlanet
   opened: boolean // marked true при slot-machine reveal start
   createdAt: number // unix ms — sortable «недавно полученные»
-  bonusRarity?: 'rare' | 'epic' | 'legendary' // optional mission perfect-bonus floor (REQ MISSION-03)
+  bonusRarity?: 'rare' | 'epic' | 'legendary' // cosmetic-only legacy flag (Phase 22)
   // Legacy Phase 11 поле — оставлено для backward compat parsing; deprecated.
   sourceArchetype?: string
 }
 
-/**
- * Phase 17: исход одного feed roll.
- *  - 'success'   → carrier.level += 1
- *  - 'fail'      → carrier.level unchanged
- *  - 'stabilize' → carrier достиг ceiling (carrier.stabilized = true)
- */
-export type RollResult =
-  | { type: 'success'; timestamp: number }
-  | { type: 'fail'; timestamp: number }
-  | { type: 'stabilize'; timestamp: number }
-
+// Phase 22: carrier = простая лягушка под сывороткой.
+// Развивается через стандартный merge до L18, на L18 → instant ascension (см. ascensionSlice).
 export interface CarrierData {
   frogId: string
   element: Element
-  rarity: Rarity
-  feedCount: number
-  stabilized: boolean
-  // Phase 12+: опциональный уровень лягушки на момент привязки сыворотки.
-  // Phase 12 manager не использует это поле; добавлено для будущей логики (Phase 17 evolution).
-  level?: number
-  // Phase 17 NEW (все optional для backward compat):
-  /** Pre-determined ceiling level (1..24). undefined = ещё не было feed'ов. */
-  ceiling?: number
-  /** Sequence of feed outcomes; clamped to last 24 entries. */
-  rollHistory?: RollResult[]
+  level: number
 }
 
 // ===== Phase 16: ShipState discriminated union (REQ SHIP-01) =====
@@ -104,17 +78,20 @@ export interface ShipStateTransit {
 
 export type ShipState = ShipStateDocked | ShipStateTransit
 
+// Phase 22: PityCounters остаются как string-keyed (не Rarity тип).
+// Используются boxRollers (cosmetic в Phase 22) — boxSlice cleanup в Task 2.
 export interface PityCounters {
-  common: number // боксов без гарантии common (всегда 0, placeholder)
-  rare: number // боксов подряд без rare+
-  epic: number // боксов подряд без epic+
-  legendary: number // боксов подряд без legendary
+  common: number
+  rare: number
+  epic: number
+  legendary: number
 }
 
 // Phase 17: добавлен carriers tab.
 export type CosmicTab = 'scouts' | 'boxes' | 'bestiary' | 'carriers'
 
 // Phase 19-05 (UX-08): tutorial overlay step IDs.
+// Phase 22: first-feed/first-stabilize устарели (нет feed-stabilize механики). Plan 22-07 решит cleanup.
 export type TutorialStepId =
   | 'first-box'
   | 'first-serum'
@@ -130,8 +107,8 @@ export interface TutorialState {
 }
 
 export interface CosmicSlice {
-  // Инвентарь сывороток: Record<Element, Record<Rarity, count>>
-  serums: Record<Element, Record<Rarity, number>>
+  // Phase 22: плоский серум-инвентарь (без rarity dimension)
+  serums: Record<Element, number>
 
   // Инвентарь боксов (Phase 15)
   boxes: BoxData[]
@@ -144,10 +121,11 @@ export interface CosmicSlice {
 
   // Бестиарий bitset: Phase 20 shrink до 144 байт = 1152 битов (24→18 frog levels).
   // Layout: 16 elements × 4 rarities × 18 levels = 1152 уникальных combos.
-  // Хранится как number[] (JSON-serializable).
+  // Phase 22: rarity dimension legacy — обсудить shrink (768 = 16×3×18 без legendary,
+  // или 288 = 16×18 если rarity полностью отказаться от бестиария) в отдельном плане.
   bestiaryBitset: number[] // length = 144
 
-  // Pity counters (Phase 19)
+  // Pity counters (Phase 19; Phase 22 cosmetic-only)
   pityCounters: PityCounters
 
   // UI: последний активный таб (sessionStorage, не persist в localStorage)
@@ -160,11 +138,12 @@ export interface CosmicSlice {
   }
 
   // Phase 14: serum tap-to-select / drag selection mode (transient UI state, НЕ persisted)
+  // Phase 22: selectedSerum упрощён до { element } (rarity removed).
   serumDragActive: boolean
-  selectedSerum: { element: Element; rarity: Rarity } | null
+  selectedSerum: { element: Element } | null
 
   // Phase 16: progressive disclosure flags (REQ UX-09).
-  // gates Корабль tab; toggle при первом feed (Phase 17).
+  // Phase 22: hasFirstFeed устарел (нет feed механики), но оставлен для backward-compat persist.
   hasFirstFeed: boolean
   // gates Боксы tab; toggle при первой completed mission (Phase 16).
   hasFirstMission: boolean
@@ -203,10 +182,10 @@ export interface CosmicToastPayload {
 
 // Фабрика начального состояния
 export function makeInitialCosmicSlice(): CosmicSlice {
-  // Инициализация serums: все 16 × 4 = 0
-  const serums = {} as Record<Element, Record<Rarity, number>>
+  // Phase 22: плоский серум — Record<Element, number>, все 16 = 0
+  const serums = {} as Record<Element, number>
   for (const el of ELEMENTS) {
-    serums[el] = { common: 0, rare: 0, epic: 0, legendary: 0 }
+    serums[el] = 0
   }
   return {
     serums,
