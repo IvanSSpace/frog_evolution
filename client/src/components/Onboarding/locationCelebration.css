@@ -1,20 +1,14 @@
 /* Phase 23 Plan 23-05 (Beat 4): location unlock toast animations.
- *
- * Slide-up from bottom + fade-out. Используется в LocationUnlockCelebration.tsx.
- * Pulse keyframes для LocationStack button находятся в LocationStack inline
- * <style>, потому что той анимации владеет конкретный компонент.
- *
- * IMPORTANT (memory feedback_animations): чистые CSS keyframes, НЕ Lottie.
+ * REWRITE 2026-05-18 v2: opacity-only animation (toast больше не pill
+ * с translateX(-50%), а full-width text-banner — translate broke layout).
  */
 
-@keyframes onb-toast-slide-up {
+@keyframes onb-toast-fade-in {
   from {
     opacity: 0;
-    transform: translate(-50%, 40px);
   }
   to {
     opacity: 1;
-    transform: translate(-50%, 0);
   }
 }
 
@@ -28,7 +22,7 @@
 }
 
 .onb-loc-toast {
-  animation: onb-toast-slide-up 350ms ease-out forwards;
+  animation: onb-toast-fade-in 350ms ease-out forwards;
 }
 
 .onb-loc-toast.is-exiting {

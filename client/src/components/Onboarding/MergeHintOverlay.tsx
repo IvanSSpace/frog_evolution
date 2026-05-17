@@ -100,32 +100,44 @@ export function MergeSuccessToast() {
 
   if (!visible) return null
 
+  // Text-only banner, no background — match new HintBanner стиль.
+  // User feedback: огромный pink prostokat при merge — fix: убрать background.
   return (
     <div
       style={{
         position: 'fixed',
-        bottom: 100,
-        left: '50%',
-        transform: 'translateX(-50%)',
+        bottom: 110,
+        left: 0,
+        right: 0,
         zIndex: 101,
-        padding: '10px 20px',
-        borderRadius: 14,
-        background: '#ec4899',
-        color: '#fff',
-        fontWeight: 700,
-        fontSize: 15,
-        // Hard maxWidth — pill НЕ растянется во весь экран.
-        maxWidth: 340,
-        boxSizing: 'border-box',
+        display: 'flex',
+        justifyContent: 'center',
         pointerEvents: 'none',
-        opacity: exiting ? 0 : 1,
-        transition: `opacity ${TOAST_FADE_MS}ms ease-out`,
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
+        padding: '0 16px',
       }}
     >
-      {t('onboarding.mergeHint.success')}
+      <div
+        style={{
+          display: 'inline-block',
+          maxWidth: '100%',
+          padding: '4px 10px',
+          color: '#fff',
+          fontWeight: 800,
+          fontSize: 16,
+          lineHeight: 1.2,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          // Heavy text-shadow для readability без background.
+          textShadow:
+            '0 1px 0 rgba(0,0,0,0.85), 0 0 4px rgba(0,0,0,0.7), 0 0 8px rgba(0,0,0,0.5)',
+          opacity: exiting ? 0 : 1,
+          transition: `opacity ${TOAST_FADE_MS}ms ease-out`,
+          boxSizing: 'border-box',
+        }}
+      >
+        {t('onboarding.mergeHint.success')}
+      </div>
     </div>
   )
 }
