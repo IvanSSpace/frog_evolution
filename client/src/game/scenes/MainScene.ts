@@ -14,6 +14,7 @@ import {
 } from '../config/frogs'
 import { FrogOverlayManager } from '../effects/FrogOverlayManager'
 import { ElementAuraOverlay } from '../effects/ElementAuraOverlay'
+import { playAscensionTween } from '../effects/CarrierAscensionTween'
 import {
   fireSpec,
   waterSpec,
@@ -223,6 +224,8 @@ export class MainScene extends Phaser.Scene {
     // Phase 21-05: location-changed + dev-clear перенесены в LocationTransition.
     eventBus.on('location:changed', this.locTransition.onLocationChanged)
     eventBus.on('dev:clearAllFrogs', this.locTransition.onDevClearAllFrogs)
+    // Plan 22-03: carrier ascension visual hook.
+    eventBus.on('cosmic:carrier-ascended', this.onCarrierAscended)
 
     eventBus.on('rareCrate:claim', ({ level }) => {
       const store = useGameStore.getState()
@@ -476,6 +479,46 @@ export class MainScene extends Phaser.Scene {
     this.drainOfflineBoxBuffer()
   }
 
+  // Plan 22-03: carrier ascension visual hook.
+  // Триггерится из ascendCarrier action (после удаления carrier из store).
+  // Находит live frog по frogId и проигрывает ~1.5s tween (scale up + alpha → 0
+  // + rise + aura pulse). По завершению — removeFrog освобождает сцену.
+  // Edge case: cross-location carrier (synthetic frogId) → frog не найден →
+  // tween не запускается, аура ярко исчезает в фоне (store mutation уже произошла).
+  private onCarrierAscended = ({
+    frogId,
+    element,
+  }: {
+    frogId: string
+    element: Element
+  }) => {
+    const frog = this.frogs.find((f) => f.id === frogId)
+    if (!frog) {
+      // Cross-location ascension или race с removeFrog — no visual.
+      return
+    }
+    // Освобождаем overlay явно ДО tween, чтобы aura не двигалась с лягушкой
+    // и не оставалась после destroy (FrogOverlayManager subscribe тоже его
+    // освободит когда увидит carrier removed из store, но мы делаем это
+    // syncronously для надёжности).
+    this.overlayManager?.releaseForFrog(frogId)
+
+    // Помечаем чтобы merge/drag не цеплял ascending лягушку.
+    frog.isMerging = true
+    frog.isMoving = true
+    frog.poopTimer?.remove()
+    frog.poopTimer = null
+    this.tweens.killTweensOf(frog.container)
+    this.tweens.killTweensOf(frog.body)
+    frog.body.disableInteractive()
+
+    playAscensionTween(this, frog.container, element, () => {
+      // Container уже фактически уничтожен внутри tween (alpha=0 + destroy);
+      // здесь — clean removal из scene.frogs и syncEntityCount.
+      this.spawner.removeFrog(frog)
+    })
+  }
+
   private drainOfflineBoxBuffer() {
     if (_offlineBoxBuffer <= 0) return
     const store = useGameStore.getState()
@@ -628,6 +671,7 @@ export class MainScene extends Phaser.Scene {
     eventBus.off('location:changed', this.locTransition.onLocationChanged)
     eventBus.off('dev:clearAllFrogs', this.locTransition.onDevClearAllFrogs)
     eventBus.off('rareCrate:claim')
+    eventBus.off('cosmic:carrier-ascended', this.onCarrierAscended)
     // Phase 12: освобождаем все overlay'ы и dropAll pool.
     this.overlayManager?.dispose()
     this.overlayManager = null

@@ -18,6 +18,7 @@ import {
 import { elementOverlayPool } from './elementOverlayPool'
 import type { FrogElementOverlay } from './FrogElementOverlay'
 import { devWarn } from '../../utils/devLog'
+import { eventBus } from '../../store/eventBus'
 
 // PERF-02: hard cap visible overlays.
 const HARD_CAP_VISIBLE = 4
@@ -68,6 +69,16 @@ export class FrogOverlayManager {
         this.dirty = true
       }
     })
+
+    // Plan 22-03: defensive cleanup при ascension event — освобождаем overlay
+    // даже если store-mutation ещё не сигналил dirty (например, ascendCarrier
+    // вызван из dev console между ticks).
+    eventBus.on('cosmic:carrier-ascended', this.onCarrierAscended)
+  }
+
+  private onCarrierAscended = ({ frogId }: { frogId: string }) => {
+    if (this.disposed) return
+    this.releaseForFrog(frogId)
   }
 
   /** Tick из MainScene.update(). */
@@ -191,6 +202,7 @@ export class FrogOverlayManager {
     this.disposed = true
     this.unsubStore?.()
     this.unsubStore = null
+    eventBus.off('cosmic:carrier-ascended', this.onCarrierAscended)
     for (const [, overlay] of this.active) {
       elementOverlayPool.release(overlay)
     }
@@ -206,6 +218,7 @@ export class FrogOverlayManager {
     this.disposed = true
     this.unsubStore?.()
     this.unsubStore = null
+    eventBus.off('cosmic:carrier-ascended', this.onCarrierAscended)
     this.active.clear()
   }
 

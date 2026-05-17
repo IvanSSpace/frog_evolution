@@ -355,6 +355,16 @@ export class MergeController {
           )
         }
 
+        // Plan 22-03: L18 ascension trigger. Только после carrier-merge'а
+        // (нормал+нормал на L18 — special path выше, обработан до этого блока).
+        // Carrier на L18 instant ascends: удаляется из store, аура pulse +
+        // лягушка исчезает с поля (MainScene listens 'cosmic:carrier-ascended').
+        // ВАЖНО порядок: сначала спавн + dispatch merge action (carrier создан в store
+        // под newFrogId), потом ascendCarrier(newFrogId) удаляет его. Consistent transition.
+        if (carrierMergePlan && newLevel === MAX_LEVEL) {
+          useGameStore.getState().ascendCarrier(newFrogId)
+        }
+
         const wasNew = store.markDiscovered(newLevel)
         if (wasNew) {
           eventBus.emit('frog:discovered', { level: newLevel })
