@@ -1,10 +1,15 @@
 // Phase 21-02 (Wave 2): Merge / carrier-merge controller, extracted from MainScene.ts.
 //
-// Phase 22: feed / stabilize branches removed. MergeController handles:
+// Phase 22 Plan 22-02: carrier merge rules wired. MergeController handles:
 //   - normal+normal → standard merge
-//   - carrier+normal → TODO Plan 22-02
-//   - carrier+carrier → TODO Plan 22-02
-//   - L18+L18 → cosmos unlock sentinel (unchanged)
+//   - carrier+normal → carrier L+1, element inherited from carrier
+//   - carrier+carrier → carrier L+1, TARGET (drop-on, = `b`) element survives
+//     per D-Carrier+carrier rule
+//   - L18+L18 normal → cosmos unlock sentinel via markDiscovered(19) (unchanged)
+//
+// Drag direction is the game-design source of truth: caller (FrogSpawner.dragend)
+// passes `a` = dropped frog, `b` = drop-on target. Do NOT swap these — element
+// selection for carrier+carrier depends on the orientation.
 //
 // Public API:
 //   - performMerge(a, b, cx, cy): top-level entry — routes to carrier/standard
@@ -44,8 +49,8 @@ import type { FrogSpawner } from './FrogSpawner'
 /** Classify drop-target relationship without importing deleted carrierFeed module. */
 type MergeKind =
   | 'normal'             // normal + normal → standard merge
-  | 'carrier-normal'     // carrier + normal (same level) → TODO Plan 22-02
-  | 'carrier-carrier'    // carrier + carrier (same level, any element) → TODO Plan 22-02
+  | 'carrier-normal'     // carrier + normal (same level) → Plan 22-02 rule
+  | 'carrier-carrier'    // carrier + carrier (same level, any element) → Plan 22-02 (target-wins)
   | 'blocked-mismatch'   // different levels
 
 function classifyMerge(
@@ -155,22 +160,56 @@ export class MergeController {
       return
     }
 
-    // TODO Plan 22-02: implement carrier+normal merge rule
-    // carrier Ln + normal Ln → carrier L(n+1), element from carrier.
+    // Plan 22-02: carrier merge metadata — resolved here BEFORE delayedCall
+    // because carrier records can be torn down/rebound mid-animation.
+    // For carrier-normal kind we capture which side is the carrier so that
+    // we dispatch mergeCarrierWithNormal(carrierId, normalId, ...) with the
+    // right orientation regardless of drag direction.
+    let carrierMergePlan:
+      | { kind: 'carrier-normal'; carrierFrogId: string; normalFrogId: string }
+      | { kind: 'carrier-carrier'; droppedFrogId: string; targetFrogId: string }
+      | null = null
+
     if (kind === 'carrier-normal') {
-      devLog('[performMerge] carrier+normal → TODO Plan 22-02, using standard merge path')
-      // Fall through to standard merge (visual + store sync); carrier overlay
-      // will follow via FrogOverlayManager.markDirty after spawn.
+      const aIsCarrier = carriers.some((c) => c.frogId === a.id)
+      const carrierFrogId = aIsCarrier ? a.id : b.id
+      const normalFrogId = aIsCarrier ? b.id : a.id
+      carrierMergePlan = { kind: 'carrier-normal', carrierFrogId, normalFrogId }
+      if (import.meta.env.DEV) {
+        const carrier = carriers.find((c) => c.frogId === carrierFrogId)
+        devLog('[carrier-merge]', {
+          kind: 'carrier-normal',
+          carrierFrogId,
+          normalFrogId,
+          element: carrier?.element,
+        })
+      }
     }
 
-    // TODO Plan 22-02: implement carrier+carrier merge rule
-    // carrier Ln + carrier Ln → carrier L(n+1), element from drop-target (b).
     if (kind === 'carrier-carrier') {
-      devLog('[performMerge] carrier+carrier → TODO Plan 22-02, using standard merge path')
-      // Fall through to standard merge.
+      // Drag direction = source of truth: `a` is dropped, `b` is target.
+      // TARGET's element survives per D-Carrier+carrier rule.
+      carrierMergePlan = {
+        kind: 'carrier-carrier',
+        droppedFrogId: a.id,
+        targetFrogId: b.id,
+      }
+      if (import.meta.env.DEV) {
+        const droppedC = carriers.find((c) => c.frogId === a.id)
+        const targetC = carriers.find((c) => c.frogId === b.id)
+        devLog('[carrier-merge]', {
+          kind: 'carrier-carrier',
+          droppedFrogId: a.id,
+          targetFrogId: b.id,
+          droppedElement: droppedC?.element,
+          targetElement: targetC?.element,
+          resultElement: targetC?.element,
+        })
+      }
     }
 
-    // === Standard-merge logic (normal+normal, and carrier fallback until 22-02) ===
+    // === Standard-merge logic (normal+normal; carrier branches dispatch a
+    // store action after the new frog spawns — see below in delayedCall). ===
     a.isMerging = true
     b.isMerging = true
     a.isMoving = true
@@ -264,6 +303,12 @@ export class MergeController {
       const isCrossLocation = newCfg.location !== currentLocId
 
       scene.time.delayedCall(60, () => {
+        // Plan 22-02: resolve newFrogId for carrier-merge dispatch.
+        // - Same-location: real spawned frog id.
+        // - Cross-location: synthetic id; FrogSpawner.rebindCarriers will
+        //   re-attach to a real frog when the target location is visited.
+        let newFrogId: string
+
         if (isCrossLocation) {
           this.playCrossLocationFlyAway(cx, cy, newLevel)
           eventBus.emit('cosmic:toast', {
@@ -271,8 +316,10 @@ export class MergeController {
             msg: i18next.t('cosmic_hub.carrier.merge_cross_location_warn'),
             duration: 3000,
           })
+          newFrogId = `carrier-cross-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
         } else {
           const newFrog = this.spawner.spawnFrog(cx, cy, newLevel)
+          newFrogId = newFrog.id
           newFrog.container.setScale(0)
           scene.tweens.add({
             targets: newFrog.container,
@@ -290,6 +337,24 @@ export class MergeController {
           })
         }
 
+        // Plan 22-02: dispatch carrier merge action AFTER spawn so we know
+        // newFrogId. Standard-merge frog (normal+normal) — no action needed.
+        if (carrierMergePlan?.kind === 'carrier-normal') {
+          useGameStore.getState().mergeCarrierWithNormal(
+            carrierMergePlan.carrierFrogId,
+            carrierMergePlan.normalFrogId,
+            newFrogId,
+            newLevel,
+          )
+        } else if (carrierMergePlan?.kind === 'carrier-carrier') {
+          useGameStore.getState().mergeCarrierWithCarrier(
+            carrierMergePlan.droppedFrogId,
+            carrierMergePlan.targetFrogId,
+            newFrogId,
+            newLevel,
+          )
+        }
+
         const wasNew = store.markDiscovered(newLevel)
         if (wasNew) {
           eventBus.emit('frog:discovered', { level: newLevel })
@@ -299,7 +364,7 @@ export class MergeController {
           }
         }
 
-        // Sync overlay after merge (carrier frogId may have moved to new frog)
+        // Sync overlay after merge (carrier frogId moved to new frog above).
         scene.overlayManager?.markDirty()
       })
     })
