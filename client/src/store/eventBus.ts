@@ -111,6 +111,17 @@ type Events = {
   // Subscribers: TapHintOverlay (fade-out), BoxController (destroy ring),
   // OnboardingController (no-op, реагирует на store change).
   'tutorial:firstBoxTapped': { boxId: string }
+  // Phase 23 Plan 23-05 — Beat 4 location celebration coordination
+  // между React HUD и Phaser.
+  // 'Start' эмитит OnboardingController при первом 'location:unlocked' для
+  // данного locationId (idempotent через locationsCelebrated guard).
+  // Подписчики:
+  //   - LocationUnlockCelebration (DOM toast slide-up snizu)
+  //   - LocationStack (pulse ring + glow + bobble на новой location button)
+  // 'Dismiss' эмитит LocationStack при tap на pulsing button —
+  // гасит pulse + dismiss'ит toast если он ещё не auto-faded.
+  'onboarding:locationCelebrationStart': { locationId: number }
+  'onboarding:locationCelebrationDismiss': { locationId: number }
 }
 
 export const eventBus = mitt<Events>()

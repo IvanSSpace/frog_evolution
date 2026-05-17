@@ -283,7 +283,11 @@ export class MainScene extends Phaser.Scene {
     this.interaction.setup()
 
     // Phase 12 dev: expose scene для smoke-helpers (window.__listFrogIds()).
-    if (import.meta.env.DEV) {
+    // Phase 23 Plan 23-05: expose в production тоже — OnboardingController (React)
+    // нуждается в scene reference чтобы spawn'ить Phaser ConfettiBurst при
+    // 'location:unlocked'. React/Phaser bridge: scene публичная, но трогать
+    // только из bridge-points (overlay/celebration), не для game state.
+    {
       const w = window as unknown as { __mainScene?: MainScene }
       w.__mainScene = this
     }
@@ -719,6 +723,12 @@ export class MainScene extends Phaser.Scene {
     this.selectionLayer = null
     // Phase 21-05: subscribe / DnD pointer listeners — в FrogInteraction.teardown().
     this.interaction.teardown()
+    // Phase 23 Plan 23-05: очищаем window.__mainScene reference
+    // (выставлено в create() для React→Phaser bridge).
+    {
+      const w = window as unknown as { __mainScene?: MainScene }
+      if (w.__mainScene === this) delete w.__mainScene
+    }
   }
 
   // Dev-only: spawn one frog per element on ALL 4 locations.
