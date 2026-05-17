@@ -178,23 +178,30 @@ export function OnboardingController() {
       targetY,
     })
 
-    // Ghost trail — same texture как L1 frog. textureKeyForLevel(1) даёт
-    // загруженный key из MainScene.preload (frog_lvl_1).
-    // ВАЖНО: container.scaleX может быть НЕГАТИВНЫМ из-за FrogSpawner FlipX
-    // (`(movingRight ? 1 : -1) * BASE_SCALE`). Negative scale на ghost даёт
-    // огромный flipped frog + burst×1.3 → перекрывает весь viewport
-    // (баг наблюдался 2026-05-18 — pink/тёмный полукруг на screenshot'е).
-    // Используем Math.abs чтобы получить magnitude, и hard cap чтобы
-    // защититься от случайных огромных scale значений.
-    const rawScale = Math.abs(src.container.scaleX) || 1
-    const ghostScale = Math.min(rawScale, 1.2)
+    // Ghost trail — match visual size source frog body.
+    // ВАЖНО: container.scaleX наследовать НЕЛЬЗЯ — может быть negative из FlipX
+    // и его magnitude не равен displayed size (BASE_SCALE × texture_quality).
+    // Правильный подход — берём фактический displayWidth body и hard cap
+    // в reasonable бypaц чтобы ghost точно был не больше реального frog'а.
+    const srcBodyW = src.body?.displayWidth ?? 0
+    const srcContainerS = Math.abs(src.container.scaleX) || 1
+    const visualW = srcBodyW * srcContainerS
+    // Cap ghost displayed visual width в 80 CSS px (=240 physical при DPR=3)
+    // даже если frog texture огромен. Frog обычно занимает ~60-80 CSS — match.
+    const MAX_GHOST_CSS_PX = 80
+    const DPR_LOCAL =
+      typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
+    const maxGhostPhys = MAX_GHOST_CSS_PX * DPR_LOCAL
+    const desiredDisplayW = Math.min(visualW || maxGhostPhys, maxGhostPhys)
     let ghost: GhostFrogTrail | null = new GhostFrogTrail({
       scene,
       textureKey: textureKeyForLevel(src.level),
       source: { x: sourceX, y: sourceY },
       target: { x: targetX, y: targetY },
       loops: 3,
-      scale: ghostScale,
+      // displayWidth — целевая ширина в Phaser scene coords (=physical px).
+      // GhostFrogTrail сам преобразует в scale по texture native size.
+      displayWidth: desiredDisplayW,
     })
 
     // На реальном merge ANY two frogs — MergeController emit'ит

@@ -46,6 +46,13 @@ export interface GhostFrogTrailOptions {
   depth?: number
   /** Scale ghost sprite'а (default — берём 1.0, caller обычно передаёт BASE_SCALE). */
   scale?: number
+  /**
+   * Целевая display width ghost'а в Phaser scene coords (physical px).
+   * Имеет приоритет над `scale` — если передан, scale игнорируется и
+   * вычисляется так чтобы ghost.displayWidth = displayWidth.
+   * Use this для match visual size source frog body.
+   */
+  displayWidth?: number
   /** Callback после завершения всех loops (НЕ вызывается при destroy()). */
   onComplete?: () => void
 }
@@ -78,11 +85,6 @@ export class GhostFrogTrail {
     const durationMs = this.opts.durationMs ?? 1200
     const alpha = this.opts.alpha ?? 0.5
     const depth = this.opts.depth ?? 5000
-    // Defensive: scale clamped в [0.1, 1.5] чтобы ghost не вырастал в pol-viewport
-    // даже если caller передал безумное значение (баг 2026-05-18: container.scaleX
-    // может быть negative из-за frog FlipX → ghost фliповался + scaled).
-    const rawScale = this.opts.scale ?? 1
-    const scale = Math.max(0.1, Math.min(Math.abs(rawScale), 1.5))
 
     // Arc-up curve: control point поднят на 50px ВВЕРХ от higher из двух точек
     // (в Phaser Y возрастает вниз — поэтому Math.min(source.y, target.y) даёт
@@ -99,7 +101,24 @@ export class GhostFrogTrail {
     if (tint != null) ghost.setTint(tint)
     ghost.setAlpha(alpha)
     ghost.setDepth(depth)
-    ghost.setScale(scale)
+    // Priority: displayWidth (точная visual width) > scale (relative). Если оба
+    // отсутствуют — scale=1.
+    if (this.opts.displayWidth && this.opts.displayWidth > 0) {
+      // setDisplaySize preserves aspect ratio при passing single dimension via
+      // matching displayHeight on same ratio as texture native.
+      const tex = this.scene.textures.get(textureKey)
+      const src = tex.getSourceImage() as { width: number; height: number }
+      const ratio = src.width > 0 ? src.height / src.width : 1
+      ghost.setDisplaySize(
+        this.opts.displayWidth,
+        this.opts.displayWidth * ratio,
+      )
+    } else {
+      // Defensive: clamp scale в [0.1, 1.5].
+      const rawScale = this.opts.scale ?? 1
+      const scale = Math.max(0.1, Math.min(Math.abs(rawScale), 1.5))
+      ghost.setScale(scale)
+    }
     this.ghost = ghost
 
     const pos = { t: 0 }
@@ -117,13 +136,16 @@ export class GhostFrogTrail {
       onComplete: () => {
         this.currentTween = null
         if (this.destroyed || !this.ghost) return
-        // Burst на прибытии: масштабируем + fade-out.
-        // Reduced 1.3 → 1.1 чтобы burst оставался скромным.
-        const burstTargetScale = scale * 1.1
+        // Burst на прибытии: масштабируем + fade-out. Берём current ghost scale
+        // (может быть проставлен через setDisplaySize или setScale) и ×1.1
+        // чтобы burst оставался скромным независимо от размера ghost'а.
+        const currentScale = this.ghost.scaleX
+        const burstTargetScale = currentScale * 1.1
         this.burstTween = this.scene.tweens.add({
           targets: this.ghost,
           alpha: 0,
-          scale: burstTargetScale,
+          scaleX: burstTargetScale,
+          scaleY: burstTargetScale,
           duration: 300,
           ease: 'Sine.easeOut',
           onComplete: () => {
