@@ -586,16 +586,34 @@ No parallel branches in v2.0 — each phase strictly consumes the previous. This
 
 ### Phase 22: Carrier merge redesign
 
+**Status:** done (2026-05-17)
 **Goal:** Перейти на two-stage carrier life: серум без rarity, apply → carrier L1, мерджится через стандартный merge до L18, на L18 ascension даёт permanent archetype bonus + one-shot essence. Удалить rarity-логику, mergeCarriers, feed-stabilize awakening. Добавить cosmic shop с двумя валютами (серум + essence). Cosmos-gate: серум-машинерия только после L18+L18 sentinel.
 
 **Source design:** `frog_obsidian/Design Notes/2026-05-17-carrier-merge-redesign.md`
-**Requirements**: TBD
+**Requirements**: PHASE22-CLEANUP, PHASE22-MERGE-RULES, PHASE22-ASCENSION, PHASE22-ARCHETYPE-POOL, PHASE22-HUD-BONUSES, PHASE22-COSMIC-SHOP, PHASE22-CURRENCIES, PHASE22-COSMOS-GATE, PHASE22-MIGRATION, PHASE22-SMOKE
 **Depends on:** Phase 20
-**Plans:** 0 plans
+**Plans:** 7 plans, all complete
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 22 --prd "<design-note>" to break down)
+- [x] 22-01-PLAN.md — Cleanup: убрать Rarity, mergeCarriers, feed-stabilize
+- [x] 22-02-PLAN.md — Carrier merge rules (carrier+normal, carrier+carrier)
+- [x] 22-03-PLAN.md — L18 ascension trigger + archetype bonus pool + essence
+- [x] 22-04-PLAN.md — HUD active bonuses bar + tooltip + i18n
+- [x] 22-05-PLAN.md — Cosmic shop с essence + серум валютами (6 items, 2 currencies)
+- [x] 22-06-PLAN.md — Cosmos gate (pre-cosmos UI hiding + data-layer guards)
+- [x] 22-07-PLAN.md — Migration (legacy state) + smoke checklist + ROADMAP/STATE finalize
+
+**Outcome (post-execution):**
+- Carrier shape: `{frogId, element, level}` (Phase 21 rarity/stabilized/feedCount stripped)
+- Serum inventory: flat `Record<Element, number>` (nested rarities flattened on migrate)
+- L18 ascension: pulse → ascendedCarriers pool + essence reward (placeholder magnitudes)
+- HUD bonus bar with mini/full breakdown tooltip
+- Cosmic shop with 6 items (cosmic_box, +1 slot, ship speed, serum drop, skip ship, serum trade-up)
+- Cosmos gate via `useCosmosUnlocked()` hook + persisted `hasCosmosUnlocked` flag
+- Legacy migration `migratePhase22(state)` — idempotent, 10/10 vitest PASS
+
+**Demo-build qualification:** placeholder values OK для balance phase (essence reward magnitudes, archetype bonus magnitudes, shop costs); open knobs документированы в 22-07 SUMMARY.
 
 ---
 
-**Last updated:** 2026-05-08 — initial ROADMAP for milestone v2.0
+**Last updated:** 2026-05-17 — Phase 22 complete
