@@ -28,6 +28,7 @@
 
 import Phaser from 'phaser'
 import { useGameStore } from '../../../store/gameStore'
+import { useOnboardingStore } from '../../../store/onboarding/onboardingSlice'
 import { eventBus } from '../../../store/eventBus'
 import {
   FROG_LEVELS,
@@ -227,6 +228,20 @@ export class MergeController {
 
     eventBus.emit('merge:happened', { level: a.level })
     hapticImpact('medium')
+
+    // Phase 23 Plan 23-04 (Beat 3): первый успешный merge ЛЮБЫХ frogs (normal+normal /
+    // carrier+normal / carrier+carrier — все варианты идут через performMerge) гасит
+    // Merge demo overlay. markFirstMergeSeen — идемпотентна (повторные merges = no-op).
+    // emit'им event ДО store mutation чтобы subscribers (OnboardingController) могли
+    // прочитать !firstMergeSeen ещё до его установки если нужно — но фактически порядок
+    // не критичен, оба signal'а несут одну семантику.
+    {
+      const onb = useOnboardingStore.getState()
+      if (onb.firstBoxTapSeen && !onb.firstMergeSeen) {
+        onb.markFirstMergeSeen()
+        eventBus.emit('tutorial:firstMerge')
+      }
+    }
 
     const VORTEX_DURATION = 350
     a.container.setDepth(99997)
