@@ -88,6 +88,10 @@ export function LocationStack() {
     ? [STAR_MAP_PROTOTYPE_LOC, ...farmLocations]
     : farmLocations
 
+  // Если visible только одна локация (Лужа) и cosmos не разблокирован —
+  // блок переключения не нужен (нечего переключать).
+  if (ordered.length <= 1) return null
+
   const handleSelect = (id: number) => {
     if (transitioning || starMapTransitioning) return
     if (id === STAR_MAP_PROTOTYPE_ID) {
