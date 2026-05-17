@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: cosmic-frogs-system
-current_phase: 22 (complete); Phase 20 (Pre-release safety net) deferred до prod-релиза
-status: completed
-last_updated: "2026-05-17T18:00:00.000Z"
+current_phase: 23 (in progress — Plan 23-01 complete; 23-02..06 pending); Phase 20 (Pre-release safety net) deferred до prod-релиза
+status: in-progress
+last_updated: "2026-05-18T03:05:37.000Z"
 progress:
-  total_phases: 13
+  total_phases: 14
   completed_phases: 0
-  total_plans: 19
-  completed_plans: 1
-  percent: 5
+  total_plans: 25
+  completed_plans: 2
+  percent: 8
 ---
 
 # Project State
@@ -37,6 +37,7 @@ progress:
 | 18 | Бестиарий 2.0 (1536 cells, virtualized) | **complete** (2026-05-08) — 5 plans, 3 waves, 5 atomic commits; bestiary helpers (countUnlocked/unlockedInLocation/BESTIARY_MILESTONES/milestonesCrossed); setBestiaryBit milestone-aware (10→1000 coins/24→epic serum/96→legendary serum/576→frogExclusiveUnlocked) + cosmic:bestiary-milestone event; @tanstack/react-virtual 3.13.24 install; 4 location tabs (Болото/Лес/Континент/Планета rarity-mapped) × 384 cells each; BestiaryGrid 6-col virtualized с overscan 5 (DOM ≤30 cells); BestiaryCell memoized 64×64 (discovered: ELEMENT_TINT linear-gradient + rarity border + glow + 🐸 + L-badge / locked: ??? + tooltip); FilterPills (rarity pills + element search + sort dropdown + show-locked toggle); useBestiaryView state machine (default «Discovered only» если countUnlocked > 0); BestiaryDetailModal с CSS preview (radial-gradient orb + ELEMENT_TINT + rarity glow + bestiary-pulse/bob keyframes); MilestoneToast auto-hide queue; window.__unlockBestiaryCells/__bestiaryCount/__resetBestiary dev helpers; i18n RU/EN/ES (38 keys × 3 = 114 entries); verify_bestiary.cjs (4 tests PASS) + smoke_bestiary.cjs (18 checks PASS); bundle delta +10.60 KB gzip (cap +30 KB ✓; index 226.38 KB vs Phase 17 baseline 224.06 KB = +2.32 KB; CosmicHubModal-chunk 13.89 KB vs 5.68 KB = +8.21 KB). 9/9 ✓ + I18N-02 ✓ REQ-IDs (BESTIARY-01..09 + I18N-02). |
 | 19 | Balance + tutorial + toggles + i18n polish | **complete** (2026-05-08) — 7 plans, 4 waves, 9 atomic commits; openBox wired to rollRarity+updatePity (BALANCE-01..07); 9 unit tests for pity guarantees; Monte Carlo simulate_balance.cjs (mirror of rarityRoll.ts; 100K iterations baseline avgLeg=6.073 effective, pityHard25Breaches=0, gap.max=25); progressive PityCounterDisplay footer (hidden/dots/exact reveal at 0/3/5 opened boxes); calmFarmMode + reducedEffects toggles via cosmicSettings.ts (default OFF Locked); StabilizationModal unified reducedEffects key fix (Rule 1 deviation); TutorialOverlay + 4 steps (first-box/serum/feed/stabilize) + tutorialState persist + single-active-step priority; check-translations.cjs (286 keys × 3 locales RU/EN/ES PARITY CLEAN); elementTints mechanical hex collision fix (0xfde68a→0xfdd87a vs desert) + Phase 19-06 audit comment; check-bundle-delta.cjs + .bundle-baseline-v1.json (delta 32.43 KB / 50 KB cap PASS; current main 229.24 KB vs v1.0 baseline 196 KB; CosmicHubModal lazy chunk 14.22 KB verified PERF-07); SMOKE_TEST.md visual+i18n+settings consumer audit. Settings consumer status: openBoxesInstantly WIRED (Phase 15), reducedEffects PARTIALLY WIRED (StabilizationModal), calmFarmMode TODO (Phase 20). 17/17 ✓ REQ-IDs (BALANCE-01..05/07/08, UX-01/02/03/04/05/06/08, PERF-01/05/07, I18N-02/03). |
 | 22 | Carrier merge redesign | **complete** (2026-05-17) — 7 plans, ~23h scope, all atomic commits + per-plan SUMMARY; Rarity dimension removed (carrier shape = {frogId, element, level}); flat serum inventory Record<Element, number>; carrier merge rules (carrier+normal element-inherit, carrier+carrier target-wins); L18 ascension instant + pulse tween + ascendedCarriers pool + essence reward; HUD ActiveBonusesBar with mini/full breakdown + tooltip + i18n; Cosmic Shop (6 items, 2 currencies: essence + серум; perma slot/ship-speed/serum-drop + consumables cosmic_box/skip/trade-up); Cosmos gate via useCosmosUnlocked hook + persisted hasCosmosUnlocked flag (top-level, separate key) — pre-cosmos SerumBar/Hub/Star Map/HUD bonuses hidden + data-layer guards in box/ship slices; legacy migration migratePhase22() (idempotent, 10/10 vitest PASS — strip Phase 21 fields, flatten nested serums, infer hasCosmosUnlocked from discovered[19]); SMOKE_TEST_22.md (9 scenarios A-I); deferred: balance phase для precise essence/bonus/cost magnitudes + glossary refresh checklist (GLOSSARY_UPDATES.md). 10 REQ-IDs (PHASE22-CLEANUP, PHASE22-MERGE-RULES, PHASE22-ASCENSION, PHASE22-ARCHETYPE-POOL, PHASE22-HUD-BONUSES, PHASE22-COSMIC-SHOP, PHASE22-CURRENCIES, PHASE22-COSMOS-GATE, PHASE22-MIGRATION, PHASE22-SMOKE). |
+| 23 | Onboarding flow (soft 4-beat) | **in progress** — Plan 23-01 complete (2026-05-18) — Foundation: useOnboardingStore (Zustand + subscribeWithSelector, isolated per-device slice) + loadOnboarding/saveOnboarding under `frog_evolution_onboarding` key + OnboardingController.tsx Wave 1 shell mounted in App.tsx + installOnboardingDevHelpers (__resetOnboarding/__skipOnboarding) + i18n RU/EN/ES onboarding.* namespace (5 keys × 3 = 15 strings) + 11 vitest specs PASS (97/97 total green); bundle delta -1.32 KB gzip (cap +50 KB ✓); 3 atomic commits (c98ed34/e74dffe/578db00). 2/6 REQ-IDs (PHASE23-STATE, PHASE23-CONTROLLER). Wave 2 (23-02 Welcome, 23-03 TapHint, 23-05 LocationCelebration parallel) + 23-04 (depends 23-03) + 23-06 (finalize) pending. |
 
 ## v1.0 Achievement Summary (closed milestone)
 
@@ -164,3 +165,20 @@ progress:
 
 **Phase 19 REQ coverage:** 17/17 ✓ (BALANCE-01..05/07/08 + UX-01/02/03/04/05/06/08 + PERF-01/05/07 + I18N-02/03).
 **Phase 19 outcome:** v2.0 milestone feature-complete. Pity counters реально влияют на rolled rarity (avgLegendary effective ≈ 6% при базе 3% — pity inflation expected behavior); Monte Carlo verifies pityHard25Breaches=0 + gap.max=25 invariants hold. Progressive pity UI (hidden/dots/exact) даёт игроку trust + retention loop. 4-step tutorial overlay onboarding с persisted seen-flags. Bundle delta 32.43/50 KB cap headroom. Lazy CosmicHubModal-chunk preserved. i18n 286 keys × 3 locales parity verified by script. Settings consumer wiring: openBoxesInstantly WIRED (Phase 15), reducedEffects PARTIAL (StabilizationModal), calmFarmMode TODO (Phase 20).
+
+## Phase 23 (in progress) — Performance Metrics
+
+| Wave | Plan | Commits | Files | Bundle Delta gzip |
+|------|------|---------|-------|-------------------|
+| 1 | 23-01 (foundation: store + persistence + controller shell + dev helpers + i18n + 11 vitest specs) | 3 (c98ed34, e74dffe, 578db00) | 5 created + 5 modified | **-1.32 KB** (cap +50 KB ✓; main `index-vffWbdF3.js` 659.67 KB / 194.65 KB gzip) |
+| **Subtotal** | — | **3 commits** | **5 created + 5 modified** | **-1.32 KB gzip** so far |
+
+**Phase 23 REQ coverage so far:** 2/6 ✓ (PHASE23-STATE, PHASE23-CONTROLLER).
+**Plan 23-01 outcome:** Foundation ready — Plan 23-02/03/05 (Wave 2) can proceed in parallel against the live store; 23-04 still gated by 23-03; 23-06 finalize last. Onboarding lives in its own per-device slice (separate from cosmic), so it cannot affect Phase 22 carrier migration or any server-synced state. 97/97 vitest green.
+
+### Plan 23-01 Decisions Logged
+- Per-device-only onboarding store, isolated from gameStore/cosmic to keep blast radius zero from Phase 22 migration logic.
+- subscribeWithSelector enabled now (cheap) so Plan 23-02..05 can subscribe to single flags without forced refactor.
+- Mark actions persist synchronously inside the slice (no debounce) — onboarding writes are infrequent one-shot events.
+- Defensive per-field validation in `loadOnboarding` (T-11-01 pattern) — partial corruption preserves valid fields.
+- `__resetOnboarding()` triggers `window.location.reload()` so the Welcome modal (Plan 23-02) re-mounts during QA.
