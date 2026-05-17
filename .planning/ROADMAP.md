@@ -616,16 +616,36 @@ Plans:
 
 ### Phase 23: Onboarding flow
 
+**Status:** done (2026-05-18)
 **Goal:** Реализовать soft 4-beat onboarding для нового игрока: welcome modal → tap-hint на первый бокс → interactive merge demo (ghost-frog drag-trail) → location-unlock celebration с burst + LocationStack pulse + toast. Все hints soft (fade-out через 5-8с), не блокирующие. Reuse existing visual language (pink pulse `#ec4899`, pastel gradients, rounded buttons). Per-device localStorage state, без server sync.
 
 **Source design:** `frog_obsidian/Design Notes/2026-05-18-onboarding-flow.md`
-**Requirements**: TBD
+**Requirements:** PHASE23-STATE, PHASE23-CONTROLLER, PHASE23-BEAT1-WELCOME, PHASE23-BEAT2-TAPHINT, PHASE23-BEAT3-MERGE, PHASE23-BEAT4-LOCATION, PHASE23-I18N, PHASE23-SMOKE
 **Depends on:** Phase 22
-**Plans:** 0 plans
+**Plans:** 6 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 23 --prd "<design-note>" to break down)
+- [x] 23-01-PLAN.md — Foundation: onboarding Zustand store + persistence + OnboardingController skeleton + dev helpers + i18n bootstrap (RU/EN/ES)
+- [x] 23-02-PLAN.md — Beat 1 Welcome modal (single-action CTA, CSS keyframes, pastel gradient, bobbing L1 frog SVG)
+- [x] 23-03-PLAN.md — Beat 2 reusable TutorialPulseRing (Phaser) + box tap-hint integration + DOM «Тапни 👆» label
+- [x] 23-04-PLAN.md — Beat 3 GhostFrogTrail (Phaser quadratic curve loop) + merge demo coordination + cancel-on-drag + success toast
+- [x] 23-05-PLAN.md — Beat 4 LocationUnlockCelebration (DOM toast) + ConfettiBurst (Phaser, per-location palette) + LocationStack pulse/glow/bobble
+- [x] 23-06-PLAN.md — i18n parity verification + extended dev helpers (`__triggerBeat2/4`, `__onboardingState`) + SMOKE_TEST_23.md + ROADMAP/STATE finalize
+
+**Outcome:**
+- Soft single-action Welcome modal (single-step blocking, pink CTA «Начать», CSS keyframes, no Lottie)
+- Reusable `TutorialPulseRing` Phaser effect (used в Beat 2 + Beat 3)
+- Reusable `GhostFrogTrail` Phaser effect (Beat 3 — quadratic curve loop, alpha 0.5, 1200ms × 3)
+- `ConfettiBurst` Phaser particle effect (Beat 4 — per-location palette: Болото/Лес/Star Map)
+- `OnboardingController` DOM coordinator с state-machine logic, idempotent через store guards
+- Per-device localStorage state (`frog_evolution_onboarding`) — НЕ синкается на сервер
+- Dev helpers: `__resetOnboarding`, `__skipOnboarding`, `__triggerBeat2`, `__triggerBeat4(id)`, `__onboardingState`
+- i18n RU/EN/ES для всех 4 beats: welcome.{title,subtitle,cta}, tapHint.label, mergeHint.{label,success}, location.unlocked
+- `SMOKE_TEST_23.md` — 8 scenarios (A-H), 4 beat scenarios + full flow + i18n + build chain
+- 8 vitest tests для onboardingSlice (PASS) + 4 atomic commits per beat-plan
+
+**Demo-build qualification:** все timings (5s/7s/8s) placeholder для A/B tuning post-pilot; confetti palettes hardcoded — конфигурируется в `ConfettiBurst.ts` если потребуется (например для будущих локаций L19+).
 
 ---
 
-**Last updated:** 2026-05-17 — Phase 22 complete
+**Last updated:** 2026-05-18 — Phase 23 complete
