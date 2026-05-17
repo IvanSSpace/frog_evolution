@@ -10,6 +10,8 @@ import { setGlobalFormat, type NumberFormat } from '../utils/formatting'
 import { makeInitialCosmicSlice, type BoxData } from './cosmic/types'
 // Phase 22 Plan 22-07: legacy state migration (idempotent).
 import { migratePhase22 } from './migrations/phase22'
+// Phase 23 Plan 23-01: onboarding flow per-device state.
+import type { OnboardingState } from './onboarding/types'
 
 // ─── storage keys ────────────────────────────────────────────────────────────
 
@@ -25,6 +27,9 @@ const BOX_OPEN_COUNT_KEY = 'frog_evolution_box_open_count'
 // Phase 22 Plan 22-06: cosmos gate — persisted unlock flag, отдельно от cosmic slice
 // (toplevel state.hasCosmosUnlocked). Включается при первом L18+L18 normal sentinel.
 const COSMOS_UNLOCKED_KEY = 'frog_evolution_cosmos_unlocked'
+// Phase 23 Plan 23-01: onboarding flow per-device state.
+// Хранится отдельным ключом (не sync'ится с сервером) — это локальная UX-фича.
+const ONBOARDING_KEY = 'frog_evolution_onboarding'
 
 // ─── upgrades ────────────────────────────────────────────────────────────────
 
@@ -491,6 +496,64 @@ export function saveNumberFormat(f: NumberFormat) {
     localStorage.setItem(FORMAT_KEY, f)
   } catch {
     /* ignore */
+  }
+}
+
+// ─── onboarding (Phase 23 Plan 23-01) ───────────────────────────────────────
+//
+// Per-device localStorage state for the soft 4-beat onboarding coordinator
+// (Welcome → Tap-hint → Merge-demo → Location-celebration).
+//
+// Same defensive pattern as other loaders: corrupt JSON / missing key → defaults.
+// Per-field type check guards against partial corruption (T-11-01 pattern).
+
+export function loadOnboarding(): OnboardingState {
+  const defaults: OnboardingState = {
+    welcomeSeen: false,
+    firstBoxTapSeen: false,
+    firstMergeSeen: false,
+    locationsCelebrated: {},
+  }
+  if (typeof localStorage === 'undefined') return defaults
+  try {
+    const raw = localStorage.getItem(ONBOARDING_KEY)
+    if (!raw) return defaults
+    const parsed = JSON.parse(raw) as Partial<OnboardingState>
+    return {
+      welcomeSeen:
+        typeof parsed.welcomeSeen === 'boolean' ? parsed.welcomeSeen : false,
+      firstBoxTapSeen:
+        typeof parsed.firstBoxTapSeen === 'boolean'
+          ? parsed.firstBoxTapSeen
+          : false,
+      firstMergeSeen:
+        typeof parsed.firstMergeSeen === 'boolean'
+          ? parsed.firstMergeSeen
+          : false,
+      locationsCelebrated:
+        parsed.locationsCelebrated &&
+        typeof parsed.locationsCelebrated === 'object' &&
+        !Array.isArray(parsed.locationsCelebrated)
+          ? Object.fromEntries(
+              Object.entries(parsed.locationsCelebrated)
+                .filter(
+                  ([k, v]) => !isNaN(Number(k)) && typeof v === 'boolean',
+                )
+                .map(([k, v]) => [Number(k), v as boolean]),
+            )
+          : {},
+    }
+  } catch {
+    return defaults
+  }
+}
+
+export function saveOnboarding(state: OnboardingState): void {
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(ONBOARDING_KEY, JSON.stringify(state))
+  } catch {
+    /* ignore (QuotaExceededError fallback) */
   }
 }
 
