@@ -126,12 +126,22 @@ export function createShipSlice(set: SetFn, get: GetFn): ShipActions {
 
     // Phase 16-04: atomic investigate transaction (REQ MISSION-05/06/07, CREW-04/08).
     // Phase 22: bonusRarity removed — box created without rarity dimension.
+    // Phase 22 Plan 22-06: cosmos gate — defensive guard. Star Map UI sкрыт до
+    // unlock (LocationStack id=6 hide), но миссии — основной серум-источник,
+    // дублируем guard здесь как безопасность.
     // - guard: ship.state !== 'docked' OR ship.planetId !== planetId → no-op (false)
     // - guard: missionsToday >= DAILY_CAP → no-op (false)
+    // - guard: !hasCosmosUnlocked → no-op (false)
     // - atomic: missionsToday++, addBox с element=elementFromPlanet, hasFirstMission=true
     // - emit 'cosmic:toast' с открытием Боксы
     investigatePlanet: (planetId, _result) => {
       const s = get()
+      // Phase 22 Plan 22-06 guard 0: cosmos gate
+      const cosmosUnlocked = (s as unknown as { hasCosmosUnlocked?: boolean })
+        .hasCosmosUnlocked === true
+      if (!cosmosUnlocked) {
+        return false
+      }
       // Guard 1: ship docked at this planet?
       if (
         !s.ship ||

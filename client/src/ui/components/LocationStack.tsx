@@ -8,6 +8,8 @@ import {
 } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
 import { hapticSelection } from '../../utils/telegram'
+// Phase 22 Plan 22-06: Star Map (виртуальная 6-я локация) скрыта до cosmos unlock.
+import { useCosmosUnlocked } from '../../utils/cosmosGate'
 
 // Эмодзи и цвета для локаций (placeholder — потом юзер заменит на свои картинки)
 const LOCATION_VISUAL: Record<
@@ -35,6 +37,8 @@ const STAR_MAP_PROTOTYPE_LOC: LocationConfig = {
 export function LocationStack() {
   const currentLocation = useGameStore((s) => s.currentLocation)
   const setCurrentLocation = useGameStore((s) => s.setCurrentLocation)
+  // Phase 22 Plan 22-06: cosmos gate — pre-cosmos Star Map (id=6) скрыта.
+  const cosmosUnlocked = useCosmosUnlocked()
   const [collapsed, setCollapsed] = useState(false)
   const [transitioning, setTransitioning] = useState(false)
   // Активна ли Звёздная карта (виртуальная 6-я). НЕ хранится в gameStore —
@@ -68,10 +72,10 @@ export function LocationStack() {
   // все локации видны всегда. Helper `getUnlockedLocations` и
   // эмиты `'location:unlocked'` оставлены в коде на месте, но
   // не гейтят отображение.
-  const ordered: LocationConfig[] = [
-    STAR_MAP_PROTOTYPE_LOC,
-    ...[...LOCATIONS].slice().reverse(),
-  ]
+  // Phase 22 Plan 22-06: Звёздная карта (id=6) скрыта до cosmos unlock.
+  const ordered: LocationConfig[] = cosmosUnlocked
+    ? [STAR_MAP_PROTOTYPE_LOC, ...[...LOCATIONS].slice().reverse()]
+    : [...[...LOCATIONS].slice().reverse()]
 
   const handleSelect = (id: number) => {
     if (transitioning || starMapTransitioning) return
@@ -156,12 +160,15 @@ export function LocationStack() {
               />
             ) : (
               <>
-                <LocationButton
-                  loc={STAR_MAP_PROTOTYPE_LOC}
-                  isCurrent={false}
-                  disabled={false}
-                  onClick={() => handleSelect(STAR_MAP_PROTOTYPE_ID)}
-                />
+                {/* Phase 22 Plan 22-06: Star Map button скрыта до cosmos unlock. */}
+                {cosmosUnlocked && (
+                  <LocationButton
+                    loc={STAR_MAP_PROTOTYPE_LOC}
+                    isCurrent={false}
+                    disabled={false}
+                    onClick={() => handleSelect(STAR_MAP_PROTOTYPE_ID)}
+                  />
+                )}
                 <LocationButton
                   loc={getLocationById(currentLocation)}
                   isCurrent

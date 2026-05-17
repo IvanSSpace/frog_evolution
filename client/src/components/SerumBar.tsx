@@ -8,8 +8,11 @@ import { eventBus } from '../store/eventBus'
 import { ELEMENTS, type Element } from '../store/cosmic/types'
 import { ELEMENT_TINT, ELEMENT_BOTTLE_FILTER } from './CosmicHub/ElementGrid'
 import { hapticImpact } from '../utils/telegram'
+// Phase 22 Plan 22-06: cosmos gate — SerumBar скрыт до первого L18+L18.
+import { useCosmosUnlocked } from '../utils/cosmosGate'
 
 export function SerumBar() {
+  const unlocked = useCosmosUnlocked()
   const serums = useGameStore((s) => s.serums)
   const setSerumDragActive = useGameStore((s) => s.setSerumDragActive)
   const selectedSerum = useGameStore((s) => s.selectedSerum)
@@ -35,6 +38,7 @@ export function SerumBar() {
     if (count > 0) slots.push({ element, count })
   }
 
+  if (!unlocked) return null // Phase 22 Plan 22-06: cosmos gate
   if (starMapActive) return null
   if (slots.length === 0) return null
 

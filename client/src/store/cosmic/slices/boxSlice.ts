@@ -48,16 +48,18 @@ export function createBoxSlice(set: SetFn, get: GetFn): BoxActions {
 
     // Phase 22: atomic commit — +1 serum[element] + remove box in one set().
     // pityCounters kept structurally but not updated (cosmetic-only Phase 22).
+    // Phase 22 Plan 22-06: cosmos gate — pre-cosmos box opens БЕЗ серум-награды
+    // (box просто исчезает). Защитная мера для legacy pipeline; mission/box UI
+    // и так недоступен до unlock.
     commitOpenedBox: (id) => {
       const s = get()
       const box = s.boxes.find((b) => b.id === id)
       if (!box) return
-      // Phase 22: flat serum increment
-      const cur = s.serums[box.element]
-      const nextSerums = {
-        ...s.serums,
-        [box.element]: cur + 1,
-      }
+      const cosmosUnlocked = (s as unknown as { hasCosmosUnlocked?: boolean })
+        .hasCosmosUnlocked === true
+      const nextSerums = cosmosUnlocked
+        ? { ...s.serums, [box.element]: s.serums[box.element] + 1 }
+        : s.serums
       const nextBoxes = s.boxes.filter((b) => b.id !== id)
       set({
         serums: nextSerums,
@@ -75,16 +77,17 @@ export function createBoxSlice(set: SetFn, get: GetFn): BoxActions {
 
     // Phase 19-01 / Phase 22: unified atomic box-open.
     // Phase 22: +1 to serums[element]; no rarity rolling.
+    // Phase 22 Plan 22-06: cosmos gate — pre-cosmos box opens БЕЗ серум-награды.
     openBox: (id) => {
       const s = get()
       const box = s.boxes.find((b) => b.id === id)
       if (!box || box.opened) return // idempotent guard
+      const cosmosUnlocked = (s as unknown as { hasCosmosUnlocked?: boolean })
+        .hasCosmosUnlocked === true
 
-      // Phase 22: flat serum increment
-      const nextSerums = {
-        ...s.serums,
-        [box.element]: s.serums[box.element] + 1,
-      }
+      const nextSerums = cosmosUnlocked
+        ? { ...s.serums, [box.element]: s.serums[box.element] + 1 }
+        : s.serums
 
       set({
         boxes: s.boxes.map((b) => (b.id === id ? { ...b, opened: true } : b)),

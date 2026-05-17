@@ -1,5 +1,7 @@
 import React from 'react'
 import { useGameStore } from '../../store/gameStore'
+// Phase 22 Plan 22-06: cosmos gate — 🧬 Cosmic Hub button disabled до L18+L18.
+import { useCosmosUnlocked } from '../../utils/cosmosGate'
 
 type BadgeProps = { children: React.ReactNode }
 
@@ -17,6 +19,9 @@ type TileProps = {
   // undefined / 0 / false → ничего не показывать.
   badge?: number | boolean
   onClick?: () => void
+  // Phase 22 Plan 22-06: disabled state (cosmos gate для 🧬 button).
+  disabled?: boolean
+  title?: string
 }
 
 const SKIN_VARS: Record<TileSkin, React.CSSProperties> = {
@@ -57,7 +62,15 @@ const SKIN_VARS: Record<TileSkin, React.CSSProperties> = {
   },
 }
 
-function Tile({ emoji, skin, size = 'md', badge, onClick }: TileProps) {
+function Tile({
+  emoji,
+  skin,
+  size = 'md',
+  badge,
+  onClick,
+  disabled = false,
+  title,
+}: TileProps) {
   const dim = size === 'lg' ? 'w-16 h-16 text-3xl' : 'w-12 h-12 text-2xl'
   const showBadge =
     typeof badge === 'number'
@@ -68,14 +81,24 @@ function Tile({ emoji, skin, size = 'md', badge, onClick }: TileProps) {
   const badgeContent = typeof badge === 'number' ? badge : '!'
   return (
     <button
-      onClick={onClick}
-      style={{ pointerEvents: 'auto', ...SKIN_VARS[skin] }}
+      type="button"
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      title={title}
+      aria-disabled={disabled || undefined}
+      style={{
+        pointerEvents: 'auto',
+        ...SKIN_VARS[skin],
+        opacity: disabled ? 0.45 : undefined,
+        cursor: disabled ? 'not-allowed' : undefined,
+        filter: disabled ? 'grayscale(0.7)' : undefined,
+      }}
       className={`ff-tile flex-shrink-0 ${dim} active:scale-100`}
     >
       <span style={{ filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))' }}>
-        {emoji}
+        {disabled ? '🔒' : emoji}
       </span>
-      {showBadge && <NotifBadge>{badgeContent}</NotifBadge>}
+      {showBadge && !disabled && <NotifBadge>{badgeContent}</NotifBadge>}
     </button>
   )
 }
@@ -102,6 +125,8 @@ export function BottomBar({
   const readyBoxCount = useGameStore(
     (s) => s.boxes.filter((b) => !b.opened).length,
   )
+  // Phase 22 Plan 22-06: cosmos gate — 🧬 button disabled до L18+L18 sentinel.
+  const cosmosUnlocked = useCosmosUnlocked()
 
   return (
     <div
@@ -116,12 +141,17 @@ export function BottomBar({
         <Tile emoji="⬆️" skin="green" onClick={onOpenShop} />
         <Tile emoji="🎨" skin="purple" onClick={onOpenGallery} />
         <Tile emoji="🎁" skin="red" badge onClick={onOpenSerumModal} />
-        {/* 🧬 — Cosmic Hub (Phase 11). Badge = число неоткрытых боксов. */}
+        {/* 🧬 — Cosmic Hub (Phase 11). Badge = число неоткрытых боксов.
+            Phase 22 Plan 22-06: disabled до L18+L18 sentinel (cosmos gate). */}
         <Tile
           emoji="🧬"
           skin="teal"
           onClick={onOpenCosmicHub}
           badge={readyBoxCount}
+          disabled={!cosmosUnlocked}
+          title={
+            !cosmosUnlocked ? 'Откройте космос — соедините L18 + L18' : undefined
+          }
         />
       </div>
 

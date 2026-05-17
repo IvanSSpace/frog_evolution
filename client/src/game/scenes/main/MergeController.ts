@@ -257,7 +257,9 @@ export class MergeController {
 
       // L18+L18 — special path: лягушки сгорают (уже удалены removeFrog выше),
       // L19 НЕ материализуется. Тригерится unlock Звёздной карты через sentinel
-      // markDiscovered(19). Cosmos sentinel НЕ трогать (используется в 22-06).
+      // markDiscovered(19).
+      // Phase 22 Plan 22-06: cosmos gate — этот же sentinel включает hasCosmosUnlocked
+      // (markCosmosUnlocked idempotent — повторные L18+L18 безопасны).
       if (oldLevel === MAX_LEVEL && b.level === MAX_LEVEL) {
         const storeL25 = useGameStore.getState()
         const currentLocId = storeL25.currentLocation
@@ -267,6 +269,9 @@ export class MergeController {
         if (wasNew) {
           eventBus.emit('location:unlocked', { locationId: 6 })
         }
+        // Phase 22 Plan 22-06: cosmos unlock — реактивно открывает SerumBar,
+        // Cosmic Hub button, Star Map ship controls во всех gated компонентах.
+        storeL25.markCosmosUnlocked()
         mergeApi(MAX_LEVEL, currentLocId)
           .then((res) => {
             useGameStore.setState({

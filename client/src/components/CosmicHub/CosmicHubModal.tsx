@@ -15,6 +15,9 @@ import { BestiaryTab } from './BestiaryTab'
 import { CarriersTab } from './CarriersTab'
 import { CosmicShopTab } from './CosmicShopTab'
 import { PityCounterDisplay } from './PityCounterDisplay'
+// Phase 22 Plan 22-06: defensive cosmos gate — даже если каким-то путём modal
+// открыт без unlock (legacy state, dev tool), показать lock screen.
+import { useCosmosUnlocked } from '../../utils/cosmosGate'
 
 const SESSION_KEY = 'cosmic_last_tab'
 
@@ -56,6 +59,8 @@ export default function CosmicHubModal({ onClose }: Props) {
   const hasFirstFeed = useGameStore((s) => s.hasFirstFeed)
   const hasFirstMission = useGameStore((s) => s.hasFirstMission)
   const isDev = import.meta.env.DEV
+  // Phase 22 Plan 22-06: defensive cosmos gate.
+  const cosmosUnlocked = useCosmosUnlocked()
 
   // Локализованные labels — внутри компонента, чтобы пере-рендерить при смене языка.
   // Phase 16: tab id остаётся 'scouts' (sessionStorage backward compat),
@@ -153,6 +158,7 @@ export default function CosmicHubModal({ onClose }: Props) {
           🧬 {t('cosmic_hub.title')}
         </span>
         <button
+          type="button"
           onClick={onClose}
           className="text-white/60 text-2xl leading-none px-2"
           aria-label="Close"
@@ -160,6 +166,21 @@ export default function CosmicHubModal({ onClose }: Props) {
           ×
         </button>
       </div>
+
+      {/* Phase 22 Plan 22-06: defensive cosmos gate — если флаг false (legacy
+          state или dev), показать lock screen вместо табов. */}
+      {!cosmosUnlocked ? (
+        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+          <div className="text-6xl mb-4">🔒</div>
+          <div className="text-white text-lg font-bold mb-2">
+            Космос закрыт
+          </div>
+          <div className="text-white/60 text-sm">
+            Соедините две L18 лягушки чтобы открыть космическую механику.
+          </div>
+        </div>
+      ) : (
+        <>
 
       {/* Tab strip — Phase 16: progressive disclosure (UX-09) с lock indicator */}
       <div className="flex border-b border-white/10 flex-shrink-0">
@@ -193,6 +214,8 @@ export default function CosmicHubModal({ onClose }: Props) {
 
       {/* Phase 19-03 (UX-01): progressive pity counter footer */}
       <PityCounterDisplay />
+        </>
+      )}
     </div>,
     document.body,
   )

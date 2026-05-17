@@ -20,6 +20,9 @@ import {
 } from '../../utils/archetypeBonuses'
 import { ActiveBonusesTooltip } from './ActiveBonusesTooltip'
 import styles from './ActiveBonusesBar.module.css'
+// Phase 22 Plan 22-06: defensive cosmos gate (на pre-cosmos ascensions всё равно
+// быть не может, но bar hide-ится явно).
+import { useCosmosUnlocked } from '../../utils/cosmosGate'
 
 function fmtPct(v: number): string {
   // 0.055 → "5.5", 0.05 → "5", 0.001 → "0.1"
@@ -29,6 +32,7 @@ function fmtPct(v: number): string {
 
 export function ActiveBonusesBar() {
   const { t } = useTranslation()
+  const unlocked = useCosmosUnlocked()
   const ascended = useGameStore((s) => s.ascendedCarriers)
   const carriers = useGameStore((s) => s.carriers)
   const [open, setOpen] = useState(false)
@@ -79,6 +83,7 @@ export function ActiveBonusesBar() {
       mini: miniBonuses.serumDrop,
     })
 
+  if (!unlocked) return null // Phase 22 Plan 22-06: cosmos gate
   if (items.length === 0) return null // hide когда нет бонусов
 
   return (
