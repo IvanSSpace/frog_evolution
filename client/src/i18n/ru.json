@@ -380,5 +380,28 @@
     "pity_rare": "До редкой: {{n}}",
     "pity_epic": "До эпической: {{n}}",
     "pity_legendary": "До легендарной: {{n}}"
+  },
+  "hud": {
+    "bonus": {
+      "aria_open": "Активные бонусы — открыть детали",
+      "tooltip_title": "Активные бонусы",
+      "essence": "Эссенция",
+      "mini_section_title": "Затравка (carrier'ы на поле)",
+      "full_section_title": "Постоянные (ascended)",
+      "mini_hint": "Доведи carrier до L18 чтобы бонус раскрылся полностью (×10)",
+      "close": "Закрыть",
+      "gold": "к золоту",
+      "tractorGold": "к трактору",
+      "boxSpeed": "к скорости боксов",
+      "offlineCap": "к offline-капу",
+      "serumDrop": "к дропу серума",
+      "category": {
+        "fire": "Огонь",
+        "water": "Вода",
+        "stone": "Камень",
+        "shadow": "Тень",
+        "other": "Прочее"
+      }
+    }
   }
 }

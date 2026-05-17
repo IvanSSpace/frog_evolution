@@ -26,6 +26,7 @@ import { MilestoneToast } from './components/CosmicHub/bestiary/MilestoneToast'
 import { TutorialOverlay } from './components/Tutorial/TutorialOverlay'
 import { SerumModal } from './components/CosmicHub/SerumModal'
 import { SerumBar } from './components/SerumBar'
+import { ActiveBonusesBar } from './components/HUD/ActiveBonusesBar'
 import { installBestiaryDevHelpers } from './utils/devHelpers'
 import { devLog } from './utils/devLog'
 import { pingHealth } from './api/client'
@@ -293,6 +294,9 @@ function App() {
       <StarMapHUD />
       <ShipFollowButton />
       <SerumBar />
+      {/* Phase 22 Plan 22-04: HUD строка активных archetype bonuses.
+          Bar самостоятельно скрывается если bonus pool пуст. z-index 50 — выше Phaser overlays. */}
+      <ActiveBonusesBar />
       <LocationStack />
 
       {galleryOpen && <GalleryModal onClose={() => setGalleryOpen(false)} />}

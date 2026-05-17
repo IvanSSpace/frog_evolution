@@ -380,5 +380,28 @@
     "pity_rare": "To rare: {{n}}",
     "pity_epic": "To epic: {{n}}",
     "pity_legendary": "To legendary: {{n}}"
+  },
+  "hud": {
+    "bonus": {
+      "aria_open": "Active bonuses — open details",
+      "tooltip_title": "Active bonuses",
+      "essence": "Essence",
+      "mini_section_title": "Teaser (carriers on field)",
+      "full_section_title": "Permanent (ascended)",
+      "mini_hint": "Reach L18 to unlock the full bonus (×10)",
+      "close": "Close",
+      "gold": "gold",
+      "tractorGold": "tractor gold",
+      "boxSpeed": "box speed",
+      "offlineCap": "offline cap",
+      "serumDrop": "serum drop",
+      "category": {
+        "fire": "Fire",
+        "water": "Water",
+        "stone": "Stone",
+        "shadow": "Shadow",
+        "other": "Other"
+      }
+    }
   }
 }

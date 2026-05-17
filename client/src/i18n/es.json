@@ -380,5 +380,28 @@
     "pity_rare": "Hasta rara: {{n}}",
     "pity_epic": "Hasta épica: {{n}}",
     "pity_legendary": "Hasta legendaria: {{n}}"
+  },
+  "hud": {
+    "bonus": {
+      "aria_open": "Bonificaciones activas — abrir detalles",
+      "tooltip_title": "Bonificaciones activas",
+      "essence": "Esencia",
+      "mini_section_title": "Adelanto (carriers en el campo)",
+      "full_section_title": "Permanentes (ascendidos)",
+      "mini_hint": "Llega a L18 para revelar el bono completo (×10)",
+      "close": "Cerrar",
+      "gold": "oro",
+      "tractorGold": "oro tractor",
+      "boxSpeed": "velocidad cajas",
+      "offlineCap": "límite offline",
+      "serumDrop": "drop suero",
+      "category": {
+        "fire": "Fuego",
+        "water": "Agua",
+        "stone": "Piedra",
+        "shadow": "Sombra",
+        "other": "Otro"
+      }
+    }
   }
 }
