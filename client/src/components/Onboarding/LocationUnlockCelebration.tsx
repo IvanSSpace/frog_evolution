@@ -135,21 +135,21 @@ export function LocationUnlockCelebration() {
         position: 'fixed',
         bottom: 120,
         left: '50%',
+        transform: 'translate3d(-50%, 0, 0)',
         zIndex: 101,
-        padding: '12px 20px',
-        borderRadius: 999,
-        background: 'linear-gradient(180deg, #ec4899, #db2777)',
+        padding: '8px 16px',
+        borderRadius: 14,
+        background: 'rgba(236, 72, 153, 0.92)',
         color: '#fff',
-        fontWeight: 800,
-        fontSize: 15,
-        boxShadow:
-          'inset 0 1px 0 rgba(255,255,255,0.45), 0 6px 16px rgba(0,0,0,0.4)',
+        fontWeight: 700,
+        fontSize: 13,
         cursor: 'pointer',
         touchAction: 'manipulation',
         maxWidth: 'calc(100vw - 32px)',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
+        textShadow: '0 1px 2px rgba(0,0,0,0.5)',
       }}
     >
       {t('onboarding.location.unlocked', { name: `${info.emoji} ${name}` })}
