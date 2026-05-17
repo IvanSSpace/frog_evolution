@@ -94,6 +94,23 @@ type Events = {
       | { readonly type: 'serum' }
       | { readonly type: 'frog-exclusive' }
   }
+  // Phase 23 Plan 23-03 — onboarding tap-hint (Beat 2).
+  // Emitted by BoxController when the very first box lands и
+  // (welcomeSeen=true && firstBoxTapSeen=false). Subscribers:
+  //   - TapHintOverlay (DOM «Тапни 👆» label, позиционируется по {x,y,width}).
+  // boxId — locally-generated stable id, чтобы dismiss event умел сопоставлять.
+  // width — boxes display-width (CSS px включая DPR), используем для anchor'а
+  // под рингом.
+  'tutorial:firstBoxSpawned': {
+    x: number
+    y: number
+    boxId: string
+    width: number
+  }
+  // Emitted при первом tap'е ЛЮБОГО бокса в onboarding'е.
+  // Subscribers: TapHintOverlay (fade-out), BoxController (destroy ring),
+  // OnboardingController (no-op, реагирует на store change).
+  'tutorial:firstBoxTapped': { boxId: string }
 }
 
 export const eventBus = mitt<Events>()
