@@ -31,10 +31,13 @@
 ### Carrier Lifecycle
 - Carrier = обычная frog + element tag + aura overlay.
 - Развивается через **стандартный merge** до L18.
+- Пока carrier на поле (любой level L1...L17) — даёт **mini bonus** своей archetype-категории. Это «затравка», показывает что carrier ценен, мотивирует довести до конца.
+- Mini bonus НЕ стэкается между несколькими carriers того же архетипа на поле (показывается max). По разным архетипам — стэкаются.
 - На достижении L18 ascends instantly (без дополнительного merge):
   - Carrier исчезает с поля
   - Слот освобождается
-  - Перманентный archetype bonus добавляется в global pool
+  - Mini bonus заменяется на **full** bonus, добавляется в permanent global pool
+  - Full bonus ≈ 10× mini, стэкается линейно по каждому ascended carrier
   - One-shot essence reward
 
 ### Merge Rules
@@ -44,20 +47,22 @@
 - `normal L18 + normal L18 → cosmos unlock sentinel` (existing)
 - `carrier reaches L18 → ascend instantly` (no further merge needed)
 
-### Archetype Bonuses
+### Archetype Bonuses (Two-tier: mini + full)
 - 4 категории + "Прочее"
-- Per ascended carrier values (placeholder, балансировка позже):
+- **Mini** — пока carrier на поле (L1...L17). Max across same-archetype carriers, НЕ стэкается между ними.
+- **Full** — после ascension, permanent, стэкается линейно по каждому ascended carrier.
 
-  | Категория | Архетипы | Bonus |
-  |---|---|---|
-  | Огонь | fire, plasma, war | +5% box drop speed |
-  | Вода | water, forest, gas | +5% tractor gold |
-  | Камень | crystal, mechanical, ring | +10% offline cap |
-  | Тень | shadow, void, arcane, binary | +1% serum drop |
-  | Прочее | ice, toxic, desert | +3% flat gold |
+  | Категория | Архетипы | Mini (на поле) | Full (ascended, permanent) |
+  |---|---|---|---|
+  | Огонь | fire, plasma, war | +0.5% box drop speed | +5% box drop speed |
+  | Вода | water, forest, gas | +0.5% tractor gold | +5% tractor gold |
+  | Камень | crystal, mechanical, ring | +1% offline cap | +10% offline cap |
+  | Тень | shadow, void, arcane, binary | +0.1% serum drop | +1% serum drop |
+  | Прочее | ice, toxic, desert | +0.3% flat gold | +3% flat gold |
 
-- Линейно стэкается. Soft cap = 16 slots на поле.
-- Видны в HUD-строке вверху экрана: `+8% gold, +4% box speed, …`. Click → tooltip с breakdown по carrier'ам.
+- Цифры placeholder, балансировка позже. Mini ≈ 10% от full.
+- Soft cap full bonus = 16 ascensions max в одной сессии.
+- Видны в HUD-строке вверху экрана: `+8% gold (full) +0.5% (mini), ...`. Click → tooltip с breakdown: mini sources / full ascended carriers.
 
 ### Currency Model
 - **Gold** — tractor offline, sale → base upgrades, frog shop (existing).
