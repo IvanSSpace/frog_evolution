@@ -584,6 +584,18 @@ No parallel branches in v2.0 — each phase strictly consumes the previous. This
 | 17    | Ceiling drama    | Hidden-ceiling reveal cadence (5 feeds) feels right or needs to drop to 3 / rise to 7 |
 | 19    | Balance tuning   | Monte Carlo numbers vs playtest feel — are pity floors too tight/loose? |
 
+### Phase 22: Carrier merge redesign
+
+**Goal:** Перейти на two-stage carrier life: серум без rarity, apply → carrier L1, мерджится через стандартный merge до L18, на L18 ascension даёт permanent archetype bonus + one-shot essence. Удалить rarity-логику, mergeCarriers, feed-stabilize awakening. Добавить cosmic shop с двумя валютами (серум + essence). Cosmos-gate: серум-машинерия только после L18+L18 sentinel.
+
+**Source design:** `frog_obsidian/Design Notes/2026-05-17-carrier-merge-redesign.md`
+**Requirements**: TBD
+**Depends on:** Phase 20
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 22 --prd "<design-note>" to break down)
+
 ---
 
 **Last updated:** 2026-05-08 — initial ROADMAP for milestone v2.0
