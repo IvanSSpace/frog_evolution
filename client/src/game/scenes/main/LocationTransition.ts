@@ -27,6 +27,7 @@ import { useGameStore } from '../../../store/gameStore'
 import { eventBus } from '../../../store/eventBus'
 import { FrogOverlayManager } from '../../effects/FrogOverlayManager'
 import { SerumSelectionLayer } from '../../effects/SerumSelectionLayer'
+import { elementOverlayPool } from '../../effects/elementOverlayPool'
 import { mapKeyForLocation, MAX_PENDING_BOXES } from './types'
 import type { MainScene } from '../MainScene'
 import type { FrogSpawner } from './FrogSpawner'
@@ -58,6 +59,11 @@ export class LocationTransition {
     // иначе pool будет держать висячие references на destroyed overlays.
     scene.overlayManager?.dispose()
     scene.overlayManager = null
+
+    // Phase 22-fix: ElementAuraOverlay'ы держат aura.container в scene root —
+    // dispose() destroy'ит их, иначе они останутся orphaned после очистки frogs.
+    for (const aura of scene.elementAuras) aura.dispose()
+    scene.elementAuras = []
 
     // Phase 14: dispose selection layer (kill tweens + destroy halos).
     scene.selectionLayer?.dispose()
@@ -120,11 +126,11 @@ export class LocationTransition {
   // (или наоборот). Обе карты отрисованы одновременно — выглядит как «зум
   // через слой» в фильмах.
   //
-  // Going UP   (Болото → Лес → ... → Планета):
+  // Going UP   (Лужа → Болото → Лес → Континент):
   //   Старая (1.0 → 0.18) сжимается в точку в центре.
   //   Новая (стартует на 6.0 — почти невидима за пределами экрана) → 1.0.
   //
-  // Going DOWN (Планета → ... → Болото):
+  // Going DOWN (Континент → ... → Лужа):
   //   Старая (1.0 → 6.0 + alpha → 0) разлетается за пределы экрана.
   //   Новая (0.18 → 1.0) была маленькой картой в центре, разрастается на весь экран.
   onLocationChanged = ({ id }: { id: number }) => {
@@ -142,6 +148,9 @@ export class LocationTransition {
       this.spawner.spawnLocationFrogs()
       // Phase 12: re-create manager после snap-cleanup и спавна новых frogs.
       scene.overlayManager = new FrogOverlayManager(scene, () => scene.frogs)
+      // Phase 22-fix: пересоздаём element aura overlay'и — clearField их не трогает.
+      for (const aura of scene.elementAuras) aura.dispose()
+      scene.createElementAuras()
       this.spawner.rebindCarriers()
       // Phase 14: re-create selection layer (clearField его dispose'нул).
       scene.selectionLayer = new SerumSelectionLayer(scene)
@@ -171,13 +180,26 @@ export class LocationTransition {
       )
     }
 
-    // Phase 12: dispose overlay manager ДО reparent старых лягушек.
-    // oldContainer.destroy(true) в onComplete уничтожит всех потомков, включая
-    // overlay.container если он сидит внутри frog.container. Чтобы pool не
-    // держал висячих ссылок, drainAll сразу здесь, а после спавна новых лягушек
-    // создаём manager заново.
-    scene.overlayManager?.dispose()
+    // Phase 22-fix: detach overlay manager БЕЗ release/drain. Overlay containers
+    // остаются вложенными в frog.container → масштабируются вместе с oldContainer
+    // в zoom-анимации (раньше pool.release() делал detach сразу и сывороточный
+    // тинт + orb пропадали ДО анимации). pool.active хранит висячие ссылки —
+    // вычистим через elementOverlayPool.drainAll() в onComplete после того как
+    // oldContainer.destroy(true) убьёт их containers.
+    scene.overlayManager?.disposeForTransition()
     scene.overlayManager = null
+
+    // Phase 22-fix: ElementAuraOverlay'ы держат aura.container в scene root
+    // и каждый кадр следуют за frog.container.x/y. Если оставить — auras
+    // «уплывают» в локальные координаты сжимающегося oldContainer и слетают.
+    // Переносим в oldContainer (с пересчётом в локальные координаты), там их
+    // уничтожит oldContainer.destroy(true).
+    // Подготавливаем oldContainer заранее, чтобы передать aura'м для reparent.
+    const oldContainer = scene.add.container(cx, cy)
+    for (const aura of scene.elementAuras) {
+      aura.reparentForTransition(oldContainer, cx, cy)
+    }
+    scene.elementAuras = []
 
     // Phase 14: dispose selection layer и сбросить active selection (halos сидят
     // внутри frog.container, который попадает в oldContainer.destroy(true)).
@@ -190,7 +212,6 @@ export class LocationTransition {
     scene.lastHaptiHover = false
 
     // 2. Заворачиваем старых лягушек + коробки + фон в oldContainer (за центром экрана)
-    const oldContainer = scene.add.container(cx, cy)
     // Фон — кладём первым (нижний по списку → нижний по depth внутри контейнера)
     const oldBg = scene.bg
     oldContainer.add(oldBg)
@@ -334,8 +355,14 @@ export class LocationTransition {
       duration,
       ease: 'Sine.easeInOut',
       onComplete: () => {
-        // Уничтожаем старый контейнер вместе со всеми его потомками (включая oldBg)
+        // Уничтожаем старый контейнер вместе со всеми его потомками
+        // (oldBg + frog.containers + box imgs + poops + overlay.containers + aura.containers).
         oldContainer.destroy(true)
+
+        // Phase 22-fix: pool.active хранит ссылки на overlay'и которые только что
+        // были destroy'd через oldContainer. Очищаем — pool.acquire() в будущем
+        // создаст свежие. drainAll() для уже-мёртвых objects = no-op safe.
+        elementOverlayPool.drainAll()
 
         // Поднимаем детей newContainer обратно на корневой уровень сцены,
         // переводя их в мировые координаты.
@@ -366,6 +393,9 @@ export class LocationTransition {
         // Phase 12: пересоздаём overlay manager ПОСЛЕ возврата лягушек в scene root
         // (manager attach'ает overlay.container внутрь frog.container).
         scene.overlayManager = new FrogOverlayManager(scene, () => scene.frogs)
+        // Phase 22-fix: пересоздаём element aura overlay'и — reparentForTransition
+        // удалил предыдущие active map, containers уже destroyed через oldContainer.
+        scene.createElementAuras()
         this.spawner.rebindCarriers()
         // Phase 14: пересоздаём selection layer (subscribe уже active в create()).
         scene.selectionLayer = new SerumSelectionLayer(scene)
@@ -385,6 +415,316 @@ export class LocationTransition {
 
         eventBus.emit('location:transitionEnd', { id: newLoc })
       },
+    })
+  }
+
+  /**
+   * Same dual-container zoom как у onLocationChanged (going-UP направление),
+   * но «новая локация» = только map4.webp как промежуточный фон при переходе
+   * на Звёздную карту. Лягушки/коробки уходят в точку вместе с фермой,
+   * map4 разрастается на полный экран. После этого MainScene.bg = map4
+   * (всё прочее на сцене уничтожено) и можно sleep'ать сцену.
+   *
+   * Возвращает Promise, который резолвится по завершению анимации — owner
+   * (game/index.ts) переключает на StarMapScene.
+   */
+  runOpenStarMapTransition(): Promise<void> {
+    return new Promise((resolve) => {
+      const scene = this.scene
+      if (scene.isLocationTransitioning) {
+        scene.tweens.killTweensOf(scene.cameras.main)
+        scene.cameras.main.setZoom(1)
+        scene.isLocationTransitioning = false
+      }
+      scene.isLocationTransitioning = true
+      scene.input.enabled = false
+      eventBus.emit('location:transitionStart', { from: scene.prevLocation, to: -1 })
+
+      const { width, height } = scene.scale
+      const cx = width / 2
+      const cy = height / 2
+
+      this.magnet.clearAll()
+
+      // Если уходим с болота — фиксируем коробки в pending, чтобы при возврате восстановились
+      if (scene.prevLocation === 1 && scene.boxes.length > 0) {
+        scene.pendingBoxCount = Math.min(
+          scene.pendingBoxCount + scene.boxes.length,
+          MAX_PENDING_BOXES,
+        )
+      }
+
+      // Detach overlay manager БЕЗ release (тинт сыворотки сохраняется до destroy)
+      scene.overlayManager?.disposeForTransition()
+      scene.overlayManager = null
+
+      const oldContainer = scene.add.container(cx, cy)
+
+      // Auras (scene root) → oldContainer
+      for (const aura of scene.elementAuras) {
+        aura.reparentForTransition(oldContainer, cx, cy)
+      }
+      scene.elementAuras = []
+
+      scene.selectionLayer?.dispose()
+      scene.selectionLayer = null
+      if (scene.cachedSerumDragActive) {
+        useGameStore.getState().setSerumDragActive(false)
+        scene.cachedSerumDragActive = false
+      }
+      scene.lastHaptiHover = false
+
+      // Bg + frogs + boxes + poops → oldContainer (с пересчётом в локальные коорды)
+      const oldBg = scene.bg
+      oldContainer.add(oldBg)
+      oldBg.x = 0
+      oldBg.y = 0
+
+      for (const f of [...scene.frogs]) {
+        scene.tweens.killTweensOf(f.container)
+        scene.tweens.killTweensOf(f.body)
+        if (f.poopTimer) f.poopTimer.paused = true
+        const wx = f.container.x
+        const wy = f.container.y
+        oldContainer.add(f.container)
+        f.container.x = wx - cx
+        f.container.y = wy - cy
+      }
+      scene.frogs = []
+
+      for (const b of [...scene.boxes]) {
+        scene.tweens.killTweensOf(b.img)
+        const wx = b.img.x
+        const wy = b.img.y
+        oldContainer.add(b.img)
+        b.img.x = wx - cx
+        b.img.y = wy - cy
+      }
+      scene.boxes = []
+
+      for (const p of [...scene.poops]) {
+        scene.tweens.killTweensOf(p)
+        const wx = p.x
+        const wy = p.y
+        oldContainer.add(p)
+        p.x = wx - cx
+        p.y = wy - cy
+      }
+      scene.poops = []
+
+      // newContainer с map4 как фоном (full screen)
+      const newContainer = scene.add.container(cx, cy)
+      const newBg = scene.add.image(0, 0, 'map4')
+      newBg.setDisplaySize(width, height)
+      newContainer.add(newBg)
+      newContainer.setScale(8)
+      newContainer.setAlpha(0)
+
+      // Going UP: старая впереди (видим как сжимается), новая сзади
+      oldContainer.setDepth(200)
+      newContainer.setDepth(100)
+
+      scene.cameras.main.setZoom(1)
+
+      const duration = 450
+
+      scene.tweens.add({
+        targets: oldContainer,
+        scale: 0.01,
+        duration,
+        ease: 'Sine.easeInOut',
+      })
+      scene.tweens.add({
+        targets: oldContainer,
+        alpha: 0,
+        duration: duration * 0.22,
+        delay: duration * 0.78,
+        ease: 'Sine.easeIn',
+      })
+      scene.tweens.add({
+        targets: newContainer,
+        alpha: 1,
+        duration: duration * 0.35,
+        ease: 'Sine.easeOut',
+      })
+      scene.tweens.add({
+        targets: newContainer,
+        scale: 1,
+        duration,
+        ease: 'Sine.easeInOut',
+        onComplete: () => {
+          oldContainer.destroy(true)
+          elementOverlayPool.drainAll()
+
+          // Поднимаем map4 из newContainer на корневой уровень
+          const children = [...newContainer.list]
+          for (const child of children) {
+            const c = child as Phaser.GameObjects.Image
+            const lx = c.x
+            const ly = c.y
+            newContainer.remove(c, false)
+            scene.add.existing(c)
+            c.x = lx + cx
+            c.y = ly + cy
+          }
+          newContainer.destroy(false)
+
+          newBg.setDepth(-1)
+          scene.bg = newBg
+
+          scene.input.enabled = true
+          scene.isLocationTransitioning = false
+          eventBus.emit('location:transitionEnd', { id: -1 })
+          resolve()
+        },
+      })
+    })
+  }
+
+  /**
+   * Зеркальный к runOpenStarMapTransition: текущий scene.bg = map4 (выставленный
+   * при open), возвращаем фактическую локацию targetLocId. Спавним лягушек
+   * через FrogSpawner.spawnLocationFrogs внутри newContainer, dual-container
+   * scale 0.005 → 1 для новой, map4 разлетается за экран.
+   */
+  runCloseStarMapTransition(targetLocId: number): Promise<void> {
+    return new Promise((resolve) => {
+      const scene = this.scene
+      if (scene.isLocationTransitioning) {
+        scene.tweens.killTweensOf(scene.cameras.main)
+        scene.cameras.main.setZoom(1)
+        scene.isLocationTransitioning = false
+      }
+      scene.isLocationTransitioning = true
+      scene.input.enabled = false
+      scene.prevLocation = targetLocId
+      eventBus.emit('location:transitionStart', { from: -1, to: targetLocId })
+
+      const { width, height } = scene.scale
+      const cx = width / 2
+      const cy = height / 2
+
+      // oldContainer с текущим bg = map4 (на корневом уровне)
+      const oldContainer = scene.add.container(cx, cy)
+      const oldBg = scene.bg
+      oldContainer.add(oldBg)
+      oldBg.x = 0
+      oldBg.y = 0
+
+      // newContainer с фоном целевой локации + спавнятся frogs
+      const newContainer = scene.add.container(cx, cy)
+      const newStartScale = 0.005
+      newContainer.setScale(newStartScale)
+      newContainer.setAlpha(0)
+      const newBg = scene.add.image(0, 0, mapKeyForLocation(targetLocId))
+      newBg.setDisplaySize(width, height)
+      newContainer.add(newBg)
+
+      const state = useGameStore.getState()
+      const levels = state.locationFrogs[targetLocId - 1] ?? []
+      if (levels.length > 0) {
+        levels.forEach((lvl) => {
+          const { x: wx, y: wy } = scene.randomFieldPos()
+          const frog = this.spawner.spawnFrog(wx, wy, lvl)
+          scene.tweens.killTweensOf(frog.body)
+          scene.tweens.killTweensOf(frog.container)
+          frog.body.scaleY = 1.0
+          if (frog.poopTimer) frog.poopTimer.paused = true
+          newContainer.add(frog.container)
+          frog.container.x = wx - cx
+          frog.container.y = wy - cy
+        })
+      }
+
+      // Pending-коробки восстанавливаются если возвращаемся на Лужу
+      if (targetLocId === 1 && scene.pendingBoxCount > 0) {
+        while (scene.pendingBoxCount > 0 && this.box.canSpawnBox()) {
+          scene.pendingBoxCount--
+          this.box.spawnBox(false, true)
+          const lastBox = scene.boxes[scene.boxes.length - 1]
+          const wx = lastBox.img.x
+          const wy = lastBox.img.y
+          newContainer.add(lastBox.img)
+          lastBox.img.x = wx - cx
+          lastBox.img.y = wy - cy
+        }
+      }
+
+      // Going DOWN: новая впереди (зумимся внутрь), старая сзади разлетается
+      newContainer.setDepth(200)
+      oldContainer.setDepth(100)
+
+      scene.cameras.main.setZoom(1)
+
+      const duration = 450
+
+      scene.tweens.add({
+        targets: oldContainer,
+        scale: 8,
+        duration,
+        ease: 'Sine.easeInOut',
+      })
+      scene.tweens.add({
+        targets: oldContainer,
+        alpha: 0,
+        duration: duration * 0.22,
+        delay: duration * 0.78,
+        ease: 'Sine.easeIn',
+      })
+      scene.tweens.add({
+        targets: newContainer,
+        alpha: 1,
+        duration: duration * 0.35,
+        ease: 'Sine.easeOut',
+      })
+      scene.tweens.add({
+        targets: newContainer,
+        scale: 1,
+        duration,
+        ease: 'Sine.easeInOut',
+        onComplete: () => {
+          oldContainer.destroy(true) // уничтожает старый map4 sprite
+
+          const children = [...newContainer.list]
+          for (const child of children) {
+            const c = child as
+              | Phaser.GameObjects.Container
+              | Phaser.GameObjects.Image
+            const lx = c.x
+            const ly = c.y
+            newContainer.remove(c, false)
+            scene.add.existing(c)
+            c.x = lx + cx
+            c.y = ly + cy
+          }
+          newContainer.destroy(false)
+
+          newBg.setDepth(-1)
+          scene.bg = newBg
+
+          for (const f of scene.frogs) {
+            if (f.poopTimer) f.poopTimer.paused = false
+            this.spawner.startIdleAnim(f)
+          }
+
+          scene.overlayManager = new FrogOverlayManager(scene, () => scene.frogs)
+          scene.createElementAuras()
+          this.spawner.rebindCarriers()
+          scene.selectionLayer = new SerumSelectionLayer(scene)
+
+          scene.input.enabled = true
+          scene.isLocationTransitioning = false
+          scene.boxProgressMs = 0
+          const storeForTransitionEnd = useGameStore.getState()
+          storeForTransitionEnd.setBoxOpenCount(0)
+          storeForTransitionEnd.setRareBoxProgress(0)
+          this.magnet.resetSpawnTimer()
+          scene.syncEntityCount()
+
+          eventBus.emit('location:transitionEnd', { id: targetLocId })
+          resolve()
+        },
+      })
     })
   }
 }

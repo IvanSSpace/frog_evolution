@@ -37,9 +37,13 @@ export const tintToHex = (cssHex: string): number =>
   parseInt(cssHex.replace('#', ''), 16)
 
 export const mapKeyForLocation = (locId: number): string => {
-  if (locId === 2) return 'map2'
-  if (locId === 3) return 'map3'
-  if (locId === 4) return 'map4'
+  // id=1 Лужа → map0.png, id=2 Болото → map.webp, id=3 Лес → map2.webp,
+  // id=4 Континент (строения) → map3.webp. map4.webp больше не используется
+  // как фон локации — оставлен для anti-zoom перехода в космос.
+  if (locId === 1) return 'map0'
+  if (locId === 2) return 'map'
+  if (locId === 3) return 'map2'
+  if (locId === 4) return 'map3'
   return 'map'
 }
 

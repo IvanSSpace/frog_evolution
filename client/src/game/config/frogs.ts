@@ -13,7 +13,7 @@ interface FrogLevelConfig {
   growthRate: number // мультипликатор цены за каждую купленную (всегда 1.15)
   poopChances: PoopChances
   tint: number // тинт (Phaser hex)
-  location: number // 1=Болото, 2=Лес, 3=Планета
+  location: number // 1=Лужа, 2=Болото, 3=Лес
   availableInShop: boolean // true = можно купить за монеты; false = только через мерджи (L19+)
 }
 
@@ -32,11 +32,11 @@ export const POOP_INTERVAL_MS = 1700
 // Целевой доход в секунду на лягушку — официальная экономика.
 // L19+ имеют одинаковый доход (cap). L19+ нельзя купить в магазине, только через мерджи.
 export const TARGET_INCOME_PER_SEC: readonly number[] = [
-  // Болото (L1-6)
+  // Лужа (L1-6)
   0.5, 1.5, 4.0, 9.5, 21.0, 44.5,
-  // Лес (L7-12)
+  // Болото (L7-12)
   92.0, 187.5, 379.0, 762.5, 1530.0, 3065.5,
-  // Планета (L13-18) — все одинаковые (cap)
+  // Лес (L13-18) — все одинаковые (cap)
   393206.0, 393206.0, 393206.0, 393206.0, 393206.0, 393206.0,
 ]
 
@@ -60,8 +60,8 @@ export function stochasticRound(x: number): number {
   return floor + (Math.random() < x - floor ? 1 : 0)
 }
 
-// L1-L6 имеют свои SVG. L7+ пока используют frog1.svg как placeholder
-// (отличаются tint'ом). При появлении реальных SVG — заменить path.
+// L1-L18 имеют свои SVG. PLACEHOLDER оставлен на случай возврата к подмене
+// (например, для будущих L19+ из мерджей).
 const PLACEHOLDER = '/frogs_svg/frog1.svg'
 
 // Ставки в общих poopChances для L7+ — много "огромных", redfер ярче
@@ -70,7 +70,7 @@ const HUGE_CHANCES: PoopChances = { regular: 0.05, big: 0.1, huge: 0.85 }
 // Цены: формула 560 × 2.8^(T-1), округлено как в референсе.
 // growthRate всегда 1.15 (множитель за каждую купленную лягушку).
 export const FROG_LEVELS: readonly FrogLevelConfig[] = [
-  // ─── Болото (L1-6) — реальные SVG ───
+  // ─── Лужа (L1-6) — реальные SVG ───
   // Тёплые жёлто-оливковые зелёные. Светлее к L1, темнее к L6.
   // Намеренно НЕ похожи на элементы: forest=0x4ade80 (яркий лайм) и toxic=0x86efac (бледная мята).
   {
@@ -140,9 +140,9 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     poopChances: { regular: 0.05, big: 0.1, huge: 0.85 },
   },
 
-  // ─── Лес (L7-12) — placeholder, натуральные зелёные, светлее предыдущей версии ───
+  // ─── Болото (L7-12) — натуральные зелёные, светлее предыдущей версии ───
   {
-    path: PLACEHOLDER,
+    path: '/frogs_svg/frog7.svg',
     name: 'Глазастик',
     size: 2.0,
     basePrice: 269_860,
@@ -153,7 +153,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     poopChances: HUGE_CHANCES,
   },
   {
-    path: PLACEHOLDER,
+    path: '/frogs_svg/frog8.svg',
     name: 'Громозека',
     size: 2.0,
     basePrice: 755_600,
@@ -164,7 +164,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     poopChances: HUGE_CHANCES,
   },
   {
-    path: PLACEHOLDER,
+    path: '/frogs_svg/frog9.svg',
     name: 'Лягозилла',
     size: 2.0,
     basePrice: 2_100_000,
@@ -175,7 +175,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     poopChances: HUGE_CHANCES,
   },
   {
-    path: PLACEHOLDER,
+    path: '/frogs_svg/frog10.svg',
     name: 'Кваколось',
     size: 2.0,
     basePrice: 5_900_000,
@@ -186,7 +186,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     poopChances: HUGE_CHANCES,
   },
   {
-    path: PLACEHOLDER,
+    path: '/frogs_svg/frog11.svg',
     name: 'Длиннолап',
     size: 2.0,
     basePrice: 16_600_000,
@@ -197,7 +197,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     poopChances: HUGE_CHANCES,
   },
   {
-    path: PLACEHOLDER,
+    path: '/frogs_svg/frog12.svg',
     name: 'Кикиморка',
     size: 2.0,
     basePrice: 46_400_000,
@@ -208,11 +208,11 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     poopChances: HUGE_CHANCES,
   },
 
-  // ─── Планета (L13-18) — доступны в shop, цены по формуле 560 × 2.8^(T-1) ───
+  // ─── Лес (L13-18) — доступны в shop, цены по формуле 560 × 2.8^(T-1) ───
   // Тёплый оливково-зелёный: контрастирует с синим фоном космоса,
   // отличается от forest=0x4ade80 (лайм H=142°) по hue (~94° vs 142°).
   {
-    path: PLACEHOLDER,
+    path: '/frogs_svg/frog13.svg',
     name: 'Квакатлас',
     size: 2.0,
     basePrice: 62_700_000_000,
@@ -223,7 +223,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     poopChances: HUGE_CHANCES,
   },
   {
-    path: PLACEHOLDER,
+    path: '/frogs_svg/frog14.svg',
     name: 'Лягобог',
     size: 2.0,
     basePrice: 175_600_000_000,
@@ -234,7 +234,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     poopChances: HUGE_CHANCES,
   },
   {
-    path: PLACEHOLDER,
+    path: '/frogs_svg/frog15.svg',
     name: 'Вселенжаб',
     size: 2.0,
     basePrice: 491_500_000_000,
@@ -245,7 +245,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     poopChances: HUGE_CHANCES,
   },
   {
-    path: PLACEHOLDER,
+    path: '/frogs_svg/frog16.svg',
     name: 'Уроборосква',
     size: 2.0,
     basePrice: 1_376_000_000_000,
@@ -256,7 +256,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     poopChances: HUGE_CHANCES,
   },
   {
-    path: PLACEHOLDER,
+    path: '/frogs_svg/frog17.svg',
     name: 'Призмоляг',
     size: 2.0,
     basePrice: 3_853_000_000_000,
@@ -267,7 +267,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     poopChances: HUGE_CHANCES,
   },
   {
-    path: PLACEHOLDER,
+    path: '/frogs_svg/frog18.svg',
     name: 'Жаб-Провидец',
     size: 2.0,
     basePrice: 10_789_000_000_000,

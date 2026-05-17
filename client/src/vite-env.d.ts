@@ -17,6 +17,8 @@ interface TelegramHapticFeedback {
 
 interface TelegramWebApp {
   initData: string
+  // 'android' | 'android_x' | 'ios' | 'macos' | 'tdesktop' | 'weba' | 'webk' | 'unigram' | 'unknown'
+  platform?: string
   initDataUnsafe: {
     user?: {
       id: number

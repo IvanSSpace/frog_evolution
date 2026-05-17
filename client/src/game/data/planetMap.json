@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-05-07T14:30:27.780Z",
+  "generatedAt": "2026-05-13T10:54:46.445739Z",
   "meta": {
     "seed": 19450707,
-    "bgCount": 435,
+    "bgCount": 334,
     "mainCount": 16,
-    "totalCount": 451,
+    "totalCount": 350,
     "blackholeExclusionR": 1100,
     "minToDist": 20,
     "systemOffset": {
       "x": 3500,
       "y": 3500
     },
-    "note": "Все x/y/size в DPR-units (DPR=1). На устройстве в runtime умножается на real DPR. | Reduced 984→615 BG planets (5 of 8 evenly kept), small planets (<25) sized +40% | -50 BG (every 12th) + all sizes ×1.10 | reduced to 451 planets"
+    "note": "Все x/y/size в DPR-units (DPR=1). На устройстве в runtime умножается на real DPR. | Reduced 984→615 BG planets (5 of 8 evenly kept), small planets (<25) sized +40% | -50 BG (every 12th) + all sizes ×1.10 | reduced to 451 planets | reduced to 350 planets (334 bg via equispaced sampling)"
   },
   "planets": [
     {
@@ -223,23 +223,6 @@
       "distFromHome": 1101
     },
     {
-      "id": "bg_0",
-      "name": "Loki",
-      "kind": "bg",
-      "x": 897,
-      "y": 5250,
-      "type": "hostile",
-      "archetype": "lava",
-      "size": 30.14,
-      "color": 14788240,
-      "accent": 12873773,
-      "brightness": 0.751,
-      "hasMoon": false,
-      "rngSeed": 418256501,
-      "distFromCenter": 5326,
-      "distFromHome": 3137
-    },
-    {
       "id": "bg_1",
       "name": "Aegis",
       "kind": "bg",
@@ -289,23 +272,6 @@
       "rngSeed": 952162307,
       "distFromCenter": 5658,
       "distFromHome": 4252
-    },
-    {
-      "id": "bg_4",
-      "name": "Persephone",
-      "kind": "bg",
-      "x": -5570,
-      "y": 2782,
-      "type": "hostile",
-      "archetype": "lava",
-      "size": 28.677000000000003,
-      "color": 14777429,
-      "accent": 10437399,
-      "brightness": 0.771,
-      "hasMoon": false,
-      "rngSeed": 278198021,
-      "distFromCenter": 6226,
-      "distFromHome": 9098
     },
     {
       "id": "bg_8",
@@ -359,23 +325,6 @@
       "distFromHome": 9786
     },
     {
-      "id": "bg_11",
-      "name": "Ross-905",
-      "kind": "bg",
-      "x": 5654,
-      "y": -870,
-      "type": "hostile",
-      "archetype": "lava",
-      "size": 34.573,
-      "color": 14322799,
-      "accent": 10824740,
-      "brightness": 0.738,
-      "hasMoon": false,
-      "rngSeed": 14462430,
-      "distFromCenter": 5721,
-      "distFromHome": 4872
-    },
-    {
       "id": "bg_12",
       "name": "Devotion",
       "kind": "bg",
@@ -425,23 +374,6 @@
       "rngSeed": 487156395,
       "distFromCenter": 1876,
       "distFromHome": 5696
-    },
-    {
-      "id": "bg_25",
-      "name": "Janus",
-      "kind": "bg",
-      "x": -4959,
-      "y": 1423,
-      "type": "empty",
-      "archetype": "desert",
-      "size": 35.7742,
-      "color": 14527804,
-      "accent": 8805139,
-      "brightness": 0.865,
-      "hasMoon": false,
-      "rngSeed": 872699821,
-      "distFromCenter": 5159,
-      "distFromHome": 8710
     },
     {
       "id": "bg_26",
@@ -512,23 +444,6 @@
       "distFromHome": 953
     },
     {
-      "id": "bg_33",
-      "name": "Lada",
-      "kind": "bg",
-      "x": -4837,
-      "y": -3897,
-      "type": "resource",
-      "archetype": "mineral",
-      "size": 32.417,
-      "color": 9986529,
-      "accent": 7346856,
-      "brightness": 0.731,
-      "hasMoon": false,
-      "rngSeed": 371169942,
-      "distFromCenter": 6212,
-      "distFromHome": 11145
-    },
-    {
       "id": "bg_34",
       "name": "Devana",
       "kind": "bg",
@@ -580,23 +495,6 @@
       "distFromHome": 5875
     },
     {
-      "id": "bg_44",
-      "name": "Gliese-436",
-      "kind": "bg",
-      "x": 4085,
-      "y": 2220,
-      "type": "hostile",
-      "archetype": "dead",
-      "size": 35.8974,
-      "color": 8823264,
-      "accent": 2713532,
-      "brightness": 0.744,
-      "hasMoon": false,
-      "rngSeed": 327574424,
-      "distFromCenter": 4649,
-      "distFromHome": 1407
-    },
-    {
       "id": "bg_48",
       "name": "HD-141937",
       "kind": "bg",
@@ -646,23 +544,6 @@
       "rngSeed": 4311769,
       "distFromCenter": 4880,
       "distFromHome": 9827
-    },
-    {
-      "id": "bg_51",
-      "name": "Boomerang",
-      "kind": "bg",
-      "x": 4517,
-      "y": -2709,
-      "type": "resource",
-      "archetype": "ocean",
-      "size": 37.190999999999995,
-      "color": 4298717,
-      "accent": 1338250,
-      "brightness": 0.967,
-      "hasMoon": false,
-      "rngSeed": 261288758,
-      "distFromCenter": 5267,
-      "distFromHome": 6292
     },
     {
       "id": "bg_52",
@@ -733,23 +614,6 @@
       "distFromHome": 1248
     },
     {
-      "id": "bg_66",
-      "name": "Gossamer",
-      "kind": "bg",
-      "x": 2940,
-      "y": -5426,
-      "type": "hostile",
-      "archetype": "toxic",
-      "size": 35.342999999999996,
-      "color": 5694010,
-      "accent": 3247376,
-      "brightness": 0.7,
-      "hasMoon": false,
-      "rngSeed": 330739161,
-      "distFromCenter": 6171,
-      "distFromHome": 8944
-    },
-    {
       "id": "bg_67",
       "name": "61Cygni",
       "kind": "bg",
@@ -801,23 +665,6 @@
       "distFromHome": 7950
     },
     {
-      "id": "bg_73",
-      "name": "K2-18",
-      "kind": "bg",
-      "x": -3976,
-      "y": -4864,
-      "type": "hostile",
-      "archetype": "lava",
-      "size": 28.644000000000002,
-      "color": 14312283,
-      "accent": 10035229,
-      "brightness": 0.857,
-      "hasMoon": false,
-      "rngSeed": 859534957,
-      "distFromCenter": 6282,
-      "distFromHome": 11218
-    },
-    {
       "id": "bg_75",
       "name": "Lethe",
       "kind": "bg",
@@ -867,23 +714,6 @@
       "rngSeed": 744613637,
       "distFromCenter": 5270,
       "distFromHome": 2965
-    },
-    {
-      "id": "bg_81",
-      "name": "Stargate",
-      "kind": "bg",
-      "x": -4391,
-      "y": 3179,
-      "type": "hostile",
-      "archetype": "dead",
-      "size": 34.434400000000004,
-      "color": 4160484,
-      "accent": 1070995,
-      "brightness": 0.83,
-      "hasMoon": false,
-      "rngSeed": 769914417,
-      "distFromCenter": 5421,
-      "distFromHome": 7898
     },
     {
       "id": "bg_82",
@@ -954,23 +784,6 @@
       "distFromHome": 6157
     },
     {
-      "id": "bg_96",
-      "name": "Flame",
-      "kind": "bg",
-      "x": -608,
-      "y": -3413,
-      "type": "hostile",
-      "archetype": "lava",
-      "size": 35.2814,
-      "color": 14453881,
-      "accent": 11417639,
-      "brightness": 0.835,
-      "hasMoon": false,
-      "rngSeed": 527024787,
-      "distFromCenter": 3467,
-      "distFromHome": 8041
-    },
-    {
       "id": "bg_97",
       "name": "Aphrodite",
       "kind": "bg",
@@ -1020,23 +833,6 @@
       "rngSeed": 11676758,
       "distFromCenter": 2684,
       "distFromHome": 5938
-    },
-    {
-      "id": "bg_100",
-      "name": "Bubble",
-      "kind": "bg",
-      "x": 4452,
-      "y": -249,
-      "type": "resource",
-      "archetype": "forest",
-      "size": 35.1736,
-      "color": 10154829,
-      "accent": 7452935,
-      "brightness": 0.997,
-      "hasMoon": false,
-      "rngSeed": 656776058,
-      "distFromCenter": 4459,
-      "distFromHome": 3868
     },
     {
       "id": "bg_104",
@@ -1090,23 +886,6 @@
       "distFromHome": 6429
     },
     {
-      "id": "bg_114",
-      "name": "Morpheus",
-      "kind": "bg",
-      "x": 720,
-      "y": -5878,
-      "type": "empty",
-      "archetype": "mineral",
-      "size": 34.958,
-      "color": 10839508,
-      "accent": 8332437,
-      "brightness": 0.981,
-      "hasMoon": true,
-      "rngSeed": 814032441,
-      "distFromCenter": 5922,
-      "distFromHome": 9781
-    },
-    {
       "id": "bg_115",
       "name": "Nocturne",
       "kind": "bg",
@@ -1156,23 +935,6 @@
       "rngSeed": 217890867,
       "distFromCenter": 5525,
       "distFromHome": 4263
-    },
-    {
-      "id": "bg_121",
-      "name": "Hyades",
-      "kind": "bg",
-      "x": 238,
-      "y": -2088,
-      "type": "hostile",
-      "archetype": "binary",
-      "size": 37.7146,
-      "color": 13162356,
-      "accent": 7513128,
-      "brightness": 0.843,
-      "hasMoon": false,
-      "rngSeed": 487995816,
-      "distFromCenter": 2102,
-      "distFromHome": 6470
     },
     {
       "id": "bg_122",
@@ -1243,23 +1005,6 @@
       "distFromHome": 601
     },
     {
-      "id": "bg_136",
-      "name": "Indigo",
-      "kind": "bg",
-      "x": 3889,
-      "y": -1999,
-      "type": "resource",
-      "archetype": "ice",
-      "size": 36.544200000000004,
-      "color": 6477021,
-      "accent": 1933218,
-      "brightness": 0.854,
-      "hasMoon": false,
-      "rngSeed": 39745195,
-      "distFromCenter": 4373,
-      "distFromHome": 5513
-    },
-    {
       "id": "bg_137",
       "name": "Rosette",
       "kind": "bg",
@@ -1311,23 +1056,6 @@
       "distFromHome": 7336
     },
     {
-      "id": "bg_140",
-      "name": "Zorya",
-      "kind": "bg",
-      "x": -5487,
-      "y": 2954,
-      "type": "hostile",
-      "archetype": "lava",
-      "size": 28.501,
-      "color": 16290172,
-      "accent": 15599113,
-      "brightness": 0.71,
-      "hasMoon": false,
-      "rngSeed": 575843838,
-      "distFromCenter": 6232,
-      "distFromHome": 9004
-    },
-    {
       "id": "bg_144",
       "name": "Astral",
       "kind": "bg",
@@ -1377,23 +1105,6 @@
       "rngSeed": 864950239,
       "distFromCenter": 6286,
       "distFromHome": 8145
-    },
-    {
-      "id": "bg_147",
-      "name": "Lodestar",
-      "kind": "bg",
-      "x": 4507,
-      "y": 3834,
-      "type": "empty",
-      "archetype": "dead",
-      "size": 31.801,
-      "color": 4425704,
-      "accent": 1002140,
-      "brightness": 0.965,
-      "hasMoon": false,
-      "rngSeed": 619274602,
-      "distFromCenter": 5917,
-      "distFromHome": 1061
     },
     {
       "id": "bg_148",
@@ -1464,23 +1175,6 @@
       "distFromHome": 7423
     },
     {
-      "id": "bg_162",
-      "name": "Gliese-486",
-      "kind": "bg",
-      "x": -2020,
-      "y": 2987,
-      "type": "hostile",
-      "archetype": "dead",
-      "size": 35.0196,
-      "color": 8753904,
-      "accent": 1397472,
-      "brightness": 0.79,
-      "hasMoon": false,
-      "rngSeed": 427008696,
-      "distFromCenter": 3606,
-      "distFromHome": 5544
-    },
-    {
       "id": "bg_163",
       "name": "Coronae",
       "kind": "bg",
@@ -1532,23 +1226,6 @@
       "distFromHome": 7800
     },
     {
-      "id": "bg_169",
-      "name": "Gliese-380",
-      "kind": "bg",
-      "x": 3459,
-      "y": 1980,
-      "type": "hostile",
-      "archetype": "dead",
-      "size": 35.2352,
-      "color": 5794547,
-      "accent": 598978,
-      "brightness": 0.942,
-      "hasMoon": false,
-      "rngSeed": 369324802,
-      "distFromCenter": 3986,
-      "distFromHome": 1521
-    },
-    {
       "id": "bg_171",
       "name": "Crab",
       "kind": "bg",
@@ -1598,23 +1275,6 @@
       "rngSeed": 312800051,
       "distFromCenter": 5666,
       "distFromHome": 2495
-    },
-    {
-      "id": "bg_180",
-      "name": "HIP-91258",
-      "kind": "bg",
-      "x": 3698,
-      "y": 3135,
-      "type": "resource",
-      "archetype": "mineral",
-      "size": 35.8512,
-      "color": 9005788,
-      "accent": 3416486,
-      "brightness": 0.787,
-      "hasMoon": false,
-      "rngSeed": 820685075,
-      "distFromCenter": 4848,
-      "distFromHome": 415
     },
     {
       "id": "bg_184",
@@ -1685,23 +1345,6 @@
       "distFromHome": 7239
     },
     {
-      "id": "bg_192",
-      "name": "Prism",
-      "kind": "bg",
-      "x": -3023,
-      "y": 5244,
-      "type": "resource",
-      "archetype": "gas_ringed",
-      "size": 44.352000000000004,
-      "color": 10843637,
-      "accent": 3213794,
-      "brightness": 0.866,
-      "hasMoon": false,
-      "rngSeed": 915533621,
-      "distFromCenter": 6053,
-      "distFromHome": 6752
-    },
-    {
       "id": "bg_193",
       "name": "OmegaPersei",
       "kind": "bg",
@@ -1753,23 +1396,6 @@
       "distFromHome": 8426
     },
     {
-      "id": "bg_202",
-      "name": "Alkaid",
-      "kind": "bg",
-      "x": 1955,
-      "y": 1785,
-      "type": "hostile",
-      "archetype": "dead",
-      "size": 35.8666,
-      "color": 5549297,
-      "accent": 676027,
-      "brightness": 0.965,
-      "hasMoon": false,
-      "rngSeed": 100617514,
-      "distFromCenter": 2647,
-      "distFromHome": 2308
-    },
-    {
       "id": "bg_203",
       "name": "Gliese-876",
       "kind": "bg",
@@ -1819,23 +1445,6 @@
       "rngSeed": 666506985,
       "distFromCenter": 6203,
       "distFromHome": 8229
-    },
-    {
-      "id": "bg_210",
-      "name": "Teegarden",
-      "kind": "bg",
-      "x": 2171,
-      "y": -223,
-      "type": "resource",
-      "archetype": "forest",
-      "size": 37.3758,
-      "color": 5296475,
-      "accent": 1999928,
-      "brightness": 0.702,
-      "hasMoon": false,
-      "rngSeed": 677376213,
-      "distFromCenter": 2182,
-      "distFromHome": 3953
     },
     {
       "id": "bg_211",
@@ -1906,23 +1515,6 @@
       "distFromHome": 6222
     },
     {
-      "id": "bg_218",
-      "name": "Wezen",
-      "kind": "bg",
-      "x": -4609,
-      "y": -1823,
-      "type": "empty",
-      "archetype": "mineral",
-      "size": 36.4826,
-      "color": 7363825,
-      "accent": 4328387,
-      "brightness": 0.993,
-      "hasMoon": false,
-      "rngSeed": 598236765,
-      "distFromCenter": 4956,
-      "distFromHome": 9700
-    },
-    {
       "id": "bg_225",
       "name": "Niveous",
       "kind": "bg",
@@ -1972,23 +1564,6 @@
       "rngSeed": 128070352,
       "distFromCenter": 3872,
       "distFromHome": 5398
-    },
-    {
-      "id": "bg_232",
-      "name": "Columbae",
-      "kind": "bg",
-      "x": -1305,
-      "y": 5410,
-      "type": "hostile",
-      "archetype": "lava",
-      "size": 33.0022,
-      "color": 16027012,
-      "accent": 15339058,
-      "brightness": 0.85,
-      "hasMoon": false,
-      "rngSeed": 612801781,
-      "distFromCenter": 5565,
-      "distFromHome": 5171
     },
     {
       "id": "bg_233",
@@ -2042,23 +1617,6 @@
       "distFromHome": 8481
     },
     {
-      "id": "bg_236",
-      "name": "51Pegasi",
-      "kind": "bg",
-      "x": 3108,
-      "y": -2605,
-      "type": "hostile",
-      "archetype": "binary",
-      "size": 32.439,
-      "color": 4119675,
-      "accent": 1345086,
-      "brightness": 0.909,
-      "hasMoon": false,
-      "rngSeed": 752451204,
-      "distFromCenter": 4055,
-      "distFromHome": 6118
-    },
-    {
       "id": "bg_240",
       "name": "GJ-3473",
       "kind": "bg",
@@ -2108,23 +1666,6 @@
       "rngSeed": 794259264,
       "distFromCenter": 4887,
       "distFromHome": 6899
-    },
-    {
-      "id": "bg_250",
-      "name": "Luyten-726",
-      "kind": "bg",
-      "x": -1132,
-      "y": 3632,
-      "type": "hostile",
-      "archetype": "lava",
-      "size": 29.029000000000003,
-      "color": 15556697,
-      "accent": 12127785,
-      "brightness": 0.839,
-      "hasMoon": false,
-      "rngSeed": 418760010,
-      "distFromCenter": 3804,
-      "distFromHome": 4634
     },
     {
       "id": "bg_251",
@@ -2195,23 +1736,6 @@
       "distFromHome": 2214
     },
     {
-      "id": "bg_258",
-      "name": "Jewelbox",
-      "kind": "bg",
-      "x": 5125,
-      "y": -3540,
-      "type": "resource",
-      "archetype": "mineral",
-      "size": 35.2044,
-      "color": 6330869,
-      "accent": 492495,
-      "brightness": 0.829,
-      "hasMoon": false,
-      "rngSeed": 507493367,
-      "distFromCenter": 6229,
-      "distFromHome": 7225
-    },
-    {
       "id": "bg_259",
       "name": "Cephei",
       "kind": "bg",
@@ -2263,23 +1787,6 @@
       "distFromHome": 6450
     },
     {
-      "id": "bg_272",
-      "name": "Lattice",
-      "kind": "bg",
-      "x": 3892,
-      "y": -1502,
-      "type": "empty",
-      "archetype": "dead",
-      "size": 33.572,
-      "color": 5469139,
-      "accent": 1983625,
-      "brightness": 0.911,
-      "hasMoon": false,
-      "rngSeed": 88578700,
-      "distFromCenter": 4172,
-      "distFromHome": 5017
-    },
-    {
       "id": "bg_273",
       "name": "Wolf-1069",
       "kind": "bg",
@@ -2329,23 +1836,6 @@
       "rngSeed": 500657100,
       "distFromCenter": 3382,
       "distFromHome": 8194
-    },
-    {
-      "id": "bg_276",
-      "name": "Pillars",
-      "kind": "bg",
-      "x": -1968,
-      "y": -1776,
-      "type": "empty",
-      "archetype": "dead",
-      "size": 33.649,
-      "color": 7178976,
-      "accent": 2050990,
-      "brightness": 0.816,
-      "hasMoon": false,
-      "rngSeed": 225486580,
-      "distFromCenter": 2651,
-      "distFromHome": 7598
     },
     {
       "id": "bg_280",
@@ -2416,23 +1906,6 @@
       "distFromHome": 7605
     },
     {
-      "id": "bg_288",
-      "name": "Eridani",
-      "kind": "bg",
-      "x": 4476,
-      "y": 396,
-      "type": "resource",
-      "archetype": "mineral",
-      "size": 37.853199999999994,
-      "color": 7378907,
-      "accent": 2376359,
-      "brightness": 0.751,
-      "hasMoon": false,
-      "rngSeed": 991815380,
-      "distFromCenter": 4493,
-      "distFromHome": 3254
-    },
-    {
       "id": "bg_292",
       "name": "Tessera",
       "kind": "bg",
@@ -2484,23 +1957,6 @@
       "distFromHome": 7693
     },
     {
-      "id": "bg_298",
-      "name": "Vega",
-      "kind": "bg",
-      "x": 347,
-      "y": -5596,
-      "type": "hostile",
-      "archetype": "toxic",
-      "size": 28.875000000000004,
-      "color": 10090352,
-      "accent": 4645127,
-      "brightness": 0.753,
-      "hasMoon": false,
-      "rngSeed": 147457781,
-      "distFromCenter": 5607,
-      "distFromHome": 9627
-    },
-    {
       "id": "bg_299",
       "name": "Medusa",
       "kind": "bg",
@@ -2550,23 +2006,6 @@
       "rngSeed": 897143720,
       "distFromCenter": 4729,
       "distFromHome": 349
-    },
-    {
-      "id": "bg_306",
-      "name": "Pavonis",
-      "kind": "bg",
-      "x": 839,
-      "y": -5568,
-      "type": "resource",
-      "archetype": "ocean",
-      "size": 35.574000000000005,
-      "color": 6658777,
-      "accent": 2181790,
-      "brightness": 0.933,
-      "hasMoon": true,
-      "rngSeed": 829814934,
-      "distFromCenter": 5631,
-      "distFromHome": 9450
     },
     {
       "id": "bg_307",
@@ -2637,23 +2076,6 @@
       "distFromHome": 7206
     },
     {
-      "id": "bg_320",
-      "name": "Gliese-411",
-      "kind": "bg",
-      "x": 2586,
-      "y": 4359,
-      "type": "resource",
-      "archetype": "gas_ringed",
-      "size": 47.08,
-      "color": 12681706,
-      "accent": 9247951,
-      "brightness": 0.723,
-      "hasMoon": false,
-      "rngSeed": 855170936,
-      "distFromCenter": 5068,
-      "distFromHome": 1254
-    },
-    {
       "id": "bg_321",
       "name": "Hex",
       "kind": "bg",
@@ -2705,23 +2127,6 @@
       "distFromHome": 2222
     },
     {
-      "id": "bg_328",
-      "name": "Apollo",
-      "kind": "bg",
-      "x": 149,
-      "y": -3289,
-      "type": "resource",
-      "archetype": "ice",
-      "size": 36.467200000000005,
-      "color": 2863090,
-      "accent": 350616,
-      "brightness": 0.736,
-      "hasMoon": false,
-      "rngSeed": 528958593,
-      "distFromCenter": 3292,
-      "distFromHome": 7571
-    },
-    {
       "id": "bg_329",
       "name": "Ross-248",
       "kind": "bg",
@@ -2771,23 +2176,6 @@
       "rngSeed": 370923697,
       "distFromCenter": 3948,
       "distFromHome": 8891
-    },
-    {
-      "id": "bg_338",
-      "name": "Hod",
-      "kind": "bg",
-      "x": -4769,
-      "y": -168,
-      "type": "empty",
-      "archetype": "mineral",
-      "size": 38.2382,
-      "color": 5131470,
-      "accent": 1912701,
-      "brightness": 0.779,
-      "hasMoon": false,
-      "rngSeed": 220020381,
-      "distFromCenter": 4772,
-      "distFromHome": 9046
     },
     {
       "id": "bg_339",
@@ -2858,23 +2246,6 @@
       "distFromHome": 2199
     },
     {
-      "id": "bg_347",
-      "name": "Cinder",
-      "kind": "bg",
-      "x": -3073,
-      "y": -2429,
-      "type": "hostile",
-      "archetype": "toxic",
-      "size": 34.495999999999995,
-      "color": 8118633,
-      "accent": 1879838,
-      "brightness": 0.954,
-      "hasMoon": false,
-      "rngSeed": 135072478,
-      "distFromCenter": 3917,
-      "distFromHome": 8852
-    },
-    {
       "id": "bg_348",
       "name": "Ankaa",
       "kind": "bg",
@@ -2924,23 +2295,6 @@
       "rngSeed": 84434961,
       "distFromCenter": 5979,
       "distFromHome": 10911
-    },
-    {
-      "id": "bg_354",
-      "name": "WASP-103",
-      "kind": "bg",
-      "x": 2577,
-      "y": -5364,
-      "type": "resource",
-      "archetype": "ocean",
-      "size": 28.028000000000002,
-      "color": 6853845,
-      "accent": 2439321,
-      "brightness": 0.995,
-      "hasMoon": false,
-      "rngSeed": 315353284,
-      "distFromCenter": 5951,
-      "distFromHome": 8912
     },
     {
       "id": "bg_361",
@@ -2994,23 +2348,6 @@
       "distFromHome": 7225
     },
     {
-      "id": "bg_368",
-      "name": "Ghoul",
-      "kind": "bg",
-      "x": -1766,
-      "y": -2670,
-      "type": "hostile",
-      "archetype": "toxic",
-      "size": 29.733000000000004,
-      "color": 11856785,
-      "accent": 7396385,
-      "brightness": 0.954,
-      "hasMoon": true,
-      "rngSeed": 57531004,
-      "distFromCenter": 3201,
-      "distFromHome": 8112
-    },
-    {
       "id": "bg_369",
       "name": "Achird",
       "kind": "bg",
@@ -3060,23 +2397,6 @@
       "rngSeed": 497067013,
       "distFromCenter": 5242,
       "distFromHome": 6001
-    },
-    {
-      "id": "bg_372",
-      "name": "Pollux",
-      "kind": "bg",
-      "x": -1892,
-      "y": 382,
-      "type": "resource",
-      "archetype": "ocean",
-      "size": 37.32959999999999,
-      "color": 9678305,
-      "accent": 3112134,
-      "brightness": 0.876,
-      "hasMoon": false,
-      "rngSeed": 341877210,
-      "distFromCenter": 1930,
-      "distFromHome": 6229
     },
     {
       "id": "bg_376",
@@ -3147,23 +2467,6 @@
       "distFromHome": 2924
     },
     {
-      "id": "bg_387",
-      "name": "Gaea",
-      "kind": "bg",
-      "x": -923,
-      "y": -4186,
-      "type": "empty",
-      "archetype": "mineral",
-      "size": 32.7404,
-      "color": 10521571,
-      "accent": 6826182,
-      "brightness": 0.832,
-      "hasMoon": true,
-      "rngSeed": 583076688,
-      "distFromCenter": 4287,
-      "distFromHome": 8868
-    },
-    {
       "id": "bg_388",
       "name": "Sargas",
       "kind": "bg",
@@ -3215,23 +2518,6 @@
       "distFromHome": 10297
     },
     {
-      "id": "bg_394",
-      "name": "Hadar",
-      "kind": "bg",
-      "x": -2147,
-      "y": -4949,
-      "type": "resource",
-      "archetype": "forest",
-      "size": 33.525800000000004,
-      "color": 7202416,
-      "accent": 1751616,
-      "brightness": 0.917,
-      "hasMoon": true,
-      "rngSeed": 297318153,
-      "distFromCenter": 5395,
-      "distFromHome": 10162
-    },
-    {
       "id": "bg_395",
       "name": "Phoenicis",
       "kind": "bg",
@@ -3281,23 +2567,6 @@
       "rngSeed": 254121062,
       "distFromCenter": 3585,
       "distFromHome": 7084
-    },
-    {
-      "id": "bg_408",
-      "name": "Volans",
-      "kind": "bg",
-      "x": 4216,
-      "y": 2060,
-      "type": "hostile",
-      "archetype": "plasma",
-      "size": 37.2064,
-      "color": 14916727,
-      "accent": 12267552,
-      "brightness": 0.821,
-      "hasMoon": false,
-      "rngSeed": 74124503,
-      "distFromCenter": 4692,
-      "distFromHome": 1608
     },
     {
       "id": "bg_409",
@@ -3368,23 +2637,6 @@
       "distFromHome": 419
     },
     {
-      "id": "bg_416",
-      "name": "Anchor",
-      "kind": "bg",
-      "x": 4392,
-      "y": -33,
-      "type": "resource",
-      "archetype": "mineral",
-      "size": 35.620200000000004,
-      "color": 7953361,
-      "accent": 4924043,
-      "brightness": 0.921,
-      "hasMoon": false,
-      "rngSeed": 800288590,
-      "distFromCenter": 4392,
-      "distFromHome": 3644
-    },
-    {
       "id": "bg_417",
       "name": "K2-25",
       "kind": "bg",
@@ -3436,23 +2688,6 @@
       "distFromHome": 7293
     },
     {
-      "id": "bg_424",
-      "name": "WASP-39",
-      "kind": "bg",
-      "x": -2125,
-      "y": 5618,
-      "type": "resource",
-      "archetype": "ice",
-      "size": 34.881,
-      "color": 4698089,
-      "accent": 946851,
-      "brightness": 0.761,
-      "hasMoon": false,
-      "rngSeed": 629978946,
-      "distFromCenter": 6006,
-      "distFromHome": 6011
-    },
-    {
       "id": "bg_428",
       "name": "Deneb",
       "kind": "bg",
@@ -3502,23 +2737,6 @@
       "rngSeed": 701869106,
       "distFromCenter": 3862,
       "distFromHome": 1323
-    },
-    {
-      "id": "bg_434",
-      "name": "Sirius",
-      "kind": "bg",
-      "x": 4086,
-      "y": 2418,
-      "type": "resource",
-      "archetype": "ice",
-      "size": 29.875999999999998,
-      "color": 8769249,
-      "accent": 2655679,
-      "brightness": 0.825,
-      "hasMoon": false,
-      "rngSeed": 167836856,
-      "distFromCenter": 4748,
-      "distFromHome": 1230
     },
     {
       "id": "bg_435",
@@ -3589,23 +2807,6 @@
       "distFromHome": 7659
     },
     {
-      "id": "bg_443",
-      "name": "Hamal",
-      "kind": "bg",
-      "x": -666,
-      "y": -1734,
-      "type": "hostile",
-      "archetype": "dead",
-      "size": 31.493,
-      "color": 5133040,
-      "accent": 2362037,
-      "brightness": 0.721,
-      "hasMoon": false,
-      "rngSeed": 171112147,
-      "distFromCenter": 1858,
-      "distFromHome": 6690
-    },
-    {
       "id": "bg_444",
       "name": "Aurigae",
       "kind": "bg",
@@ -3657,23 +2858,6 @@
       "distFromHome": 5818
     },
     {
-      "id": "bg_456",
-      "name": "Freyja",
-      "kind": "bg",
-      "x": -3680,
-      "y": -3357,
-      "type": "resource",
-      "archetype": "gas_giant",
-      "size": 39.908,
-      "color": 14600067,
-      "accent": 12099114,
-      "brightness": 0.728,
-      "hasMoon": false,
-      "rngSeed": 775261111,
-      "distFromCenter": 4981,
-      "distFromHome": 9928
-    },
-    {
       "id": "bg_457",
       "name": "Helix",
       "kind": "bg",
@@ -3723,23 +2907,6 @@
       "rngSeed": 450085418,
       "distFromCenter": 5225,
       "distFromHome": 9865
-    },
-    {
-      "id": "bg_464",
-      "name": "Necklace",
-      "kind": "bg",
-      "x": 3316,
-      "y": -5238,
-      "type": "empty",
-      "archetype": "dead",
-      "size": 32.0936,
-      "color": 4740317,
-      "accent": 1450640,
-      "brightness": 0.924,
-      "hasMoon": false,
-      "rngSeed": 860137406,
-      "distFromCenter": 6199,
-      "distFromHome": 8740
     },
     {
       "id": "bg_465",
@@ -3810,23 +2977,6 @@
       "distFromHome": 1929
     },
     {
-      "id": "bg_475",
-      "name": "Junction",
-      "kind": "bg",
-      "x": 952,
-      "y": -2262,
-      "type": "hostile",
-      "archetype": "lava",
-      "size": 31.185,
-      "color": 15560283,
-      "accent": 12128031,
-      "brightness": 0.784,
-      "hasMoon": false,
-      "rngSeed": 933348477,
-      "distFromCenter": 2454,
-      "distFromHome": 6300
-    },
-    {
       "id": "bg_480",
       "name": "Lacuna",
       "kind": "bg",
@@ -3876,23 +3026,6 @@
       "rngSeed": 178084869,
       "distFromCenter": 2127,
       "distFromHome": 6395
-    },
-    {
-      "id": "bg_483",
-      "name": "Gliese-785",
-      "kind": "bg",
-      "x": 2606,
-      "y": 3248,
-      "type": "resource",
-      "archetype": "forest",
-      "size": 33.3718,
-      "color": 7527060,
-      "accent": 2467652,
-      "brightness": 0.94,
-      "hasMoon": true,
-      "rngSeed": 535524731,
-      "distFromCenter": 4164,
-      "distFromHome": 929
     },
     {
       "id": "bg_484",
@@ -3946,23 +3079,6 @@
       "distFromHome": 8146
     },
     {
-      "id": "bg_490",
-      "name": "Sirius-2",
-      "kind": "bg",
-      "x": 1880,
-      "y": -3339,
-      "type": "resource",
-      "archetype": "gas_giant",
-      "size": 37.334,
-      "color": 15972742,
-      "accent": 15243537,
-      "brightness": 0.944,
-      "hasMoon": false,
-      "rngSeed": 387396075,
-      "distFromCenter": 3832,
-      "distFromHome": 7028
-    },
-    {
       "id": "bg_498",
       "name": "Betelgeuse-2",
       "kind": "bg",
@@ -4012,23 +3128,6 @@
       "rngSeed": 405540528,
       "distFromCenter": 4723,
       "distFromHome": 9511
-    },
-    {
-      "id": "bg_504",
-      "name": "Spica-2",
-      "kind": "bg",
-      "x": -1250,
-      "y": 3335,
-      "type": "hostile",
-      "archetype": "dead",
-      "size": 30.8308,
-      "color": 6455536,
-      "accent": 871878,
-      "brightness": 0.868,
-      "hasMoon": true,
-      "rngSeed": 538459841,
-      "distFromCenter": 3562,
-      "distFromHome": 4753
     },
     {
       "id": "bg_505",
@@ -4099,23 +3198,6 @@
       "distFromHome": 9523
     },
     {
-      "id": "bg_512",
-      "name": "Shaula-2",
-      "kind": "bg",
-      "x": -3253,
-      "y": 2430,
-      "type": "hostile",
-      "archetype": "lava",
-      "size": 34.2342,
-      "color": 14114393,
-      "accent": 9581342,
-      "brightness": 0.93,
-      "hasMoon": false,
-      "rngSeed": 643403823,
-      "distFromCenter": 4060,
-      "distFromHome": 6837
-    },
-    {
       "id": "bg_513",
       "name": "Gacrux-2",
       "kind": "bg",
@@ -4167,23 +3249,6 @@
       "distFromHome": 2921
     },
     {
-      "id": "bg_523",
-      "name": "Sargas-2",
-      "kind": "bg",
-      "x": 3403,
-      "y": -465,
-      "type": "resource",
-      "archetype": "gas_ringed",
-      "size": 48.961,
-      "color": 11304924,
-      "accent": 6629810,
-      "brightness": 0.739,
-      "hasMoon": true,
-      "rngSeed": 898250402,
-      "distFromCenter": 3435,
-      "distFromHome": 3966
-    },
-    {
       "id": "bg_524",
       "name": "Kaus-2",
       "kind": "bg",
@@ -4233,23 +3298,6 @@
       "rngSeed": 62148922,
       "distFromCenter": 4628,
       "distFromHome": 7558
-    },
-    {
-      "id": "bg_530",
-      "name": "Nunki-2",
-      "kind": "bg",
-      "x": -4658,
-      "y": 4161,
-      "type": "hostile",
-      "archetype": "binary",
-      "size": 31.845000000000002,
-      "color": 9326040,
-      "accent": 4856459,
-      "brightness": 0.923,
-      "hasMoon": false,
-      "rngSeed": 492530436,
-      "distFromCenter": 6246,
-      "distFromHome": 8185
     },
     {
       "id": "bg_531",
@@ -4320,23 +3368,6 @@
       "distFromHome": 3124
     },
     {
-      "id": "bg_545",
-      "name": "Ankaa-2",
-      "kind": "bg",
-      "x": -219,
-      "y": -4176,
-      "type": "empty",
-      "archetype": "ice",
-      "size": 36.59040000000001,
-      "color": 3207668,
-      "accent": 300192,
-      "brightness": 0.932,
-      "hasMoon": false,
-      "rngSeed": 841237185,
-      "distFromCenter": 4182,
-      "distFromHome": 8529
-    },
-    {
       "id": "bg_546",
       "name": "Mirzam-2",
       "kind": "bg",
@@ -4388,23 +3419,6 @@
       "distFromHome": 8527
     },
     {
-      "id": "bg_552",
-      "name": "Phecda-2",
-      "kind": "bg",
-      "x": -3729,
-      "y": 2040,
-      "type": "hostile",
-      "archetype": "dead",
-      "size": 33.6952,
-      "color": 3703283,
-      "accent": 341414,
-      "brightness": 0.741,
-      "hasMoon": false,
-      "rngSeed": 126154436,
-      "distFromCenter": 4251,
-      "distFromHome": 7375
-    },
-    {
       "id": "bg_553",
       "name": "Megrez-2",
       "kind": "bg",
@@ -4454,23 +3468,6 @@
       "rngSeed": 457126972,
       "distFromCenter": 6114,
       "distFromHome": 8313
-    },
-    {
-      "id": "bg_560",
-      "name": "Andromedae-2",
-      "kind": "bg",
-      "x": 1569,
-      "y": -917,
-      "type": "hostile",
-      "archetype": "binary",
-      "size": 33.9724,
-      "color": 4947159,
-      "accent": 1725577,
-      "brightness": 0.909,
-      "hasMoon": false,
-      "rngSeed": 631481546,
-      "distFromCenter": 1817,
-      "distFromHome": 4821
     },
     {
       "id": "bg_564",
@@ -4541,23 +3538,6 @@
       "distFromHome": 7028
     },
     {
-      "id": "bg_571",
-      "name": "Eridani-2",
-      "kind": "bg",
-      "x": -4226,
-      "y": 2613,
-      "type": "empty",
-      "archetype": "dead",
-      "size": 26.8422,
-      "color": 7374317,
-      "accent": 2298827,
-      "brightness": 0.769,
-      "hasMoon": false,
-      "rngSeed": 738147342,
-      "distFromCenter": 4969,
-      "distFromHome": 7777
-    },
-    {
       "id": "bg_576",
       "name": "Lyrae-2",
       "kind": "bg",
@@ -4609,23 +3589,6 @@
       "distFromHome": 4530
     },
     {
-      "id": "bg_579",
-      "name": "Persei-2",
-      "kind": "bg",
-      "x": -4851,
-      "y": 1627,
-      "type": "resource",
-      "archetype": "ice",
-      "size": 29.275400000000005,
-      "color": 5807340,
-      "accent": 999350,
-      "brightness": 0.705,
-      "hasMoon": false,
-      "rngSeed": 973115296,
-      "distFromCenter": 5117,
-      "distFromHome": 8558
-    },
-    {
       "id": "bg_580",
       "name": "Phoenicis-2",
       "kind": "bg",
@@ -4675,23 +3638,6 @@
       "rngSeed": 720543991,
       "distFromCenter": 5675,
       "distFromHome": 9821
-    },
-    {
-      "id": "bg_592",
-      "name": "Columbae-2",
-      "kind": "bg",
-      "x": 1082,
-      "y": -5367,
-      "type": "hostile",
-      "archetype": "binary",
-      "size": 30.657000000000004,
-      "color": 14856019,
-      "accent": 10517782,
-      "brightness": 0.921,
-      "hasMoon": true,
-      "rngSeed": 584167793,
-      "distFromCenter": 5475,
-      "distFromHome": 9191
     },
     {
       "id": "bg_594",
@@ -4762,23 +3708,6 @@
       "distFromHome": 6573
     },
     {
-      "id": "bg_601",
-      "name": "Microscopii-2",
-      "kind": "bg",
-      "x": 5787,
-      "y": 1009,
-      "type": "hostile",
-      "archetype": "lava",
-      "size": 33.6336,
-      "color": 15498040,
-      "accent": 10115594,
-      "brightness": 0.752,
-      "hasMoon": false,
-      "rngSeed": 608608286,
-      "distFromCenter": 5874,
-      "distFromHome": 3382
-    },
-    {
       "id": "bg_602",
       "name": "Monocerotis-2",
       "kind": "bg",
@@ -4828,23 +3757,6 @@
       "rngSeed": 182023659,
       "distFromCenter": 3463,
       "distFromHome": 7604
-    },
-    {
-      "id": "bg_612",
-      "name": "Aphrodite-2",
-      "kind": "bg",
-      "x": 2176,
-      "y": -5177,
-      "type": "hostile",
-      "archetype": "plasma",
-      "size": 28.116,
-      "color": 14851914,
-      "accent": 10048532,
-      "brightness": 0.721,
-      "hasMoon": false,
-      "rngSeed": 383964507,
-      "distFromCenter": 5616,
-      "distFromHome": 8777
     },
     {
       "id": "bg_616",
@@ -4898,23 +3810,6 @@
       "distFromHome": 5377
     },
     {
-      "id": "bg_619",
-      "name": "Cerberus-2",
-      "kind": "bg",
-      "x": -5521,
-      "y": 362,
-      "type": "hostile",
-      "archetype": "dead",
-      "size": 33.4642,
-      "color": 7516633,
-      "accent": 2516646,
-      "brightness": 0.72,
-      "hasMoon": true,
-      "rngSeed": 231230194,
-      "distFromCenter": 5533,
-      "distFromHome": 9551
-    },
-    {
       "id": "bg_620",
       "name": "Charon-2",
       "kind": "bg",
@@ -4964,23 +3859,6 @@
       "rngSeed": 17396896,
       "distFromCenter": 3480,
       "distFromHome": 8324
-    },
-    {
-      "id": "bg_626",
-      "name": "Demeter-2",
-      "kind": "bg",
-      "x": 3141,
-      "y": 4349,
-      "type": "hostile",
-      "archetype": "dead",
-      "size": 31.57,
-      "color": 7911134,
-      "accent": 2394290,
-      "brightness": 0.981,
-      "hasMoon": false,
-      "rngSeed": 545375488,
-      "distFromCenter": 5365,
-      "distFromHome": 922
     },
     {
       "id": "bg_634",
@@ -5051,23 +3929,6 @@
       "distFromHome": 10307
     },
     {
-      "id": "bg_641",
-      "name": "BG-641-9147",
-      "kind": "bg",
-      "x": 1726,
-      "y": -4273,
-      "type": "hostile",
-      "archetype": "binary",
-      "size": 31.856000000000005,
-      "color": 8834893,
-      "accent": 3506205,
-      "brightness": 0.968,
-      "hasMoon": false,
-      "rngSeed": 808111894,
-      "distFromCenter": 4608,
-      "distFromHome": 7973
-    },
-    {
       "id": "bg_642",
       "name": "BG-642-1722",
       "kind": "bg",
@@ -5119,23 +3980,6 @@
       "distFromHome": 2047
     },
     {
-      "id": "bg_648",
-      "name": "BG-648-3127",
-      "kind": "bg",
-      "x": -1744,
-      "y": -5186,
-      "type": "hostile",
-      "archetype": "plasma",
-      "size": 36.113,
-      "color": 14401406,
-      "accent": 11496490,
-      "brightness": 0.798,
-      "hasMoon": false,
-      "rngSeed": 102695928,
-      "distFromCenter": 5471,
-      "distFromHome": 10146
-    },
-    {
       "id": "bg_649",
       "name": "BG-649-9299",
       "kind": "bg",
@@ -5185,23 +4029,6 @@
       "rngSeed": 788675518,
       "distFromCenter": 5208,
       "distFromHome": 498
-    },
-    {
-      "id": "bg_659",
-      "name": "BG-659-7590",
-      "kind": "bg",
-      "x": -1097,
-      "y": 4618,
-      "type": "hostile",
-      "archetype": "plasma",
-      "size": 27.566000000000003,
-      "color": 16102498,
-      "accent": 13588488,
-      "brightness": 0.85,
-      "hasMoon": false,
-      "rngSeed": 395568779,
-      "distFromCenter": 4747,
-      "distFromHome": 4731
     },
     {
       "id": "bg_660",
@@ -5272,23 +4099,6 @@
       "distFromHome": 7166
     },
     {
-      "id": "bg_667",
-      "name": "Hesperus-2",
-      "kind": "bg",
-      "x": 1846,
-      "y": -2167,
-      "type": "resource",
-      "archetype": "ocean",
-      "size": 29.601000000000003,
-      "color": 8305642,
-      "accent": 1736143,
-      "brightness": 0.765,
-      "hasMoon": false,
-      "rngSeed": 871164614,
-      "distFromCenter": 2847,
-      "distFromHome": 5903
-    },
-    {
       "id": "bg_672",
       "name": "Medusa-2",
       "kind": "bg",
@@ -5340,23 +4150,6 @@
       "distFromHome": 9612
     },
     {
-      "id": "bg_681",
-      "name": "Pan-2",
-      "kind": "bg",
-      "x": 3791,
-      "y": -3433,
-      "type": "resource",
-      "archetype": "ocean",
-      "size": 35.373799999999996,
-      "color": 9219563,
-      "accent": 2062808,
-      "brightness": 0.778,
-      "hasMoon": false,
-      "rngSeed": 265755945,
-      "distFromCenter": 5114,
-      "distFromHome": 6939
-    },
-    {
       "id": "bg_682",
       "name": "Pandora-2",
       "kind": "bg",
@@ -5406,23 +4199,6 @@
       "rngSeed": 281273932,
       "distFromCenter": 2599,
       "distFromHome": 3152
-    },
-    {
-      "id": "bg_688",
-      "name": "Sphinx-2",
-      "kind": "bg",
-      "x": 5697,
-      "y": -2682,
-      "type": "hostile",
-      "archetype": "dead",
-      "size": 23.716,
-      "color": 7779056,
-      "accent": 1083094,
-      "brightness": 0.827,
-      "hasMoon": false,
-      "rngSeed": 259942161,
-      "distFromCenter": 6297,
-      "distFromHome": 6561
     },
     {
       "id": "bg_690",
@@ -5493,23 +4269,6 @@
       "distFromHome": 9790
     },
     {
-      "id": "bg_700",
-      "name": "Idun-2",
-      "kind": "bg",
-      "x": 2315,
-      "y": 1806,
-      "type": "resource",
-      "archetype": "ice",
-      "size": 29.9838,
-      "color": 7786483,
-      "accent": 968412,
-      "brightness": 0.73,
-      "hasMoon": false,
-      "rngSeed": 607903036,
-      "distFromCenter": 2936,
-      "distFromHome": 2067
-    },
-    {
       "id": "bg_704",
       "name": "Sif-2",
       "kind": "bg",
@@ -5561,23 +4320,6 @@
       "distFromHome": 5473
     },
     {
-      "id": "bg_708",
-      "name": "Crab-2",
-      "kind": "bg",
-      "x": -4670,
-      "y": -264,
-      "type": "resource",
-      "archetype": "gas_ringed",
-      "size": 42.163000000000004,
-      "color": 11698159,
-      "accent": 4789722,
-      "brightness": 0.758,
-      "hasMoon": false,
-      "rngSeed": 660847678,
-      "distFromCenter": 4677,
-      "distFromHome": 8995
-    },
-    {
       "id": "bg_712",
       "name": "Lagoon-2",
       "kind": "bg",
@@ -5627,23 +4369,6 @@
       "rngSeed": 101462478,
       "distFromCenter": 6032,
       "distFromHome": 7897
-    },
-    {
-      "id": "bg_715",
-      "name": "Boomerang-2",
-      "kind": "bg",
-      "x": 3453,
-      "y": -144,
-      "type": "resource",
-      "archetype": "mineral",
-      "size": 31.8318,
-      "color": 7641835,
-      "accent": 1531592,
-      "brightness": 0.859,
-      "hasMoon": false,
-      "rngSeed": 697108505,
-      "distFromCenter": 3456,
-      "distFromHome": 3644
     },
     {
       "id": "bg_716",
@@ -5714,23 +4439,6 @@
       "distFromHome": 8778
     },
     {
-      "id": "bg_730",
-      "name": "Coalsack-2",
-      "kind": "bg",
-      "x": -1139,
-      "y": -3158,
-      "type": "hostile",
-      "archetype": "toxic",
-      "size": 35.296800000000005,
-      "color": 10281810,
-      "accent": 7446805,
-      "brightness": 0.919,
-      "hasMoon": false,
-      "rngSeed": 535282349,
-      "distFromCenter": 3357,
-      "distFromHome": 8115
-    },
-    {
       "id": "bg_731",
       "name": "Cosmic-2",
       "kind": "bg",
@@ -5780,23 +4488,6 @@
       "rngSeed": 975666156,
       "distFromCenter": 5543,
       "distFromHome": 10299
-    },
-    {
-      "id": "bg_737",
-      "name": "Ghoul-2",
-      "kind": "bg",
-      "x": 4739,
-      "y": -1811,
-      "type": "hostile",
-      "archetype": "toxic",
-      "size": 27.500000000000004,
-      "color": 10344049,
-      "accent": 7381288,
-      "brightness": 0.706,
-      "hasMoon": true,
-      "rngSeed": 465994177,
-      "distFromCenter": 5073,
-      "distFromHome": 5454
     },
     {
       "id": "bg_738",
@@ -5850,23 +4541,6 @@
       "distFromHome": 1508
     },
     {
-      "id": "bg_748",
-      "name": "Carina-2",
-      "kind": "bg",
-      "x": -119,
-      "y": -5472,
-      "type": "hostile",
-      "archetype": "dead",
-      "size": 28.751800000000003,
-      "color": 8503007,
-      "accent": 2661048,
-      "brightness": 0.719,
-      "hasMoon": false,
-      "rngSeed": 599354337,
-      "distFromCenter": 5473,
-      "distFromHome": 9674
-    },
-    {
       "id": "bg_752",
       "name": "Spirograph-2",
       "kind": "bg",
@@ -5916,23 +4590,6 @@
       "rngSeed": 462289097,
       "distFromCenter": 3135,
       "distFromHome": 7571
-    },
-    {
-      "id": "bg_755",
-      "name": "Pelican-2",
-      "kind": "bg",
-      "x": 3261,
-      "y": -157,
-      "type": "empty",
-      "archetype": "dead",
-      "size": 33.6028,
-      "color": 6911957,
-      "accent": 2436762,
-      "brightness": 0.991,
-      "hasMoon": false,
-      "rngSeed": 739631023,
-      "distFromCenter": 3265,
-      "distFromHome": 3665
     },
     {
       "id": "bg_756",
@@ -6003,23 +4660,6 @@
       "distFromHome": 7942
     },
     {
-      "id": "bg_770",
-      "name": "Astral-2",
-      "kind": "bg",
-      "x": 518,
-      "y": 5521,
-      "type": "empty",
-      "archetype": "dead",
-      "size": 34.4652,
-      "color": 5800681,
-      "accent": 1127088,
-      "brightness": 0.993,
-      "hasMoon": false,
-      "rngSeed": 837756194,
-      "distFromCenter": 5545,
-      "distFromHome": 3602
-    },
-    {
       "id": "bg_771",
       "name": "Aurora-2",
       "kind": "bg",
@@ -6071,23 +4711,6 @@
       "distFromHome": 10150
     },
     {
-      "id": "bg_777",
-      "name": "Crescent-2",
-      "kind": "bg",
-      "x": -3133,
-      "y": -2179,
-      "type": "hostile",
-      "archetype": "binary",
-      "size": 32.494,
-      "color": 14043779,
-      "accent": 8919636,
-      "brightness": 0.715,
-      "hasMoon": false,
-      "rngSeed": 728799884,
-      "distFromCenter": 3816,
-      "distFromHome": 8732
-    },
-    {
       "id": "bg_778",
       "name": "Crimson-2",
       "kind": "bg",
@@ -6137,23 +4760,6 @@
       "rngSeed": 698928531,
       "distFromCenter": 6064,
       "distFromHome": 7356
-    },
-    {
-      "id": "bg_784",
-      "name": "Horizon-2",
-      "kind": "bg",
-      "x": -917,
-      "y": 3349,
-      "type": "empty",
-      "archetype": "ice",
-      "size": 34.573,
-      "color": 6213599,
-      "accent": 1735076,
-      "brightness": 0.959,
-      "hasMoon": false,
-      "rngSeed": 31911382,
-      "distFromCenter": 3472,
-      "distFromHome": 4420
     },
     {
       "id": "bg_786",
@@ -6224,23 +4830,6 @@
       "distFromHome": 10929
     },
     {
-      "id": "bg_796",
-      "name": "Pulsar-2",
-      "kind": "bg",
-      "x": 539,
-      "y": 2921,
-      "type": "resource",
-      "archetype": "gas_giant",
-      "size": 32.989000000000004,
-      "color": 14983273,
-      "accent": 11761946,
-      "brightness": 0.779,
-      "hasMoon": false,
-      "rngSeed": 283246052,
-      "distFromCenter": 2970,
-      "distFromHome": 3017
-    },
-    {
       "id": "bg_800",
       "name": "Rift-2",
       "kind": "bg",
@@ -6292,23 +4881,6 @@
       "distFromHome": 7784
     },
     {
-      "id": "bg_804",
-      "name": "Spire-2",
-      "kind": "bg",
-      "x": -3492,
-      "y": 1813,
-      "type": "resource",
-      "archetype": "mineral",
-      "size": 33.418,
-      "color": 9288421,
-      "accent": 2589644,
-      "brightness": 0.766,
-      "hasMoon": false,
-      "rngSeed": 668874243,
-      "distFromCenter": 3935,
-      "distFromHome": 7193
-    },
-    {
       "id": "bg_808",
       "name": "Tundra-2",
       "kind": "bg",
@@ -6358,23 +4930,6 @@
       "rngSeed": 476412038,
       "distFromCenter": 6065,
       "distFromHome": 9176
-    },
-    {
-      "id": "bg_817",
-      "name": "Cinder-2",
-      "kind": "bg",
-      "x": 1142,
-      "y": -4426,
-      "type": "hostile",
-      "archetype": "dead",
-      "size": 25.3792,
-      "color": 7315930,
-      "accent": 2382756,
-      "brightness": 0.734,
-      "hasMoon": false,
-      "rngSeed": 310590805,
-      "distFromCenter": 4571,
-      "distFromHome": 8269
     },
     {
       "id": "bg_818",
@@ -6445,23 +5000,6 @@
       "distFromHome": 3680
     },
     {
-      "id": "bg_826",
-      "name": "Lattice-2",
-      "kind": "bg",
-      "x": -429,
-      "y": -2975,
-      "type": "hostile",
-      "archetype": "toxic",
-      "size": 36.159200000000006,
-      "color": 11593615,
-      "accent": 4902950,
-      "brightness": 0.723,
-      "hasMoon": false,
-      "rngSeed": 847737767,
-      "distFromCenter": 3006,
-      "distFromHome": 7574
-    },
-    {
       "id": "bg_827",
       "name": "Marrow-2",
       "kind": "bg",
@@ -6513,23 +5051,6 @@
       "distFromHome": 10108
     },
     {
-      "id": "bg_836",
-      "name": "Whisper-2",
-      "kind": "bg",
-      "x": 150,
-      "y": -5877,
-      "type": "hostile",
-      "archetype": "binary",
-      "size": 37.2526,
-      "color": 12116886,
-      "accent": 5163823,
-      "brightness": 0.774,
-      "hasMoon": false,
-      "rngSeed": 317090235,
-      "distFromCenter": 5879,
-      "distFromHome": 9957
-    },
-    {
       "id": "bg_840",
       "name": "Cobweb-2",
       "kind": "bg",
@@ -6579,23 +5100,6 @@
       "rngSeed": 955151655,
       "distFromCenter": 3515,
       "distFromHome": 1769
-    },
-    {
-      "id": "bg_844",
-      "name": "Gossamer-2",
-      "kind": "bg",
-      "x": -2953,
-      "y": 2406,
-      "type": "resource",
-      "archetype": "mineral",
-      "size": 32.8482,
-      "color": 5668305,
-      "accent": 2120072,
-      "brightness": 0.708,
-      "hasMoon": false,
-      "rngSeed": 270404341,
-      "distFromCenter": 3809,
-      "distFromHome": 6545
     },
     {
       "id": "bg_848",
@@ -6666,23 +5170,6 @@
       "distFromHome": 9479
     },
     {
-      "id": "bg_852",
-      "name": "Opal-2",
-      "kind": "bg",
-      "x": -1933,
-      "y": -5090,
-      "type": "resource",
-      "archetype": "ice",
-      "size": 33.7568,
-      "color": 4957423,
-      "accent": 751792,
-      "brightness": 0.739,
-      "hasMoon": false,
-      "rngSeed": 779387146,
-      "distFromCenter": 5445,
-      "distFromHome": 10164
-    },
-    {
       "id": "bg_859",
       "name": "Verdant-2",
       "kind": "bg",
@@ -6732,23 +5219,6 @@
       "rngSeed": 493292483,
       "distFromCenter": 5889,
       "distFromHome": 1335
-    },
-    {
-      "id": "bg_866",
-      "name": "Cavern-2",
-      "kind": "bg",
-      "x": -1396,
-      "y": 5878,
-      "type": "hostile",
-      "archetype": "lava",
-      "size": 31.354400000000002,
-      "color": 15551820,
-      "accent": 11340843,
-      "brightness": 0.892,
-      "hasMoon": true,
-      "rngSeed": 528640157,
-      "distFromCenter": 6041,
-      "distFromHome": 5443
     },
     {
       "id": "bg_867",
@@ -6802,23 +5272,6 @@
       "distFromHome": 6932
     },
     {
-      "id": "bg_873",
-      "name": "Jubilo-2",
-      "kind": "bg",
-      "x": 4615,
-      "y": -2104,
-      "type": "resource",
-      "archetype": "gas_giant",
-      "size": 37.059,
-      "color": 15786629,
-      "accent": 14727702,
-      "brightness": 0.76,
-      "hasMoon": false,
-      "rngSeed": 531211111,
-      "distFromCenter": 5072,
-      "distFromHome": 5714
-    },
-    {
       "id": "bg_874",
       "name": "Kaleido-2",
       "kind": "bg",
@@ -6868,23 +5321,6 @@
       "rngSeed": 866748460,
       "distFromCenter": 4387,
       "distFromHome": 2566
-    },
-    {
-      "id": "bg_884",
-      "name": "Belobog-2",
-      "kind": "bg",
-      "x": -1091,
-      "y": 3338,
-      "type": "hostile",
-      "archetype": "lava",
-      "size": 34.1264,
-      "color": 14313544,
-      "accent": 9181207,
-      "brightness": 0.749,
-      "hasMoon": false,
-      "rngSeed": 909666364,
-      "distFromCenter": 3512,
-      "distFromHome": 4594
     },
     {
       "id": "bg_888",
@@ -6955,23 +5391,6 @@
       "distFromHome": 8670
     },
     {
-      "id": "bg_892",
-      "name": "Devana-2",
-      "kind": "bg",
-      "x": 2365,
-      "y": 32,
-      "type": "hostile",
-      "archetype": "lava",
-      "size": 35.9128,
-      "color": 15691115,
-      "accent": 13242406,
-      "brightness": 0.81,
-      "hasMoon": false,
-      "rngSeed": 961411329,
-      "distFromCenter": 2365,
-      "distFromHome": 3649
-    },
-    {
       "id": "bg_896",
       "name": "Kupala-2",
       "kind": "bg",
@@ -7023,23 +5442,6 @@
       "distFromHome": 7728
     },
     {
-      "id": "bg_906",
-      "name": "Leshy-2",
-      "kind": "bg",
-      "x": -4592,
-      "y": 3818,
-      "type": "resource",
-      "archetype": "gas_ringed",
-      "size": 46.871,
-      "color": 12153578,
-      "accent": 9115591,
-      "brightness": 0.845,
-      "hasMoon": false,
-      "rngSeed": 768298591,
-      "distFromCenter": 5972,
-      "distFromHome": 8098
-    },
-    {
       "id": "bg_907",
       "name": "Rusalka-2",
       "kind": "bg",
@@ -7089,23 +5491,6 @@
       "rngSeed": 750270002,
       "distFromCenter": 2310,
       "distFromHome": 4054
-    },
-    {
-      "id": "bg_913",
-      "name": "Gliese-380-2",
-      "kind": "bg",
-      "x": -3156,
-      "y": 523,
-      "type": "hostile",
-      "archetype": "plasma",
-      "size": 32.586400000000005,
-      "color": 14066780,
-      "accent": 9594144,
-      "brightness": 0.909,
-      "hasMoon": false,
-      "rngSeed": 314211272,
-      "distFromCenter": 3199,
-      "distFromHome": 7291
     },
     {
       "id": "bg_914",
@@ -7176,23 +5561,6 @@
       "distFromHome": 9007
     },
     {
-      "id": "bg_922",
-      "name": "Gliese-687-2",
-      "kind": "bg",
-      "x": 4609,
-      "y": 2134,
-      "type": "hostile",
-      "archetype": "lava",
-      "size": 32.5248,
-      "color": 16027017,
-      "accent": 15666987,
-      "brightness": 0.795,
-      "hasMoon": false,
-      "rngSeed": 18124268,
-      "distFromCenter": 5079,
-      "distFromHome": 1759
-    },
-    {
       "id": "bg_929",
       "name": "Gliese-849-2",
       "kind": "bg",
@@ -7244,23 +5612,6 @@
       "distFromHome": 3670
     },
     {
-      "id": "bg_932",
-      "name": "Gliese-908-2",
-      "kind": "bg",
-      "x": 2174,
-      "y": -718,
-      "type": "hostile",
-      "archetype": "toxic",
-      "size": 32.9252,
-      "color": 11199104,
-      "accent": 8830245,
-      "brightness": 0.758,
-      "hasMoon": false,
-      "rngSeed": 431312520,
-      "distFromCenter": 2289,
-      "distFromHome": 4422
-    },
-    {
       "id": "bg_936",
       "name": "HD-39091-2",
       "kind": "bg",
@@ -7310,23 +5661,6 @@
       "rngSeed": 544013588,
       "distFromCenter": 6263,
       "distFromHome": 11145
-    },
-    {
-      "id": "bg_940",
-      "name": "HD-95086-2",
-      "kind": "bg",
-      "x": -3079,
-      "y": 2804,
-      "type": "empty",
-      "archetype": "mineral",
-      "size": 35.943599999999996,
-      "color": 3829994,
-      "accent": 796825,
-      "brightness": 0.766,
-      "hasMoon": false,
-      "rngSeed": 988281532,
-      "distFromCenter": 4164,
-      "distFromHome": 6616
     },
     {
       "id": "bg_944",
@@ -7397,23 +5731,6 @@
       "distFromHome": 3711
     },
     {
-      "id": "bg_954",
-      "name": "HIP-91258-2",
-      "kind": "bg",
-      "x": -2158,
-      "y": 5759,
-      "type": "resource",
-      "archetype": "ocean",
-      "size": 37.114000000000004,
-      "color": 6400757,
-      "accent": 479696,
-      "brightness": 0.946,
-      "hasMoon": false,
-      "rngSeed": 456763668,
-      "distFromCenter": 6150,
-      "distFromHome": 6092
-    },
-    {
       "id": "bg_955",
       "name": "GJ-1002-2",
       "kind": "bg",
@@ -7465,23 +5782,6 @@
       "distFromHome": 8874
     },
     {
-      "id": "bg_962",
-      "name": "Wolf-503-2",
-      "kind": "bg",
-      "x": -6060,
-      "y": 1622,
-      "type": "hostile",
-      "archetype": "plasma",
-      "size": 37.8686,
-      "color": 14400084,
-      "accent": 9789722,
-      "brightness": 0.948,
-      "hasMoon": false,
-      "rngSeed": 321243224,
-      "distFromCenter": 6273,
-      "distFromHome": 9743
-    },
-    {
       "id": "bg_963",
       "name": "Wolf-1061-2",
       "kind": "bg",
@@ -7531,23 +5831,6 @@
       "rngSeed": 738365310,
       "distFromCenter": 2823,
       "distFromHome": 2466
-    },
-    {
-      "id": "bg_972",
-      "name": "Lalande-21185-2",
-      "kind": "bg",
-      "x": -3288,
-      "y": 2716,
-      "type": "empty",
-      "archetype": "mineral",
-      "size": 31.5392,
-      "color": 7707626,
-      "accent": 1523145,
-      "brightness": 0.738,
-      "hasMoon": true,
-      "rngSeed": 991744512,
-      "distFromCenter": 4265,
-      "distFromHome": 6833
     },
     {
       "id": "bg_976",

@@ -1,6 +1,6 @@
 // Progressive location unlock — derived state from discoveredLevels.
 //
-// Болото (id=1) — всегда открыто.
+// Лужа (id=1) — всегда открыта.
 // Остальные локации открываются когда соответствующий уровень лягушки
 // впервые регистрируется в discoveredLevels. L19 — sentinel
 // (см. MergeController: при merge L18+L18 вызывается markDiscovered(19)
@@ -9,9 +9,10 @@
 // См. spec: docs/superpowers/specs/2026-05-11-progressive-location-unlock-design.md
 
 export const LOCATION_UNLOCK_THRESHOLD: Readonly<Record<number, number>> = {
-  1: 0, // Болото — всегда открыто (0 = no threshold)
-  2: 7, // Лес
-  3: 13, // Планета (была slot 3 = Континент, теперь Планета)
+  1: 0, // Лужа — всегда открыта (0 = no threshold)
+  2: 7, // Болото
+  3: 13, // Лес
+  4: 19, // Континент (строения) — открывается одновременно со Звёздной картой
   6: 19, // Звёздная карта (sentinel, merge L18+L18)
 } as const
 

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: cosmic-frogs-system
-current_phase: 19
-status: complete
-last_updated: "2026-05-08"
+current_phase: 19 (closed); Phase 20 (Pre-release safety net) deferred до prod-релиза
+status: completed
+last_updated: "2026-05-17T15:58:03.458Z"
 progress:
-  total_phases: 11
-  completed_phases: 10
-  total_plans: 40
-  completed_plans: 40
-  percent: 100
+  total_phases: 13
+  completed_phases: 0
+  total_plans: 19
+  completed_plans: 1
+  percent: 5
 ---
 
 # Project State
@@ -38,11 +38,13 @@ progress:
 | 19 | Balance + tutorial + toggles + i18n polish | **complete** (2026-05-08) — 7 plans, 4 waves, 9 atomic commits; openBox wired to rollRarity+updatePity (BALANCE-01..07); 9 unit tests for pity guarantees; Monte Carlo simulate_balance.cjs (mirror of rarityRoll.ts; 100K iterations baseline avgLeg=6.073 effective, pityHard25Breaches=0, gap.max=25); progressive PityCounterDisplay footer (hidden/dots/exact reveal at 0/3/5 opened boxes); calmFarmMode + reducedEffects toggles via cosmicSettings.ts (default OFF Locked); StabilizationModal unified reducedEffects key fix (Rule 1 deviation); TutorialOverlay + 4 steps (first-box/serum/feed/stabilize) + tutorialState persist + single-active-step priority; check-translations.cjs (286 keys × 3 locales RU/EN/ES PARITY CLEAN); elementTints mechanical hex collision fix (0xfde68a→0xfdd87a vs desert) + Phase 19-06 audit comment; check-bundle-delta.cjs + .bundle-baseline-v1.json (delta 32.43 KB / 50 KB cap PASS; current main 229.24 KB vs v1.0 baseline 196 KB; CosmicHubModal lazy chunk 14.22 KB verified PERF-07); SMOKE_TEST.md visual+i18n+settings consumer audit. Settings consumer status: openBoxesInstantly WIRED (Phase 15), reducedEffects PARTIALLY WIRED (StabilizationModal), calmFarmMode TODO (Phase 20). 17/17 ✓ REQ-IDs (BALANCE-01..05/07/08, UX-01/02/03/04/05/06/08, PERF-01/05/07, I18N-02/03). |
 
 ## v1.0 Achievement Summary (closed milestone)
+
 - 8 phases, 26 plans, 100% complete
 - 1000/1000/1000 unique anim/texture/sound, 96 animation components
 - Полная локализация RU/EN/ES, бестиарий 24-grid, slot-machines, rare boxes
 
 ## v2.0 Notes
+
 - Started: 2026-05-08
 - Phase numbering continues from v1.0 (9..19, total 11 phases)
 - Dev-mode: unlock-логика через L25-командира НЕ реализуется в v2.0
@@ -52,6 +54,7 @@ progress:
 - Phase 11 решения: содержимое старого 🛍️ — Cosmic Hub занимает его место; флаг storage version bump (15→16) → wipe старых cosmic данных при load mismatch.
 
 ## Pending Decisions
+
 - 8 open A/B questions для playtest (rarity weights, ceiling reveal threshold, streak protection, slot duration, pity reveal, scout duration, skip delay, bottom-bar icon)
 
 ## Phase 11 (closed) — Performance Metrics

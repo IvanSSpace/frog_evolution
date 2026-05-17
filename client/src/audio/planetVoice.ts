@@ -240,8 +240,8 @@ const PROFILES: Record<string, VoiceProfile> = {
   forge: {
     notes: [C, Eb, G],
     synths: ['membrane', 'noise', 'fm'],
-    noiseType: 'white',
-    gain: 3,
+    noiseType: 'pink',
+    gain: 0,
   },
   military: {
     notes: [C, C - 12, G - 12],
@@ -252,7 +252,7 @@ const PROFILES: Record<string, VoiceProfile> = {
     notes: [Eb - 12, Bb - 12],
     synths: ['noise', 'drone'],
     noiseType: 'brown',
-    gain: 3,
+    gain: 0,
   },
   crystal_bio: {
     notes: [F + 12, A + 12, C + 24],
@@ -285,8 +285,8 @@ const PROFILES: Record<string, VoiceProfile> = {
   aerial: {
     notes: [G + 12, B + 12, D + 24],
     synths: ['pluck', 'noise'],
-    noiseType: 'white',
-    gain: 2,
+    noiseType: 'pink',
+    gain: 0,
   },
 
   // ── BG archetypes ──
@@ -317,7 +317,7 @@ const PROFILES: Record<string, VoiceProfile> = {
     notes: [C - 12, Eb - 12],
     synths: ['membrane', 'noise', 'fm'],
     noiseType: 'brown',
-    gain: 3,
+    gain: 0,
   },
   forest: {
     notes: [G, B, D + 12],
@@ -327,11 +327,11 @@ const PROFILES: Record<string, VoiceProfile> = {
   },
   mineral: { notes: [C + 12, G + 12], synths: ['bell', 'membrane'], gain: -1 },
   dead: { notes: [C - 24], synths: ['drone'], gain: 3 },
-  toxic: { notes: [Eb, A], synths: ['drone', 'fm'], detune: 20, gain: 3 },
+  toxic: { notes: [Eb, A], synths: ['drone', 'fm'], detune: 10, gain: 0 },
   plasma: {
     notes: [G + 12, D + 24, A + 24],
     synths: ['fm', 'pluck'],
-    detune: 15,
+    detune: 8,
   },
   binary: { notes: [C, F], synths: ['drone', 'fm'], gain: 3 },
 }
@@ -393,55 +393,73 @@ class PlanetVoice {
       const masterRev = new Tone.Reverb({ decay: 4, wet: 0.4 }).connect(bus)
       await masterRev.generate()
 
+      // Глобальный tone-tame: lowpass + lowshelf-cut для устранения "режущих" верхов.
+      const masterTone = new Tone.Filter(5500, 'lowpass')
+      masterTone.Q.value = 0.5
+      masterTone.connect(masterRev)
+      const masterHighCut = new Tone.EQ3({ low: 0, mid: -1, high: -4 }).connect(
+        masterTone,
+      )
+
+      const bellLP = new Tone.Filter(3200, 'lowpass')
+      bellLP.Q.value = 0.7
+      bellLP.connect(masterHighCut)
       const bell = new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: 'sine' },
-        envelope: { attack: 0.005, decay: 0.3, sustain: 0.5, release: 0.4 },
-      }).connect(masterRev)
-      bell.volume.value = -8
+        envelope: { attack: 0.025, decay: 0.35, sustain: 0.45, release: 0.7 },
+      }).connect(bellLP)
+      bell.volume.value = -11
 
       // Phase 8: filter'ы вынесены в named refs чтобы их frequency.rampTo можно
       // было модулировать per-planet seed.
-      const droneFilter = new Tone.Filter(800, 'lowpass')
-      droneFilter.connect(masterRev)
+      const droneFilter = new Tone.Filter(700, 'lowpass')
+      droneFilter.connect(masterHighCut)
       const drone = new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: 'sine' },
-        envelope: { attack: 0.15, decay: 0.2, sustain: 0.8, release: 0.6 },
+        envelope: { attack: 0.18, decay: 0.25, sustain: 0.75, release: 0.8 },
       }).connect(droneFilter)
-      drone.volume.value = -12
+      drone.volume.value = -13
 
+      const pluckLP = new Tone.Filter(2800, 'lowpass')
+      pluckLP.Q.value = 0.6
+      pluckLP.connect(masterHighCut)
       const pluck = new Tone.Synth({
-        oscillator: { type: 'triangle' },
-        envelope: { attack: 0.005, decay: 0.15, sustain: 0.1, release: 0.3 },
-      }).connect(masterRev)
-      pluck.volume.value = -10
+        oscillator: { type: 'sine' },
+        envelope: { attack: 0.018, decay: 0.18, sustain: 0.15, release: 0.45 },
+      }).connect(pluckLP)
+      pluck.volume.value = -13
 
-      const noiseFilter = new Tone.Filter(1200, 'bandpass')
-      noiseFilter.connect(masterRev)
+      const noiseFilter = new Tone.Filter(900, 'lowpass')
+      noiseFilter.Q.value = 0.7
+      noiseFilter.connect(masterHighCut)
       const noise = new Tone.NoiseSynth({
         noise: { type: 'pink' },
-        envelope: { attack: 0.05, decay: 0.3, sustain: 0.4, release: 0.6 },
+        envelope: { attack: 0.08, decay: 0.35, sustain: 0.35, release: 0.7 },
       }).connect(noiseFilter)
-      noise.volume.value = -22
+      noise.volume.value = -24
 
+      const fmLP = new Tone.Filter(3500, 'lowpass')
+      fmLP.Q.value = 0.7
+      fmLP.connect(masterHighCut)
       const fm = new Tone.FMSynth({
         harmonicity: 2,
-        modulationIndex: 3,
-        envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.4 },
+        modulationIndex: 1.6,
+        envelope: { attack: 0.025, decay: 0.25, sustain: 0.3, release: 0.55 },
         modulationEnvelope: {
-          attack: 0.05,
-          decay: 0.2,
-          sustain: 0.4,
-          release: 0.3,
+          attack: 0.08,
+          decay: 0.25,
+          sustain: 0.35,
+          release: 0.4,
         },
-      }).connect(masterRev)
-      fm.volume.value = -14
+      }).connect(fmLP)
+      fm.volume.value = -16
 
       const membrane = new Tone.MembraneSynth({
-        pitchDecay: 0.15,
-        octaves: 6,
-        envelope: { attack: 0.002, decay: 0.4, sustain: 0, release: 0.3 },
-      }).connect(new Tone.Filter(400, 'lowpass').connect(masterRev))
-      membrane.volume.value = -10
+        pitchDecay: 0.18,
+        octaves: 5,
+        envelope: { attack: 0.01, decay: 0.45, sustain: 0, release: 0.4 },
+      }).connect(new Tone.Filter(380, 'lowpass').connect(masterHighCut))
+      membrane.volume.value = -12
 
       this.kit = {
         bus,

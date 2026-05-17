@@ -8,11 +8,12 @@ import {
 } from './locationUnlocks'
 
 describe('LOCATION_UNLOCK_THRESHOLD', () => {
-  it('defines threshold for all 4 locations', () => {
+  it('defines threshold for all 4 locations + starmap sentinel', () => {
     expect(LOCATION_UNLOCK_THRESHOLD).toEqual({
       1: 0,
       2: 7,
       3: 13,
+      4: 19,
       6: 19,
     })
   })
@@ -29,24 +30,26 @@ describe('LOCATION_BY_TRIGGER_LEVEL', () => {
 })
 
 describe('getUnlockedLocations', () => {
-  it('returns only Болото on empty discovered', () => {
+  it('returns only Лужа on empty discovered', () => {
     expect(getUnlockedLocations([])).toEqual(new Set([1]))
   })
 
-  it('Лес opens when L7 discovered', () => {
+  it('Болото opens when L7 discovered', () => {
     expect(getUnlockedLocations([1, 7])).toEqual(new Set([1, 2]))
   })
 
-  it('Планета opens when L13 discovered', () => {
+  it('Лес opens when L13 discovered', () => {
     expect(getUnlockedLocations([1, 7, 13])).toEqual(new Set([1, 2, 3]))
   })
 
-  it('Звёздная карта opens when L19 sentinel discovered', () => {
-    expect(getUnlockedLocations([1, 7, 13, 19])).toEqual(new Set([1, 2, 3, 6]))
+  it('Континент + Звёздная карта opens when L19 sentinel discovered', () => {
+    expect(getUnlockedLocations([1, 7, 13, 19])).toEqual(
+      new Set([1, 2, 3, 4, 6]),
+    )
   })
 
   it('tolerates non-contiguous discovery (corrupted save)', () => {
-    expect(getUnlockedLocations([1, 19])).toEqual(new Set([1, 6]))
+    expect(getUnlockedLocations([1, 19])).toEqual(new Set([1, 4, 6]))
   })
 
   it('intermediate levels do not unlock locations', () => {
@@ -55,15 +58,15 @@ describe('getUnlockedLocations', () => {
 })
 
 describe('isLocationUnlocked', () => {
-  it('returns true for Болото always', () => {
+  it('returns true for Лужа always', () => {
     expect(isLocationUnlocked(1, [])).toBe(true)
   })
 
-  it('returns false for Лес when L7 not discovered', () => {
+  it('returns false for Болото when L7 not discovered', () => {
     expect(isLocationUnlocked(2, [1, 6])).toBe(false)
   })
 
-  it('returns true for Лес when L7 discovered', () => {
+  it('returns true for Болото when L7 discovered', () => {
     expect(isLocationUnlocked(2, [7])).toBe(true)
   })
 

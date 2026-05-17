@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { MainScene } from './scenes/MainScene'
 import { StarMapScene } from './scenes/StarMapScene'
 import { eventBus } from '../store/eventBus'
+import { useGameStore } from '../store/gameStore'
 
 let game: Phaser.Game | null = null
 
@@ -88,69 +89,55 @@ export function startGame(): Phaser.Game {
 
   game = new Phaser.Game(config)
 
-  // Переключение Phaser-сцен через event bus с плавной анимацией.
-  // Логика «полёта»:
-  //   Open  (Ферма → StarMap): отдаляемся ОТ фермы (zoom OUT) → подлетаем К карте (zoom IN)
-  //   Close (StarMap → Ферма): отдаляемся ОТ карты (zoom OUT) → подлетаем К ферме (zoom IN)
+  // Переключение Phaser-сцен через event bus с тем же dual-container zoom-feel
+  // что и при смене обычной локации. «Промежуточная локация» = map4.webp:
+  //   Open  (Ферма → StarMap): ферма сжимается в точку, map4 разрастается
+  //                            на полный экран → sleep MainScene → wake StarMap
+  //                            с fade-in поверх (фон у Star уже чёрный).
+  //   Close (StarMap → Ферма): обратно — StarMap fade-out → wake MainScene
+  //                            (там bg=map4) → dual-container на целевую локацию.
   const sm = () => game!.scene
   let isTransitioning = false
-  // Длительность fade — увеличена до 600мс для плавности (раньше 450, бликало при быстром появлении)
-  const FADE_MS = 600
+  const FADE_MS = 350 // fade StarMap поверх map4
 
-  eventBus.on('starmap:open', () => {
+  eventBus.on('starmap:open', async () => {
     if (isTransitioning) return
     if (sm().isActive('StarMapScene')) return
     isTransitioning = true
 
-    const main = sm().getScene('MainScene') as Phaser.Scene
-    const mainCam = main.cameras.main
-    const startZoom = mainCam.zoom
+    const main = sm().getScene('MainScene') as MainScene
+    // Этап 1: dual-container zoom-out фермы + zoom-in map4 (тот же эффект,
+    // что переключение на обычную локацию).
+    await main.locTransition.runOpenStarMapTransition()
 
-    // Шаг 1: ОТДАЛЯЕМСЯ от фермы — она уменьшается + fade out
-    main.tweens.add({
-      targets: mainCam,
-      zoom: startZoom * 0.4,
-      duration: FADE_MS,
-      ease: 'Quad.easeIn',
-    })
-    mainCam.fadeOut(FADE_MS, 0, 0, 0)
+    // Этап 2: засыпаем MainScene и поднимаем StarMap.
+    sm().sleep('MainScene')
 
-    main.time.delayedCall(FADE_MS, () => {
-      mainCam.setZoom(startZoom)
-      mainCam.resetFX()
-      // sleep() вместо pause(): останавливает И render И update. pause() стопает
-      // только update, поэтому MainScene продолжала бы рисоваться в GPU параллельно
-      // с тяжёлой StarMap → двойная нагрузка на mobile.
-      sm().sleep('MainScene')
+    const wasSleeping = sm().isSleeping('StarMapScene')
+    if (wasSleeping) sm().wake('StarMapScene')
+    else sm().start('StarMapScene')
 
-      const wasSleeping = sm().isSleeping('StarMapScene')
-      if (wasSleeping) sm().wake('StarMapScene')
-      else sm().start('StarMapScene')
-
-      const animate = () => {
-        const star = sm().getScene('StarMapScene') as Phaser.Scene
-        if (!star || !star.cameras?.main) {
-          requestAnimationFrame(animate)
-          return
-        }
-        const starCam = star.cameras.main
-        starCam.setZoom(1.0)
-        // Используем camera.alpha tween, не fadeIn — fadeIn это overlay,
-        // который не предотвращает мерцание объектов до его старта.
-        starCam.setAlpha(0)
-        starCam.resetFX()
-        star.tweens.add({
-          targets: starCam,
-          alpha: 1,
-          duration: FADE_MS,
-          ease: 'Sine.easeOut',
-          onComplete: () => {
-            isTransitioning = false
-          },
-        })
+    const animate = () => {
+      const star = sm().getScene('StarMapScene') as Phaser.Scene
+      if (!star || !star.cameras?.main) {
+        requestAnimationFrame(animate)
+        return
       }
-      requestAnimationFrame(animate)
-    })
+      const starCam = star.cameras.main
+      starCam.setZoom(1.0)
+      starCam.setAlpha(0)
+      starCam.resetFX()
+      star.tweens.add({
+        targets: starCam,
+        alpha: 1,
+        duration: FADE_MS,
+        ease: 'Sine.easeOut',
+        onComplete: () => {
+          isTransitioning = false
+        },
+      })
+    }
+    requestAnimationFrame(animate)
   })
 
   eventBus.on('starmap:close', () => {
@@ -161,7 +148,7 @@ export function startGame(): Phaser.Game {
     const star = sm().getScene('StarMapScene') as Phaser.Scene
     const starCam = star.cameras.main
 
-    // Плавно скрываем через alpha tween (не fadeOut overlay)
+    // Этап 1: затухание StarMap (под ней лежит спящая MainScene с bg=map4)
     star.tweens.add({
       targets: starCam,
       alpha: 0,
@@ -169,28 +156,18 @@ export function startGame(): Phaser.Game {
       ease: 'Sine.easeIn',
     })
 
-    star.time.delayedCall(FADE_MS, () => {
+    star.time.delayedCall(FADE_MS, async () => {
       starCam.setZoom(1.0)
       starCam.resetFX()
-      // alpha остаётся 0 — при следующем wake/open опять подкрутим к 1
       sm().sleep('StarMapScene')
 
-      // wake() парный к sleep() — поднимает MainScene из sleep, состояние сохранено.
       sm().wake('MainScene')
-      const main = sm().getScene('MainScene') as Phaser.Scene
-      const mainCam = main.cameras.main
-      // Шаг 2: ПОДЛЕТАЕМ к ферме — стартуем издалека, приближаемся (zoom IN)
-      mainCam.setZoom(0.4)
-      mainCam.fadeIn(FADE_MS, 0, 0, 0)
-      main.tweens.add({
-        targets: mainCam,
-        zoom: 1.0,
-        duration: FADE_MS,
-        ease: 'Sine.easeOut',
-        onComplete: () => {
-          isTransitioning = false
-        },
-      })
+      const main = sm().getScene('MainScene') as MainScene
+
+      // Этап 2: dual-container zoom от map4 к фактической локации игрока.
+      const targetLoc = useGameStore.getState().currentLocation
+      await main.locTransition.runCloseStarMapTransition(targetLoc)
+      isTransitioning = false
     })
   })
 

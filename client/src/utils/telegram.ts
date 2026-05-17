@@ -18,6 +18,12 @@ export function isDevMode(): boolean {
   return import.meta.env.DEV && !isInsideTelegram()
 }
 
+// Десктопные платформы Telegram — там фуллскрин не нужен (окно и так управляется юзером).
+function isDesktopPlatform(tg: TelegramWebApp): boolean {
+  const platform = tg.platform ?? ''
+  return platform === 'tdesktop' || platform === 'macos' || platform === 'weba' || platform === 'webk' || platform === 'web'
+}
+
 // Инициализация SDK. Зовём один раз при старте приложения.
 export function initTelegram(): void {
   const tg = getTelegramWebApp()
@@ -31,15 +37,18 @@ export function initTelegram(): void {
   // метод СУЩЕСТВУЕТ на объекте но кидает WebAppMethodUnsupported при вызове —
   // optional chaining не помогает, оборачиваем в try/catch.
   // Связан с DPR cap в game/index.ts — без cap=2 фуллскрин убивает FPS StarMap'а.
-  try {
-    tg.requestFullscreen?.()
-  } catch {
-    // Старый клиент — fullscreen недоступен, остаёмся в expand() режиме.
-  }
-  try {
-    tg.lockOrientation?.('portrait')
-  } catch {
-    // Старый клиент — orientation lock недоступен, fallback overlay сработает.
+  // На десктопе (tdesktop/macos/web) фуллскрин не зовём — окно и так в распоряжении юзера.
+  if (!isDesktopPlatform(tg)) {
+    try {
+      tg.requestFullscreen?.()
+    } catch {
+      // Старый клиент — fullscreen недоступен, остаёмся в expand() режиме.
+    }
+    try {
+      tg.lockOrientation?.('portrait')
+    } catch {
+      // Старый клиент — orientation lock недоступен, fallback overlay сработает.
+    }
   }
 }
 
