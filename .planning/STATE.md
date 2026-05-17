@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: cosmic-frogs-system
-current_phase: 23 (in progress — Plan 23-01 complete; 23-02..06 pending); Phase 20 (Pre-release safety net) deferred до prod-релиза
-status: in-progress
-last_updated: "2026-05-18T03:05:37.000Z"
+current_phase: 19 (closed); Phase 20 (Pre-release safety net) deferred до prod-релиза
+status: completed
+last_updated: "2026-05-17T21:18:41.512Z"
 progress:
   total_phases: 14
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 25
-  completed_plans: 2
-  percent: 8
+  completed_plans: 9
+  percent: 36
 ---
 
 # Project State
@@ -171,14 +171,26 @@ progress:
 | Wave | Plan | Commits | Files | Bundle Delta gzip |
 |------|------|---------|-------|-------------------|
 | 1 | 23-01 (foundation: store + persistence + controller shell + dev helpers + i18n + 11 vitest specs) | 3 (c98ed34, e74dffe, 578db00) | 5 created + 5 modified | **-1.32 KB** (cap +50 KB ✓; main `index-vffWbdF3.js` 659.67 KB / 194.65 KB gzip) |
-| **Subtotal** | — | **3 commits** | **5 created + 5 modified** | **-1.32 KB gzip** so far |
+| 2 | 23-02 (Beat 1 Welcome modal: WelcomeModal.tsx + welcomeModal.css + OnboardingController wire) | 2 (c580d2f, ed93d22) | 2 created + 1 modified | TBD (vite build deferred — parallel-agent TS6133 in BoxController блокирует bundle measure, см. deferred-items.md) |
+| **Subtotal** | — | **5 commits** | **7 created + 6 modified** | -1.32 KB gzip so far (23-02 measure pending) |
 
-**Phase 23 REQ coverage so far:** 2/6 ✓ (PHASE23-STATE, PHASE23-CONTROLLER).
+**Phase 23 REQ coverage so far:** 3/6 ✓ (PHASE23-STATE, PHASE23-CONTROLLER, PHASE23-BEAT1-WELCOME).
 **Plan 23-01 outcome:** Foundation ready — Plan 23-02/03/05 (Wave 2) can proceed in parallel against the live store; 23-04 still gated by 23-03; 23-06 finalize last. Onboarding lives in its own per-device slice (separate from cosmic), so it cannot affect Phase 22 carrier migration or any server-synced state. 97/97 vitest green.
+**Plan 23-02 outcome:** Beat 1 active — игрок при first app open (welcomeSeen=false) видит centered modal с pastel gradient + bobbing frog SVG + pink CTA «Начать». Single-action: backdrop click ignored. CTA → fade-out 400ms → markWelcomeSeen → modal unmounts. Persistence через onboarding slice (Plan 23-01) гарантирует one-shot per device. Pattern для onboarding overlays установлен (createPortal, CSS keyframes only, per-flag selector, exit-animation-aware unmount) — Plan 23-04/05 могут reuse. tsc clean по моим файлам; vite build blocked by parallel Plan 23-03 unused-imports (deferred-items.md).
 
 ### Plan 23-01 Decisions Logged
+
 - Per-device-only onboarding store, isolated from gameStore/cosmic to keep blast radius zero from Phase 22 migration logic.
 - subscribeWithSelector enabled now (cheap) so Plan 23-02..05 can subscribe to single flags without forced refactor.
 - Mark actions persist synchronously inside the slice (no debounce) — onboarding writes are infrequent one-shot events.
 - Defensive per-field validation in `loadOnboarding` (T-11-01 pattern) — partial corruption preserves valid fields.
 - `__resetOnboarding()` triggers `window.location.reload()` so the Welcome modal (Plan 23-02) re-mounts during QA.
+
+### Plan 23-02 Decisions Logged
+
+- Inline SVG для L1 frog (вместо external asset) — zero network deps, мгновенный mount, нет flash-of-no-image. Plan 23-06 может swap на existing frog asset когда визуальный язык frog assets устаканится.
+- `setTimeout(markSeen, 400ms)` перед store mutation — store mutate триггерит синхронный re-render, который unmount'ит modal; задержка совпадает с длительностью @keyframes onb-welcome-fade-out так что игрок видит плавный fade-out а не резкое исчезновение.
+- Per-flag selector в OnboardingController (`s => s.welcomeSeen` вместо combined object) — каждый beat изолированно re-render'ится, готово для Plan 23-03..05 conditional branches.
+- Backdrop intentionally без onClick handler — single-action UX (это первый и единственный blocking onboarding step). Cliclability checklist выполнен другими механизмами: `type="button"`, z-index 100, touchAction manipulation, stopPropagation на inner modal.
+- CSS keyframes only (не Lottie) per memory feedback_animations. Frog bob — DOM SVG, отдельная сущность от Phaser frog.container, никакого риска мерцания (memory feedback_frog_container_alpha n/a здесь).
+- Reused pink CTA gradient (#f9a8d4 → #ec4899) и pastel bg (lake-blue #bae6fd → swamp-green #bef264) от LocationStack/LOCATION_VISUAL для визуальной consistency с остальным миром локаций.
