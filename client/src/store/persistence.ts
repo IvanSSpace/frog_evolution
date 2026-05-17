@@ -271,6 +271,22 @@ export function loadCosmicSlice(): CosmicPersist {
       boxes,
       ship,
       carriers: Array.isArray(parsed.carriers) ? parsed.carriers : [],
+      // Phase 22 Plan 22-03: ascendedCarriers + essence persisted whitelist.
+      // Shape: { id: string, element: Element, ascendedAt: number }.
+      ascendedCarriers: Array.isArray(parsed.ascendedCarriers)
+        ? (parsed.ascendedCarriers as unknown[]).filter(
+            (a): a is { id: string; element: string; ascendedAt: number } =>
+              typeof a === 'object' &&
+              a !== null &&
+              typeof (a as Record<string, unknown>).id === 'string' &&
+              typeof (a as Record<string, unknown>).element === 'string' &&
+              typeof (a as Record<string, unknown>).ascendedAt === 'number',
+          ) as CosmicPersist['ascendedCarriers']
+        : defaults.ascendedCarriers,
+      essence:
+        typeof parsed.essence === 'number' && parsed.essence >= 0
+          ? parsed.essence
+          : defaults.essence,
       // Phase 17: bitset extended 24 → 192 bytes (1536 bits). Pad-only migration.
       // Phase 20: shrink to 144 bytes (1152 bits) после 24→18 frog levels.
       //   NOTE: migration code below still pads/truncates to 192 — needs a separate

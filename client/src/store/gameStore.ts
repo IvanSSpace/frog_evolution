@@ -351,13 +351,19 @@ useGameStore.subscribe((state, prev) => {
     state.hasFirstMission !== prev.hasFirstMission ||
     state.hasOpenedAnyBox !== prev.hasOpenedAnyBox ||
     state.frogExclusiveUnlocked !== prev.frogExclusiveUnlocked ||
-    state.tutorialState !== prev.tutorialState
+    state.tutorialState !== prev.tutorialState ||
+    // Phase 22 Plan 22-03: ascension state must trigger persist.
+    state.ascendedCarriers !== prev.ascendedCarriers ||
+    state.essence !== prev.essence
   ) {
     saveCosmicSlice({
       serums: state.serums,
       boxes: state.boxes,
       ship: state.ship,
       carriers: state.carriers,
+      // Phase 22 Plan 22-03: persist ascension pool + essence.
+      ascendedCarriers: state.ascendedCarriers,
+      essence: state.essence,
       bestiaryBitset: state.bestiaryBitset,
       pityCounters: state.pityCounters,
       lastActiveTab: state.lastActiveTab,

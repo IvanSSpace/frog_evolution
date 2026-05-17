@@ -28,6 +28,7 @@ import { createSerumSlice } from './slices/serumSlice'
 import { createBoxSlice } from './slices/boxSlice'
 import { createCarrierSlice } from './slices/carrierSlice'
 import { createShipSlice } from './slices/shipSlice'
+import { createAscensionSlice } from './slices/ascensionSlice'
 
 // Phase 22: Rarity type removed from serum/carrier system.
 // LegacyRarity kept only for bestiary bitset dimension (Plan 22-07 will shrink).
@@ -111,6 +112,17 @@ export interface CosmicSliceActions {
   ) => void
 
   /**
+   * Phase 22 Plan 22-03: ascend a carrier that reached L18.
+   * - Removes carrier with frogId from state.carriers (frees field slot).
+   * - Appends AscendedCarrier {id, element, ascendedAt} to state.ascendedCarriers
+   *   (permanent, persisted в localStorage).
+   * - +1 essence (placeholder reward; balance — Plan 22-07).
+   * - Emits eventBus 'cosmic:carrier-ascended' after store mutation.
+   * No-op if frogId not found in state.carriers (idempotent).
+   */
+  ascendCarrier: (frogId: string) => void
+
+  /**
    * Phase 17 (CARRIER-12) + Phase 18 (BESTIARY-07): set bestiary bit для (element, rarity, level).
    * Phase 22: rarity param kept as LegacyRarity — bestiary bitset still 16×4×18 layout
    * until Plan 22-07 decides shrink.
@@ -170,6 +182,7 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
     ...createBoxSlice(set, get),
     ...createCarrierSlice(set, get),
     ...createShipSlice(set, get),
+    ...createAscensionSlice(set, get),
 
     // Phase 17 (CARRIER-12) + Phase 18 (BESTIARY-07): set bestiary bit + milestone trigger.
     // Phase 22: rarity param kept as LegacyRarity (bestiary shape unchanged until Plan 22-07).

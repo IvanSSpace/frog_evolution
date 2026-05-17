@@ -70,6 +70,10 @@ type Events = {
   'cosmic:flight-cancel': void
   'cosmic:ship-arrived': { planetId: string }
   // Phase 17 — carrier evolution (Phase 22: carrier-stabilized removed)
+  // Phase 22 Plan 22-03 — carrier ascension event.
+  // Emitted by ascendCarrier action after store mutation.
+  // Subscribers: MainScene (play ascension tween), FrogOverlayManager (cleanup overlay).
+  'cosmic:carrier-ascended': { frogId: string; element: Element }
   // Phase 19-01 — box-opened event.
   // Phase 22: rarity removed from box-opened payload.
   'cosmic:box-opened': { boxId: string; element: Element }

@@ -62,6 +62,15 @@ export interface CarrierData {
   level: number
 }
 
+// Phase 22 Plan 22-03: carrier достигший L18 instant ascends — исчезает с поля,
+// слот освобождается, в global pool добавляется AscendedCarrier (permanent).
+// Persisted в localStorage (loadCosmicSlice whitelist).
+export interface AscendedCarrier {
+  id: string         // unique ascension id (asc-<ts>-<rnd>)
+  element: Element   // unchanged, инкапсулирует категорию для archetype pool
+  ascendedAt: number // unix ms — для UI sorting / age display
+}
+
 // ===== Phase 16: ShipState discriminated union (REQ SHIP-01) =====
 export interface ShipStateDocked {
   state: 'docked'
@@ -118,6 +127,14 @@ export interface CosmicSlice {
 
   // Карьеры (Phase 14/17)
   carriers: CarrierData[]
+
+  // Phase 22 Plan 22-03: ascended carriers pool (permanent, persisted).
+  // Растёт линейно — Plan 22-04 будет агрегировать archetype bonuses из этого массива.
+  ascendedCarriers: AscendedCarrier[]
+
+  // Phase 22 Plan 22-03: meta-currency, выдаётся по +1 при каждом ascension (placeholder).
+  // Balance — Plan 22-07.
+  essence: number
 
   // Бестиарий bitset: Phase 20 shrink до 144 байт = 1152 битов (24→18 frog levels).
   // Layout: 16 elements × 4 rarities × 18 levels = 1152 уникальных combos.
@@ -192,6 +209,9 @@ export function makeInitialCosmicSlice(): CosmicSlice {
     boxes: [],
     ship: null,
     carriers: [],
+    // Phase 22 Plan 22-03: ascended pool + essence start empty.
+    ascendedCarriers: [],
+    essence: 0,
     bestiaryBitset: new Array(144).fill(0), // Phase 20: 1152 bits = 144 bytes (18 levels)
     pityCounters: { common: 0, rare: 0, epic: 0, legendary: 0 },
     lastActiveTab: 'scouts',
