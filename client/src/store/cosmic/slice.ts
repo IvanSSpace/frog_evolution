@@ -81,6 +81,36 @@ export interface CosmicSliceActions {
   removeCarrier: (frogId: string) => void
 
   /**
+   * Phase 22 Plan 22-02: carrier + normal merge.
+   * Removes carrier with carrierFrogId, creates new carrier at newFrogId
+   * inheriting the old carrier's element and bumped to newLevel.
+   * The normal frog (normalFrogId) is the caller's responsibility to remove
+   * from the visual scene — carrierSlice only mutates carrier list.
+   * No-op if carrierFrogId not found in state.carriers.
+   */
+  mergeCarrierWithNormal: (
+    carrierFrogId: string,
+    normalFrogId: string,
+    newFrogId: string,
+    newLevel: number,
+  ) => void
+
+  /**
+   * Phase 22 Plan 22-02: carrier + carrier merge.
+   * Removes both droppedFrogId and targetFrogId carriers, creates new carrier
+   * at newFrogId. Per D-Carrier+carrier rule the TARGET (drop-on) element
+   * survives — droppedFrogId's element is discarded. Drag direction is the
+   * game-design source of truth for element selection.
+   * No-op if either carrier id missing from state.carriers.
+   */
+  mergeCarrierWithCarrier: (
+    droppedFrogId: string,
+    targetFrogId: string,
+    newFrogId: string,
+    newLevel: number,
+  ) => void
+
+  /**
    * Phase 17 (CARRIER-12) + Phase 18 (BESTIARY-07): set bestiary bit для (element, rarity, level).
    * Phase 22: rarity param kept as LegacyRarity — bestiary bitset still 16×4×18 layout
    * until Plan 22-07 decides shrink.
