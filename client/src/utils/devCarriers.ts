@@ -2,6 +2,8 @@
 // Tree-shaken в prod build (import.meta.env.DEV — статический бранч у Vite).
 // Phase 22: rarity/stabilized/feedCount/ceiling removed from carrier shape.
 // __forceFeed and __forceStabilize removed (feed-stabilize mechanic deleted).
+// Phase 22 Plan 22-02: __giveCarrier / __listCarriers / __simulateMerge — smoke
+// helpers для проверки carrier merge rules без UI.
 //
 // Usage в DevTools console:
 //   __listFrogIds()                               // print frog ids
@@ -12,6 +14,18 @@
 //   __testBurstEffect('<frogId>', 'fire')          // ELEMENT-10 без тапа
 //   __testMergeEffect('fire')                     // ELEMENT-11 без реального мерджа
 //   __bestiaryBitsSet()                           // count bestiary bits
+//
+// Plan 22-02 carrier merge smoke helpers:
+//   __giveCarrier('fire', 5, 'frog-a')           // bind carrier to existing frog
+//   __giveCarrier('fire', 5)                     // spawn new L5 frog + carrier
+//   __listCarriers()                             // print [{frogId, element, level}]
+//   __simulateMerge('frog-a', 'frog-b')          // call performMerge(a, b) — a=dropped
+//
+// Smoke flow:
+//   __giveCarrier('fire', 5, 'frog-a')
+//   __giveCarrier('water', 5, 'frog-b')
+//   __simulateMerge('frog-a', 'frog-b')          // → carrier(water, L6) — TARGET wins
+//   __listCarriers()                             // [{frogId: '<new>', element: 'water', level: 6}]
 
 import type Phaser from 'phaser'
 import { useGameStore } from '../store/gameStore'
@@ -34,6 +48,14 @@ interface DevFrogLike {
 interface DevMainScene extends Phaser.Scene {
   frogs: DevFrogLike[]
   overlayManager?: { markDirty(): void } | null
+  // Plan 22-02: smoke-test helper hook (added by __simulateMerge).
+  performMerge?: (
+    a: DevFrogLike,
+    b: DevFrogLike,
+    cx: number,
+    cy: number,
+  ) => void
+  spawnFrog?: (x: number, y: number, level?: number) => DevFrogLike
 }
 
 declare global {
@@ -46,6 +68,14 @@ declare global {
     __testBurstEffect?: (frogId?: string, element?: Element) => void
     __testMergeEffect?: (element?: Element, x?: number, y?: number) => void
     __bestiaryBitsSet?: () => number
+    // Plan 22-02 smoke helpers.
+    __giveCarrier?: (
+      element: Element,
+      level: number,
+      frogId?: string,
+    ) => string | null
+    __listCarriers?: () => void
+    __simulateMerge?: (droppedFrogId: string, targetFrogId: string) => void
   }
 }
 
@@ -161,9 +191,80 @@ if (import.meta.env.DEV) {
     return count
   }
 
+  // ============== Phase 22 Plan 22-02 helpers ==============
+
+  /**
+   * __giveCarrier(element, level, frogId?) — bind carrier to an existing frog,
+   * or spawn a fresh frog of the requested level and bind to that.
+   * Returns the resolved frogId, or null if no MainScene available for spawn.
+   */
+  window.__giveCarrier = (element, level, frogId) => {
+    const store = useGameStore.getState()
+
+    if (frogId) {
+      store.addCarrier({ frogId, element, level })
+      console.log('[dev] carrier bound to existing frog', { frogId, element, level })
+      return frogId
+    }
+
+    const ms = window.__mainScene
+    if (!ms?.spawnFrog) {
+      console.warn(
+        '[dev] no __mainScene.spawnFrog — open game first or pass frogId arg',
+      )
+      return null
+    }
+    const cam = ms.cameras?.main
+    const x = cam ? cam.scrollX + cam.width / 2 : 200
+    const y = cam ? cam.scrollY + cam.height / 2 : 300
+    const newFrog = ms.spawnFrog(x, y, level)
+    store.addCarrier({ frogId: newFrog.id, element, level })
+    ms.overlayManager?.markDirty()
+    console.log('[dev] spawned frog + carrier', {
+      frogId: newFrog.id,
+      element,
+      level,
+    })
+    return newFrog.id
+  }
+
+  /** Print current carrier list (frogId, element, level). */
+  window.__listCarriers = () => {
+    console.table(useGameStore.getState().carriers)
+  }
+
+  /**
+   * __simulateMerge(droppedFrogId, targetFrogId) — call MainScene.performMerge
+   * directly so that the dragged=dropped, dragged-onto=target orientation
+   * is preserved (target-wins rule depends on this).
+   */
+  window.__simulateMerge = (droppedFrogId, targetFrogId) => {
+    const ms = window.__mainScene
+    if (!ms?.performMerge) {
+      console.warn('[dev] no __mainScene.performMerge — open game first')
+      return
+    }
+    const dropped = ms.frogs.find((f) => f.id === droppedFrogId)
+    const target = ms.frogs.find((f) => f.id === targetFrogId)
+    if (!dropped || !target) {
+      console.warn('[dev] could not find one of the frogs', {
+        droppedFrogId,
+        targetFrogId,
+      })
+      return
+    }
+    const tc = target.container
+    const cx = tc?.x ?? 0
+    const cy = tc?.y ?? 0
+    ms.performMerge(dropped, target, cx, cy)
+    console.log('[dev] simulated merge', { droppedFrogId, targetFrogId })
+  }
+
   console.log(
     '[dev Phase 12+13 / Phase 22] helpers: __addDevCarrier(frogId?, element?), ' +
       '__testBurstEffect(frogId?, element?), __testMergeEffect(element?, x?, y?), ' +
-      '__clearDevCarriers, __listDevCarriers, __listFrogIds, __bestiaryBitsSet',
+      '__clearDevCarriers, __listDevCarriers, __listFrogIds, __bestiaryBitsSet, ' +
+      '__giveCarrier(element, level, frogId?), __listCarriers(), ' +
+      '__simulateMerge(droppedFrogId, targetFrogId)',
   )
 }
