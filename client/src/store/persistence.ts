@@ -125,7 +125,8 @@ export function saveDiscovered(arr: number[]) {
 // ─── locations ───────────────────────────────────────────────────────────────
 
 // Резиденты каждой локации — массив уровней лягушек на её поле.
-// Дефолт: Лужа — L1..L6 по одной, остальные пустые.
+// Дефолт: Лужа — 1 стартовая L1 лягушка, остальные локации пустые.
+// Это стартовое состояние для всех новых пользователей (без сейва).
 export function loadLocationFrogs(): number[][] {
   try {
     const raw = localStorage.getItem(LOCATION_FROGS_KEY)
@@ -146,7 +147,7 @@ export function loadLocationFrogs(): number[][] {
     /* ignore */
   }
   const arr: number[][] = LOCATIONS.map(() => [])
-  arr[0] = [1, 2, 3, 4, 5, 6]
+  arr[0] = [1]
   return arr
 }
 
