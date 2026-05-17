@@ -614,6 +614,18 @@ Plans:
 
 **Demo-build qualification:** placeholder values OK для balance phase (essence reward magnitudes, archetype bonus magnitudes, shop costs); open knobs документированы в 22-07 SUMMARY.
 
+### Phase 23: Onboarding flow
+
+**Goal:** Реализовать soft 4-beat onboarding для нового игрока: welcome modal → tap-hint на первый бокс → interactive merge demo (ghost-frog drag-trail) → location-unlock celebration с burst + LocationStack pulse + toast. Все hints soft (fade-out через 5-8с), не блокирующие. Reuse existing visual language (pink pulse `#ec4899`, pastel gradients, rounded buttons). Per-device localStorage state, без server sync.
+
+**Source design:** `frog_obsidian/Design Notes/2026-05-18-onboarding-flow.md`
+**Requirements**: TBD
+**Depends on:** Phase 22
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 23 --prd "<design-note>" to break down)
+
 ---
 
 **Last updated:** 2026-05-17 — Phase 22 complete
