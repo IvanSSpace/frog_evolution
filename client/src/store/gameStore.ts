@@ -42,6 +42,8 @@ import {
   saveNumberFormat,
   loadBoxOpenCount,
   saveBoxOpenCount,
+  loadCosmosUnlocked,
+  saveCosmosUnlocked,
 } from './persistence'
 
 // Re-exports for backward compat — many consumers import these from gameStore.
@@ -130,6 +132,15 @@ interface GameStateBase {
   setRareBoxProgress: (v: number) => void
   boxOpenCount: number
   setBoxOpenCount: (n: number) => void
+
+  // Phase 22 Plan 22-06: cosmos gate.
+  // false до первого L18+L18 normal merge sentinel. Триггерится в MergeController.
+  // Pre-cosmos: SerumBar / Cosmic Hub button / Star Map controls скрыты; box-open и
+  // mission rewards не дропают серум.
+  // FIXME Plan 22-07: на load — если discovered[19] true но hasCosmosUnlocked
+  // отсутствует, выставить true (legacy migration).
+  hasCosmosUnlocked: boolean
+  markCosmosUnlocked: () => void
 }
 
 // Полный GameState = базовые поля + Cosmic Frogs System (Phase 11+)
@@ -322,6 +333,22 @@ export const useGameStore = create<GameState>((set, get) => ({
   setBoxOpenCount: (n) => {
     saveBoxOpenCount(n)
     set({ boxOpenCount: n })
+  },
+
+  // Phase 22 Plan 22-06: cosmos gate state + idempotent unlock action.
+  // Persisted под отдельным ключом (COSMOS_UNLOCKED_KEY) — выживает любые
+  // corrupt resets cosmic slice.
+  hasCosmosUnlocked: loadCosmosUnlocked(),
+  markCosmosUnlocked: () => {
+    const s = get()
+    if (s.hasCosmosUnlocked) return // idempotent
+    saveCosmosUnlocked(true)
+    set({ hasCosmosUnlocked: true })
+    eventBus.emit('cosmic:toast', {
+      type: 'generic',
+      msg: 'Космос открыт!',
+      duration: 3000,
+    })
   },
 
   // ============== COSMIC FROGS SYSTEM (Phase 11+) ==============

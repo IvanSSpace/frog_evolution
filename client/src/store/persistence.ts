@@ -20,6 +20,9 @@ const COSMIC_KEY = 'frog_evolution_cosmic'
 const LOCATION_KEY = 'frog_evolution_current_location'
 const LOCATION_FROGS_KEY = 'frog_evolution_location_frogs'
 const BOX_OPEN_COUNT_KEY = 'frog_evolution_box_open_count'
+// Phase 22 Plan 22-06: cosmos gate — persisted unlock flag, отдельно от cosmic slice
+// (toplevel state.hasCosmosUnlocked). Включается при первом L18+L18 normal sentinel.
+const COSMOS_UNLOCKED_KEY = 'frog_evolution_cosmos_unlocked'
 
 // ─── upgrades ────────────────────────────────────────────────────────────────
 
@@ -396,6 +399,34 @@ export function loadBoxOpenCount(): number {
 export function saveBoxOpenCount(n: number): void {
   if (typeof localStorage === 'undefined') return
   localStorage.setItem(BOX_OPEN_COUNT_KEY, String(n))
+}
+
+// ─── cosmos unlock flag (Phase 22 Plan 22-06) ───────────────────────────────
+//
+// Хранится отдельным ключом (не в COSMIC_KEY), чтобы выживать любые corrupt
+// resets cosmic slice (T-11-01 mitigation pattern).
+//
+// Phase 22 Plan 22-07 (migration): на load — если legacy state имеет
+// discovered[19]=true но cosmosUnlocked отсутствует, выставить true.
+// Здесь только примитивный getter/setter; migration logic — phase22.ts.
+
+export function loadCosmosUnlocked(): boolean {
+  if (typeof localStorage === 'undefined') return false
+  try {
+    const raw = localStorage.getItem(COSMOS_UNLOCKED_KEY)
+    return raw === 'true'
+  } catch {
+    return false
+  }
+}
+
+export function saveCosmosUnlocked(v: boolean): void {
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(COSMOS_UNLOCKED_KEY, v ? 'true' : 'false')
+  } catch {
+    /* ignore */
+  }
 }
 
 // ─── number format ───────────────────────────────────────────────────────────
