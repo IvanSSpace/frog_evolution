@@ -1,6 +1,6 @@
 // Cosmic Frogs — Serum sub-slice.
-// Извлечено из cosmic/slice.ts при рефакторе разделения по доменам.
-// Public API не меняется: composed обратно в createCosmicSlice через spread.
+// Phase 22: rarity убран. Серум — плоский Record<Element, number>.
+// applySerum принимает любую обычную frog любого уровня → carrier того же уровня.
 
 import type { CarrierData } from '../types'
 import type { CosmicSliceActions, GetFn, SetFn } from '../slice'
@@ -12,16 +12,13 @@ import { devWarn } from '../../../utils/devLog'
 const APPLY_SERUM_ERROR_MESSAGES: Record<string, string> = {
   'frogId required': 'Лягушка не выбрана',
   'invalid element': 'Неверный элемент сыворотки',
-  'invalid rarity': 'Неверная редкость',
   'invalid level': 'Неверный уровень',
-  'level mismatch': 'Уровень лягушки не подходит для этой сыворотки',
   'no game state': 'Состояние игры не загружено',
   'no serum': 'Сыворотка отсутствует в инвентаре',
   'already carrier': 'Лягушка уже под сывороткой',
 }
 
 function translateServerError(raw: string): string {
-  // Server message может быть "error: foo" — пробуем match по подстроке.
   for (const [code, ru] of Object.entries(APPLY_SERUM_ERROR_MESSAGES)) {
     if (raw.includes(code)) return ru
   }
@@ -35,31 +32,21 @@ export type SerumActions = Pick<
 
 export function createSerumSlice(set: SetFn, get: GetFn): SerumActions {
   return {
-    addSerum: (element, rarity, count = 1) => {
+    addSerum: (element, count = 1) => {
       const s = get()
-      const cur = s.serums[element][rarity]
+      const cur = s.serums[element]
       const next = Math.max(0, cur + count)
-      const serums = {
-        ...s.serums,
-        [element]: { ...s.serums[element], [rarity]: next },
-      }
-      set({ serums })
+      set({ serums: { ...s.serums, [element]: next } })
     },
 
-    removeSerum: (element, rarity, count = 1) => {
+    removeSerum: (element, count = 1) => {
       const s = get()
-      const cur = s.serums[element][rarity]
+      const cur = s.serums[element]
       const next = Math.max(0, cur - count)
-      const serums = {
-        ...s.serums,
-        [element]: { ...s.serums[element], [rarity]: next },
-      }
-      set({ serums })
+      set({ serums: { ...s.serums, [element]: next } })
     },
 
     // Phase 14: tap-to-select / drag mode flag.
-    // active=true → переключает MainScene в selection mode (halos + auto-pause magnet/merge).
-    // active=false → clears selectedSerum независимо от второго аргумента.
     setSerumDragActive: (active, payload) => {
       if (active) {
         set({ serumDragActive: true, selectedSerum: payload ?? null })
@@ -68,36 +55,24 @@ export function createSerumSlice(set: SetFn, get: GetFn): SerumActions {
       }
     },
 
-    // Phase 14 / Phase 22: server-validated apply с optimistic UI.
-    //  1. Локальные guards (быстрый exit для очевидных no-op'ов)
-    //  2. Optimistic local apply — UI мгновенно отзывается
-    //  3. POST /game/cosmic/apply-serum — сервер валидирует и применяет
-    //  4. Success → reconcile serums map с сервером
-    //  5. Error → rollback (вернуть serum, убрать carrier), показать toast
-    applySerum: async (frogId, element, rarity, level) => {
+    // Phase 22: упрощённый applySerum (без rarity).
+    //  1. Guard: serum в инвентаре?
+    //  2. Guard: idempotency — frog уже carrier?
+    //  3. Optimistic local: decrement serums[element], add carrier {frogId, element, level}
+    //  4. POST /game/cosmic/apply-serum (server валидирует и применяет)
+    //  5. Success → reconcile serums
+    //  6. Error → rollback + toast
+    applySerum: async (frogId, element, level) => {
       const s = get()
 
-      // Guard 1: serum доступен?
-      const cur = s.serums[element][rarity]
+      const cur = s.serums[element]
       if (cur < 1) return
 
-      // Guard 2: idempotency — frog уже carrier?
       if (s.carriers.some((c) => c.frogId === frogId)) return
 
-      // Optimistic apply
       const prevSerums = s.serums
-      const nextSerumsOpt = {
-        ...s.serums,
-        [element]: { ...s.serums[element], [rarity]: cur - 1 },
-      }
-      const nextCarrier: CarrierData = {
-        frogId,
-        element,
-        rarity,
-        feedCount: 0,
-        stabilized: false,
-        level,
-      }
+      const nextSerumsOpt = { ...s.serums, [element]: cur - 1 }
+      const nextCarrier: CarrierData = { frogId, element, level }
       set({
         serums: nextSerumsOpt,
         carriers: [...s.carriers, nextCarrier],
@@ -105,13 +80,10 @@ export function createSerumSlice(set: SetFn, get: GetFn): SerumActions {
         selectedSerum: null,
       })
 
-      // Server validation
       try {
-        const res = await applySerumApi(frogId, element, rarity, level)
-        // Reconcile serums с сервером (server — единственный источник истины).
+        const res = await applySerumApi(frogId, element, level)
         set({ serums: res.serums })
       } catch (err) {
-        // Rollback: вернуть serum + убрать carrier
         const cur2 = get()
         set({
           serums: prevSerums,
