@@ -47,6 +47,13 @@ export function LocationStack() {
   const [starMapActive, setStarMapActive] = useState(false)
   // Локальный лок на время starmap-перехода (~900мс), чтобы не словить двойной клик
   const [starMapTransitioning, setStarMapTransitioning] = useState(false)
+  // Phase 23 Plan 23-05 (Beat 4): pulse на новой location button после unlock.
+  // null = ни одна кнопка не пульсирует. Set'ится по 'celebrationStart' event,
+  // clear'ится по 'celebrationDismiss' (emit'ит сам LocationStack по tap).
+  // Pulse persists пока игрок не тапнет кнопку — toast auto-fade его НЕ гасит.
+  const [pulsingLocationId, setPulsingLocationId] = useState<number | null>(
+    null,
+  )
 
   useEffect(() => {
     const onStart = () => setTransitioning(true)
@@ -56,6 +63,24 @@ export function LocationStack() {
     return () => {
       eventBus.off('location:transitionStart', onStart)
       eventBus.off('location:transitionEnd', onEnd)
+    }
+  }, [])
+
+  // Phase 23 Plan 23-05: subscribe на celebration events.
+  // Pulse ON на 'Start' (от OnboardingController), OFF на 'Dismiss'
+  // (от наших же handleSelect когда player тапнул pulsing button).
+  useEffect(() => {
+    const onCelebStart = ({ locationId }: { locationId: number }) => {
+      setPulsingLocationId(locationId)
+    }
+    const onCelebDismiss = () => {
+      setPulsingLocationId(null)
+    }
+    eventBus.on('onboarding:locationCelebrationStart', onCelebStart)
+    eventBus.on('onboarding:locationCelebrationDismiss', onCelebDismiss)
+    return () => {
+      eventBus.off('onboarding:locationCelebrationStart', onCelebStart)
+      eventBus.off('onboarding:locationCelebrationDismiss', onCelebDismiss)
     }
   }, [])
 
@@ -94,6 +119,12 @@ export function LocationStack() {
 
   const handleSelect = (id: number) => {
     if (transitioning || starMapTransitioning) return
+    // Phase 23 Plan 23-05: тап по пульсирующей кнопке гасит pulse + toast.
+    // Эмитим dismiss ДО логики transition — pulse-state должен сняться даже
+    // если transition заблокирован (id === currentLocation возврат ниже).
+    if (id === pulsingLocationId) {
+      eventBus.emit('onboarding:locationCelebrationDismiss', { locationId: id })
+    }
     if (id === STAR_MAP_PROTOTYPE_ID) {
       // Звёздная карта — переключаем Phaser-сцены через event bus
       if (starMapActive) {
@@ -136,6 +167,15 @@ export function LocationStack() {
 
   return (
     <>
+      {/* Phase 23 Plan 23-05 (Beat 4): pulse keyframes для location button после
+          unlock. Bobble — scale 1.0↔1.1, 1.2s loop, infinite. CSS keyframes
+          (НЕ Lottie) per memory feedback_animations. */}
+      <style>{`
+        @keyframes onb-loc-bobble {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+        }
+      `}</style>
       <div
         style={{
           position: 'fixed',
@@ -160,6 +200,7 @@ export function LocationStack() {
                   ? starMapActive
                   : !starMapActive && loc.id === currentLocation
               }
+              isPulsing={loc.id === pulsingLocationId}
               disabled={transitioning && loc.id !== STAR_MAP_PROTOTYPE_ID}
               onClick={() => handleSelect(loc.id)}
             />
@@ -170,6 +211,7 @@ export function LocationStack() {
               <LocationButton
                 loc={STAR_MAP_PROTOTYPE_LOC}
                 isCurrent
+                isPulsing={STAR_MAP_PROTOTYPE_ID === pulsingLocationId}
                 disabled={transitioning}
                 onClick={toggleCollapse}
               />
@@ -180,6 +222,7 @@ export function LocationStack() {
                   <LocationButton
                     loc={STAR_MAP_PROTOTYPE_LOC}
                     isCurrent={false}
+                    isPulsing={STAR_MAP_PROTOTYPE_ID === pulsingLocationId}
                     disabled={false}
                     onClick={() => handleSelect(STAR_MAP_PROTOTYPE_ID)}
                   />
@@ -187,6 +230,7 @@ export function LocationStack() {
                 <LocationButton
                   loc={getLocationById(currentLocation)}
                   isCurrent
+                  isPulsing={currentLocation === pulsingLocationId}
                   disabled={transitioning}
                   onClick={toggleCollapse}
                 />
@@ -196,6 +240,7 @@ export function LocationStack() {
         )}
 
         <button
+          type="button"
           onClick={toggleCollapse}
           disabled={transitioning}
           aria-label={collapsed ? 'развернуть' : 'свернуть'}
@@ -232,15 +277,31 @@ function LocationButton({
   isCurrent,
   onClick,
   disabled = false,
+  isPulsing = false,
 }: {
   loc: LocationConfig
   isCurrent: boolean
   onClick: () => void
   disabled?: boolean
+  /** Phase 23 Plan 23-05: pulse + glow на новой location button после unlock. */
+  isPulsing?: boolean
 }) {
   const { t } = useTranslation()
   const locName = t(`locations.${loc.id}`)
   const v = LOCATION_VISUAL[loc.id] ?? LOCATION_VISUAL[1]
+
+  // Box shadow assembly — pulse-glow override'ит обычный isCurrent ring (pink
+  // glow #ec4899 более яркий, чем isCurrent's solid pink ring). Pulse > Current.
+  const baseShadow = 'inset 0 1px 0 rgba(255,255,255,0.5), 0 2px 0 rgba(0,0,0,0.25)'
+  let boxShadow: string
+  if (isPulsing) {
+    // 16px glow + 4px spread #ec4899 → видимый pulse-ring «новая локация».
+    boxShadow = `${baseShadow}, 0 0 16px 4px #ec4899`
+  } else if (isCurrent) {
+    boxShadow = `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 2px #ec4899, 0 2px 0 rgba(0,0,0,0.25)`
+  } else {
+    boxShadow = baseShadow
+  }
 
   return (
     <div
@@ -264,6 +325,7 @@ function LocationButton({
         />
       )}
       <button
+        type="button"
         onClick={onClick}
         disabled={disabled}
         aria-label={locName}
@@ -276,17 +338,26 @@ function LocationButton({
           borderRadius: '50%',
           background: `linear-gradient(180deg, ${v.from} 0%, ${v.to} 100%)`,
           border: '2px solid ' + v.border,
-          boxShadow: isCurrent
-            ? `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 2px #ec4899, 0 2px 0 rgba(0,0,0,0.25)`
-            : 'inset 0 1px 0 rgba(255,255,255,0.5), 0 2px 0 rgba(0,0,0,0.25)',
+          boxShadow,
           fontSize: 20,
           lineHeight: 1,
           padding: 0,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          transform: isCurrent ? 'scale(1.05)' : 'scale(1)',
-          transition: 'transform 120ms',
+          // Pulse bobble (1.2s loop, infinite) перебивает isCurrent scale.
+          // Если ни pulse ни isCurrent — обычный 1.0 без анимации.
+          // transition только когда нет infinite animation — иначе мерцает.
+          transform:
+            isPulsing || isCurrent
+              ? isCurrent && !isPulsing
+                ? 'scale(1.05)'
+                : undefined
+              : 'scale(1)',
+          transition: isPulsing ? undefined : 'transform 120ms',
+          animation: isPulsing
+            ? 'onb-loc-bobble 1200ms ease-in-out infinite'
+            : undefined,
         }}
       >
         <span style={{ filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))' }}>
