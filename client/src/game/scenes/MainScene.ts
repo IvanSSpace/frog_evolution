@@ -226,6 +226,8 @@ export class MainScene extends Phaser.Scene {
     eventBus.on('dev:clearAllFrogs', this.locTransition.onDevClearAllFrogs)
     // Plan 22-03: carrier ascension visual hook.
     eventBus.on('cosmic:carrier-ascended', this.onCarrierAscended)
+    // Plan 22-05: cosmic shop «Cosmic Box» purchase → spawn 3 L7 frogs at random.
+    eventBus.on('cosmic:cosmic-box-purchased', this.onCosmicBoxPurchased)
 
     eventBus.on('rareCrate:claim', ({ level }) => {
       const store = useGameStore.getState()
@@ -519,6 +521,38 @@ export class MainScene extends Phaser.Scene {
     })
   }
 
+  // Plan 22-05: cosmic shop «Cosmic Box» purchase → spawn 3 L7 frogs.
+  // Placeholder spawn behavior (балансировка позже): L7 заранее, на random позициях
+  // в пределах поля. Также добавляем в store.locationFrogs для текущей локации,
+  // чтобы при reload они персистились (а не только визуально).
+  private onCosmicBoxPurchased = () => {
+    const store = useGameStore.getState()
+    const currentLoc = store.currentLocation
+    const SPAWN_LEVEL = 7
+    for (let i = 0; i < 3; i++) {
+      const { x, y } = this.randomFieldPos()
+      const newFrog = this.spawnFrog(x, y, SPAWN_LEVEL)
+      store.addFrogToLocation(currentLoc, SPAWN_LEVEL)
+      // Pop-in анимация (CSS-free, Phaser tween — Phaser legal).
+      newFrog.container.setScale(0)
+      this.tweens.add({
+        targets: newFrog.container,
+        scale: BASE_SCALE * 1.2,
+        duration: 200,
+        delay: i * 80,
+        ease: 'Back.easeOut',
+        onComplete: () => {
+          this.tweens.add({
+            targets: newFrog.container,
+            scale: BASE_SCALE,
+            duration: 120,
+            ease: 'Power2.easeOut',
+          })
+        },
+      })
+    }
+  }
+
   private drainOfflineBoxBuffer() {
     if (_offlineBoxBuffer <= 0) return
     const store = useGameStore.getState()
@@ -672,6 +706,8 @@ export class MainScene extends Phaser.Scene {
     eventBus.off('dev:clearAllFrogs', this.locTransition.onDevClearAllFrogs)
     eventBus.off('rareCrate:claim')
     eventBus.off('cosmic:carrier-ascended', this.onCarrierAscended)
+    // Plan 22-05: shop cosmic-box event handler cleanup.
+    eventBus.off('cosmic:cosmic-box-purchased', this.onCosmicBoxPurchased)
     // Phase 12: освобождаем все overlay'ы и dropAll pool.
     this.overlayManager?.dispose()
     this.overlayManager = null

@@ -26,10 +26,10 @@
     "24": "Toad Seer"
   },
   "locations": {
-    "1": "Swamp",
-    "2": "Forest",
-    "3": "Continent",
-    "4": "Planet"
+    "1": "Puddle",
+    "2": "Swamp",
+    "3": "Forest",
+    "4": "Continent"
   },
   "header": {
     "per_sec": "/sec"
@@ -207,6 +207,7 @@
     "tab_serums": "Serums",
     "tab_bestiary": "Bestiary",
     "tab_carriers": "Carriers",
+    "tab_shop": "Shop",
     "lock_first_feed": "Unlocks after first feed",
     "lock_first_mission": "Unlocks after first mission",
     "scouts_placeholder": "Scouts coming in next update",
@@ -275,10 +276,10 @@
       "undo_label": "Undo",
       "undo_hint": "Revert last apply",
       "mis_tap_msg": "This serum works only on a level {{level}} frog ({{location}})",
+      "location_puddle": "Puddle",
       "location_swamp": "Swamp",
       "location_forest": "Forest",
-      "location_continent": "Continent",
-      "location_planet": "Planet"
+      "location_continent": "Continent"
     },
     "carrier": {
       "empty_state": "No carriers",
@@ -317,10 +318,10 @@
       }
     },
     "bestiary": {
+      "location_puddle": "Puddle",
       "location_swamp": "Swamp",
       "location_forest": "Forest",
       "location_continent": "Continent",
-      "location_planet": "Planet",
       "discovered_total": "Discovered {{count}} / {{total}}",
       "filter_all": "All",
       "rarity_common": "Common",
@@ -354,6 +355,42 @@
       "milestone_24": "Reward: epic serum for 24 cells",
       "milestone_96": "Reward: legendary serum for 96 cells",
       "milestone_576": "Reward: exclusive frog visual for 576 cells"
+    }
+  },
+  "cosmic_shop": {
+    "essence": "essence",
+    "serum_total": "serum total",
+    "buy": "Buy",
+    "insufficient": "Not enough",
+    "purchased_count": "Purchased: {{count}} times",
+    "pick_source_element": "Source (3 of one element required):",
+    "pick_skip_element": "Pay skip with:",
+    "skip_requires_transit": "Ship is not in transit — nothing to skip.",
+    "items": {
+      "cosmic_box": {
+        "title": "Cosmic box",
+        "desc": "Guaranteed 3 L7+ frogs at the current location."
+      },
+      "slot_plus_one": {
+        "title": "+1 slot",
+        "desc": "Permanently increases the field slot cap."
+      },
+      "ship_speed": {
+        "title": "+5% ship speed",
+        "desc": "Reduces travel time by 5% per level."
+      },
+      "serum_drop_chance": {
+        "title": "+0.5% serum drop chance",
+        "desc": "Increases base serum drop chance from boxes."
+      },
+      "skip_ship_cooldown": {
+        "title": "Skip ship cooldown",
+        "desc": "Instantly completes the current ship transit."
+      },
+      "serum_trade_up": {
+        "title": "Serum trade-up",
+        "desc": "3 serums of one element → 1 serum of a random element."
+      }
     }
   },
   "tutorial": {

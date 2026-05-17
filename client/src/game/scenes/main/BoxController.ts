@@ -45,6 +45,8 @@ import {
 import type { MainScene } from '../MainScene'
 import type { FrogSpawner } from './FrogSpawner'
 import type { MergeController } from './MergeController'
+// Phase 22 Plan 22-05: effective slot cap учитывает permaSlotBonus из cosmic shop.
+import { effectiveSlotCap } from '../../utils/shopBonuses'
 
 export class BoxController {
   private scene: MainScene
@@ -58,7 +60,11 @@ export class BoxController {
   }
 
   canSpawnBox(): boolean {
-    return this.scene.frogs.length + this.scene.boxes.length < MAX_ENTITIES
+    const cap = effectiveSlotCap(
+      MAX_ENTITIES,
+      useGameStore.getState().permaSlotBonus ?? 0,
+    )
+    return this.scene.frogs.length + this.scene.boxes.length < cap
   }
 
   spawnBox(isRare = false, preLanded = false) {

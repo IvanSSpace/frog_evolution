@@ -26,10 +26,10 @@
     "24": "Sapo Vidente"
   },
   "locations": {
-    "1": "Pantano",
-    "2": "Bosque",
-    "3": "Continente",
-    "4": "Planeta"
+    "1": "Charco",
+    "2": "Pantano",
+    "3": "Bosque",
+    "4": "Continente"
   },
   "header": {
     "per_sec": "/seg"
@@ -207,6 +207,7 @@
     "tab_serums": "Sueros",
     "tab_bestiary": "Bestiario",
     "tab_carriers": "Carriers",
+    "tab_shop": "Tienda",
     "lock_first_feed": "Se desbloquea tras la primera alimentación",
     "lock_first_mission": "Se desbloquea tras la primera misión",
     "scouts_placeholder": "Exploradores llegando próximamente",
@@ -275,10 +276,10 @@
       "undo_label": "Deshacer",
       "undo_hint": "Revertir último uso",
       "mis_tap_msg": "Este suero solo funciona en una rana de nivel {{level}} ({{location}})",
+      "location_puddle": "Charco",
       "location_swamp": "Pantano",
       "location_forest": "Bosque",
-      "location_continent": "Continente",
-      "location_planet": "Planeta"
+      "location_continent": "Continente"
     },
     "carrier": {
       "empty_state": "Sin carriers",
@@ -317,10 +318,10 @@
       }
     },
     "bestiary": {
+      "location_puddle": "Charco",
       "location_swamp": "Pantano",
       "location_forest": "Bosque",
       "location_continent": "Continente",
-      "location_planet": "Planeta",
       "discovered_total": "Descubiertos {{count}} / {{total}}",
       "filter_all": "Todos",
       "rarity_common": "Comunes",
@@ -354,6 +355,42 @@
       "milestone_24": "Recompensa: suero épico por 24 celdas",
       "milestone_96": "Recompensa: suero legendario por 96 celdas",
       "milestone_576": "Recompensa: visual exclusivo de rana por 576 celdas"
+    }
+  },
+  "cosmic_shop": {
+    "essence": "esencia",
+    "serum_total": "suero total",
+    "buy": "Comprar",
+    "insufficient": "Insuficiente",
+    "purchased_count": "Comprado: {{count}} veces",
+    "pick_source_element": "Fuente (se requieren 3 del mismo elemento):",
+    "pick_skip_element": "Pagar el salto con:",
+    "skip_requires_transit": "La nave no está en tránsito — nada que saltar.",
+    "items": {
+      "cosmic_box": {
+        "title": "Caja cósmica",
+        "desc": "Garantiza 3 ranas L7+ en la ubicación actual."
+      },
+      "slot_plus_one": {
+        "title": "+1 hueco",
+        "desc": "Aumenta permanentemente el límite de huecos del campo."
+      },
+      "ship_speed": {
+        "title": "+5% velocidad de la nave",
+        "desc": "Reduce el tiempo de viaje un 5% por nivel."
+      },
+      "serum_drop_chance": {
+        "title": "+0,5% prob. de suero",
+        "desc": "Aumenta la probabilidad base de soltar suero de las cajas."
+      },
+      "skip_ship_cooldown": {
+        "title": "Saltar enfriamiento",
+        "desc": "Completa al instante el viaje actual de la nave."
+      },
+      "serum_trade_up": {
+        "title": "Intercambio de suero",
+        "desc": "3 sueros del mismo elemento → 1 suero de un elemento aleatorio."
+      }
     }
   },
   "tutorial": {

@@ -15,6 +15,8 @@ import {
   planetElementInputs,
 } from '../../../game/data/missionConfig'
 import { elementFromPlanet } from '../../../game/effects/elements/elementMapping'
+// Phase 22 Plan 22-05: ship speed perma upgrade from cosmic shop.
+import { shipSpeedMultiplier } from '../../../game/utils/shopBonuses'
 
 export type ShipActions = Pick<
   CosmicSliceActions,
@@ -94,7 +96,10 @@ export function createShipSlice(set: SetFn, get: GetFn): ShipActions {
       }
 
       const dist = planetDistance(fromPos, { x: target.x, y: target.y })
-      const dur = travelTimeMs(dist)
+      // Phase 22 Plan 22-05: ship_speed shop perma upgrade → /multiplier.
+      const baseDur = travelTimeMs(dist)
+      const speedMult = shipSpeedMultiplier(get().permaShipSpeedBonus ?? 0)
+      const dur = baseDur / speedMult
       const now = Date.now()
       set({
         ship: {
