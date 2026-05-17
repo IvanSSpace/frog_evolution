@@ -13,6 +13,7 @@ import { ShipTab } from './ShipTab'
 import { SerumInventoryTab } from './SerumInventoryTab'
 import { BestiaryTab } from './BestiaryTab'
 import { CarriersTab } from './CarriersTab'
+import { CosmicShopTab } from './CosmicShopTab'
 import { PityCounterDisplay } from './PityCounterDisplay'
 
 const SESSION_KEY = 'cosmic_last_tab'
@@ -24,7 +25,8 @@ function getInitialTab(): CosmicTab {
       saved === 'scouts' ||
       saved === 'boxes' ||
       saved === 'bestiary' ||
-      saved === 'carriers'
+      saved === 'carriers' ||
+      saved === 'shop'
     ) {
       return saved
     }
@@ -87,6 +89,13 @@ export default function CosmicHubModal({ onClose }: Props) {
       // Phase 17: carriers tab всегда видим. Empty state когда carriers пуст.
       enabled: true,
     },
+    {
+      id: 'shop',
+      label: t('cosmic_hub.tab_shop'),
+      icon: '🛒',
+      // Phase 22 Plan 22-05: shop всегда виден (essence обнуляется в empty state UI).
+      enabled: true,
+    },
   ]
 
   // Если активный таб теперь disabled — fall back на первый enabled
@@ -121,6 +130,8 @@ export default function CosmicHubModal({ onClose }: Props) {
         return <BestiaryTab />
       case 'carriers':
         return <CarriersTab />
+      case 'shop':
+        return <CosmicShopTab />
     }
   }
 
