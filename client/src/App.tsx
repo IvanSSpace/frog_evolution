@@ -29,6 +29,7 @@ import { SerumModal } from './components/CosmicHub/SerumModal'
 import { SerumBar } from './components/SerumBar'
 import { ActiveBonusesBar } from './components/HUD/ActiveBonusesBar'
 import { installBestiaryDevHelpers } from './utils/devHelpers'
+import { installOnboardingDevHelpers } from './utils/onboardingDevHelpers'
 import { devLog } from './utils/devLog'
 import { pingHealth } from './api/client'
 import { ensureLogin } from './api/auth'
@@ -237,6 +238,8 @@ function App() {
 
     // Phase 18: bestiary dev helpers (window.__unlockBestiaryCells / __bestiaryCount / __resetBestiary).
     installBestiaryDevHelpers()
+    // Phase 23 Plan 23-01: onboarding dev helpers (__resetOnboarding / __skipOnboarding).
+    installOnboardingDevHelpers()
 
     return () => {
       delete w.__resetCrewToday
@@ -249,6 +252,8 @@ function App() {
       delete w.__unlockBestiaryCells
       delete w.__bestiaryCount
       delete w.__resetBestiary
+      delete w.__resetOnboarding
+      delete w.__skipOnboarding
     }
   }, [])
 

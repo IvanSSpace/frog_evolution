@@ -440,5 +440,22 @@
         "other": "Other"
       }
     }
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "Frog Evolution",
+      "subtitle": "Tap frogs. Merge same. Discover the world.",
+      "cta": "Start"
+    },
+    "tapHint": {
+      "label": "Tap 👆"
+    },
+    "mergeHint": {
+      "label": "Drag one onto another",
+      "success": "Done! Now merge everything"
+    },
+    "location": {
+      "unlocked": "{{name}} unlocked! Tap the icon to visit"
+    }
   }
 }

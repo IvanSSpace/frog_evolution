@@ -440,5 +440,22 @@
         "other": "Otro"
       }
     }
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "Frog Evolution",
+      "subtitle": "Toca ranas. Junta iguales. Descubre el mundo.",
+      "cta": "Empezar"
+    },
+    "tapHint": {
+      "label": "Toca 👆"
+    },
+    "mergeHint": {
+      "label": "Arrastra una sobre la otra",
+      "success": "¡Listo! Ahora junta todo"
+    },
+    "location": {
+      "unlocked": "¡{{name}} desbloqueado! Toca el icono para visitar"
+    }
   }
 }
