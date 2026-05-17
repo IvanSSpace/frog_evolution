@@ -37,6 +37,7 @@ const STAR_MAP_PROTOTYPE_LOC: LocationConfig = {
 export function LocationStack() {
   const currentLocation = useGameStore((s) => s.currentLocation)
   const setCurrentLocation = useGameStore((s) => s.setCurrentLocation)
+  const locationFrogs = useGameStore((s) => s.locationFrogs)
   // Phase 22 Plan 22-06: cosmos gate — pre-cosmos Star Map (id=6) скрыта.
   const cosmosUnlocked = useCosmosUnlocked()
   const [collapsed, setCollapsed] = useState(false)
@@ -67,15 +68,25 @@ export function LocationStack() {
     }
   }, [starMapActive])
 
-  // Сверху вниз: 6 (Звёздная карта) → 3 → 2 → 1
-  // Прогрессивный анлок временно отключён (по запросу автора) —
-  // все локации видны всегда. Helper `getUnlockedLocations` и
-  // эмиты `'location:unlocked'` оставлены в коде на месте, но
-  // не гейтят отображение.
+  // Сверху вниз: 6 (Звёздная карта) → 4 → 3 → 2 → 1
   // Phase 22 Plan 22-06: Звёздная карта (id=6) скрыта до cosmos unlock.
+  // Фильтр локаций по наличию лягушек:
+  //   - Лужа (id=1) — всегда видна (стартовая локация)
+  //   - Текущая локация — всегда видна (иначе игрок застрянет)
+  //   - Остальные — только если на них есть хотя бы одна лягушка
+  // Прогрессивный анлок по discoveredLevels отключён — populated-фильтр заменяет.
+  const farmLocations = [...LOCATIONS]
+    .slice()
+    .reverse()
+    .filter((loc) => {
+      if (loc.id === 1) return true
+      if (loc.id === currentLocation) return true
+      const frogs = locationFrogs[loc.id - 1] ?? []
+      return frogs.length > 0
+    })
   const ordered: LocationConfig[] = cosmosUnlocked
-    ? [STAR_MAP_PROTOTYPE_LOC, ...[...LOCATIONS].slice().reverse()]
-    : [...[...LOCATIONS].slice().reverse()]
+    ? [STAR_MAP_PROTOTYPE_LOC, ...farmLocations]
+    : farmLocations
 
   const handleSelect = (id: number) => {
     if (transitioning || starMapTransitioning) return
