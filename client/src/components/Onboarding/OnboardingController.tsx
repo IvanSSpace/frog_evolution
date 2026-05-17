@@ -2,13 +2,13 @@
 //
 // State machine:
 //   Beat 1: Welcome modal (if !welcomeSeen) — Plan 23-02 ✓ integrated below
-//   Beat 2: Tap-hint pulse (if welcomeSeen && !firstBoxTapSeen && box landed) — Plan 23-03
+//   Beat 2: Tap-hint pulse (if welcomeSeen && !firstBoxTapSeen && box landed) — Plan 23-03 ✓
 //   Beat 3: Merge demo (if firstBoxTapSeen && !firstMergeSeen && ≥2 L1 frogs) — Plan 23-04
 //   Beat 4: Location celebration on 'location:unlocked' (if !locationsCelebrated[id]) — Plan 23-05
 //
-// Plan 23-02 (this update): adds Beat 1 conditional render. Other beats остаются
-// placeholder'ами — будут добавлены последующими планами как новые JSX branches
-// рядом с WelcomeModal.
+// Plan 23-03 (this update): mounts TapHintOverlay (DOM label «Тапни 👆») когда
+// игрок прошёл Welcome но ещё не тапнул первый бокс. Phaser pulse ring живёт
+// отдельно в BoxController; здесь только DOM-anchor под ним.
 //
 // IMPORTANT (memory feedback_clickability): all future beat overlays must use
 //   - <button type="button"> for interactive elements
@@ -20,16 +20,23 @@
 
 import { useOnboardingStore } from '../../store/onboarding/onboardingSlice'
 import { WelcomeModal } from './WelcomeModal'
+import { TapHintOverlay } from './TapHintOverlay'
 
 export function OnboardingController() {
   // Per-flag selectors — каждый render зависит только от своего флага,
   // никаких лишних re-render'ов когда меняется чужой флаг.
   const welcomeSeen = useOnboardingStore((s) => s.welcomeSeen)
-  // firstBoxTapSeen / firstMergeSeen / locationsCelebrated будут добавлены
-  // Plan 23-03..05 как новые селекторы рядом.
+  // Plan 23-03: Beat 2 mount-условие — Welcome пройден, но Beat 2 ещё не seen.
+  const firstBoxTapSeen = useOnboardingStore((s) => s.firstBoxTapSeen)
+  // firstMergeSeen / locationsCelebrated будут добавлены Plan 23-04..05.
 
   // WelcomeModal сам вызывает markWelcomeSeen() в конце своей fade-out animation;
   // как только store mutates, этот компонент re-render'ится с welcomeSeen=true
   // → WelcomeModal unmount'ится автоматически.
-  return <>{!welcomeSeen && <WelcomeModal />}</>
+  return (
+    <>
+      {!welcomeSeen && <WelcomeModal />}
+      {welcomeSeen && !firstBoxTapSeen && <TapHintOverlay />}
+    </>
+  )
 }

@@ -47,6 +47,17 @@ import type { FrogSpawner } from './FrogSpawner'
 import type { MergeController } from './MergeController'
 // Phase 22 Plan 22-05: effective slot cap учитывает permaSlotBonus из cosmic shop.
 import { effectiveSlotCap } from '../../utils/shopBonuses'
+// Phase 23 Plan 23-03 — Beat 2 (Tap-hint): onboarding state + pulse ring effect.
+import { useOnboardingStore } from '../../../store/onboarding/onboardingSlice'
+import { TutorialPulseRing } from '../../effects/TutorialPulseRing'
+
+// Phase 23 Plan 23-03: registry key для cross-controller access к активному
+// tutorial ring'у. BoxController создаёт, dismiss-handlers destroy'ят.
+const TUTORIAL_RING_REGISTRY_KEY = '__tutorialPulseRing'
+// Sentinel auto-dismiss timeout — должен совпадать с TapHintOverlay (TapHintOverlay.tsx).
+const TUTORIAL_RING_AUTO_DISMISS_MS = 5000
+// Delay перед спавном ring'а после box landing (CONTEXT.md Beat 2).
+const TUTORIAL_RING_DELAY_MS = 300
 
 export class BoxController {
   private scene: MainScene
@@ -101,6 +112,8 @@ export class BoxController {
       baseY: targetY,
       idleTween: null,
       isRare,
+      // Phase 23 Plan 23-03 — per-box id для tutorial event coupling.
+      id: `box_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
     }
     scene.boxes.push(box)
     scene.syncEntityCount()
@@ -110,6 +123,11 @@ export class BoxController {
     img.on('pointerdown', () => {
       if (box.isLanding) return
       hapticImpact('medium')
+      // Phase 23 Plan 23-03 — Beat 2 dismiss: первый tap ЛЮБОГО бокса гасит
+      // tap-hint. Помечаем seen в store + эмитим event для DOM overlay
+      // и destroy'ит ring (вне зависимости от какого бокса тап — даже не того,
+      // вокруг которого был ring).
+      this.dismissTutorialTapHint(box.id ?? '')
       // Открываем тапнутую коробку + все приземлившиеся в радиусе
       const cx = box.img.x
       const cy = box.img.y
@@ -146,10 +164,89 @@ export class BoxController {
             img.scaleY = baseScale
             box.isLanding = false
             this.startBoxIdleAnim(box)
+            // Phase 23 Plan 23-03 — Beat 2 trigger: первый бокс приземлился.
+            this.maybeSpawnTutorialTapHint(box)
           },
         })
       },
     })
+  }
+
+  /**
+   * Phase 23 Plan 23-03 (Beat 2) — пробуем поднять tap-hint вокруг этого бокса.
+   * Не делает ничего если:
+   *   - welcomeSeen=false (Beat 1 ещё не пройден)
+   *   - firstBoxTapSeen=true (Beat 2 уже завершён)
+   *   - в scene.registry уже лежит активный ring (другой бокс был первым)
+   *
+   * Через 300ms (CONTEXT.md) re-check'ает state — если за это время другой
+   * бокс уже создал ring или игрок успел тапнуть, выходим silently.
+   */
+  private maybeSpawnTutorialTapHint(box: BoxData): void {
+    const scene = this.scene
+    // Quick reject — избегаем setTimeout если уже не нужно.
+    const s0 = useOnboardingStore.getState()
+    if (!s0.welcomeSeen || s0.firstBoxTapSeen) return
+    if (scene.registry.get(TUTORIAL_RING_REGISTRY_KEY)) return
+
+    scene.time.delayedCall(TUTORIAL_RING_DELAY_MS, () => {
+      // Re-check after delay — состояние могло измениться.
+      const s = useOnboardingStore.getState()
+      if (!s.welcomeSeen || s.firstBoxTapSeen) return
+      if (scene.registry.get(TUTORIAL_RING_REGISTRY_KEY)) return
+      // Бокс мог быть открыт / destroy'ен / уже не активен.
+      if (!box.img.active || !scene.boxes.includes(box)) return
+
+      const radius = (box.img.displayWidth * 0.7) / 2 + 6 * DPR
+      const ring = new TutorialPulseRing({
+        scene,
+        target: box.img,
+        radius,
+      })
+      scene.registry.set(TUTORIAL_RING_REGISTRY_KEY, ring)
+
+      eventBus.emit('tutorial:firstBoxSpawned', {
+        x: box.img.x,
+        y: box.img.y,
+        boxId: box.id ?? '',
+        width: box.img.displayWidth,
+      })
+
+      // Sentinel auto-dismiss — на случай если игрок никогда не тапнет бокс
+      // (бокс может open'нуться от другого пути, или пользователь afk).
+      // TapHintOverlay тоже своим таймером пометит seen=true; здесь дублируем
+      // только destroy ring'а как страховку.
+      scene.time.delayedCall(TUTORIAL_RING_AUTO_DISMISS_MS, () => {
+        const cur = scene.registry.get(TUTORIAL_RING_REGISTRY_KEY) as
+          | TutorialPulseRing
+          | undefined
+        if (cur === ring) {
+          ring.destroy()
+          scene.registry.set(TUTORIAL_RING_REGISTRY_KEY, undefined)
+        }
+      })
+    })
+  }
+
+  /**
+   * Phase 23 Plan 23-03 (Beat 2 dismiss) — общий dismiss hook для box-tap.
+   * Срабатывает на КАЖДЫЙ box pointerdown; реальную работу делает только
+   * если state ещё не seen. Idempotent.
+   */
+  private dismissTutorialTapHint(boxId: string): void {
+    const s = useOnboardingStore.getState()
+    if (!s.welcomeSeen || s.firstBoxTapSeen) return
+
+    s.markFirstBoxTapSeen()
+    eventBus.emit('tutorial:firstBoxTapped', { boxId })
+
+    const ring = this.scene.registry.get(TUTORIAL_RING_REGISTRY_KEY) as
+      | TutorialPulseRing
+      | undefined
+    if (ring) {
+      ring.destroy()
+      this.scene.registry.set(TUTORIAL_RING_REGISTRY_KEY, undefined)
+    }
   }
 
   startBoxIdleAnim(box: BoxData) {

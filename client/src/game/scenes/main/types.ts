@@ -54,6 +54,9 @@ export interface BoxData {
   baseY: number
   idleTween: Phaser.Tweens.TweenChain | null
   isRare?: boolean
+  // Phase 23 Plan 23-03 — stable id для tutorial tap-hint event coupling
+  // (tutorial:firstBoxSpawned/firstBoxTapped). Per-box unique, session-only.
+  id?: string
 }
 
 export interface MagnetData {
