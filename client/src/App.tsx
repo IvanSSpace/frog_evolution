@@ -24,6 +24,7 @@ import { GalleryModal } from './components/Gallery/GalleryModal'
 import { GalleryDetailModal } from './components/Gallery/GalleryDetailModal'
 import { MilestoneToast } from './components/CosmicHub/bestiary/MilestoneToast'
 import { TutorialOverlay } from './components/Tutorial/TutorialOverlay'
+import { OnboardingController } from './components/Onboarding/OnboardingController'
 import { SerumModal } from './components/CosmicHub/SerumModal'
 import { SerumBar } from './components/SerumBar'
 import { ActiveBonusesBar } from './components/HUD/ActiveBonusesBar'
@@ -315,6 +316,9 @@ function App() {
       <MilestoneToast />
       {/* Phase 19-05 (UX-08): tutorial overlay — always mounted; conditional null-render. */}
       <TutorialOverlay />
+      {/* Phase 23 Plan 23-01: onboarding coordinator (Wave 1 — empty shell;
+          Plan 23-02..05 add Welcome / TapHint / MergeDemo / LocationCelebration overlays). */}
+      <OnboardingController />
       {discovered !== null && (
         <DiscoveryModal
           level={discovered}
