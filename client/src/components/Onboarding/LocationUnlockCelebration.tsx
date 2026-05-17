@@ -133,25 +133,23 @@ export function LocationUnlockCelebration() {
       onClick={beginExit}
       style={{
         position: 'fixed',
-        bottom: 120,
+        bottom: 100,
         left: '50%',
-        transform: 'translate3d(-50%, 0, 0)',
+        transform: 'translateX(-50%)',
         zIndex: 101,
         padding: '10px 20px',
         borderRadius: 14,
-        background: 'rgba(236, 72, 153, 0.92)',
+        background: '#ec4899',
         color: '#fff',
         fontWeight: 700,
         fontSize: 15,
         cursor: 'pointer',
         touchAction: 'manipulation',
-        // Hard cap для toast чтобы не растягивался во весь экран
-        maxWidth: 'min(calc(100vw - 32px), 340px)',
+        maxWidth: 340,
         boxSizing: 'border-box',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        textShadow: '0 1px 2px rgba(0,0,0,0.5)',
       }}
     >
       {t('onboarding.location.unlocked', { name: `${info.emoji} ${name}` })}

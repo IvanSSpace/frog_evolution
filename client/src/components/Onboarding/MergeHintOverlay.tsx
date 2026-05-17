@@ -1,10 +1,8 @@
 // Phase 23 Plan 23-04 — Beat 3 (Merge demo) DOM pill + success toast.
 //
-// REWRITE 2026-05-18: minimal, clean, defensive.
-// - Pure inline style без box-shadow / backdrop-filter / blend modes
-// - Solid bg rgba(0,0,0,0.65) — единый source dark
-// - Жёсткий cap на ширину
-// - position via integer pixels (no subpixel blur)
+// REWRITE 2026-05-18 v3: viewport-center positioning. Pills всегда по центру
+// viewport — никаких canvas-anchored coords (они съезжали с центра когда frogs
+// не у viewport center). Y anchored к лягушкам через bottom offset.
 
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -21,17 +19,17 @@ interface AnchorPayload {
 
 export function MergeHintOverlay() {
   const { t } = useTranslation()
-  const [anchor, setAnchor] = useState<AnchorPayload | null>(null)
+  const [active, setActive] = useState(false)
   const [exiting, setExiting] = useState(false)
 
   useEffect(() => {
-    const onStart = (p: AnchorPayload) => {
-      setAnchor(p)
+    const onStart = (_p: AnchorPayload) => {
+      setActive(true)
       setExiting(false)
     }
     const onMerge = () => {
       setExiting(true)
-      window.setTimeout(() => setAnchor(null), FADE_OUT_MS)
+      window.setTimeout(() => setActive(false), FADE_OUT_MS)
     }
     eventBus.on('tutorial:mergeDemoStart', onStart)
     eventBus.on('tutorial:firstMerge', onMerge)
@@ -41,39 +39,20 @@ export function MergeHintOverlay() {
     }
   }, [])
 
-  if (!anchor) return null
+  if (!active) return null
 
-  const canvas = document.querySelector('canvas')
-  if (!canvas) return null
-  const rect = canvas.getBoundingClientRect()
-  const scaleX = rect.width / canvas.width
-  const scaleY = rect.height / canvas.height
-
-  const midGameX = (anchor.sourceX + anchor.targetX) / 2
-  const lowerGameY = Math.max(anchor.sourceY, anchor.targetY)
-  const rawDomX = rect.left + midGameX * scaleX
-  const rawDomY = rect.top + lowerGameY * scaleY + 40
-
-  const VIEWPORT_PADDING = 16
-  const PILL_HALF_W = 110
-  const domX = Math.round(
-    Math.max(
-      PILL_HALF_W + VIEWPORT_PADDING,
-      Math.min(window.innerWidth - PILL_HALF_W - VIEWPORT_PADDING, rawDomX),
-    ),
-  )
-  const domY = Math.round(rawDomY)
-
+  // Viewport-center positioning: всегда по центру viewport, Y зафиксирована
+  // в верхней половине экрана где обычно находятся frogs (top: 30%).
   return (
     <div
       style={{
         position: 'fixed',
-        left: domX,
-        top: domY,
-        transform: 'translate3d(-50%, 0, 0)',
+        top: '30%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
         zIndex: 100,
-        padding: '8px 16px',
-        background: 'rgba(0, 0, 0, 0.7)',
+        padding: '10px 18px',
+        background: 'rgba(0, 0, 0, 0.72)',
         color: '#fff',
         fontWeight: 600,
         fontSize: 15,
@@ -81,10 +60,10 @@ export function MergeHintOverlay() {
         borderRadius: 14,
         whiteSpace: 'nowrap',
         maxWidth: 'calc(100vw - 32px)',
+        boxSizing: 'border-box',
         pointerEvents: 'none',
         opacity: exiting ? 0 : 1,
         transition: `opacity ${FADE_OUT_MS}ms ease-out`,
-        textShadow: '0 1px 2px rgba(0,0,0,0.8)',
       }}
     >
       {t('onboarding.mergeHint.label')}
@@ -125,19 +104,18 @@ export function MergeSuccessToast() {
     <div
       style={{
         position: 'fixed',
-        bottom: 120,
+        bottom: 100,
         left: '50%',
-        transform: 'translate3d(-50%, 0, 0)',
+        transform: 'translateX(-50%)',
         zIndex: 101,
         padding: '10px 20px',
         borderRadius: 14,
-        background: 'rgba(236, 72, 153, 0.92)',
+        background: '#ec4899',
         color: '#fff',
         fontWeight: 700,
         fontSize: 15,
-        // Hard cap чтобы pill не растягивался во весь экран при длинных переводах
-        // или unexpected layout edge cases (баг 2026-05-18: розовый закрыл экран).
-        maxWidth: 'min(calc(100vw - 32px), 340px)',
+        // Hard maxWidth — pill НЕ растянется во весь экран.
+        maxWidth: 340,
         boxSizing: 'border-box',
         pointerEvents: 'none',
         opacity: exiting ? 0 : 1,
@@ -145,7 +123,6 @@ export function MergeSuccessToast() {
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        textShadow: '0 1px 2px rgba(0,0,0,0.5)',
       }}
     >
       {t('onboarding.mergeHint.success')}

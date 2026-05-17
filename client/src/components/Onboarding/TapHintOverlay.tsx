@@ -1,6 +1,8 @@
-// Phase 23 Plan 23-03 — Beat 2 (Tap-hint) DOM label под pulse ring'ом.
+// Phase 23 Plan 23-03 — Beat 2 (Tap-hint) DOM label.
 //
-// REWRITE 2026-05-18: minimal clean pill. Solid bg, no shadow, integer pixels.
+// REWRITE 2026-05-18 v3: viewport-center positioning. Pill всегда по центру
+// viewport — canvas-anchored coords съезжали. Y зафиксирована в нижней части
+// над BottomBar (bottom: 25%).
 
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -19,19 +21,19 @@ const FADE_OUT_MS = 300
 
 export function TapHintOverlay() {
   const { t } = useTranslation()
-  const [spawn, setSpawn] = useState<SpawnPayload | null>(null)
+  const [active, setActive] = useState(false)
   const [exiting, setExiting] = useState(false)
 
   useEffect(() => {
-    const onSpawn = (p: SpawnPayload) => {
+    const onSpawn = (_p: SpawnPayload) => {
       const s = useOnboardingStore.getState()
       if (!s.welcomeSeen || s.firstBoxTapSeen) return
-      setSpawn(p)
+      setActive(true)
       setExiting(false)
     }
     const onTapped = () => {
       setExiting(true)
-      window.setTimeout(() => setSpawn(null), FADE_OUT_MS)
+      window.setTimeout(() => setActive(false), FADE_OUT_MS)
     }
     eventBus.on('tutorial:firstBoxSpawned', onSpawn)
     eventBus.on('tutorial:firstBoxTapped', onTapped)
@@ -42,47 +44,30 @@ export function TapHintOverlay() {
   }, [])
 
   useEffect(() => {
-    if (!spawn || exiting) return
+    if (!active || exiting) return
     const t1 = window.setTimeout(() => {
       setExiting(true)
       window.setTimeout(() => {
-        setSpawn(null)
+        setActive(false)
         useOnboardingStore.getState().markFirstBoxTapSeen()
       }, FADE_OUT_MS)
     }, AUTO_FADE_MS)
     return () => clearTimeout(t1)
-  }, [spawn, exiting])
+  }, [active, exiting])
 
-  if (!spawn) return null
+  if (!active) return null
 
-  const canvas = document.querySelector('canvas')
-  if (!canvas) return null
-  const rect = canvas.getBoundingClientRect()
-  const scaleX = rect.width / canvas.width
-  const scaleY = rect.height / canvas.height
-  const rawDomX = rect.left + spawn.x * scaleX
-  const rawDomY = rect.top + (spawn.y + spawn.width * 0.7) * scaleY + 12
-
-  const VIEWPORT_PADDING = 16
-  const PILL_HALF_W = 60
-  const domX = Math.round(
-    Math.max(
-      PILL_HALF_W + VIEWPORT_PADDING,
-      Math.min(window.innerWidth - PILL_HALF_W - VIEWPORT_PADDING, rawDomX),
-    ),
-  )
-  const domY = Math.round(rawDomY)
-
+  // Viewport-center positioning. Над BottomBar (~80px).
   return (
     <div
       style={{
         position: 'fixed',
-        left: domX,
-        top: domY,
-        transform: 'translate3d(-50%, 0, 0)',
+        bottom: '20%',
+        left: '50%',
+        transform: 'translateX(-50%)',
         zIndex: 100,
-        padding: '8px 14px',
-        background: 'rgba(0, 0, 0, 0.7)',
+        padding: '10px 18px',
+        background: 'rgba(0, 0, 0, 0.72)',
         color: '#fff',
         fontWeight: 600,
         fontSize: 15,
@@ -90,10 +75,10 @@ export function TapHintOverlay() {
         borderRadius: 14,
         whiteSpace: 'nowrap',
         maxWidth: 'calc(100vw - 32px)',
+        boxSizing: 'border-box',
         pointerEvents: 'none',
         opacity: exiting ? 0 : 1,
         transition: `opacity ${FADE_OUT_MS}ms ease-out`,
-        textShadow: '0 1px 2px rgba(0,0,0,0.8)',
       }}
     >
       {t('onboarding.tapHint.label')}

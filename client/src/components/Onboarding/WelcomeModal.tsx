@@ -1,29 +1,8 @@
 // Phase 23 Plan 23-02 — Beat 1: Welcome modal.
 //
-// Single-action modal: появляется при первом запуске (welcomeSeen=false),
-// закрывается ИСКЛЮЧИТЕЛЬНО через CTA «Начать». Backdrop click игнорируется
-// (это первый и единственный blocking step в onboarding — у игрока должен быть
-// один очевидный путь дальше).
-//
-// Visual language:
-//   - Pastel gradient bg (lake-blue → swamp-green) — связь с миром локаций
-//   - Inline L1 frog SVG (bobbing animation) — символ героя игры
-//   - Pink CTA gradient (#f9a8d4 → #ec4899) — reuse от LocationStack
-//
-// Cliclability checklist (memory feedback_clickability):
-//   - <button type="button"> ✓
-//   - z-index 100 (выше Phaser canvas и LocationStack) ✓
-//   - touchAction: 'manipulation' (no 300ms tap delay on mobile) ✓
-//   - Backdrop intentionally без onClick (single-action) ✓
-//   - Inner modal stopPropagation чтобы будущие изменения backdrop не ломали клик ✓
-//
-// Animation (memory feedback_animations):
-//   - CSS keyframes, не Lottie
-//   - Frog bob — DOM SVG, отдельная сущность от Phaser frog.container,
-//     никакого риска mерцания (memory feedback_frog_container_alpha n/a)
-//
-// Render path: createPortal → document.body, чтобы overlay был вне React tree
-// LocationStack/Phaser host и не наследовал их transform/z-index quirks.
+// REWRITE 2026-05-18: hard-capped dimensions, no flex stretch, no full-width CTA.
+// User reported PINK на весь экран — CTA button с width:100% растягивался в
+// каком-то edge case. Теперь width: auto + max-width + display: inline-block.
 
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -31,8 +10,6 @@ import { useTranslation } from 'react-i18next'
 import { useOnboardingStore } from '../../store/onboarding/onboardingSlice'
 import './welcomeModal.css'
 
-// Delay чтобы fade-out animation успела отыграть до unmount.
-// Совпадает с длительностью @keyframes onb-welcome-fade-out (400ms).
 const FADE_OUT_MS = 400
 
 export function WelcomeModal() {
@@ -41,16 +18,12 @@ export function WelcomeModal() {
   const [exiting, setExiting] = useState(false)
 
   const handleCta = () => {
-    if (exiting) return // двойной тап guard
+    if (exiting) return
     setExiting(true)
-    // markSeen() триггерит re-render OnboardingController → unmount WelcomeModal.
-    // Откладываем до конца fade-out, иначе пользователь увидит резкое исчезновение.
     window.setTimeout(() => {
       markSeen()
     }, FADE_OUT_MS)
   }
-
-  // Backdrop intentionally без onClick — single-action UX.
 
   const node = (
     <div
@@ -70,29 +43,30 @@ export function WelcomeModal() {
         touchAction: 'manipulation',
       }}
     >
+      {/* Modal card — hard width/height caps + no flex stretch */}
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          maxWidth: 320,
           width: '100%',
-          padding: '32px 24px 24px',
+          maxWidth: 320,
+          maxHeight: 'calc(100vh - 64px)',
+          padding: '28px 20px 22px',
           borderRadius: 16,
-          background: 'linear-gradient(180deg, #bae6fd 0%, #bef264 100%)',
-          boxShadow:
-            'inset 0 1px 0 rgba(255,255,255,0.45), 0 8px 20px rgba(0,0,0,0.35)',
-          border: '2px solid rgba(255,255,255,0.6)',
+          background: '#1a2e1a',
+          border: '2px solid rgba(255,255,255,0.15)',
           textAlign: 'center',
+          boxSizing: 'border-box',
+          overflow: 'hidden',
         }}
       >
         <h1
           id="onb-welcome-title"
           style={{
             margin: 0,
-            fontSize: 32,
-            fontWeight: 900,
-            color: '#0c4a6e',
-            textShadow: '0 1px 0 rgba(255,255,255,0.6)',
-            lineHeight: 1.1,
+            fontSize: 26,
+            fontWeight: 800,
+            color: '#fde68a',
+            lineHeight: 1.15,
           }}
         >
           {t('onboarding.welcome.title')}
@@ -100,38 +74,35 @@ export function WelcomeModal() {
 
         <p
           style={{
-            marginTop: 8,
+            marginTop: 10,
             marginBottom: 16,
             fontSize: 14,
-            fontWeight: 600,
-            color: '#365314',
+            fontWeight: 500,
+            color: '#d4d4d8',
             lineHeight: 1.4,
           }}
         >
           {t('onboarding.welcome.subtitle')}
         </p>
 
-        {/*
-         * Inline SVG для нулевых external asset deps (быстрый mount, нет
-         * flash-of-no-image). Plan 23-06 может заменить на existing frog
-         * asset когда визуальный язык frog assets окончательно устаканится.
-         */}
         <div
           className="onb-welcome-frog"
-          style={{ margin: '8px auto 20px', width: 96, height: 96 }}
+          style={{
+            margin: '4px auto 16px',
+            width: 72,
+            height: 72,
+            display: 'block',
+          }}
         >
-          <svg viewBox="0 0 100 100" width="96" height="96">
-            {/* Body */}
+          <svg viewBox="0 0 100 100" width="72" height="72">
             <ellipse cx="50" cy="60" rx="34" ry="28" fill="#65a30d" />
             <ellipse cx="50" cy="58" rx="28" ry="20" fill="#a3e635" />
-            {/* Eyes */}
             <circle cx="36" cy="36" r="12" fill="#65a30d" />
             <circle cx="64" cy="36" r="12" fill="#65a30d" />
             <circle cx="36" cy="36" r="9" fill="#fff" />
             <circle cx="64" cy="36" r="9" fill="#fff" />
             <circle cx="38" cy="38" r="5" fill="#000" />
             <circle cx="66" cy="38" r="5" fill="#000" />
-            {/* Smile */}
             <path
               d="M 38 64 Q 50 74 62 64"
               stroke="#365314"
@@ -142,28 +113,35 @@ export function WelcomeModal() {
           </svg>
         </div>
 
-        <button
-          type="button"
-          className="onb-welcome-cta"
-          onClick={handleCta}
-          style={{
-            background: 'linear-gradient(180deg, #f9a8d4, #ec4899)',
-            borderRadius: 999,
-            padding: '14px 36px',
-            color: '#fff',
-            fontWeight: 900,
-            fontSize: 18,
-            textShadow: '0 1px 0 rgba(0,0,0,0.4)',
-            boxShadow:
-              'inset 0 1px 0 rgba(255,255,255,0.45), 0 3px 0 rgba(0,0,0,0.3)',
-            border: 'none',
-            cursor: 'pointer',
-            width: '100%',
-            touchAction: 'manipulation',
-          }}
-        >
-          {t('onboarding.welcome.cta')}
-        </button>
+        {/* CTA wrapper — flex centers button без stretching */}
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <button
+            type="button"
+            className="onb-welcome-cta"
+            onClick={handleCta}
+            style={{
+              // ВАЖНО: width: auto + display: inline-block чтобы button НЕ
+              // растягивался на 100% родителя. Раньше user видел pink fullscreen
+              // когда CTA как-то стретчился — теперь width derived from content.
+              display: 'inline-block',
+              width: 'auto',
+              minWidth: 160,
+              maxWidth: '100%',
+              background: '#ec4899',
+              borderRadius: 12,
+              padding: '12px 28px',
+              color: '#fff',
+              fontWeight: 700,
+              fontSize: 16,
+              border: 'none',
+              cursor: 'pointer',
+              touchAction: 'manipulation',
+              boxSizing: 'border-box',
+            }}
+          >
+            {t('onboarding.welcome.cta')}
+          </button>
+        </div>
       </div>
     </div>
   )
