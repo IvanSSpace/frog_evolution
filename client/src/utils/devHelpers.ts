@@ -1,13 +1,10 @@
 // Phase 18: dev-only helpers для тестирования бестиария.
 // Подключаются в App.tsx через `if (import.meta.env.DEV) installBestiaryDevHelpers()`.
+// Phase 22: RARITIES removed from types.ts; use LEGACY_RARITIES from bestiary.ts.
 
 import { useGameStore } from '../store/gameStore'
-import {
-  ELEMENTS,
-  RARITIES,
-  type Element,
-  type Rarity,
-} from '../store/cosmic/types'
+import { ELEMENTS, type Element } from '../store/cosmic/types'
+import { LEGACY_RARITIES, type LegacyRarity } from '../store/cosmic/bestiary'
 import { MAX_LEVEL } from '../game/config/frogs'
 
 declare global {
@@ -50,9 +47,9 @@ function unlockRandomCells(count: number): void {
     const element = ELEMENTS[
       Math.floor(Math.random() * ELEMENTS.length)
     ] as Element
-    const rarity = RARITIES[
-      Math.floor(Math.random() * RARITIES.length)
-    ] as Rarity
+    const rarity = LEGACY_RARITIES[
+      Math.floor(Math.random() * LEGACY_RARITIES.length)
+    ] as LegacyRarity
     const level = Math.floor(Math.random() * MAX_LEVEL) + 1
 
     const before = bitCount(useGameStore.getState().bestiaryBitset)

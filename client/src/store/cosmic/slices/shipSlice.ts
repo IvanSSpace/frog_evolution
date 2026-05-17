@@ -2,6 +2,7 @@
 // Извлечено из cosmic/slice.ts при рефакторе разделения по доменам.
 // Содержит: ship navigation + mission credit / reset + investigatePlanet (atomic mission tx).
 // Public API не меняется: composed обратно в createCosmicSlice через spread.
+// Phase 22: bonusRarity removed from box creation in investigatePlanet.
 
 import type { CosmicSliceActions, GetFn, SetFn } from '../slice'
 import { eventBus } from '../../eventBus'
@@ -11,7 +12,6 @@ import {
   findPlanetById,
   getLocalDateString,
   DAILY_CAP,
-  bonusRarityForResult,
   planetElementInputs,
 } from '../../../game/data/missionConfig'
 import { elementFromPlanet } from '../../../game/effects/elements/elementMapping'
@@ -120,11 +120,12 @@ export function createShipSlice(set: SetFn, get: GetFn): ShipActions {
     },
 
     // Phase 16-04: atomic investigate transaction (REQ MISSION-05/06/07, CREW-04/08).
+    // Phase 22: bonusRarity removed — box created without rarity dimension.
     // - guard: ship.state !== 'docked' OR ship.planetId !== planetId → no-op (false)
     // - guard: missionsToday >= DAILY_CAP → no-op (false)
-    // - atomic: missionsToday++, addBox с element=elementFromPlanet, bonusRarity, hasFirstMission=true
+    // - atomic: missionsToday++, addBox с element=elementFromPlanet, hasFirstMission=true
     // - emit 'cosmic:toast' с открытием Боксы
-    investigatePlanet: (planetId, result) => {
+    investigatePlanet: (planetId, _result) => {
       const s = get()
       // Guard 1: ship docked at this planet?
       if (
@@ -145,14 +146,6 @@ export function createShipSlice(set: SetFn, get: GetFn): ShipActions {
       const { archetype, mainRaceType } = planetElementInputs(planet)
       const element = elementFromPlanet(archetype, mainRaceType) ?? 'fire' // fallback
 
-      // BALANCE fix: bonusRarity — пол редкости только для perfect миссий (гарантия rare).
-      // good и fail дают чистый весовой ролл (70% common) — иначе common не могут выпасть.
-      const bonusNum = bonusRarityForResult(result)
-      let bonusRarityEnum: 'rare' | 'epic' | 'legendary' | undefined
-      if (bonusNum >= 0.15)
-        bonusRarityEnum = 'rare' // perfect → минимум rare
-      else bonusRarityEnum = undefined // good/fail → чистый ролл, common возможен
-
       // Atomic transaction: один set()
       const newBoxId = `box_${Date.now()}_${Math.floor(Math.random() * 1e6)}`
       const archetypeKey = archetype ?? mainRaceType ?? ''
@@ -168,7 +161,7 @@ export function createShipSlice(set: SetFn, get: GetFn): ShipActions {
             element,
             opened: false,
             createdAt: Date.now(),
-            bonusRarity: bonusRarityEnum,
+            // Phase 22: bonusRarity removed
           },
         ],
         hasFirstMission: true, // unlock Боксы tab (REQ UX-09)

@@ -3,12 +3,12 @@
 // Refactor: actions разбиты по доменам в ./slices/* (serum / box / carrier / ship).
 // Этот файл — orchestrator: содержит public API (interface CosmicSliceActions),
 // типы (CosmicState, SetFn, GetFn) и composition через spread.
+// Phase 22: Rarity, feedCarrier, mergeCarriers, disposeCarrier удалены.
 
 import {
   type CosmicSlice,
   type CosmicTab,
   type Element,
-  type Rarity,
   type BoxData,
   type CarrierData,
   type TutorialStepId,
@@ -16,7 +16,6 @@ import {
   makeInitialCosmicSlice,
 } from './types'
 import { eventBus } from '../eventBus'
-import type { FeedOutcome } from '../../utils/carrierEvolution'
 import type { MissionResult } from '../../game/data/missionConfig'
 import {
   bestiaryIndex,
@@ -30,25 +29,28 @@ import { createBoxSlice } from './slices/boxSlice'
 import { createCarrierSlice } from './slices/carrierSlice'
 import { createShipSlice } from './slices/shipSlice'
 
+// Phase 22: Rarity type removed from serum/carrier system.
+// LegacyRarity kept only for bestiary bitset dimension (Plan 22-07 will shrink).
+type LegacyRarity = 'common' | 'rare' | 'epic' | 'legendary'
+
 // Actions — то, что наполняется в Phase 14-19. Здесь — placeholder stubs.
 export interface CosmicSliceActions {
   // Serum actions (Phase 14)
-  addSerum: (element: Element, rarity: Rarity, count?: number) => void
-  removeSerum: (element: Element, rarity: Rarity, count?: number) => void
+  // Phase 22: addSerum/removeSerum без rarity param
+  addSerum: (element: Element, count?: number) => void
+  removeSerum: (element: Element, count?: number) => void
 
   // Phase 14: tap-to-select / drag selection mode (transient UI state).
+  // Phase 22: payload без rarity
   setSerumDragActive: (
     active: boolean,
-    payload?: { element: Element; rarity: Rarity } | null,
+    payload?: { element: Element } | null,
   ) => void
 
-  // Phase 14 / Phase 22: server-validated apply. Optimistic UI + rollback при сбое.
-  // Decrement serum + addCarrier + clear selection — атомарно локально, затем
-  // POST /game/cosmic/apply-serum для валидации (level matches rarity, serum в инвентаре, не carrier).
+  // Phase 22: applySerum без rarity (любая frog принимает серум)
   applySerum: (
     frogId: string,
     element: Element,
-    rarity: Rarity,
     level: number,
   ) => Promise<void>
 
@@ -60,82 +62,33 @@ export interface CosmicSliceActions {
     element: Element
     bonusRarity?: 'rare' | 'epic' | 'legendary'
   }) => BoxData
-  rollBoxRarity: (id: string) => { rarity: Rarity; element: Element } | null
-  commitOpenedBox: (id: string, rarity: Rarity) => void
+  rollBoxRarity: (id: string) => { element: Element } | null
+  commitOpenedBox: (id: string) => void
   removeBox: (id: string) => void
 
   /**
    * Phase 19-01 (BALANCE-01..07): unified box-open action.
-   * Atomic transaction:
+   * Phase 22: awards +1 to serums[box.element] (no rarity dimension).
    *   1. find box; idempotent guard (opened/missing → no-op)
-   *   2. rollRarity(pityCounters, bonusRarity) → rolled rarity
-   *   3. updatePity(pityCounters, rolled) → newPity
-   *   4. award serums[box.element][rolled] += 1
-   *   5. mark box opened, set hasOpenedAnyBox sentinel (REQ UX-09 / tutorial first-box)
-   *   6. eventBus.emit('cosmic:box-opened', { boxId, rarity, element })
-   *
-   * Используется для quick-open / debug. Cascade reveal flow (Phase 15)
-   * по-прежнему использует rollBoxRarity → SerumSlotMachine → commitOpenedBox.
-   * NOTE: openBox() *removes* box opened-flag pattern (sets opened=true, retains
-   * box record), unlike commitOpenedBox() which removes box from inventory.
+   *   2. award serums[box.element] += 1
+   *   3. mark box opened, set hasOpenedAnyBox sentinel (REQ UX-09 / tutorial first-box)
+   *   4. eventBus.emit('cosmic:box-opened', { boxId, element })
    */
   openBox: (id: string) => void
 
-  // Carrier actions (Phase 17)
+  // Carrier actions (Phase 17 / Phase 22 simplified)
   addCarrier: (carrier: CarrierData) => void
   removeCarrier: (frogId: string) => void
 
   /**
-   * Phase 17 (CARRIER-03/04, BALANCE-09): feed carrier — атомарно мутирует state и
-   * returns FeedOutcome.
-   * Pre-determines ceiling в первый feed (когда feedCount === 0 до increment).
-   * Updates rollHistory, level, stabilized, feedCount; пишет bestiary bit
-   * на success / stabilize.
-   *
-   * Returns null если carrier не найден.
-   *
-   * NOTE: НЕ удаляет sacrifice frog — caller (MainScene) сам removes.
-   * NOTE: НЕ инициирует UI modal — MainScene слушает `cosmic:carrier-stabilized`
-   * через eventBus и показывает Plan 17-04 modal.
-   */
-  feedCarrier: (carrierFrogId: string) => FeedOutcome | null
-
-  /**
-   * Phase 17 (CARRIER-10): merge two stabilized same-element same-level carriers
-   * → 1 new carrier на level+1 с S-bucket guaranteed ceiling.
-   * Caller (MainScene.performCarrierMerge) передаёт newFrogId — id уже-spawned
-   * upgraded frog.
-   *
-   * Returns null если validation failed (any carrier missing, not stabilized,
-   * different element/rarity, different level, same id).
-   *
-   * Side effects:
-   *   - removeCarrier(a), removeCarrier(b)
-   *   - addCarrier(new) с feedCount=0, stabilized=false, ceiling=S-bucket
-   *   - setBestiaryBit(element, rarity, newLevel)
-   */
-  mergeCarriers: (
-    aFrogId: string,
-    bFrogId: string,
-    newFrogId: string,
-  ) => CarrierData | null
-
-  /**
-   * Phase 17 (CARRIER-11, UX-11): dispose carrier — 30% chance return 1 серум
-   * того же (element, rarity). Carrier удаляется (frog stays as regular frog —
-   * caller MainScene самостоятельно очищает overlay через subscribe).
-   *
-   * Returns { recovered: boolean } для UI feedback.
-   */
-  disposeCarrier: (carrierFrogId: string) => { recovered: boolean }
-
-  /**
    * Phase 17 (CARRIER-12) + Phase 18 (BESTIARY-07): set bestiary bit для (element, rarity, level).
+   * Phase 22: rarity param kept as LegacyRarity — bestiary bitset still 16×4×18 layout
+   * until Plan 22-07 decides shrink.
    * Idempotent: re-set unlocked bit → no state change → no event.
    * Phase 18: проверяет milestonesCrossed (10/24/96/576) и эмитит
    * 'cosmic:bestiary-milestone' event + grants reward (coins/serum/flag).
    */
-  setBestiaryBit: (element: Element, rarity: Rarity, level: number) => void
+  setBestiaryBit: (element: Element, rarity: LegacyRarity, level: number) => void
 
   /** Phase 18 (REQ BESTIARY-07): toggle 576-cells milestone visual flag. */
   setFrogExclusiveUnlocked: (v: boolean) => void
@@ -189,6 +142,7 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
     ...createShipSlice(set, get),
 
     // Phase 17 (CARRIER-12) + Phase 18 (BESTIARY-07): set bestiary bit + milestone trigger.
+    // Phase 22: rarity param kept as LegacyRarity (bestiary shape unchanged until Plan 22-07).
     // Idempotent: re-setting an already unlocked bit → no state change → no event.
     // Atomic: один set() per call; eventBus.emit вне set() в том же tick.
     setBestiaryBit: (element, rarity, level) => {
@@ -213,14 +167,14 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
         if (reward.type === 'coins') {
           coinsToAdd += reward.amount
         } else if (reward.type === 'serum') {
-          // Random element для milestone-granted serum (REQ BESTIARY-07).
+          // Phase 22: serum reward — +1 to a random element (no rarity).
           const randElem = ELEMENTS[
             Math.floor(Math.random() * ELEMENTS.length)
           ] as Element
-          const cur = nextSerums[randElem][reward.rarity]
+          const cur = nextSerums[randElem]
           nextSerums = {
             ...nextSerums,
-            [randElem]: { ...nextSerums[randElem], [reward.rarity]: cur + 1 },
+            [randElem]: cur + 1,
           }
         } else if (reward.type === 'frog-exclusive') {
           nextFrogExclusive = true

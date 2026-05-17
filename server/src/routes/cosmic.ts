@@ -4,29 +4,26 @@ import {
   adjustSerum,
   getSerumCount,
   isValidElement,
-  isValidRarity,
-  RARITY_TO_STARTING_LEVEL,
   type CarrierData,
   type Element,
-  type Rarity,
 } from '../config/cosmic'
 
 interface ApplySerumBody {
   frogId?: string
   element?: string
-  rarity?: string
   level?: number
 }
 
 export async function cosmicRoutes(app: FastifyInstance) {
   // POST /game/cosmic/apply-serum
-  // Server-validated применение сыворотки на лягушку → создание carrier'а.
+  // Phase 22: rarity validation removed. Any frog (any level) can accept a serum.
+  // Request body: { frogId, element, level }
   app.post(
     '/game/cosmic/apply-serum',
     { preHandler: [app.authenticate] },
     async (request, reply) => {
       const body = request.body as ApplySerumBody
-      const { frogId, element, rarity, level } = body
+      const { frogId, element, level } = body
 
       if (!frogId || typeof frogId !== 'string') {
         return reply.code(400).send({ error: 'frogId required' })
@@ -34,21 +31,8 @@ export async function cosmicRoutes(app: FastifyInstance) {
       if (!isValidElement(element)) {
         return reply.code(400).send({ error: 'invalid element' })
       }
-      if (!isValidRarity(rarity)) {
-        return reply.code(400).send({ error: 'invalid rarity' })
-      }
       if (typeof level !== 'number' || level < 1 || level > 24) {
         return reply.code(400).send({ error: 'invalid level' })
-      }
-
-      // Eligibility: уровень frog'а должен совпадать с требованием rarity.
-      const requiredLevel = RARITY_TO_STARTING_LEVEL[rarity as Rarity]
-      if (level !== requiredLevel) {
-        return reply.code(400).send({
-          error: 'level mismatch',
-          required: requiredLevel,
-          got: level,
-        })
       }
 
       const state = await prisma.gameState.findUnique({
@@ -66,7 +50,7 @@ export async function cosmicRoutes(app: FastifyInstance) {
         : []
 
       // Guard 1: сыворотка доступна?
-      const have = getSerumCount(serums, element as Element, rarity as Rarity)
+      const have = getSerumCount(serums, element as Element)
       if (have < 1) {
         return reply.code(400).send({ error: 'no serum', have })
       }
@@ -77,18 +61,10 @@ export async function cosmicRoutes(app: FastifyInstance) {
       }
 
       // Apply: decrement serum + add carrier.
-      const nextSerums = adjustSerum(
-        serums,
-        element as Element,
-        rarity as Rarity,
-        -1,
-      )
+      const nextSerums = adjustSerum(serums, element as Element, -1)
       const newCarrier: CarrierData = {
         frogId,
         element: element as Element,
-        rarity: rarity as Rarity,
-        feedCount: 0,
-        stabilized: false,
         level,
       }
       const nextCarriers = [...carriers, newCarrier]

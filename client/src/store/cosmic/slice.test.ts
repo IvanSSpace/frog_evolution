@@ -1,8 +1,8 @@
-// Phase 15 Plan 15-01 Task 2: unit tests for new box actions in cosmicSlice.
+// Phase 15 Plan 15-01 Task 2: unit tests for box actions in cosmicSlice.
+// Phase 22: rewritten — rarity removed, flat serums model.
 // Run: tsx client/src/store/cosmic/slice.test.ts
 //
 // Тестируем addBox, rollBoxRarity, commitOpenedBox, removeBox.
-// Mock gameStore не нужен — createCosmicSlice принимает custom set/get.
 
 import assert from 'node:assert/strict'
 
@@ -78,7 +78,7 @@ function makeHarness(): Harness {
   )
 }
 
-// ─── Test 4: rollBoxRarity для opened box → null ───
+// ─── Test 4: rollBoxRarity для removed box → null ───
 {
   const h = makeHarness()
   const box = h.state().addBox({
@@ -87,18 +87,15 @@ function makeHarness(): Harness {
     archetype: 'lava',
     element: 'fire',
   })
-  // mark opened manually (через store mutation; в реальности commitOpenedBox удаляет, но тест граничный case)
-  // Используем openBox-like manual mark через filter+map approach. Проще: проверим, что после commitOpenedBox
-  // box удалён → rollBoxRarity возвращает null (другой test path).
-  h.state().commitOpenedBox(box.id, 'common')
+  h.state().commitOpenedBox(box.id)
   assert.equal(
     h.state().rollBoxRarity(box.id),
     null,
-    'Test 4: opened/removed box → null',
+    'Test 4: removed box → null',
   )
 }
 
-// ─── Test 5: rollBoxRarity returns {rarity, element} без mutation ───
+// ─── Test 5: rollBoxRarity returns {element} без mutation ───
 {
   const h = makeHarness()
   const box = h.state().addBox({
@@ -109,19 +106,13 @@ function makeHarness(): Harness {
   })
   const before = JSON.stringify({
     serums: h.state().serums,
-    pity: h.state().pityCounters,
     boxesLen: h.state().boxes.length,
   })
   const result = h.state().rollBoxRarity(box.id)
   assert(result !== null, 'Test 5: result not null')
-  assert(
-    ['common', 'rare', 'epic', 'legendary'].includes(result!.rarity),
-    'Test 5: rarity is valid',
-  )
   assert.equal(result!.element, 'fire', 'Test 5: element=fire')
   const after = JSON.stringify({
     serums: h.state().serums,
-    pity: h.state().pityCounters,
     boxesLen: h.state().boxes.length,
   })
   assert.equal(
@@ -131,7 +122,7 @@ function makeHarness(): Harness {
   )
 }
 
-// ─── Test 6: commitOpenedBox 'rare' → serums++, box removed, pity update ───
+// ─── Test 6: commitOpenedBox → serum[element]++, box removed ───
 {
   const h = makeHarness()
   const box = h.state().addBox({
@@ -140,41 +131,26 @@ function makeHarness(): Harness {
     archetype: 'lava',
     element: 'fire',
   })
-  const before = h.state().serums.fire.rare
-  h.state().commitOpenedBox(box.id, 'rare')
+  const before = h.state().serums.fire ?? 0
+  h.state().commitOpenedBox(box.id)
   assert.equal(
-    h.state().serums.fire.rare,
+    h.state().serums.fire,
     before + 1,
-    'Test 6: fire rare incremented',
+    'Test 6: fire serum incremented',
   )
   assert.equal(h.state().boxes.length, 0, 'Test 6: box removed')
-  assert.equal(
-    h.state().pityCounters.rare,
-    0,
-    'Test 6: pity.rare reset on rare',
-  )
-  assert(
-    h.state().pityCounters.epic >= 1,
-    'Test 6: pity.epic incremented (rare not epic+)',
-  )
 }
 
 // ─── Test 7: commitOpenedBox unknown id → no-op ───
 {
   const h = makeHarness()
-  const before = JSON.stringify({
-    serums: h.state().serums,
-    pity: h.state().pityCounters,
-  })
-  h.state().commitOpenedBox('unknown', 'rare')
-  const after = JSON.stringify({
-    serums: h.state().serums,
-    pity: h.state().pityCounters,
-  })
+  const before = JSON.stringify({ serums: h.state().serums })
+  h.state().commitOpenedBox('unknown')
+  const after = JSON.stringify({ serums: h.state().serums })
   assert.equal(before, after, 'Test 7: unknown id no-op')
 }
 
-// ─── Test 8: commitOpenedBox 'legendary' → pity.legendary=0, others incremented ───
+// ─── Test 8: commitOpenedBox arcane box → arcane serum +1 ───
 {
   const h = makeHarness()
   const box = h.state().addBox({
@@ -183,16 +159,12 @@ function makeHarness(): Harness {
     archetype: 'mystic',
     element: 'arcane',
   })
-  h.state().commitOpenedBox(box.id, 'legendary')
+  const before = h.state().serums.arcane ?? 0
+  h.state().commitOpenedBox(box.id)
   assert.equal(
-    h.state().pityCounters.legendary,
-    0,
-    'Test 8: legendary resets legendary counter',
-  )
-  assert.equal(
-    h.state().serums.arcane.legendary,
-    1,
-    'Test 8: arcane legendary serum +1',
+    h.state().serums.arcane,
+    before + 1,
+    'Test 8: arcane serum +1',
   )
 }
 
@@ -216,7 +188,7 @@ function makeHarness(): Harness {
   assert.equal(h.state().boxes[0].id, b.id, 'Test 9: kept box B')
 }
 
-// ─── Test 10: bonusRarity carries through addBox + rollBoxRarity floor ───
+// ─── Test 10: bonusRarity cosmetic flag preserved in addBox ───
 {
   const h = makeHarness()
   const box = h.state().addBox({
@@ -227,15 +199,10 @@ function makeHarness(): Harness {
     bonusRarity: 'epic',
   })
   assert.equal(box.bonusRarity, 'epic', 'Test 10: bonusRarity stored')
-  // 100 rolls — все >= epic
-  for (let i = 0; i < 100; i++) {
-    const r = h.state().rollBoxRarity(box.id)
-    assert(r !== null, 'Test 10: roll not null')
-    assert(
-      r!.rarity === 'epic' || r!.rarity === 'legendary',
-      `Test 10: bonus epic should yield epic+, got ${r!.rarity}`,
-    )
-  }
+  // rollBoxRarity still returns {element} only
+  const r = h.state().rollBoxRarity(box.id)
+  assert(r !== null, 'Test 10: roll not null')
+  assert.equal(r!.element, 'fire', 'Test 10: element=fire')
 }
 
 // ─── Test 11: hasOpenedAnyBox toggled на commitOpenedBox ───
@@ -248,7 +215,7 @@ function makeHarness(): Harness {
     archetype: 'lava',
     element: 'fire',
   })
-  h.state().commitOpenedBox(box.id, 'common')
+  h.state().commitOpenedBox(box.id)
   assert.equal(
     h.state().hasOpenedAnyBox,
     true,

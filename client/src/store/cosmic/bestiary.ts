@@ -2,28 +2,42 @@
 // Bit indexing для (element, rarity, level) → unique bit index 0..1535.
 // Phase 17 — write-through из feedCarrier success/stabilize + mergeCarriers.
 // Phase 18 — read-side UI (TanStack Virtual, filter pills).
+//
+// Phase 22: Rarity type removed from main cosmic types. Bestiary still uses
+// 4-tier layout (16×4×18 = 1152 bits). Plan 22-07 will decide whether to
+// shrink the bitset. LegacyRarity inlined here to keep bitset shape stable.
 
-import { ELEMENTS, RARITIES, type Element, type Rarity } from './types'
+import { ELEMENTS, type Element } from './types'
 import { MAX_LEVEL } from '../../game/config/frogs'
 
+// Phase 22: Rarity removed from types.ts; inlined locally to preserve bitset
+// layout until Plan 22-07 decides on shrink.
+export type LegacyRarity = 'common' | 'rare' | 'epic' | 'legendary'
+export const LEGACY_RARITIES: readonly LegacyRarity[] = [
+  'common',
+  'rare',
+  'epic',
+  'legendary',
+]
+
 /** 16 elements × 4 rarities × 18 levels = 1152 уникальных combos. */
-export const BESTIARY_BIT_COUNT = ELEMENTS.length * RARITIES.length * MAX_LEVEL
+export const BESTIARY_BIT_COUNT = ELEMENTS.length * LEGACY_RARITIES.length * MAX_LEVEL
 /** Bytes = 1152 / 8. */
 export const BESTIARY_BYTE_COUNT = BESTIARY_BIT_COUNT / 8
 
 /**
  * Linear bit index для (element, rarity, level).
  * Layout: 18 уровней × 64 cells/уровень (16 elements × 4 rarities = 64).
- *   index = (level - 1) * 64 + ELEMENTS.indexOf(element) * 4 + RARITIES.indexOf(rarity)
+ *   index = (level - 1) * 64 + ELEMENTS.indexOf(element) * 4 + LEGACY_RARITIES.indexOf(rarity)
  * Range: 0..1151. Returns -1 если invalid.
  */
 export function bestiaryIndex(
   element: Element,
-  rarity: Rarity,
+  rarity: LegacyRarity,
   level: number,
 ): number {
   const e = ELEMENTS.indexOf(element)
-  const r = RARITIES.indexOf(rarity)
+  const r = LEGACY_RARITIES.indexOf(rarity)
   if (e < 0 || r < 0 || level < 1 || level > MAX_LEVEL) return -1
   return (level - 1) * 64 + e * 4 + r
 }
@@ -81,15 +95,15 @@ export function countUnlocked(bitset: ReadonlyArray<number>): number {
 /**
  * Phase 18: подсчёт unlocked cells для одной rarity (= одной локации).
  * 4 локации = 4 rarity tiers (BESTIARY-01 + REQUIREMENTS:109-111):
- *   common = Болото, rare = Лес, epic = Континент, legendary = Планета.
+ *   common = Лужа, rare = Болото, epic = Лес, legendary = Континент.
  * Каждая локация = 16 elements × 18 levels = 288 cells.
  */
 export function unlockedInLocation(
   bitset: ReadonlyArray<number>,
-  rarity: Rarity,
+  rarity: LegacyRarity,
 ): number {
   let count = 0
-  const r = RARITIES.indexOf(rarity)
+  const r = LEGACY_RARITIES.indexOf(rarity)
   if (r < 0) return 0
   for (let level = 1; level <= MAX_LEVEL; level++) {
     for (let e = 0; e < ELEMENTS.length; e++) {
@@ -108,8 +122,8 @@ export function unlockedInLocation(
 //   10 → 8, 24 → 18, 96 → 72, 576 → 432.
 export const BESTIARY_MILESTONES = [
   { threshold: 8, reward: { type: 'coins', amount: 1000 } },
-  { threshold: 18, reward: { type: 'serum', rarity: 'epic' } },
-  { threshold: 72, reward: { type: 'serum', rarity: 'legendary' } },
+  { threshold: 18, reward: { type: 'serum' } },
+  { threshold: 72, reward: { type: 'serum' } },
   { threshold: 432, reward: { type: 'frog-exclusive' } },
 ] as const
 

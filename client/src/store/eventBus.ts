@@ -1,6 +1,9 @@
 import mitt from 'mitt'
-import type { CosmicToastPayload, Element, Rarity } from './cosmic/types'
-import type { Bucket } from '../utils/carrierEvolution'
+import type { CosmicToastPayload, Element } from './cosmic/types'
+
+// Phase 22: Rarity removed from cosmic types. Legacy rarity strings kept only
+// in Gallery/Bestiary where they are UI-only (not serum/carrier state).
+type LegacyRarity = 'common' | 'rare' | 'epic' | 'legendary'
 
 type Events = {
   'goo:collected': { value: number }
@@ -56,7 +59,8 @@ type Events = {
   // Cosmic Frogs System (Phase 11+)
   'cosmic:toast': CosmicToastPayload
   // Phase 14 — serum tap-to-select / drag-DnD
-  'cosmic:select-serum': { element: Element; rarity: Rarity }
+  // Phase 22: rarity removed from select-serum payload
+  'cosmic:select-serum': { element: Element }
   'cosmic:cancel-serum': void
   'cosmic:serum-pointer-move': { x: number; y: number }
   'cosmic:serum-pointer-up': { x: number; y: number }
@@ -65,29 +69,22 @@ type Events = {
   'cosmic:flight-confirm': { planetId: string }
   'cosmic:flight-cancel': void
   'cosmic:ship-arrived': { planetId: string }
-  // Phase 17 — carrier evolution
-  'cosmic:carrier-stabilized': {
-    frogId: string
-    element: Element
-    rarity: Rarity
-    ceiling: number
-    bucket: Bucket
-  }
-  // Phase 19-01 — box-opened event (BALANCE-01..07 wiring).
-  // Emitted by cosmicSlice.openBox после rollRarity/updatePity.
-  'cosmic:box-opened': { boxId: string; rarity: Rarity; element: Element }
+  // Phase 17 — carrier evolution (Phase 22: carrier-stabilized removed)
+  // Phase 19-01 — box-opened event.
+  // Phase 22: rarity removed from box-opened payload.
+  'cosmic:box-opened': { boxId: string; element: Element }
   // Offline box drops (boot-time): сколько боксов «упало» пока игрок был away.
   'box:offline-pending': { count: number }
   // Server-authoritative tractor offline income (boot-time).
   'server:welcome-back': { earned: number; durationMs: number }
-  // Gallery — open detail panel for a specific archetype/rarity
-  'gallery:open-detail': { archetype: Element; rarity: Rarity }
+  // Gallery — open detail panel for a specific archetype/rarity (UI-only, legacy rarity)
+  'gallery:open-detail': { archetype: Element; rarity: LegacyRarity }
   // Phase 18 — bestiary milestone (REQ BESTIARY-07)
   'cosmic:bestiary-milestone': {
     threshold: 10 | 24 | 96 | 576
     reward:
       | { readonly type: 'coins'; readonly amount: number }
-      | { readonly type: 'serum'; readonly rarity: 'epic' | 'legendary' }
+      | { readonly type: 'serum' }
       | { readonly type: 'frog-exclusive' }
   }
 }

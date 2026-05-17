@@ -19,10 +19,9 @@ import { initSfx } from './audio/sfxBootstrap'
 import { initPlanetVoice } from './audio/planetVoice'
 import { useGameStore } from './store/gameStore'
 import { saveDiscovered } from './store/persistence'
-import type { Element, Rarity } from './store/cosmic/types'
+import type { Element } from './store/cosmic/types'
 import { GalleryModal } from './components/Gallery/GalleryModal'
 import { GalleryDetailModal } from './components/Gallery/GalleryDetailModal'
-import { StabilizationModal } from './components/CosmicHub/StabilizationModal'
 import { MilestoneToast } from './components/CosmicHub/bestiary/MilestoneToast'
 import { TutorialOverlay } from './components/Tutorial/TutorialOverlay'
 import { SerumModal } from './components/CosmicHub/SerumModal'
@@ -228,13 +227,10 @@ function App() {
       useGameStore.getState().arriveShipAt(planetId)
     }
 
-    w.__grantSerum = (
-      element: Element,
-      rarity: Rarity = 'common',
-      count = 1,
-    ) => {
-      useGameStore.getState().addSerum(element, rarity, count)
-      devLog(`[dev] granted ${count}× ${rarity} ${element} serum`)
+    // Phase 22: rarity removed; addSerum(element, count)
+    w.__grantSerum = (element: Element, count = 1) => {
+      useGameStore.getState().addSerum(element, count)
+      devLog(`[dev] granted ${count}× ${element} serum`)
     }
 
     // Phase 18: bestiary dev helpers (window.__unlockBestiaryCells / __bestiaryCount / __resetBestiary).
@@ -271,7 +267,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <OrientationLock />
-      {bootState === 'offline' && (
+      {bootState === 'offline' && !import.meta.env.DEV && (
         <div className="fixed top-4 left-4 z-50 bg-amber-700/90 text-white px-3 py-2 rounded text-xs">
           Offline режим — изменения не сохраняются
         </div>
@@ -310,9 +306,6 @@ function App() {
           <CosmicHubModal onClose={() => setCosmicHubOpen(false)} />
         )}
       </Suspense>
-      {/* Phase 17 (CARRIER-08): stabilization modal — top-level always-mounted,
-          listens cosmic:carrier-stabilized event independent of Cosmic Hub state. */}
-      <StabilizationModal />
       {/* Phase 18 (REQ BESTIARY-07): milestone toast — listens cosmic:bestiary-milestone
           event from cosmicSlice.setBestiaryBit; visible regardless of Cosmic Hub state. */}
       <MilestoneToast />
