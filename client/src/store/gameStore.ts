@@ -110,7 +110,7 @@ interface GameStateBase {
   magnetEnabled: boolean
   toggleMagnet: () => void
 
-  // Текущая локация (1=Болото, 2=Лес, 3=Континент, 4=Планета)
+  // Текущая локация (1=Лужа, 2=Болото, 3=Лес, 4=Континент)
   currentLocation: number
   setCurrentLocation: (id: number) => void
 
@@ -354,7 +354,12 @@ useGameStore.subscribe((state, prev) => {
     state.tutorialState !== prev.tutorialState ||
     // Phase 22 Plan 22-03: ascension state must trigger persist.
     state.ascendedCarriers !== prev.ascendedCarriers ||
-    state.essence !== prev.essence
+    state.essence !== prev.essence ||
+    // Phase 22 Plan 22-05: shop perma upgrades + purchase counters.
+    state.permaSlotBonus !== prev.permaSlotBonus ||
+    state.permaShipSpeedBonus !== prev.permaShipSpeedBonus ||
+    state.permaSerumDropBonus !== prev.permaSerumDropBonus ||
+    state.shopPurchaseCounts !== prev.shopPurchaseCounts
   ) {
     saveCosmicSlice({
       serums: state.serums,
@@ -364,6 +369,11 @@ useGameStore.subscribe((state, prev) => {
       // Phase 22 Plan 22-03: persist ascension pool + essence.
       ascendedCarriers: state.ascendedCarriers,
       essence: state.essence,
+      // Phase 22 Plan 22-05: persist shop perma upgrades + counters.
+      permaSlotBonus: state.permaSlotBonus,
+      permaShipSpeedBonus: state.permaShipSpeedBonus,
+      permaSerumDropBonus: state.permaSerumDropBonus,
+      shopPurchaseCounts: state.shopPurchaseCounts,
       bestiaryBitset: state.bestiaryBitset,
       pityCounters: state.pityCounters,
       lastActiveTab: state.lastActiveTab,

@@ -120,18 +120,21 @@ export function saveDiscovered(arr: number[]) {
 // ─── locations ───────────────────────────────────────────────────────────────
 
 // Резиденты каждой локации — массив уровней лягушек на её поле.
-// Дефолт: Болото — L1..L6 по одной, остальные пустые.
+// Дефолт: Лужа — L1..L6 по одной, остальные пустые.
 export function loadLocationFrogs(): number[][] {
   try {
     const raw = localStorage.getItem(LOCATION_FROGS_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed) && parsed.length === LOCATIONS.length) {
-        return parsed.map((arr) =>
-          Array.isArray(arr)
+      // Нормализуем длину под текущий LOCATIONS.length: старые сейвы (когда было
+      // 3 локации) паддятся пустыми массивами для новых слотов, лишние — обрезаются.
+      if (Array.isArray(parsed)) {
+        return LOCATIONS.map((_, i) => {
+          const arr = parsed[i]
+          return Array.isArray(arr)
             ? arr.filter((n) => Number.isFinite(n) && n > 0)
-            : [],
-        )
+            : []
+        })
       }
     }
   } catch {
@@ -287,6 +290,25 @@ export function loadCosmicSlice(): CosmicPersist {
         typeof parsed.essence === 'number' && parsed.essence >= 0
           ? parsed.essence
           : defaults.essence,
+      // Phase 22 Plan 22-05: shop perma upgrades + counters whitelist.
+      permaSlotBonus:
+        typeof parsed.permaSlotBonus === 'number' && parsed.permaSlotBonus >= 0
+          ? parsed.permaSlotBonus
+          : defaults.permaSlotBonus,
+      permaShipSpeedBonus:
+        typeof parsed.permaShipSpeedBonus === 'number' &&
+        parsed.permaShipSpeedBonus >= 0
+          ? parsed.permaShipSpeedBonus
+          : defaults.permaShipSpeedBonus,
+      permaSerumDropBonus:
+        typeof parsed.permaSerumDropBonus === 'number' &&
+        parsed.permaSerumDropBonus >= 0
+          ? parsed.permaSerumDropBonus
+          : defaults.permaSerumDropBonus,
+      shopPurchaseCounts:
+        parsed.shopPurchaseCounts && typeof parsed.shopPurchaseCounts === 'object'
+          ? (parsed.shopPurchaseCounts as Record<string, number>)
+          : defaults.shopPurchaseCounts,
       // Phase 17: bitset extended 24 → 192 bytes (1536 bits). Pad-only migration.
       // Phase 20: shrink to 144 bytes (1152 bits) после 24→18 frog levels.
       //   NOTE: migration code below still pads/truncates to 192 — needs a separate
@@ -303,7 +325,8 @@ export function loadCosmicSlice(): CosmicPersist {
         parsed.lastActiveTab === 'scouts' ||
         parsed.lastActiveTab === 'boxes' ||
         parsed.lastActiveTab === 'bestiary' ||
-        parsed.lastActiveTab === 'carriers'
+        parsed.lastActiveTab === 'carriers' ||
+        parsed.lastActiveTab === 'shop'
           ? parsed.lastActiveTab
           : 'scouts',
       crew: parsed.crew ?? defaults.crew,

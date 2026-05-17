@@ -74,6 +74,9 @@ type Events = {
   // Emitted by ascendCarrier action after store mutation.
   // Subscribers: MainScene (play ascension tween), FrogOverlayManager (cleanup overlay).
   'cosmic:carrier-ascended': { frogId: string; element: Element }
+  // Phase 22 Plan 22-05 — cosmic box purchased (shop).
+  // Subscribers: MainScene spawn'ит 3 L7+ frogs на текущей локации.
+  'cosmic:cosmic-box-purchased': Record<string, never>
   // Phase 19-01 — box-opened event.
   // Phase 22: rarity removed from box-opened payload.
   'cosmic:box-opened': { boxId: string; element: Element }

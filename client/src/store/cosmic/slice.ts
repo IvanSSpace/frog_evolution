@@ -29,6 +29,11 @@ import { createBoxSlice } from './slices/boxSlice'
 import { createCarrierSlice } from './slices/carrierSlice'
 import { createShipSlice } from './slices/shipSlice'
 import { createAscensionSlice } from './slices/ascensionSlice'
+import {
+  createShopSlice,
+  type PurchaseShopItemOpts,
+} from './slices/shopSlice'
+import type { ShopItemId } from '../../config/cosmicShop'
 
 // Phase 22: Rarity type removed from serum/carrier system.
 // LegacyRarity kept only for bestiary bitset dimension (Plan 22-07 will shrink).
@@ -163,6 +168,17 @@ export interface CosmicSliceActions {
    * Persisted via existing cosmic auto-persist (gameStore subscribe).
    */
   markTutorialSeen: (step: TutorialStepId) => void
+
+  /**
+   * Phase 22 Plan 22-05: cosmic shop purchase.
+   * Atomically: cost guard → currency decrement → shopPurchaseCounts++ → apply effect.
+   * Returns true on success, false on guard failure (insufficient currency / invalid opts).
+   * Idempotent — повторный успешный call увеличивает counter (scaling cost).
+   */
+  purchaseShopItem: (
+    itemId: ShopItemId,
+    opts?: PurchaseShopItemOpts,
+  ) => boolean
 }
 
 export type CosmicState = CosmicSlice & CosmicSliceActions
@@ -183,6 +199,7 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
     ...createCarrierSlice(set, get),
     ...createShipSlice(set, get),
     ...createAscensionSlice(set, get),
+    ...createShopSlice(set, get),
 
     // Phase 17 (CARRIER-12) + Phase 18 (BESTIARY-07): set bestiary bit + milestone trigger.
     // Phase 22: rarity param kept as LegacyRarity (bestiary shape unchanged until Plan 22-07).

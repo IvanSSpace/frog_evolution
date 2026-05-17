@@ -97,7 +97,18 @@ export interface PityCounters {
 }
 
 // Phase 17: добавлен carriers tab.
-export type CosmicTab = 'scouts' | 'boxes' | 'bestiary' | 'carriers'
+// Phase 22 Plan 22-05: добавлен shop tab (cosmic shop с двумя валютами).
+export type CosmicTab = 'scouts' | 'boxes' | 'bestiary' | 'carriers' | 'shop'
+
+// Phase 22 Plan 22-05: ShopItemId mirror (импорт из config/cosmicShop вызвал бы
+// циклическую зависимость types <-> config). Источник истины — config/cosmicShop.ts.
+export type ShopItemId =
+  | 'cosmic_box'
+  | 'slot_plus_one'
+  | 'ship_speed'
+  | 'serum_drop_chance'
+  | 'skip_ship_cooldown'
+  | 'serum_trade_up'
 
 // Phase 19-05 (UX-08): tutorial overlay step IDs.
 // Phase 22: first-feed/first-stabilize устарели (нет feed-stabilize механики). Plan 22-07 решит cleanup.
@@ -135,6 +146,18 @@ export interface CosmicSlice {
   // Phase 22 Plan 22-03: meta-currency, выдаётся по +1 при каждом ascension (placeholder).
   // Balance — Plan 22-07.
   essence: number
+
+  // Phase 22 Plan 22-05: cosmic shop perma upgrades + purchase counters.
+  // Все ×N (raw counter, не процент). Game systems читают и применяют:
+  //   - permaSlotBonus → FrogSpawner.slotCap += N
+  //   - permaShipSpeedBonus → travelTimeMs / (1 + 0.05 * N)
+  //   - permaSerumDropBonus → rollSerumDrop base + 0.005 * N
+  // Cost scaling геометрический (см. config/cosmicShop.ts) — shopPurchaseCounts хранит
+  // historical count для каждого item id.
+  permaSlotBonus: number
+  permaShipSpeedBonus: number
+  permaSerumDropBonus: number
+  shopPurchaseCounts: Partial<Record<ShopItemId, number>>
 
   // Бестиарий bitset: Phase 20 shrink до 144 байт = 1152 битов (24→18 frog levels).
   // Layout: 16 elements × 4 rarities × 18 levels = 1152 уникальных combos.
@@ -212,6 +235,11 @@ export function makeInitialCosmicSlice(): CosmicSlice {
     // Phase 22 Plan 22-03: ascended pool + essence start empty.
     ascendedCarriers: [],
     essence: 0,
+    // Phase 22 Plan 22-05: shop perma upgrades + counters start at 0.
+    permaSlotBonus: 0,
+    permaShipSpeedBonus: 0,
+    permaSerumDropBonus: 0,
+    shopPurchaseCounts: {},
     bestiaryBitset: new Array(144).fill(0), // Phase 20: 1152 bits = 144 bytes (18 levels)
     pityCounters: { common: 0, rare: 0, epic: 0, legendary: 0 },
     lastActiveTab: 'scouts',
