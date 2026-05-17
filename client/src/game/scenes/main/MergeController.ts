@@ -1,14 +1,13 @@
-// Phase 21-02 (Wave 2): Merge / feed / carrier-merge controller, extracted
-// from MainScene.ts.
+// Phase 21-02 (Wave 2): Merge / carrier-merge controller, extracted from MainScene.ts.
 //
-// Owns: classifyDropTarget routing → standard/feed/carrier-merge,
-// vortex anim, post-merge spawn, cross-location fly-away effect, plus
-// shared visual helpers (flashAt, spawnVortexParticles, spawnFloatingText).
+// Phase 22: feed / stabilize branches removed. MergeController handles:
+//   - normal+normal → standard merge
+//   - carrier+normal → TODO Plan 22-02
+//   - carrier+carrier → TODO Plan 22-02
+//   - L18+L18 → cosmos unlock sentinel (unchanged)
 //
 // Public API:
-//   - performMerge(a, b, cx, cy): top-level entry — routes to feed/carrier/standard
-//   - performCarrierMerge(a, b, cx, cy): two stabilized carriers → 1 carrier
-//   - performFeed(carrier, sacrifice, cx, cy): consume regular frog → roll outcome
+//   - performMerge(a, b, cx, cy): top-level entry — routes to carrier/standard
 //   - playCrossLocationFlyAway(x, y, level): ghost-fly anim when frog goes to other location
 //   - findMergeTarget(x, y, level, exclude): radius search for merge pair
 //   - findClosestSameLevelPair(): magnet pair search across all frogs
@@ -34,14 +33,33 @@ import {
 import { getLocationUnlockedByLevel } from '../../config/locationUnlocks'
 import { hapticImpact, hapticNotification } from '../../../utils/telegram'
 import { mergeEffect } from '../../effects/elements/mergeEffect'
-import { classifyDropTarget } from '../../../utils/carrierFeed'
 import i18next from 'i18next'
 import type { Element } from '../../../store/cosmic/types'
-import { devLog, devWarn } from '../../../utils/devLog'
+import { devLog } from '../../../utils/devLog'
 import { mergeApi } from '../../../api/merge'
 import { BASE_SCALE, DPR, MERGE_RADIUS, type FrogData } from './types'
 import type { MainScene } from '../MainScene'
 import type { FrogSpawner } from './FrogSpawner'
+
+/** Classify drop-target relationship without importing deleted carrierFeed module. */
+type MergeKind =
+  | 'normal'             // normal + normal → standard merge
+  | 'carrier-normal'     // carrier + normal (same level) → TODO Plan 22-02
+  | 'carrier-carrier'    // carrier + carrier (same level, any element) → TODO Plan 22-02
+  | 'blocked-mismatch'   // different levels
+
+function classifyMerge(
+  a: FrogData,
+  b: FrogData,
+  carriers: ReturnType<typeof useGameStore.getState>['carriers'],
+): MergeKind {
+  if (a.level !== b.level) return 'blocked-mismatch'
+  const aIsCarrier = carriers.some((c) => c.frogId === a.id)
+  const bIsCarrier = carriers.some((c) => c.frogId === b.id)
+  if (aIsCarrier && bIsCarrier) return 'carrier-carrier'
+  if (aIsCarrier || bIsCarrier) return 'carrier-normal'
+  return 'normal'
+}
 
 export class MergeController {
   private scene: MainScene
@@ -119,28 +137,16 @@ export class MergeController {
 
   performMerge(a: FrogData, b: FrogData, cx: number, cy: number) {
     const scene = this.scene
-    // Phase 17 (CARRIER-03/10): classify drop target before vortex.
     const carriers = useGameStore.getState().carriers
-    const cls = classifyDropTarget(
-      { aId: a.id, aLevel: a.level, bId: b.id, bLevel: b.level },
-      carriers,
-    )
-    devLog('[performMerge]', cls.kind, {
+    const kind = classifyMerge(a, b, carriers)
+
+    devLog('[performMerge]', kind, {
       aId: a.id,
       bId: b.id,
       carrierIds: carriers.map((c) => c.frogId),
     })
 
-    if (cls.kind === 'blocked-unstabilized') {
-      eventBus.emit('cosmic:toast', {
-        type: 'generic',
-        msg: i18next.t('cosmic_hub.carrier.merge_blocked_unstabilized'),
-      })
-      hapticNotification('error')
-      return
-    }
-
-    if (cls.kind === 'blocked-mismatch') {
+    if (kind === 'blocked-mismatch') {
       eventBus.emit('cosmic:toast', {
         type: 'generic',
         msg: i18next.t('cosmic_hub.carrier.merge_blocked_mismatch'),
@@ -149,34 +155,22 @@ export class MergeController {
       return
     }
 
-    if (cls.kind === 'blocked-stabilized') {
-      eventBus.emit('cosmic:toast', {
-        type: 'generic',
-        msg: i18next.t('cosmic_hub.carrier.merge_blocked_stabilized'),
-      })
-      hapticNotification('error')
-      return
+    // TODO Plan 22-02: implement carrier+normal merge rule
+    // carrier Ln + normal Ln → carrier L(n+1), element from carrier.
+    if (kind === 'carrier-normal') {
+      devLog('[performMerge] carrier+normal → TODO Plan 22-02, using standard merge path')
+      // Fall through to standard merge (visual + store sync); carrier overlay
+      // will follow via FrogOverlayManager.markDirty after spawn.
     }
 
-    if (cls.kind === 'no-match') {
-      devWarn('[performMerge] no-match unexpected', { a: a.id, b: b.id })
-      return
+    // TODO Plan 22-02: implement carrier+carrier merge rule
+    // carrier Ln + carrier Ln → carrier L(n+1), element from drop-target (b).
+    if (kind === 'carrier-carrier') {
+      devLog('[performMerge] carrier+carrier → TODO Plan 22-02, using standard merge path')
+      // Fall through to standard merge.
     }
 
-    if (cls.kind === 'feed' && cls.carrierFrogId) {
-      const carrierFrog = a.id === cls.carrierFrogId ? a : b
-      const sacrificeFrog = a.id === cls.carrierFrogId ? b : a
-      this.performFeed(carrierFrog, sacrificeFrog, cx, cy)
-      return
-    }
-
-    if (cls.kind === 'carrier-merge') {
-      this.performCarrierMerge(a, b, cx, cy)
-      return
-    }
-
-    // === Existing standard-merge logic ===
-    // Заморозка: убрать лягушек из активных, отключить инпут, прервать твины
+    // === Standard-merge logic (normal+normal, and carrier fallback until 22-02) ===
     a.isMerging = true
     b.isMerging = true
     a.isMoving = true
@@ -193,8 +187,6 @@ export class MergeController {
     b.poopTimer = null
 
     eventBus.emit('merge:happened', { level: a.level })
-
-    // Заметная вибрация на мердж
     hapticImpact('medium')
 
     const VORTEX_DURATION = 350
@@ -226,7 +218,7 @@ export class MergeController {
 
       // L18+L18 — special path: лягушки сгорают (уже удалены removeFrog выше),
       // L19 НЕ материализуется. Тригерится unlock Звёздной карты через sentinel
-      // markDiscovered(19). См. spec progressive-location-unlock.
+      // markDiscovered(19). Cosmos sentinel НЕ трогать (используется в 22-06).
       if (oldLevel === MAX_LEVEL && b.level === MAX_LEVEL) {
         const storeL25 = useGameStore.getState()
         const currentLocId = storeL25.currentLocation
@@ -236,11 +228,8 @@ export class MergeController {
         if (wasNew) {
           eventBus.emit('location:unlocked', { locationId: 6 })
         }
-        // Server-authoritative merge — fire-and-forget с reconcile при ответе.
-        // Optimistic state уже применён выше. Server проверит и тихо обновит.
         mergeApi(MAX_LEVEL, currentLocId)
           .then((res) => {
-            // Reconcile: server values authoritative
             useGameStore.setState({
               locationFrogs: res.locationFrogs,
               discoveredLevels: res.discoveredLevels,
@@ -248,9 +237,6 @@ export class MergeController {
           })
           .catch((e) => {
             console.warn('[merge] server sync failed:', e)
-            // НЕ откатываем optimistic state — пользователь видит свой merge.
-            // Server eventually catch up через PUT. Может быть drift если cheat;
-            // legit play не пострадает.
           })
         return
       }
@@ -260,17 +246,12 @@ export class MergeController {
       const store = useGameStore.getState()
       const currentLocId = store.currentLocation
 
-      // Синкаем store: −2 старых уровня в текущей локации
       store.removeFrogFromLocation(currentLocId, oldLevel)
       store.removeFrogFromLocation(currentLocId, oldLevel)
-      // +1 новый уровень в его родной локации (может отличаться от текущей)
       store.addFrogToLocation(newCfg.location, newLevel)
 
-      // Server-authoritative merge — fire-and-forget с reconcile при ответе.
-      // Optimistic state уже применён выше. Server проверит и тихо обновит.
       mergeApi(oldLevel, currentLocId)
         .then((res) => {
-          // Reconcile: server values authoritative
           useGameStore.setState({
             locationFrogs: res.locationFrogs,
             discoveredLevels: res.discoveredLevels,
@@ -278,16 +259,12 @@ export class MergeController {
         })
         .catch((e) => {
           console.warn('[merge] server sync failed:', e)
-          // НЕ откатываем optimistic state — пользователь видит свой merge.
-          // Server eventually catch up через PUT. Может быть drift если cheat;
-          // legit play не пострадает.
         })
 
       const isCrossLocation = newCfg.location !== currentLocId
 
       scene.time.delayedCall(60, () => {
         if (isCrossLocation) {
-          // Лягушка улетает в свою локацию
           this.playCrossLocationFlyAway(cx, cy, newLevel)
           eventBus.emit('cosmic:toast', {
             type: 'generic',
@@ -295,7 +272,6 @@ export class MergeController {
             duration: 3000,
           })
         } else {
-          // Обычный pop-in
           const newFrog = this.spawner.spawnFrog(cx, cy, newLevel)
           newFrog.container.setScale(0)
           scene.tweens.add({
@@ -314,7 +290,6 @@ export class MergeController {
           })
         }
 
-        // Discovery (всегда)
         const wasNew = store.markDiscovered(newLevel)
         if (wasNew) {
           eventBus.emit('frog:discovered', { level: newLevel })
@@ -323,290 +298,9 @@ export class MergeController {
             eventBus.emit('location:unlocked', { locationId: unlockedLocId })
           }
         }
-      })
-    })
-  }
 
-  /**
-   * Phase 17 (CARRIER-03/04): feed carrier — sacrifice regular same-level frog → roll outcome.
-   * Vortex anim + delayed apply через store.feedCarrier action.
-   *
-   * После outcome:
-   *   - 'success': carrier replaced spawned upgraded frog (transfer carrier.frogId)
-   *   - 'fail': sacrifice consumed; carrier resumes idle на месте
-   *   - 'stabilize': StabilizationModal triggered через eventBus (Plan 17-04)
-   */
-  performFeed(carrier: FrogData, sacrifice: FrogData, cx: number, cy: number) {
-    const scene = this.scene
-    carrier.isMerging = true
-    sacrifice.isMerging = true
-    carrier.isMoving = true
-    sacrifice.isMoving = true
-    scene.tweens.killTweensOf(carrier.container)
-    scene.tweens.killTweensOf(carrier.body)
-    scene.tweens.killTweensOf(sacrifice.container)
-    scene.tweens.killTweensOf(sacrifice.body)
-    carrier.body.disableInteractive()
-    sacrifice.body.disableInteractive()
-    carrier.poopTimer?.remove()
-    carrier.poopTimer = null
-    sacrifice.poopTimer?.remove()
-    sacrifice.poopTimer = null
-
-    hapticImpact('medium')
-
-    const VORTEX_DURATION = 350
-    carrier.container.setDepth(99997)
-    sacrifice.container.setDepth(99997)
-    this.spawner.spiralFrogTo(carrier, cx, cy, VORTEX_DURATION)
-    this.spawner.spiralFrogTo(sacrifice, cx, cy, VORTEX_DURATION)
-    this.spawnVortexParticles(cx, cy, VORTEX_DURATION)
-
-    scene.time.delayedCall(VORTEX_DURATION, () => {
-      // Kill spiral tweens immediately: TimeManager fires before TweenManager in
-      // the same frame, so if the tween's last frame fires after this callback,
-      // it would overwrite setScale(BASE_SCALE) in fail/stabilize paths → carrier invisible.
-      scene.tweens.killTweensOf(carrier.container)
-      scene.tweens.killTweensOf(sacrifice.container)
-
-      const oldLevel = sacrifice.level
-      this.spawner.removeFrog(sacrifice)
-      const store0 = useGameStore.getState()
-      store0.removeFrogFromLocation(store0.currentLocation, oldLevel)
-
-      this.flashAt(cx, cy)
-
-      // Atomic feed — store mutates carrier + maybe emits stabilization event.
-      const outcome = useGameStore.getState().feedCarrier(carrier.id)
-      devLog(
-        '[performFeed] feedCarrier result:',
-        outcome,
-        'carrierId:',
-        carrier.id,
-      )
-
-      if (!outcome) {
-        // Defensive: carrier disappeared between drag-end and apply.
-        carrier.isMerging = false
-        carrier.isMoving = false
-        carrier.container.setDepth(carrier.container.y)
-        this.spawner.startIdleAnim(carrier)
-        return
-      }
-
-      if (outcome.result === 'success') {
-        // Replace carrier visual: remove old, spawn new at +1 level.
-        // Carrier-evolved frog всегда остаётся в текущей локации (не улетает cross-location).
-        const newLevel = outcome.newLevel
-        const oldCarrierLevel = carrier.level
-        this.spawner.removeFrog(carrier)
-        const storeS = useGameStore.getState()
-        storeS.removeFrogFromLocation(storeS.currentLocation, oldCarrierLevel)
-        storeS.addFrogToLocation(storeS.currentLocation, newLevel)
-
-        const newFrog = this.spawner.spawnFrog(cx, cy, newLevel)
-        // Transfer carrier.frogId на newFrog.id.
-        const carriersNow = useGameStore.getState().carriers.slice()
-        const idx = carriersNow.findIndex((c) => c.frogId === carrier.id)
-        if (idx >= 0) {
-          carriersNow[idx] = { ...carriersNow[idx], frogId: newFrog.id }
-          useGameStore.setState({ carriers: carriersNow })
-          // Немедленный sync overlay — новый frog получает element-цвет до setScale(0),
-          // иначе overlay прицепится лишь через кадр и pop-in начнётся без элемент-тинта.
-          scene.overlayManager?.syncNow()
-          devLog(
-            '[performFeed] frogId transferred to newFrog',
-            newFrog.id,
-            'overlayActiveCount:',
-            scene.overlayManager?.activeCount,
-          )
-        } else {
-          devWarn(
-            '[performFeed] carrier frogId transfer failed, orphaned carrier',
-            carrier.id,
-          )
-        }
-        newFrog.container.setScale(0)
-        scene.tweens.add({
-          targets: newFrog.container,
-          scale: BASE_SCALE * 1.2,
-          duration: 160,
-          ease: 'Back.easeOut',
-          onComplete: () => {
-            scene.tweens.add({
-              targets: newFrog.container,
-              scale: BASE_SCALE,
-              duration: 100,
-              ease: 'Power2.easeOut',
-            })
-          },
-        })
-        hapticNotification('success')
-
-        const wasNew = storeS.markDiscovered(newLevel)
-        if (wasNew) {
-          eventBus.emit('frog:discovered', { level: newLevel })
-          const unlockedLocId = getLocationUnlockedByLevel(newLevel)
-          if (unlockedLocId !== null) {
-            eventBus.emit('location:unlocked', { locationId: unlockedLocId })
-          }
-        }
-      } else if (outcome.result === 'fail') {
-        // Carrier stays at (cx, cy). Unlock + resume idle.
-        carrier.isMerging = false
-        carrier.isMoving = false
-        carrier.container.setRotation(0)
-        carrier.container.setScale(BASE_SCALE)
-        carrier.container.x = cx
-        carrier.container.y = cy
-        carrier.body.setInteractive({ useHandCursor: true })
-        scene.input.setDraggable(carrier.body)
-        this.spawner.startIdleAnim(carrier)
-        hapticNotification('error')
-        eventBus.emit('cosmic:toast', {
-          type: 'generic',
-          msg: i18next.t('cosmic_hub.carrier.feed_fail'),
-          duration: 1500,
-        })
-      } else {
-        // 'stabilize' — carrier остаётся, modal triggered через eventBus.
-        carrier.isMerging = false
-        carrier.isMoving = false
-        carrier.container.setRotation(0)
-        carrier.container.setScale(BASE_SCALE)
-        carrier.container.x = cx
-        carrier.container.y = cy
-        carrier.body.setInteractive({ useHandCursor: true })
-        scene.input.setDraggable(carrier.body)
-        this.spawner.startIdleAnim(carrier)
-        hapticImpact('heavy')
-      }
-
-      // Force overlay re-sync — level / stabilized changed.
-      scene.overlayManager?.markDirty()
-    })
-  }
-
-  /**
-   * Phase 17 (CARRIER-10): merge two stabilized same-element same-level carriers
-   * → 1 new carrier на level+1 с S-bucket guaranteed ceiling. Plays mergeEffect.
-   */
-  performCarrierMerge(a: FrogData, b: FrogData, cx: number, cy: number) {
-    const scene = this.scene
-    a.isMerging = true
-    b.isMerging = true
-    a.isMoving = true
-    b.isMoving = true
-    scene.tweens.killTweensOf(a.container)
-    scene.tweens.killTweensOf(a.body)
-    scene.tweens.killTweensOf(b.container)
-    scene.tweens.killTweensOf(b.body)
-    a.body.disableInteractive()
-    b.body.disableInteractive()
-    a.poopTimer?.remove()
-    a.poopTimer = null
-    b.poopTimer?.remove()
-    b.poopTimer = null
-
-    eventBus.emit('merge:happened', { level: a.level })
-    hapticImpact('medium')
-
-    const VORTEX_DURATION = 350
-    a.container.setDepth(99997)
-    b.container.setDepth(99997)
-    this.spawner.spiralFrogTo(a, cx, cy, VORTEX_DURATION)
-    this.spawner.spiralFrogTo(b, cx, cy, VORTEX_DURATION)
-    this.spawnVortexParticles(cx, cy, VORTEX_DURATION)
-
-    // Pre-capture carrier element для mergeEffect.
-    const carriersSnap = useGameStore.getState().carriers
-    const carrierA = carriersSnap.find((c) => c.frogId === a.id)
-    const element = carrierA?.element
-
-    scene.time.delayedCall(VORTEX_DURATION, () => {
-      const oldLevel = a.level
-      const store = useGameStore.getState()
-
-      this.spawner.removeFrog(a)
-      this.spawner.removeFrog(b)
-      store.removeFrogFromLocation(store.currentLocation, oldLevel)
-      store.removeFrogFromLocation(store.currentLocation, oldLevel)
-
-      this.flashAt(cx, cy)
-      if (element) mergeEffect(scene, cx, cy, element)
-
-      const newLevel = Math.min(oldLevel + 1, MAX_LEVEL)
-      const newCfg = FROG_LEVELS[newLevel - 1]
-      store.addFrogToLocation(newCfg.location, newLevel)
-
-      // Server-authoritative merge — fire-and-forget с reconcile при ответе.
-      // Optimistic state уже применён выше. Server проверит и тихо обновит.
-      mergeApi(oldLevel, store.currentLocation)
-        .then((res) => {
-          // Reconcile: server values authoritative
-          useGameStore.setState({
-            locationFrogs: res.locationFrogs,
-            discoveredLevels: res.discoveredLevels,
-          })
-        })
-        .catch((e) => {
-          console.warn('[merge] server sync failed:', e)
-          // НЕ откатываем optimistic state — пользователь видит свой merge.
-          // Server eventually catch up через PUT. Может быть drift если cheat;
-          // legit play не пострадает.
-        })
-
-      const isCrossLocation = newCfg.location !== store.currentLocation
-
-      scene.time.delayedCall(60, () => {
-        if (isCrossLocation) {
-          this.playCrossLocationFlyAway(cx, cy, newLevel)
-          eventBus.emit('cosmic:toast', {
-            type: 'generic',
-            msg: i18next.t('cosmic_hub.carrier.merge_cross_location_warn'),
-            duration: 3000,
-          })
-          return
-        }
-        const newFrog = this.spawner.spawnFrog(cx, cy, newLevel)
-        newFrog.container.setScale(0)
-        scene.tweens.add({
-          targets: newFrog.container,
-          scale: BASE_SCALE * 1.2,
-          duration: 160,
-          ease: 'Back.easeOut',
-          onComplete: () => {
-            scene.tweens.add({
-              targets: newFrog.container,
-              scale: BASE_SCALE,
-              duration: 100,
-              ease: 'Power2.easeOut',
-            })
-          },
-        })
-
-        // Atomic store merge — removes both old carriers, adds new with S-bucket
-        // ceiling, sets bestiary bit.
-        const merged = useGameStore
-          .getState()
-          .mergeCarriers(a.id, b.id, newFrog.id)
-        if (!merged) {
-          devWarn(
-            '[performCarrierMerge] mergeCarriers returned null — defensive',
-          )
-        }
-
+        // Sync overlay after merge (carrier frogId may have moved to new frog)
         scene.overlayManager?.markDirty()
-        hapticNotification('success')
-
-        const wasNew = store.markDiscovered(newLevel)
-        if (wasNew) {
-          eventBus.emit('frog:discovered', { level: newLevel })
-          const unlockedLocId = getLocationUnlockedByLevel(newLevel)
-          if (unlockedLocId !== null) {
-            eventBus.emit('location:unlocked', { locationId: unlockedLocId })
-          }
-        }
       })
     })
   }
@@ -630,7 +324,6 @@ export class MergeController {
       onComplete: () => ghost.destroy(),
     })
 
-    // Плавающий текст с именем локации
     this.spawnFloatingText(
       x,
       y - 40 * DPR,
@@ -642,13 +335,13 @@ export class MergeController {
   locationName(id: number): string {
     switch (id) {
       case 1:
-        return 'Болото'
+        return 'Лужа'
       case 2:
-        return 'Лес'
+        return 'Болото'
       case 3:
-        return 'Континент'
+        return 'Лес'
       case 4:
-        return 'Планета'
+        return 'Континент'
       default:
         return ''
     }
@@ -700,7 +393,6 @@ export class MergeController {
 
   spawnFloatingText(x: number, y: number, text: string, _type: PoopType) {
     const scene = this.scene
-    // Все цифры — золотые, очень мелкие, медленно поднимаются
     const t = scene.add.text(x, y, text, {
       fontFamily: 'Russo One, sans-serif',
       fontSize: `${11 * DPR}px`,
@@ -711,14 +403,12 @@ export class MergeController {
     t.setOrigin(0.5)
     t.setDepth(99998)
 
-    // Сначала летит вверх без затухания
     scene.tweens.add({
       targets: t,
       y: y - 32 * DPR,
       duration: 1800,
       ease: 'Sine.easeOut',
     })
-    // Затухание стартует позже и идёт быстрее, продолжая полёт
     scene.tweens.add({
       targets: t,
       alpha: 0,

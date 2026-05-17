@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import Phaser from 'phaser'
-import type { Element, Rarity } from '../../store/cosmic/types'
+import type { Element } from '../../store/cosmic/types'
+import type { LegacyRarity } from '../../store/cosmic/bestiary'
 import { textureKeyForLevel, configForLevel } from '../../game/config/frogs'
 import { ELEMENT_TINTS } from '../../game/effects/elements/elementTints'
 import type { AuraSpec } from '../../game/effects/ElementAuraOverlay'
@@ -24,12 +25,12 @@ import {
 
 interface GalleryDetailPreviewProps {
   archetype: Element
-  rarity: Rarity
+  rarity: LegacyRarity
 }
 
 const SIZE = 480
 
-const RARITY_TO_LEVEL: Record<Rarity, number> = {
+const RARITY_TO_LEVEL: Record<LegacyRarity, number> = {
   common: 1,
   rare: 7,
   epic: 13,
@@ -67,7 +68,7 @@ const AURA_SPECS: Partial<Record<Element, AuraSpec>> = {
 
 function makePreviewScene(
   archetype: Element,
-  rarity: Rarity,
+  rarity: LegacyRarity,
 ): typeof Phaser.Scene {
   const level = RARITY_TO_LEVEL[rarity]
   const textureKey = textureKeyForLevel(level)
@@ -90,7 +91,7 @@ function makePreviewScene(
       // Aura спавнится первой (ниже по depth) — лягушка автоматически поверх.
       if (spec) {
         spec.ensureTextures(this)
-        const aura = spec.createAura(this, rarity)
+        const aura = spec.createAura(this)
         aura.container.setPosition(SIZE / 2, SIZE / 2 - 20)
         aura.container.setScale(2.4) // увеличить для preview canvas (главная сцена меньше)
         aura.container.setDepth(0)

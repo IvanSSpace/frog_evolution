@@ -31,7 +31,7 @@ import {
   rollPoopType,
   POOP_INTERVAL_MS,
 } from '../../config/frogs'
-import { isEligible } from '../../../utils/serumEligibility'
+// Phase 22: serumEligibility deleted — simple inline check
 import { ELEMENT_TINT } from '../../../components/CosmicHub/ElementGrid'
 import {
   BASE_SCALE,
@@ -154,13 +154,9 @@ export class FrogSpawner {
       const state = useGameStore.getState()
       if (state.serumDragActive && state.selectedSerum) {
         const sel = state.selectedSerum
-        const eligible = scene.frogs.filter((f) =>
-          isEligible(
-            { id: f.id, level: f.level },
-            sel.element,
-            sel.rarity,
-            state.carriers,
-          ),
+        // Phase 22: eligible = any frog that is not already a carrier
+        const eligible = scene.frogs.filter(
+          (f) => !state.carriers.some((c) => c.frogId === f.id),
         )
         scene.selectionLayer?.show(
           eligible.map((f) => ({

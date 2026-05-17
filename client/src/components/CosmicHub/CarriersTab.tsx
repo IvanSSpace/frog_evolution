@@ -1,18 +1,18 @@
-// Phase 17: list of all carriers (cosmicSlice.carriers) с прогрессом + dispose.
-// Plan 17-05 wires DisposeConfirmModal.
+// Phase 22: простой список carriers (element + level + frogId).
+// Удалены: stabilized badge, feedCount progress, disposeCarrier action.
+// DisposeConfirmModal остаётся как stub — dispose TBD в Plan 22-03 (ascension flow).
 
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useGameStore } from '../../store/gameStore'
 import { CarrierInfoCard } from './CarrierInfoCard'
 import { DisposeConfirmModal } from './DisposeConfirmModal'
-import { eventBus } from '../../store/eventBus'
 import type { CarrierData } from '../../store/cosmic/types'
 
 export function CarriersTab() {
   const { t } = useTranslation()
   const carriers = useGameStore((s) => s.carriers)
-  const disposeCarrier = useGameStore((s) => s.disposeCarrier)
+  const removeCarrier = useGameStore((s) => s.removeCarrier)
   const [pendingDispose, setPendingDispose] = useState<CarrierData | null>(null)
 
   if (carriers.length === 0) {
@@ -34,22 +34,13 @@ export function CarriersTab() {
 
   const handleConfirmDispose = () => {
     if (!pendingDispose) return
-    const result = disposeCarrier(pendingDispose.frogId)
-    eventBus.emit('cosmic:toast', {
-      type: 'generic',
-      msg: result.recovered
-        ? t('cosmic_hub.carrier.dispose.toast_recovered')
-        : t('cosmic_hub.carrier.dispose.toast_no_recovery'),
-      duration: 3000,
-    })
+    // Phase 22: simple removeCarrier (ascension + serum recovery in Plan 22-03)
+    removeCarrier(pendingDispose.frogId)
     setPendingDispose(null)
   }
 
-  // Sort: stabilized последними; внутри — по feedCount desc.
-  const sorted = [...carriers].sort((a, b) => {
-    if (a.stabilized !== b.stabilized) return a.stabilized ? 1 : -1
-    return b.feedCount - a.feedCount
-  })
+  // Phase 22: simple sort by level descending
+  const sorted = [...carriers].sort((a, b) => b.level - a.level)
 
   return (
     <>

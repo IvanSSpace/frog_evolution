@@ -32,7 +32,7 @@ import {
   voidSpec,
 } from '../effects/elementAuraSpecs'
 import { SerumSelectionLayer } from '../effects/SerumSelectionLayer'
-import type { Element, Rarity } from '../../store/cosmic/types'
+import type { Element } from '../../store/cosmic/types'
 import { devLog } from '../../utils/devLog'
 import {
   BASE_SCALE,
@@ -102,7 +102,8 @@ export class MainScene extends Phaser.Scene {
   // Phaser-native aura'ы для carrier'ов разных элементов. Рисуются прямо
   // в сцене под лягушкой, без bridge через DOM. Каждый элемент имеет свой
   // визуальный паттерн (пламя/ripples/листья/токсичные облака).
-  private elementAuras: ElementAuraOverlay[] = []
+  // Package-public — LocationTransition пересоздаёт массив после dual-container animation.
+  elementAuras: ElementAuraOverlay[] = []
 
   // Phase 14: serum selection layer (зелёные halo + red flash).
   selectionLayer: SerumSelectionLayer | null = null
@@ -127,7 +128,9 @@ export class MainScene extends Phaser.Scene {
   private magnet!: MagnetController
 
   // Phase 21-05 (Wave 5): location transition (clearField + dual-container zoom).
-  private locTransition!: LocationTransition
+  // Package-public — game/index.ts вызывает runOpen/CloseStarMapTransition при
+  // переключении на/со Звёздной карты.
+  locTransition!: LocationTransition
 
   // Phase 21-05 (Wave 5): tap / serum-drag handlers + selection subscribe.
   private interaction!: FrogInteraction
@@ -159,6 +162,7 @@ export class MainScene extends Phaser.Scene {
       width: 18 * TEXTURE_QUALITY,
       height: 18 * TEXTURE_QUALITY,
     })
+    this.load.image('map0', '/map0.png')
     this.load.image('map', '/map.webp')
     this.load.image('map2', '/map2.webp')
     this.load.image('map3', '/map3.webp')
@@ -263,30 +267,7 @@ export class MainScene extends Phaser.Scene {
     // Phase 12: overlay manager — создаётся ПОСЛЕ spawnLocationFrogs так что
     // первый sync видит уже живых лягушек, и для их frogId-match с CarrierData.
     this.overlayManager = new FrogOverlayManager(this, () => this.frogs)
-    // Phase 22: element aura'ы — все 15 архетипов (кроме ice — пока не реализован).
-    // Каждый со своим визуальным паттерном через AuraSpec.
-    this.elementAuras = [
-      new ElementAuraOverlay(this, () => this.frogs, 'fire', fireSpec),
-      new ElementAuraOverlay(this, () => this.frogs, 'water', waterSpec),
-      new ElementAuraOverlay(this, () => this.frogs, 'forest', forestSpec),
-      new ElementAuraOverlay(this, () => this.frogs, 'toxic', toxicSpec),
-      new ElementAuraOverlay(this, () => this.frogs, 'plasma', plasmaSpec),
-      new ElementAuraOverlay(this, () => this.frogs, 'shadow', shadowSpec),
-      new ElementAuraOverlay(this, () => this.frogs, 'crystal', crystalSpec),
-      new ElementAuraOverlay(this, () => this.frogs, 'desert', desertSpec),
-      new ElementAuraOverlay(this, () => this.frogs, 'gas', gasSpec),
-      new ElementAuraOverlay(this, () => this.frogs, 'ring', ringSpec),
-      new ElementAuraOverlay(this, () => this.frogs, 'binary', binarySpec),
-      new ElementAuraOverlay(this, () => this.frogs, 'arcane', arcaneSpec),
-      new ElementAuraOverlay(
-        this,
-        () => this.frogs,
-        'mechanical',
-        mechanicalSpec,
-      ),
-      new ElementAuraOverlay(this, () => this.frogs, 'war', warSpec),
-      new ElementAuraOverlay(this, () => this.frogs, 'void', voidSpec),
-    ]
+    this.createElementAuras()
     this.rebindCarriers()
 
     // Phase 14: serum selection layer + subscribe на serumDragActive.
@@ -330,6 +311,36 @@ export class MainScene extends Phaser.Scene {
 
   private rebindCarriers(): void {
     this.spawner.rebindCarriers()
+  }
+
+  /**
+   * Создаёт/пересоздаёт массив element aura overlays. Вызывается из create()
+   * и из LocationTransition.onLocationChanged.onComplete (после того как старые
+   * auras были перенесены в oldContainer и уничтожены вместе с ним).
+   */
+  createElementAuras(): void {
+    this.elementAuras = [
+      new ElementAuraOverlay(this, () => this.frogs, 'fire', fireSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'water', waterSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'forest', forestSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'toxic', toxicSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'plasma', plasmaSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'shadow', shadowSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'crystal', crystalSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'desert', desertSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'gas', gasSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'ring', ringSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'binary', binarySpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'arcane', arcaneSpec),
+      new ElementAuraOverlay(
+        this,
+        () => this.frogs,
+        'mechanical',
+        mechanicalSpec,
+      ),
+      new ElementAuraOverlay(this, () => this.frogs, 'war', warSpec),
+      new ElementAuraOverlay(this, () => this.frogs, 'void', voidSpec),
+    ]
   }
 
   // Phase 21-05: clearField / onLocationChanged / onDevClearAllFrogs перенесены
@@ -572,7 +583,7 @@ export class MainScene extends Phaser.Scene {
       store.setBoxWaiting(waiting)
     }
 
-    // Магнит работает только на локации, где это разрешено (сейчас — только Болото L1).
+    // Магнит работает только на локации, где это разрешено (сейчас — только Лужа L1).
     // Phase 14 (SERUM-06): auto-pause во время serum selection mode.
     const location = getLocationById(store.currentLocation)
     const magnetLevel = store.upgrades.magnet
@@ -653,7 +664,6 @@ export class MainScene extends Phaser.Scene {
       'war',
       'void',
     ]
-    const RARITIES: Rarity[] = ['common', 'rare', 'epic', 'legendary']
     // Representative level per location
     const LOC_LEVEL: Record<number, number> = { 1: 1, 2: 7, 3: 13, 4: 19 }
 
@@ -666,19 +676,16 @@ export class MainScene extends Phaser.Scene {
 
     for (let loc = 1; loc <= 4; loc++) {
       const level = LOC_LEVEL[loc]
-      ELEMENTS.forEach((element, i) => {
-        const rarity = RARITIES[i % RARITIES.length]
+      ELEMENTS.forEach((element) => {
         if (loc === currentLoc) {
           // Spawn real Phaser frog — overlay attaches immediately
           const { x, y } = this.randomFieldPos()
           const frog = this.spawnFrog(x, y, level)
           newLocationFrogs[loc - 1].push(level)
+          // Phase 22: carrier = { frogId, element, level } only
           newCarriers.push({
             frogId: frog.id,
             element,
-            rarity,
-            feedCount: 0,
-            stabilized: false,
             level,
           })
         } else {
@@ -687,9 +694,6 @@ export class MainScene extends Phaser.Scene {
           newCarriers.push({
             frogId: `debug:${element}:${loc}`,
             element,
-            rarity,
-            feedCount: 0,
-            stabilized: false,
             level,
           })
         }

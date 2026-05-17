@@ -3,11 +3,9 @@ import { createPortal } from 'react-dom'
 import { useGameStore } from '../../store/gameStore'
 import {
   ELEMENTS,
-  RARITIES,
   type Element,
-  type Rarity,
 } from '../../store/cosmic/types'
-import { bestiaryIndex, readBit } from '../../store/cosmic/bestiary'
+import { bestiaryIndex, readBit, LEGACY_RARITIES, type LegacyRarity } from '../../store/cosmic/bestiary'
 import { GalleryCard } from './GalleryCard'
 import { ARCHETYPE_EMOJI, ARCHETYPE_NAME_RU } from './types'
 
@@ -18,7 +16,7 @@ interface GalleryModalProps {
 function isArchetypeRarityUnlocked(
   bitset: ReadonlyArray<number>,
   archetype: Element,
-  rarity: Rarity,
+  rarity: LegacyRarity,
 ): boolean {
   for (let level = 1; level <= 18; level++) {
     const idx = bestiaryIndex(archetype, rarity, level)
@@ -34,7 +32,7 @@ export function GalleryModal({ onClose }: GalleryModalProps) {
     () =>
       ELEMENTS.map((archetype) => ({
         archetype,
-        rarities: RARITIES.map((rarity) => ({
+        rarities: LEGACY_RARITIES.map((rarity) => ({
           rarity,
           unlocked: isArchetypeRarityUnlocked(bitset, archetype, rarity),
         })),

@@ -1,10 +1,11 @@
-import type { Element, Rarity } from '../../store/cosmic/types'
+import type { Element } from '../../store/cosmic/types'
+import type { LegacyRarity } from '../../store/cosmic/bestiary'
 import { eventBus } from '../../store/eventBus'
 import { ARCHETYPE_EMOJI, RARITY_COLOR, RARITY_LABEL } from './types'
 
 interface GalleryCardProps {
   archetype: Element
-  rarity: Rarity
+  rarity: LegacyRarity
   unlocked: boolean
 }
 

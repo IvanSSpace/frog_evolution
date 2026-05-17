@@ -1,12 +1,11 @@
 // Phase 15: CascadeRevealModal — обёртка драмы при открытии бокса.
+// Phase 22: rarity removed. Box reveals element + serum (no tier).
 // State machine: opening-flash → coins-reveal → resources-reveal → pause → slot-spinning → slot-reveal → closing.
 // Lazy-loads SerumSlotMachine (отдельный chunk PERF-08).
-//
-// REQ BOX-04 / BOX-05 / BOX-06 / UX-06.
 
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { BoxData, Rarity, Element } from '../../store/cosmic/types'
+import type { BoxData, Element } from '../../store/cosmic/types'
 import { useGameStore } from '../../store/gameStore'
 import { ELEMENT_TINT } from './ElementGrid'
 import { getInstantBoxes } from '../../utils/cosmicSettings'
@@ -20,7 +19,6 @@ const T_OPENING_FLASH = 200 // ms
 const T_COINS_REVEAL = 200 // ms
 const T_RESOURCES_REVEAL = 200 // ms
 const T_PAUSE = 400 // ms
-// instant total ≈ slot's INSTANT_MODE_DURATION_MS (400) — handled в SerumSlotMachine.
 
 type Phase =
   | 'opening-flash'
@@ -42,10 +40,10 @@ export default function CascadeRevealModal({
 }: CascadeRevealModalProps) {
   const { t } = useTranslation()
 
-  // Pre-roll rarity на mount (REQ: rolling до анимации, fairness).
+  // Phase 22: rollBoxRarity returns { element } only (no rarity)
   const rollBoxRarity = useGameStore((s) => s.rollBoxRarity)
   const commitOpenedBox = useGameStore((s) => s.commitOpenedBox)
-  const rolledRef = useRef<{ rarity: Rarity; element: Element } | null>(null)
+  const rolledRef = useRef<{ element: Element } | null>(null)
 
   if (rolledRef.current === null) {
     rolledRef.current = rollBoxRarity(box.id)
@@ -106,16 +104,15 @@ export default function CascadeRevealModal({
   // SerumSlotMachine onComplete handler — переходим к reveal phase + commit.
   const handleSlotComplete = useCallback(() => {
     if (rolledRef.current === null) return
-    commitOpenedBox(box.id, rolledRef.current.rarity)
+    // Phase 22: commitOpenedBox no longer needs rarity arg
+    commitOpenedBox(box.id)
     setPhase('slot-reveal')
   }, [box.id, commitOpenedBox])
 
   // Tap-anywhere skip (REQ SLOT-06): после первой 0.6с от mount.
-  // Phase 'slot-spinning' → SerumSlotMachine handles skip via skipRequested prop.
-  // Phase 'slot-reveal' → tap НЕ закрывает (юзер должен жмякнуть «Забрать»).
   const handleTapAnywhere = useCallback(() => {
     if (phase !== 'slot-spinning') return
-    if (Date.now() - tapStartTime.current < 600) return // anti-misclick 600ms
+    if (Date.now() - tapStartTime.current < 600) return
     setSkipRequested(true)
   }, [phase])
 
@@ -145,7 +142,6 @@ export default function CascadeRevealModal({
         cursor: phase === 'slot-spinning' ? 'pointer' : 'default',
       }}
     >
-      {/* Phase: opening-flash — quick zoom in */}
       {phase === 'opening-flash' && (
         <div
           data-testid="cascade-opening"
@@ -158,7 +154,6 @@ export default function CascadeRevealModal({
         </div>
       )}
 
-      {/* Phase: coins-reveal */}
       {phase === 'coins-reveal' && (
         <div
           data-testid="cascade-coins"
@@ -175,7 +170,6 @@ export default function CascadeRevealModal({
         </div>
       )}
 
-      {/* Phase: resources-reveal */}
       {phase === 'resources-reveal' && (
         <div
           data-testid="cascade-resources"
@@ -192,7 +186,6 @@ export default function CascadeRevealModal({
         </div>
       )}
 
-      {/* Phase: pause — empty 400ms breath */}
       {phase === 'pause' && (
         <div
           data-testid="cascade-pause"
@@ -202,14 +195,12 @@ export default function CascadeRevealModal({
         </div>
       )}
 
-      {/* Phase: slot-spinning — SerumSlotMachine takes over (Plan 15-04) */}
       {phase === 'slot-spinning' && (
         <Suspense
           fallback={<div style={{ color: 'rgba(255,255,255,0.4)' }}>…</div>}
         >
           <SerumSlotMachine
             element={rolled.element}
-            rolledRarity={rolled.rarity}
             onComplete={handleSlotComplete}
             skipRequested={skipRequested}
             instantMode={instantMode}
@@ -217,19 +208,15 @@ export default function CascadeRevealModal({
         </Suspense>
       )}
 
-      {/* Phase: slot-reveal — show serum + claim button */}
       {phase === 'slot-reveal' && (
         <RevealResult
           element={rolled.element}
-          rarity={rolled.rarity}
           onClaim={handleClaim}
         />
       )}
 
-      {/* Closing — empty (parent unmounts) */}
       {phase === 'closing' && null}
 
-      {/* Inline keyframes (one-time per mount; OK для overlay-modal) */}
       <style>{`
         @keyframes cascadeZoomIn {
           from { transform: scale(0.5); opacity: 0; }
@@ -246,11 +233,10 @@ export default function CascadeRevealModal({
 
 interface RevealResultProps {
   element: Element
-  rarity: Rarity
   onClaim: () => void
 }
 
-function RevealResult({ element, rarity, onClaim }: RevealResultProps) {
+function RevealResult({ element, onClaim }: RevealResultProps) {
   const { t } = useTranslation()
   const tint = ELEMENT_TINT[element]
   return (
@@ -259,7 +245,6 @@ function RevealResult({ element, rarity, onClaim }: RevealResultProps) {
       className="flex flex-col items-center gap-4 px-6"
       style={{ animation: 'cascadeSlideUp 300ms ease-out forwards' }}
     >
-      {/* Element-specific reveal flash */}
       <div
         className="flex items-center justify-center"
         style={{
@@ -273,7 +258,7 @@ function RevealResult({ element, rarity, onClaim }: RevealResultProps) {
         <span style={{ fontSize: 56 }}>🧪</span>
       </div>
 
-      {/* Element + rarity name */}
+      {/* Element name */}
       <div
         className="ff-display text-center px-5 py-2"
         style={{
@@ -288,12 +273,11 @@ function RevealResult({ element, rarity, onClaim }: RevealResultProps) {
       >
         {t('cosmic_hub.slot.reveal_serum', {
           element: t(`cosmic_hub.elements.${element}`),
-          rarity: t(`rarity.${rarity}`),
         })}
       </div>
 
-      {/* Claim button */}
       <button
+        type="button"
         onClick={onClaim}
         className="ff-btn ff-btn-green text-lg"
         style={{

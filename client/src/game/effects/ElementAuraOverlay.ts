@@ -1,6 +1,8 @@
 import Phaser from 'phaser'
 import { useGameStore } from '../../store/gameStore'
-import type { CarrierData, Element, Rarity } from '../../store/cosmic/types'
+// Phase 22: Rarity removed. AuraSpec.createAura no longer takes rarity.
+// All carriers render at 'dormant' tier (Plan 22-03 will add tier escalation).
+import type { CarrierData, Element } from '../../store/cosmic/types'
 
 const HARD_CAP_VISIBLE = 4
 const CULL_FRAME_INTERVAL = 6
@@ -16,12 +18,11 @@ export type FrogProvider = () => FrogLike[]
 export interface AuraInstance {
   container: Phaser.GameObjects.Container
   tweens: Phaser.Tweens.Tween[]
-  rarity: Rarity
 }
 
 export interface AuraSpec {
   ensureTextures(scene: Phaser.Scene): void
-  createAura(scene: Phaser.Scene, rarity: Rarity): AuraInstance
+  createAura(scene: Phaser.Scene): AuraInstance
 }
 
 export class ElementAuraOverlay {
@@ -108,7 +109,7 @@ export class ElementAuraOverlay {
 
     for (const { carrier, frog } of top) {
       if (this.active.has(carrier.frogId)) continue
-      const aura = this.spec.createAura(this.scene, carrier.rarity)
+      const aura = this.spec.createAura(this.scene)
       aura.container.setPosition(frog.container.x, frog.container.y)
       this.active.set(carrier.frogId, aura)
     }
@@ -140,6 +141,39 @@ export class ElementAuraOverlay {
     this.unsubStore = null
     for (const [, aura] of this.active) {
       this.destroyAura(aura)
+    }
+    this.active.clear()
+  }
+
+  /**
+   * Specialized dispose для location transition: переносит все active aura
+   * containers внутрь указанного reparent контейнера (oldContainer), переводя
+   * их в локальные координаты (минус cx,cy). Так aura будет масштабироваться
+   * и fade-out'нуться вместе с лягушкой/полем. Реальное destroy случится через
+   * oldContainer.destroy(true) — нам остаётся только обнулить active map
+   * и отписаться от store.
+   */
+  reparentForTransition(
+    reparent: Phaser.GameObjects.Container,
+    cx: number,
+    cy: number,
+  ): void {
+    if (this.disposed) return
+    this.disposed = true
+    this.unsubStore?.()
+    this.unsubStore = null
+    for (const [, aura] of this.active) {
+      const wx = aura.container.x
+      const wy = aura.container.y
+      const parent = aura.container.parentContainer
+      if (parent) {
+        parent.remove(aura.container, false)
+      } else {
+        this.scene.children.remove(aura.container)
+      }
+      reparent.add(aura.container)
+      aura.container.x = wx - cx
+      aura.container.y = wy - cy
     }
     this.active.clear()
   }

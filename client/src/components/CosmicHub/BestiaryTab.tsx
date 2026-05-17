@@ -4,13 +4,15 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useGameStore } from '../../store/gameStore'
-import type { Element, Rarity } from '../../store/cosmic/types'
+import type { Element } from '../../store/cosmic/types'
 import {
   countUnlocked,
   unlockedInLocation,
   readBit,
   bestiaryIndex,
   BESTIARY_BIT_COUNT,
+  type LegacyRarity,
+  LEGACY_RARITIES,
 } from '../../store/cosmic/bestiary'
 import {
   BestiaryGrid,
@@ -20,7 +22,7 @@ import {
 } from './bestiary'
 
 interface LocationTab {
-  rarity: Rarity
+  rarity: LegacyRarity
   labelKey: string // i18n key
   icon: string
 }
@@ -28,36 +30,36 @@ interface LocationTab {
 const LOCATION_TABS: readonly LocationTab[] = [
   {
     rarity: 'common',
+    labelKey: 'cosmic_hub.bestiary.location_puddle',
+    icon: '💧',
+  },
+  {
+    rarity: 'rare',
     labelKey: 'cosmic_hub.bestiary.location_swamp',
     icon: '🌿',
   },
   {
-    rarity: 'rare',
+    rarity: 'epic',
     labelKey: 'cosmic_hub.bestiary.location_forest',
     icon: '🌲',
   },
   {
-    rarity: 'epic',
+    rarity: 'legendary',
     labelKey: 'cosmic_hub.bestiary.location_continent',
     icon: '🏔️',
-  },
-  {
-    rarity: 'legendary',
-    labelKey: 'cosmic_hub.bestiary.location_planet',
-    icon: '🪐',
   },
 ] as const
 
 interface SelectedCell {
   element: Element
-  rarity: Rarity
+  rarity: LegacyRarity
   level: number
 }
 
 export function BestiaryTab() {
   const { t } = useTranslation()
   const bitset = useGameStore((s) => s.bestiaryBitset)
-  const [activeLocation, setActiveLocation] = useState<Rarity>('common')
+  const [activeLocation, setActiveLocation] = useState<LegacyRarity>('common')
   const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null)
 
   const totalUnlocked = useMemo(() => countUnlocked(bitset), [bitset])
@@ -66,19 +68,19 @@ export function BestiaryTab() {
 
   // Per-tab unlocked count map (memoized)
   const perLocationCounts = useMemo(() => {
-    const result: Record<Rarity, number> = {
+    const result: Record<LegacyRarity, number> = {
       common: 0,
       rare: 0,
       epic: 0,
       legendary: 0,
     }
-    for (const r of ['common', 'rare', 'epic', 'legendary'] as const) {
+    for (const r of LEGACY_RARITIES) {
       result[r] = unlockedInLocation(bitset, r)
     }
     return result
   }, [bitset])
 
-  const handleCellTap = (element: Element, rarity: Rarity, level: number) => {
+  const handleCellTap = (element: Element, rarity: LegacyRarity, level: number) => {
     setSelectedCell({ element, rarity, level })
   }
 

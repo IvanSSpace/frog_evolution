@@ -1,31 +1,19 @@
+// Phase 22: SerumBar — отображает серумы из плоского Record<Element, number>.
+// Один тип серума per element, без rarity stripes/sections.
+// Tap → setSerumDragActive + eventBus select-serum → modal closes, frogs visible.
+
 import { useEffect, useState } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { eventBus } from '../store/eventBus'
-import { ELEMENTS, type Element, type Rarity } from '../store/cosmic/types'
+import { ELEMENTS, type Element } from '../store/cosmic/types'
 import { ELEMENT_TINT, ELEMENT_BOTTLE_FILTER } from './CosmicHub/ElementGrid'
 import { hapticImpact } from '../utils/telegram'
-
-const RARITY_LOCATION: Record<Rarity, number> = {
-  common: 1,
-  rare: 2,
-  epic: 3,
-  legendary: 4,
-}
-
-const LOCATION_RARITY: Record<number, Rarity> = {
-  1: 'common',
-  2: 'rare',
-  3: 'epic',
-  4: 'legendary',
-}
 
 export function SerumBar() {
   const serums = useGameStore((s) => s.serums)
   const setSerumDragActive = useGameStore((s) => s.setSerumDragActive)
-  const setCurrentLocation = useGameStore((s) => s.setCurrentLocation)
   const selectedSerum = useGameStore((s) => s.selectedSerum)
   const serumDragActive = useGameStore((s) => s.serumDragActive)
-  const currentLocation = useGameStore((s) => s.currentLocation)
 
   const [starMapActive, setStarMapActive] = useState(false)
 
@@ -40,34 +28,25 @@ export function SerumBar() {
     }
   }, [])
 
-  // Показываем только редкость текущей локации
-  const locationRarity = LOCATION_RARITY[currentLocation]
-
-  const slots: { element: Element; rarity: Rarity; count: number }[] = []
-  if (locationRarity) {
-    for (const element of ELEMENTS) {
-      const count = serums[element][locationRarity] ?? 0
-      if (count > 0) slots.push({ element, rarity: locationRarity, count })
-    }
+  // Phase 22: show all elements that have at least 1 serum
+  const slots: { element: Element; count: number }[] = []
+  for (const element of ELEMENTS) {
+    const count = serums[element] ?? 0
+    if (count > 0) slots.push({ element, count })
   }
 
   if (starMapActive) return null
   if (slots.length === 0) return null
 
-  const handleTap = (element: Element, rarity: Rarity) => {
+  const handleTap = (element: Element) => {
     hapticImpact('light')
     // Повторный тап по активной — снять выбор
-    if (
-      serumDragActive &&
-      selectedSerum?.element === element &&
-      selectedSerum?.rarity === rarity
-    ) {
+    if (serumDragActive && selectedSerum?.element === element) {
       setSerumDragActive(false)
       return
     }
-    setCurrentLocation(RARITY_LOCATION[rarity])
-    setSerumDragActive(true, { element, rarity })
-    eventBus.emit('cosmic:select-serum', { element, rarity })
+    setSerumDragActive(true, { element })
+    eventBus.emit('cosmic:select-serum', { element })
   }
 
   return (
@@ -100,17 +79,15 @@ export function SerumBar() {
           scrollbarWidth: 'none',
         }}
       >
-        {slots.map(({ element, rarity, count }) => {
+        {slots.map(({ element, count }) => {
           const tint = ELEMENT_TINT[element]
-          const isActive =
-            serumDragActive &&
-            selectedSerum?.element === element &&
-            selectedSerum?.rarity === rarity
+          const isActive = serumDragActive && selectedSerum?.element === element
 
           return (
             <button
-              key={`${element}:${rarity}`}
-              onClick={() => handleTap(element, rarity)}
+              key={element}
+              type="button"
+              onClick={() => handleTap(element)}
               style={{
                 flexShrink: 0,
                 width: 52,

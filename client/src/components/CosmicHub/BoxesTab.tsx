@@ -50,10 +50,9 @@ export function BoxesTab({ onClose }: Props) {
     for (const box of snapshot) {
       const rolled = rollBoxRarity(box.id)
       if (!rolled) continue
-      commitOpenedBox(box.id, rolled.rarity)
+      commitOpenedBox(box.id)
       results.push({
         element: rolled.element,
-        rarity: rolled.rarity,
         planetName: box.planetName,
       })
     }

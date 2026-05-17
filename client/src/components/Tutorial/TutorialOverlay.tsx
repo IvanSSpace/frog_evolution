@@ -35,9 +35,8 @@ export function TutorialOverlay() {
   const hasOpenedAnyBox = useGameStore((s) => s.hasOpenedAnyBox)
   const serumDragActive = useGameStore((s) => s.serumDragActive)
   const hasFirstFeed = useGameStore((s) => s.hasFirstFeed)
-  const hasFirstStabilize = useGameStore((s) =>
-    s.carriers.some((c) => c.stabilized),
-  )
+  // Phase 22: stabilize removed — hasFirstStabilize always false
+  const hasFirstStabilize = false
   const tutorialState = useGameStore((s) => s.tutorialState)
   const markSeen = useGameStore((s) => s.markTutorialSeen)
 

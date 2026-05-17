@@ -8,18 +8,16 @@
 import { useMemo, useState } from 'react'
 import {
   ELEMENTS,
-  RARITIES,
   type Element,
-  type Rarity,
 } from '../../../store/cosmic/types'
-import { bestiaryIndex, readBit } from '../../../store/cosmic/bestiary'
+import { LEGACY_RARITIES, type LegacyRarity, bestiaryIndex, readBit } from '../../../store/cosmic/bestiary'
 import { MAX_LEVEL } from '../../../game/config/frogs'
 
 export type SortKey = 'level-asc' | 'level-desc' | 'element' | 'rarity'
 
 export interface BestiaryCellRef {
   element: Element
-  rarity: Rarity
+  rarity: LegacyRarity
   level: number
   unlocked: boolean
   /** stable key для virtualizer */
@@ -28,7 +26,7 @@ export interface BestiaryCellRef {
 
 export interface BestiaryViewFilters {
   /** 'all' = показывать все, 'common'/'rare'/etc = только эту rarity */
-  rarityFilter: Rarity | 'all'
+  rarityFilter: LegacyRarity | 'all'
   /** Substring поиск по element name (lowercase) */
   elementSearch: string
   /** Если true → показывать locked cells; если false → только unlocked */
@@ -39,7 +37,7 @@ export interface BestiaryViewFilters {
 
 export interface UseBestiaryViewArgs {
   /** Активная локация (= rarity). Внутри hook фильтрует bitset по этой rarity. */
-  location: Rarity
+  location: LegacyRarity
   /** bitset из store */
   bitset: ReadonlyArray<number>
 }
@@ -48,7 +46,7 @@ export interface UseBestiaryViewResult extends BestiaryViewFilters {
   cells: BestiaryCellRef[]
   totalInLocation: number
   unlockedInLocation: number
-  setRarityFilter: (r: Rarity | 'all') => void
+  setRarityFilter: (r: LegacyRarity | 'all') => void
   setElementSearch: (s: string) => void
   setShowLocked: (v: boolean) => void
   setSortBy: (k: SortKey) => void
@@ -76,7 +74,7 @@ export function useBestiaryView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location])
 
-  const [rarityFilter, setRarityFilter] = useState<Rarity | 'all'>('all')
+  const [rarityFilter, setRarityFilter] = useState<LegacyRarity | 'all'>('all')
   const [elementSearch, setElementSearch] = useState('')
   const [showLocked, setShowLocked] = useState(initialUnlocked === 0)
   const [sortBy, setSortBy] = useState<SortKey>('level-asc')
@@ -136,7 +134,7 @@ export function useBestiaryView({
         // В single-location tab все cells имеют одну rarity → fallback на element/level
         out.sort(
           (a, b) =>
-            RARITIES.indexOf(a.rarity) - RARITIES.indexOf(b.rarity) ||
+            LEGACY_RARITIES.indexOf(a.rarity) - LEGACY_RARITIES.indexOf(b.rarity) ||
             a.level - b.level ||
             ELEMENTS.indexOf(a.element) - ELEMENTS.indexOf(b.element),
         )

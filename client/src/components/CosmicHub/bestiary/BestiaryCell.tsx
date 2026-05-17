@@ -4,16 +4,17 @@
 
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Element, Rarity } from '../../../store/cosmic/types'
+import type { Element } from '../../../store/cosmic/types'
+import type { LegacyRarity } from '../../../store/cosmic/bestiary'
 import { ELEMENT_TINTS } from '../../../game/effects/elements/elementTints'
 import { RARITY_BORDER, RARITY_GLOW, tintToCss } from './rarityStyles'
 
 interface Props {
   element: Element
-  rarity: Rarity
+  rarity: LegacyRarity
   level: number
   unlocked: boolean
-  onTap: (element: Element, rarity: Rarity, level: number) => void
+  onTap: (element: Element, rarity: LegacyRarity, level: number) => void
 }
 
 const SIZE = 64

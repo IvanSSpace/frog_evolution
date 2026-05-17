@@ -2,8 +2,9 @@
 // Pure types — без runtime зависимости от Phaser/store.
 // Phase 13: расширили ElementTier до 5-tier union (dormant + 4 awakened).
 
-import type { Element, Rarity } from '../../../store/cosmic/types'
-export type { Element, Rarity }
+// Phase 22: Rarity removed from cosmic/types; export removed from here.
+import type { Element } from '../../../store/cosmic/types'
+export type { Element }
 export { ELEMENTS } from '../../../store/cosmic/types'
 
 // Phase 13: 5-tier ElementTier — dormant (Phase 12) + 4 awakened (this phase).

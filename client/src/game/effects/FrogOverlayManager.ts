@@ -5,18 +5,18 @@
 //   2. Hard cap 4 visible: при 5+ carriers выбираем top-4 closest to camera, остальные release'аются.
 //   3. Off-screen culling каждые 6 кадров: лягушки вне viewport → setVisible(false).
 //   4. На scene shutdown — release всех overlays + drainAll pool.
+//
+// Phase 22: stabilized/rarity references removed. All carriers render basic aura tier.
 
 import type Phaser from 'phaser'
 import { useGameStore } from '../../store/gameStore'
 import {
   ELEMENTS,
-  RARITIES,
   type CarrierData,
   type Element,
 } from '../../store/cosmic/types'
 import { elementOverlayPool } from './elementOverlayPool'
 import type { FrogElementOverlay } from './FrogElementOverlay'
-import type { ElementTier } from './elements/types'
 import { devWarn } from '../../utils/devLog'
 
 // PERF-02: hard cap visible overlays.
@@ -27,15 +27,10 @@ const CULL_FRAME_INTERVAL = 6
 
 // T-12-01: validation set против tampered localStorage carriers.
 const VALID_ELEMENTS: ReadonlySet<string> = new Set<string>(ELEMENTS)
-// T-13-04: validation rarity → tier (Rarity ⊂ awakened ElementTier).
-const VALID_RARITIES: ReadonlySet<string> = new Set<string>(RARITIES)
 
-/** Resolve carrier.rarity → ElementTier с защитой от tampered store. */
-function tierFromCarrier(carrier: CarrierData): ElementTier {
-  if (VALID_RARITIES.has(carrier.rarity)) return carrier.rarity as ElementTier
-  devWarn('[FrogOverlayManager] invalid rarity in carrier (tampered?)', carrier)
-  return 'dormant'
-}
+// Phase 22: all carriers use 'dormant' tier (basic aura).
+// Plan 22-03 will introduce tier escalation on ascension.
+const CARRIER_TIER = 'dormant' as const
 
 export interface FrogLike {
   id: string
@@ -93,8 +88,6 @@ export class FrogOverlayManager {
 
   /**
    * Немедленный sync без ожидания следующего tick().
-   * Используется в performFeed success path чтобы overlay появился одновременно
-   * с pop-in анимацией нового frog (не с задержкой в 1 кадр).
    */
   syncNow(): void {
     if (this.disposed) return
@@ -115,7 +108,6 @@ export class FrogOverlayManager {
     for (const f of frogs) frogById.set(f.id, f)
 
     // T-12-01: validate carrier elements; invalid → warn + skip.
-    // Compute carrier-frogs that exist (intersection of carriers and live frogs).
     const live: { carrier: CarrierData; frog: FrogLike }[] = []
     for (const c of carriers) {
       if (!VALID_ELEMENTS.has(c.element)) {
@@ -151,24 +143,10 @@ export class FrogOverlayManager {
 
     // Acquire overlays for top carriers that are not yet active.
     for (const { carrier, frog } of top) {
-      const tier = tierFromCarrier(carrier)
       const existing = this.active.get(carrier.frogId)
       if (existing) {
-        // Element или tier (rarity) сменились → re-acquire через pool так чтобы
-        // overlay лёг в правильный bucket. Phase 13: setTier() мог бы переключить
-        // idle in-place, но пересборка через pool проще и сохраняет инвариант
-        // "active overlay.tier совпадает с overlay.element bucket key".
-        const tierChanged = existing.tier !== tier
-        // Phase 17 (CARRIER-09): если carrier.stabilized & overlay.locked — НЕ
-        // пересоздаём overlay. Tier и element считаются финализированными.
-        if (
-          existing.locked &&
-          carrier.stabilized &&
-          existing.element === carrier.element
-        ) {
-          continue
-        }
-        if (existing.element !== carrier.element || tierChanged) {
+        // Phase 22: tier is always 'dormant'; element changes → re-acquire.
+        if (existing.element !== carrier.element) {
           elementOverlayPool.release(existing)
           this.active.delete(carrier.frogId)
         } else {
@@ -176,10 +154,8 @@ export class FrogOverlayManager {
         }
       }
       const element = carrier.element as Element
-      const overlay = elementOverlayPool.acquire(this.scene, element, tier)
-      overlay.attach(frog.container, frog.body, carrier.frogId, element, tier)
-      // Phase 17 (CARRIER-09): lock visual если carrier стабилизировался.
-      if (carrier.stabilized) overlay.setLocked(true)
+      const overlay = elementOverlayPool.acquire(this.scene, element, CARRIER_TIER)
+      overlay.attach(frog.container, frog.body, carrier.frogId, element, CARRIER_TIER)
       this.active.set(carrier.frogId, overlay)
     }
   }
@@ -201,9 +177,6 @@ export class FrogOverlayManager {
 
   /**
    * Освобождает overlay для конкретной лягушки перед её уничтожением.
-   * Вызывается из removeFrog() ДО frog.container.destroy() — это гарантирует
-   * что overlay-контейнер отсоединяется от родителя и возвращается в pool
-   * живым (а не уничтожается вместе с frog-контейнером как дочерний элемент).
    */
   releaseForFrog(frogId: string): void {
     const overlay = this.active.get(frogId)
@@ -223,6 +196,17 @@ export class FrogOverlayManager {
     }
     this.active.clear()
     elementOverlayPool.drainAll()
+  }
+
+  /**
+   * Specialized dispose для location transition.
+   */
+  disposeForTransition(): void {
+    if (this.disposed) return
+    this.disposed = true
+    this.unsubStore?.()
+    this.unsubStore = null
+    this.active.clear()
   }
 
   // ============ Dev/test introspection ============

@@ -2,13 +2,13 @@
 // Stateless — все из props.
 
 import { useTranslation } from 'react-i18next'
-import { RARITIES, type Rarity } from '../../../store/cosmic/types'
+import { LEGACY_RARITIES, type LegacyRarity } from '../../../store/cosmic/bestiary'
 import { RARITY_LABEL_KEY } from './rarityStyles'
 import type { SortKey } from './useBestiaryView'
 
 interface Props {
-  rarityFilter: Rarity | 'all'
-  onRarityFilter: (r: Rarity | 'all') => void
+  rarityFilter: LegacyRarity | 'all'
+  onRarityFilter: (r: LegacyRarity | 'all') => void
   elementSearch: string
   onElementSearch: (s: string) => void
   showLocked: boolean
@@ -45,7 +45,7 @@ export function FilterPills(props: Props) {
         >
           {t('cosmic_hub.bestiary.filter_all')}
         </button>
-        {RARITIES.map((r) => (
+        {LEGACY_RARITIES.map((r) => (
           <button
             key={r}
             type="button"

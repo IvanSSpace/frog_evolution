@@ -1,9 +1,10 @@
-// Phase 14: переиспользуемый компонент 4×4 grid с 16 элементами для одной rarity-секции.
-// Каждая cell отображает: tint dot (locked TINT TABLE) + count badge.
-// onClick → onSelect(element, rarity) при count > 0; disabled cell → no-op.
+// Phase 22: 4×4 grid с 16 элементами.
+// Phase 14: переиспользуемый компонент для SerumTab (одна секция без rarity).
+// Каждая cell отображает: tint border + bottle icon + count badge.
+// onClick → onSelect(element) при count > 0; disabled cell → no-op.
 
 import { useTranslation } from 'react-i18next'
-import { ELEMENTS, type Element, type Rarity } from '../../store/cosmic/types'
+import { ELEMENTS, type Element } from '../../store/cosmic/types'
 import { hapticImpact } from '../../utils/telegram'
 
 /** TINT TABLE из REQUIREMENTS.md (locked palette, colorblind-safe). */
@@ -48,20 +49,17 @@ export const ELEMENT_BOTTLE_FILTER: Record<Element, string> = {
 }
 
 interface Props {
-  rarity: Rarity
-  counts: Record<Element, number> // serums[element][rarity] для всех 16 elements
-  onSelect: (element: Element, rarity: Rarity) => void
+  counts: Record<Element, number> // serums[element] для всех 16 elements
+  onSelect: (element: Element) => void
   // Phase 14 (SERUM-11): desktop drag-start callback. Mobile (touch) → ignored.
   onPointerDragStart?: (
     element: Element,
-    rarity: Rarity,
     startX: number,
     startY: number,
   ) => void
 }
 
 export function ElementGrid({
-  rarity,
   counts,
   onSelect,
   onPointerDragStart,
@@ -75,18 +73,19 @@ export function ElementGrid({
         return (
           <button
             key={el}
+            type="button"
             disabled={!active}
             onPointerDown={(e) => {
               if (!active) return
               // Mobile / touch → tap path (onClick) handles это.
               if (e.pointerType === 'touch') return
               e.preventDefault() // отменяет text-selection
-              onPointerDragStart?.(el, rarity, e.clientX, e.clientY)
+              onPointerDragStart?.(el, e.clientX, e.clientY)
             }}
             onClick={() => {
               if (!active) return
               hapticImpact('light')
-              onSelect(el, rarity)
+              onSelect(el)
             }}
             className={`relative aspect-square rounded-lg border-2 flex items-center justify-center
                ${

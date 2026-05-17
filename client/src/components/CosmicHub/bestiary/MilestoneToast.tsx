@@ -17,7 +17,7 @@ interface MilestonePayload {
   threshold: 10 | 24 | 96 | 576
   reward:
     | { readonly type: 'coins'; readonly amount: number }
-    | { readonly type: 'serum'; readonly rarity: 'epic' | 'legendary' }
+    | { readonly type: 'serum' }
     | { readonly type: 'frog-exclusive' }
 }
 

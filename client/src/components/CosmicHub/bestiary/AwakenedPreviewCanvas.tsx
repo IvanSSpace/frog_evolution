@@ -2,18 +2,19 @@
 // Использует ELEMENT_TINTS (Phase 12+) и rarity glow.
 // Намеренно НЕ использует Phaser — preview не требует interactive sprite.
 
-import type { Element, Rarity } from '../../../store/cosmic/types'
+import type { Element } from '../../../store/cosmic/types'
+import type { LegacyRarity } from '../../../store/cosmic/bestiary'
 import { ELEMENT_TINTS } from '../../../game/effects/elements/elementTints'
 import { tintToCss } from './rarityStyles'
 
-const RARITY_PULSE_DURATION: Record<Rarity, string> = {
+const RARITY_PULSE_DURATION: Record<LegacyRarity, string> = {
   common: '2s',
   rare: '1.6s',
   epic: '1.2s',
   legendary: '0.9s',
 }
 
-const RARITY_GLOW_INTENSITY: Record<Rarity, string> = {
+const RARITY_GLOW_INTENSITY: Record<LegacyRarity, string> = {
   common: '0 0 16px',
   rare: '0 0 24px',
   epic: '0 0 36px',
@@ -22,7 +23,7 @@ const RARITY_GLOW_INTENSITY: Record<Rarity, string> = {
 
 interface Props {
   element: Element
-  rarity: Rarity
+  rarity: LegacyRarity
   size?: number
 }
 

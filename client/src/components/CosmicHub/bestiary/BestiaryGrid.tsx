@@ -7,7 +7,8 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { BestiaryCell } from './BestiaryCell'
 import type { BestiaryCellRef } from './useBestiaryView'
 import { BESTIARY_GRID_COLS } from './useBestiaryView'
-import type { Element, Rarity } from '../../../store/cosmic/types'
+import type { Element } from '../../../store/cosmic/types'
+import type { LegacyRarity } from '../../../store/cosmic/bestiary'
 
 const CELL_SIZE = 64
 const GAP = 8
@@ -15,7 +16,7 @@ const ROW_HEIGHT = CELL_SIZE + GAP // 72px
 
 interface Props {
   cells: BestiaryCellRef[]
-  onCellTap: (element: Element, rarity: Rarity, level: number) => void
+  onCellTap: (element: Element, rarity: LegacyRarity, level: number) => void
 }
 
 export function BestiaryGrid({ cells, onCellTap }: Props) {

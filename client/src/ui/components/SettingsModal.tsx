@@ -5,7 +5,7 @@ import { setLang, type Lang } from '../../i18n/index'
 import { useGameStore } from '../../store/gameStore'
 import { FROG_LEVELS, getTargetIncomePerSec } from '../../game/config/frogs'
 import { getTelegramWebApp, isDevMode } from '../../utils/telegram'
-import { ELEMENTS, RARITIES } from '../../store/cosmic/types'
+import { ELEMENTS } from '../../store/cosmic/types'
 import { fmtRate } from '../../utils/formatting'
 import { PlayerPanel } from '../../audio/components/PlayerPanel'
 import { sfx } from '../../audio/sfx'
@@ -408,9 +408,7 @@ function SettingsTab() {
           <button
             onClick={devSync(() => {
               for (const el of ELEMENTS) {
-                for (const r of RARITIES) {
-                  addSerum(el, r, 1)
-                }
+                addSerum(el, 1)
               }
             })}
             className="ff-btn ff-btn-green text-sm w-full"

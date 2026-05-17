@@ -4,13 +4,14 @@
 
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Element, Rarity } from '../../../store/cosmic/types'
+import type { Element } from '../../../store/cosmic/types'
+import type { LegacyRarity } from '../../../store/cosmic/bestiary'
 import { AwakenedPreviewCanvas } from './AwakenedPreviewCanvas'
 import { RARITY_LABEL_KEY, RARITY_BORDER } from './rarityStyles'
 
 interface Props {
   element: Element
-  rarity: Rarity
+  rarity: LegacyRarity
   level: number
   unlocked: boolean
   onClose: () => void

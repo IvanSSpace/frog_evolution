@@ -1,8 +1,9 @@
-import type { Element, Rarity } from '../../store/cosmic/types'
+import type { Element } from '../../store/cosmic/types'
+import type { LegacyRarity } from '../../store/cosmic/bestiary'
 
 export interface GalleryEntry {
   archetype: Element
-  rarity: Rarity
+  rarity: LegacyRarity
   unlocked: boolean
   /** Level которого собран для preview (lowest unlocked, или 1 если не unlocked). */
   previewLevel: number
@@ -46,14 +47,14 @@ export const ARCHETYPE_NAME_RU: Record<Element, string> = {
   void: 'Пустота',
 }
 
-export const RARITY_LABEL: Record<Rarity, string> = {
+export const RARITY_LABEL: Record<LegacyRarity, string> = {
   common: 'C',
   rare: 'R',
   epic: 'E',
   legendary: 'L',
 }
 
-export const RARITY_COLOR: Record<Rarity, string> = {
+export const RARITY_COLOR: Record<LegacyRarity, string> = {
   common: '#86efac', // green
   rare: '#93c5fd', // blue
   epic: '#d8b4fe', // purple

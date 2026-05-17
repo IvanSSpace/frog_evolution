@@ -1,5 +1,5 @@
 // Phase 15: SerumSlotMachine — drama при открытии бокса.
-// Длительность signal'ит rarity (1.2s common → 9-10s legendary cap).
+// Phase 22: rarity removed — fixed duration 2.0–3.0s for all serums.
 // Checkpoint flashes на 1.5/3.5/5.5/8s рендерятся при duration > checkpoint.
 // Skip MVP: tap-anywhere через parent (skipRequested prop) + visible Skip button с 1s.
 // Element fingerprint particle co-старта.
@@ -8,16 +8,12 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Element, Rarity } from '../../store/cosmic/types'
+import type { Element } from '../../store/cosmic/types'
 import { ELEMENT_TINT } from './ElementGrid'
 
-// REQ SLOT-01: durations by rarity (locked).
-const DURATIONS: Record<Rarity, [number, number]> = {
-  common: [1200, 1800],
-  rare: [2500, 3800],
-  epic: [5000, 7000],
-  legendary: [9000, 9999], // hard cap 10s — never exceed
-}
+// Phase 22: fixed duration range (rarity removed).
+const DURATION_MIN = 2000
+const DURATION_MAX = 3000
 
 // REQ SLOT-02: checkpoint flashes (только те с at < duration).
 interface Checkpoint {
@@ -46,7 +42,6 @@ const INSTANT_MODE_DURATION_MS = 400 // UX-06
 
 export interface SerumSlotMachineProps {
   element: Element
-  rolledRarity: Rarity
   onComplete: () => void
   skipRequested: boolean
   instantMode: boolean
@@ -54,7 +49,6 @@ export interface SerumSlotMachineProps {
 
 export default function SerumSlotMachine({
   element,
-  rolledRarity,
   onComplete,
   skipRequested,
   instantMode,
@@ -65,9 +59,8 @@ export default function SerumSlotMachine({
   // Compute duration once при mount (не перерасчитывается).
   const duration = useMemo(() => {
     if (instantMode) return INSTANT_MODE_DURATION_MS
-    const [min, max] = DURATIONS[rolledRarity]
-    return Math.floor(min + Math.random() * (max - min))
-  }, [rolledRarity, instantMode])
+    return Math.floor(DURATION_MIN + Math.random() * (DURATION_MAX - DURATION_MIN))
+  }, [instantMode])
 
   // Active checkpoints (только те с at < duration - 200ms safety margin).
   const activeCheckpoints = useMemo(
@@ -187,7 +180,6 @@ export default function SerumSlotMachine({
   return (
     <div
       data-testid="serum-slot-machine"
-      data-rarity={rolledRarity}
       data-element={element}
       data-duration={duration}
       className="relative flex flex-col items-center justify-center gap-4"

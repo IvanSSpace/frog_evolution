@@ -41,7 +41,7 @@ export const fireSpec: AuraSpec = {
     ])
   },
 
-  createAura(scene, rarity): AuraInstance {
+  createAura(scene): AuraInstance {
     const container = scene.add.container(0, 0)
     const tweens: Phaser.Tweens.Tween[] = []
 
@@ -54,31 +54,7 @@ export const fireSpec: AuraSpec = {
     container.add(middle)
 
     let core: Phaser.GameObjects.Image | null = null
-    if (rarity !== 'common') {
-      core = scene.add.image(0, -10, TEX_FIRE_CORE)
-      core.setBlendMode(Phaser.BlendModes.ADD).setScale(0.4).setAlpha(0.9)
-      container.add(core)
-    }
 
-    if (rarity === 'epic' || rarity === 'legendary') {
-      for (let i = 0; i < 5; i++) {
-        const spark = scene.add.image((i - 2) * 8, 5, TEX_FIRE_SPARK)
-        spark.setBlendMode(Phaser.BlendModes.ADD).setScale(0.5).setAlpha(0)
-        container.add(spark)
-        tweens.push(
-          scene.tweens.add({
-            targets: spark,
-            y: { from: 5, to: -50 },
-            alpha: { from: 0, to: 0.9 },
-            scale: { from: 0.5, to: 0.15 },
-            duration: 1800,
-            delay: i * 360,
-            repeat: -1,
-            ease: 'Sine.easeOut',
-          }),
-        )
-      }
-    }
 
     tweens.push(
       scene.tweens.add({
@@ -109,7 +85,7 @@ export const fireSpec: AuraSpec = {
           targets: core,
           scale: { from: 0.35, to: 0.5 },
           alpha: { from: 0.85, to: 1 },
-          duration: rarity === 'epic' || rarity === 'legendary' ? 800 : 1050,
+          duration: 1050,
           yoyo: true,
           repeat: -1,
           ease: 'Sine.easeInOut',
@@ -118,7 +94,7 @@ export const fireSpec: AuraSpec = {
       )
     }
 
-    return { container, tweens, rarity }
+    return { container, tweens }
   },
 }
 
@@ -176,7 +152,7 @@ export const waterSpec: AuraSpec = {
     ])
   },
 
-  createAura(scene, rarity): AuraInstance {
+  createAura(scene): AuraInstance {
     const container = scene.add.container(0, 0)
     const tweens: Phaser.Tweens.Tween[] = []
 
@@ -197,7 +173,7 @@ export const waterSpec: AuraSpec = {
     )
 
     // Ripples — 3 ring waves для common/rare, 4 для epic/legendary
-    const ringCount = rarity === 'epic' || rarity === 'legendary' ? 4 : 3
+    const ringCount = 3
     const ringDuration = 2000
     for (let i = 0; i < ringCount; i++) {
       const ring = scene.add.image(0, 0, TEX_WATER_RING)
@@ -228,32 +204,8 @@ export const waterSpec: AuraSpec = {
     }
 
     // Bubbles для не-common
-    if (rarity !== 'common') {
-      const bubbleCount = rarity === 'epic' || rarity === 'legendary' ? 5 : 3
-      for (let i = 0; i < bubbleCount; i++) {
-        const bubble = scene.add.image(
-          (i - bubbleCount / 2) * 9,
-          20,
-          TEX_WATER_BUBBLE,
-        )
-        bubble.setBlendMode(Phaser.BlendModes.ADD).setScale(0.4).setAlpha(0)
-        container.add(bubble)
-        tweens.push(
-          scene.tweens.add({
-            targets: bubble,
-            y: { from: 25, to: -40 },
-            alpha: { from: 0, to: 0.9 },
-            scale: { from: 0.3, to: 0.6 },
-            duration: 1800,
-            delay: i * 400,
-            repeat: -1,
-            ease: 'Sine.easeOut',
-          }),
-        )
-      }
-    }
 
-    return { container, tweens, rarity }
+    return { container, tweens }
   },
 }
 
@@ -281,7 +233,7 @@ export const forestSpec: AuraSpec = {
     ])
   },
 
-  createAura(scene, rarity): AuraInstance {
+  createAura(scene): AuraInstance {
     const container = scene.add.container(0, 0)
     const tweens: Phaser.Tweens.Tween[] = []
 
@@ -302,12 +254,7 @@ export const forestSpec: AuraSpec = {
     )
 
     // Orbit container с листьями
-    const leafCount =
-      rarity === 'epic' || rarity === 'legendary'
-        ? 7
-        : rarity === 'rare'
-          ? 5
-          : 4
+    const leafCount = 4
     const radius = 32
     const orbit = scene.add.container(0, 0)
     container.add(orbit)
@@ -335,7 +282,7 @@ export const forestSpec: AuraSpec = {
 
     // Orbit rotation — листья вращаются вокруг лягушки
     const rotationDuration =
-      rarity === 'epic' || rarity === 'legendary' ? 5000 : 8000
+      8000
     tweens.push(
       scene.tweens.add({
         targets: orbit,
@@ -346,7 +293,7 @@ export const forestSpec: AuraSpec = {
       }),
     )
 
-    return { container, tweens, rarity }
+    return { container, tweens }
   },
 }
 
@@ -382,7 +329,7 @@ export const toxicSpec: AuraSpec = {
     ])
   },
 
-  createAura(scene, rarity): AuraInstance {
+  createAura(scene): AuraInstance {
     const container = scene.add.container(0, 0)
     const tweens: Phaser.Tweens.Tween[] = []
 
@@ -403,12 +350,7 @@ export const toxicSpec: AuraSpec = {
     )
 
     // Toxic bubbles — поднимаются снизу вверх
-    const bubbleCount =
-      rarity === 'epic' || rarity === 'legendary'
-        ? 5
-        : rarity === 'rare'
-          ? 4
-          : 3
+    const bubbleCount = 3
     for (let i = 0; i < bubbleCount; i++) {
       const startX = (i - (bubbleCount - 1) / 2) * 10 + (i % 2 === 0 ? -3 : 3)
       const bubble = scene.add.image(startX, 22, TEX_TOXIC_BUBBLE)
@@ -429,12 +371,7 @@ export const toxicSpec: AuraSpec = {
     }
 
     // Twinkling spots — мерцают в случайных точках
-    const spotCount =
-      rarity === 'epic' || rarity === 'legendary'
-        ? 8
-        : rarity === 'rare'
-          ? 5
-          : 3
+    const spotCount = 3
     for (let i = 0; i < spotCount; i++) {
       const angle = Math.random() * Math.PI * 2
       const r = 15 + Math.random() * 30
@@ -457,7 +394,7 @@ export const toxicSpec: AuraSpec = {
       )
     }
 
-    return { container, tweens, rarity }
+    return { container, tweens }
   },
 }
 
@@ -497,7 +434,7 @@ export const plasmaSpec: AuraSpec = {
     ])
   },
 
-  createAura(scene, rarity): AuraInstance {
+  createAura(scene): AuraInstance {
     const container = scene.add.container(0, 0)
     const tweens: Phaser.Tweens.Tween[] = []
 
@@ -517,12 +454,7 @@ export const plasmaSpec: AuraSpec = {
     )
 
     // Bolts — электрические дуги вокруг ядра
-    const boltCount =
-      rarity === 'epic' || rarity === 'legendary'
-        ? 6
-        : rarity === 'rare'
-          ? 5
-          : 4
+    const boltCount = 4
     const boltRadius = 28
     const orbit = scene.add.container(0, 0)
     container.add(orbit)
@@ -551,7 +483,7 @@ export const plasmaSpec: AuraSpec = {
     }
 
     const rotationDuration =
-      rarity === 'epic' || rarity === 'legendary' ? 3000 : 4500
+      4500
     tweens.push(
       scene.tweens.add({
         targets: orbit,
@@ -562,48 +494,9 @@ export const plasmaSpec: AuraSpec = {
       }),
     )
 
-    if (rarity !== 'common') {
-      const core = scene.add.image(0, 0, TEX_PLASMA_CORE)
-      core.setBlendMode(Phaser.BlendModes.ADD).setScale(0.35).setAlpha(0.9)
-      container.add(core)
-      tweens.push(
-        scene.tweens.add({
-          targets: core,
-          scale: { from: 0.3, to: 0.5 },
-          alpha: { from: 0.85, to: 1 },
-          duration: rarity === 'epic' || rarity === 'legendary' ? 600 : 900,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        }),
-      )
-    }
 
-    if (rarity === 'epic' || rarity === 'legendary') {
-      for (let i = 0; i < 6; i++) {
-        const sangle = Math.random() * Math.PI * 2
-        const sr = 18 + Math.random() * 28
-        const sx = Math.cos(sangle) * sr
-        const sy = Math.sin(sangle) * sr
-        const spark = scene.add.image(sx, sy, TEX_PLASMA_SPARK)
-        spark.setBlendMode(Phaser.BlendModes.ADD).setScale(0.4).setAlpha(0)
-        container.add(spark)
-        tweens.push(
-          scene.tweens.add({
-            targets: spark,
-            alpha: { from: 0, to: 1 },
-            scale: { from: 0.3, to: 0.7 },
-            duration: 200 + Math.random() * 200,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut',
-            delay: Math.random() * 1500,
-          }),
-        )
-      }
-    }
 
-    return { container, tweens, rarity }
+    return { container, tweens }
   },
 }
 
@@ -642,7 +535,7 @@ export const shadowSpec: AuraSpec = {
     ])
   },
 
-  createAura(scene, rarity): AuraInstance {
+  createAura(scene): AuraInstance {
     const container = scene.add.container(0, 0)
     const tweens: Phaser.Tweens.Tween[] = []
 
@@ -662,7 +555,7 @@ export const shadowSpec: AuraSpec = {
     )
 
     // Wisps — 2-3 больших облака вращаются в разные стороны
-    const wispCount = rarity === 'epic' || rarity === 'legendary' ? 3 : 2
+    const wispCount = 2
     for (let i = 0; i < wispCount; i++) {
       const wisp = scene.add.image(0, 0, TEX_SHADOW_WISP)
       wisp.setBlendMode(Phaser.BlendModes.SCREEN)
@@ -692,48 +585,9 @@ export const shadowSpec: AuraSpec = {
       )
     }
 
-    if (rarity !== 'common') {
-      const inner = scene.add.image(0, 0, TEX_SHADOW_INNER)
-      inner.setBlendMode(Phaser.BlendModes.SCREEN).setScale(0.4).setAlpha(0.8)
-      container.add(inner)
-      tweens.push(
-        scene.tweens.add({
-          targets: inner,
-          scale: { from: 0.35, to: 0.5 },
-          alpha: { from: 0.7, to: 0.95 },
-          duration: 1800,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        }),
-      )
-    }
 
-    if (rarity === 'epic' || rarity === 'legendary') {
-      for (let i = 0; i < 6; i++) {
-        const sangle = Math.random() * Math.PI * 2
-        const sr = 20 + Math.random() * 30
-        const sx = Math.cos(sangle) * sr
-        const sy = Math.sin(sangle) * sr * 0.8
-        const spark = scene.add.image(sx, sy, TEX_SHADOW_SPARK)
-        spark.setBlendMode(Phaser.BlendModes.ADD).setScale(0.4).setAlpha(0)
-        container.add(spark)
-        tweens.push(
-          scene.tweens.add({
-            targets: spark,
-            alpha: { from: 0, to: 0.9 },
-            scale: { from: 0.3, to: 0.6 },
-            duration: 900 + Math.random() * 600,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut',
-            delay: Math.random() * 2000,
-          }),
-        )
-      }
-    }
 
-    return { container, tweens, rarity }
+    return { container, tweens }
   },
 }
 
@@ -773,7 +627,7 @@ export const crystalSpec: AuraSpec = {
     ])
   },
 
-  createAura(scene, rarity): AuraInstance {
+  createAura(scene): AuraInstance {
     const container = scene.add.container(0, 0)
     const tweens: Phaser.Tweens.Tween[] = []
 
@@ -793,12 +647,7 @@ export const crystalSpec: AuraSpec = {
     )
 
     // Shards — ромбоидальная форма (узкий вертикальный осколок) orbit'ит
-    const shardCount =
-      rarity === 'epic' || rarity === 'legendary'
-        ? 7
-        : rarity === 'rare'
-          ? 5
-          : 4
+    const shardCount = 4
     const shardRadius = 30
     const orbit = scene.add.container(0, 0)
     container.add(orbit)
@@ -827,7 +676,7 @@ export const crystalSpec: AuraSpec = {
     }
 
     const rotationDuration =
-      rarity === 'epic' || rarity === 'legendary' ? 6000 : 9000
+      9000
     tweens.push(
       scene.tweens.add({
         targets: orbit,
@@ -838,48 +687,9 @@ export const crystalSpec: AuraSpec = {
       }),
     )
 
-    if (rarity !== 'common') {
-      const core = scene.add.image(0, 0, TEX_CRYSTAL_CORE)
-      core.setBlendMode(Phaser.BlendModes.ADD).setScale(0.4).setAlpha(0.85)
-      container.add(core)
-      tweens.push(
-        scene.tweens.add({
-          targets: core,
-          scale: { from: 0.35, to: 0.55 },
-          alpha: { from: 0.75, to: 1 },
-          duration: rarity === 'epic' || rarity === 'legendary' ? 900 : 1200,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        }),
-      )
-    }
 
-    if (rarity === 'epic' || rarity === 'legendary') {
-      for (let i = 0; i < 8; i++) {
-        const tangle = Math.random() * Math.PI * 2
-        const tr = 20 + Math.random() * 30
-        const tx = Math.cos(tangle) * tr
-        const ty = Math.sin(tangle) * tr * 0.8
-        const twink = scene.add.image(tx, ty, TEX_CRYSTAL_TWINKLE)
-        twink.setBlendMode(Phaser.BlendModes.ADD).setScale(0.4).setAlpha(0)
-        container.add(twink)
-        tweens.push(
-          scene.tweens.add({
-            targets: twink,
-            alpha: { from: 0, to: 1 },
-            scale: { from: 0.3, to: 0.6 },
-            duration: 500 + Math.random() * 400,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut',
-            delay: Math.random() * 1500,
-          }),
-        )
-      }
-    }
 
-    return { container, tweens, rarity }
+    return { container, tweens }
   },
 }
 
@@ -912,7 +722,7 @@ export const desertSpec: AuraSpec = {
     ])
   },
 
-  createAura(scene, rarity): AuraInstance {
+  createAura(scene): AuraInstance {
     const container = scene.add.container(0, 0)
     const tweens: Phaser.Tweens.Tween[] = []
 
@@ -931,12 +741,7 @@ export const desertSpec: AuraSpec = {
       }),
     )
 
-    const grainCount =
-      rarity === 'epic' || rarity === 'legendary'
-        ? 14
-        : rarity === 'rare'
-          ? 10
-          : 7
+    const grainCount = 7
     const orbit = scene.add.container(0, 0)
     container.add(orbit)
     for (let i = 0; i < grainCount; i++) {
@@ -963,7 +768,7 @@ export const desertSpec: AuraSpec = {
     }
 
     const rotationDuration =
-      rarity === 'epic' || rarity === 'legendary' ? 4000 : 6000
+      6000
     tweens.push(
       scene.tweens.add({
         targets: orbit,
@@ -974,24 +779,8 @@ export const desertSpec: AuraSpec = {
       }),
     )
 
-    if (rarity !== 'common') {
-      const core = scene.add.image(0, 0, TEX_DESERT_CORE)
-      core.setBlendMode(Phaser.BlendModes.ADD).setScale(0.4).setAlpha(0.85)
-      container.add(core)
-      tweens.push(
-        scene.tweens.add({
-          targets: core,
-          scale: { from: 0.35, to: 0.5 },
-          alpha: { from: 0.75, to: 1 },
-          duration: 1500,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        }),
-      )
-    }
 
-    return { container, tweens, rarity }
+    return { container, tweens }
   },
 }
 
@@ -1024,7 +813,7 @@ export const gasSpec: AuraSpec = {
     ])
   },
 
-  createAura(scene, rarity): AuraInstance {
+  createAura(scene): AuraInstance {
     const container = scene.add.container(0, 0)
     const tweens: Phaser.Tweens.Tween[] = []
 
@@ -1043,7 +832,7 @@ export const gasSpec: AuraSpec = {
       }),
     )
 
-    const cloudCount = rarity === 'epic' || rarity === 'legendary' ? 3 : 2
+    const cloudCount = 2
     for (let i = 0; i < cloudCount; i++) {
       const offsetX = (i - (cloudCount - 1) / 2) * 12
       const cloud = scene.add.image(offsetX, 0, TEX_GAS_CLOUD)
@@ -1074,12 +863,7 @@ export const gasSpec: AuraSpec = {
       )
     }
 
-    const wispCount =
-      rarity === 'epic' || rarity === 'legendary'
-        ? 4
-        : rarity === 'rare'
-          ? 3
-          : 0
+    const wispCount = 0
     for (let i = 0; i < wispCount; i++) {
       const wx = (i - (wispCount - 1) / 2) * 14
       const wisp = scene.add.image(wx, 15, TEX_GAS_WISP)
@@ -1099,7 +883,7 @@ export const gasSpec: AuraSpec = {
       )
     }
 
-    return { container, tweens, rarity }
+    return { container, tweens }
   },
 }
 
@@ -1157,7 +941,7 @@ export const ringSpec: AuraSpec = {
     ])
   },
 
-  createAura(scene, rarity): AuraInstance {
+  createAura(scene): AuraInstance {
     const container = scene.add.container(0, 0)
     const tweens: Phaser.Tweens.Tween[] = []
 
@@ -1176,12 +960,7 @@ export const ringSpec: AuraSpec = {
       }),
     )
 
-    const ringCount =
-      rarity === 'epic' || rarity === 'legendary'
-        ? 3
-        : rarity === 'rare'
-          ? 2
-          : 1
+    const ringCount = 1
     for (let i = 0; i < ringCount; i++) {
       const band = scene.add.image(0, 0, TEX_RING_BAND)
       band.setBlendMode(Phaser.BlendModes.ADD)
@@ -1212,43 +991,8 @@ export const ringSpec: AuraSpec = {
       )
     }
 
-    if (rarity === 'epic' || rarity === 'legendary') {
-      const particleCount = 8
-      const orbit = scene.add.container(0, 0)
-      container.add(orbit)
-      for (let i = 0; i < particleCount; i++) {
-        const angle = (i / particleCount) * Math.PI * 2
-        const r = 36 + Math.random() * 8
-        const px = Math.cos(angle) * r
-        const py = Math.sin(angle) * r * 0.4
-        const particle = scene.add.image(px, py, TEX_RING_PARTICLE)
-        particle.setBlendMode(Phaser.BlendModes.ADD).setScale(0.5).setAlpha(0.8)
-        orbit.add(particle)
-        tweens.push(
-          scene.tweens.add({
-            targets: particle,
-            alpha: { from: 0.5, to: 1 },
-            duration: 500 + Math.random() * 500,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut',
-            delay: Math.random() * 800,
-          }),
-        )
-      }
-      orbit.setRotation(-0.25)
-      tweens.push(
-        scene.tweens.add({
-          targets: orbit,
-          angle: { from: -15, to: 345 },
-          duration: 5000,
-          repeat: -1,
-          ease: 'Linear',
-        }),
-      )
-    }
 
-    return { container, tweens, rarity }
+    return { container, tweens }
   },
 }
 
@@ -1284,17 +1028,12 @@ export const binarySpec: AuraSpec = {
     ])
   },
 
-  createAura(scene, rarity): AuraInstance {
+  createAura(scene): AuraInstance {
     const container = scene.add.container(0, 0)
     const tweens: Phaser.Tweens.Tween[] = []
 
     // 3D-очки эффект — два смещённых halo с разным цветом, аддитивно
-    const offsetBase =
-      rarity === 'epic' || rarity === 'legendary'
-        ? 10
-        : rarity === 'rare'
-          ? 7
-          : 5
+    const offsetBase = 5
 
     const ghostL = scene.add.image(-offsetBase, 0, TEX_BINARY_GHOST_L)
     ghostL.setBlendMode(Phaser.BlendModes.ADD).setScale(0.55).setAlpha(0.65)
@@ -1339,24 +1078,8 @@ export const binarySpec: AuraSpec = {
       }),
     )
 
-    if (rarity !== 'common') {
-      const core = scene.add.image(0, 0, TEX_BINARY_CORE)
-      core.setBlendMode(Phaser.BlendModes.ADD).setScale(0.4).setAlpha(0.85)
-      container.add(core)
-      tweens.push(
-        scene.tweens.add({
-          targets: core,
-          scale: { from: 0.35, to: 0.5 },
-          alpha: { from: 0.7, to: 1 },
-          duration: 1200,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        }),
-      )
-    }
 
-    return { container, tweens, rarity }
+    return { container, tweens }
   },
 }
 
@@ -1397,7 +1120,7 @@ export const arcaneSpec: AuraSpec = {
     ])
   },
 
-  createAura(scene, rarity): AuraInstance {
+  createAura(scene): AuraInstance {
     const container = scene.add.container(0, 0)
     const tweens: Phaser.Tweens.Tween[] = []
 
@@ -1417,12 +1140,7 @@ export const arcaneSpec: AuraSpec = {
     )
 
     // Two orbit rings (counter-rotating) — внешнее и внутреннее
-    const runeCountOuter =
-      rarity === 'epic' || rarity === 'legendary'
-        ? 6
-        : rarity === 'rare'
-          ? 5
-          : 4
+    const runeCountOuter = 4
     const outerRadius = 34
     const outerOrbit = scene.add.container(0, 0)
     container.add(outerOrbit)
@@ -1449,80 +1167,19 @@ export const arcaneSpec: AuraSpec = {
       scene.tweens.add({
         targets: outerOrbit,
         angle: { from: 0, to: 360 },
-        duration: rarity === 'epic' || rarity === 'legendary' ? 6000 : 8500,
+        duration: 8500,
         repeat: -1,
         ease: 'Linear',
       }),
     )
 
     // Inner counter-rotating ring (rare+)
-    if (rarity !== 'common') {
-      const runeCountInner = 4
-      const innerRadius = 20
-      const innerOrbit = scene.add.container(0, 0)
-      container.add(innerOrbit)
-      for (let i = 0; i < runeCountInner; i++) {
-        const angle = (i / runeCountInner) * Math.PI * 2
-        const rx = Math.cos(angle) * innerRadius
-        const ry = Math.sin(angle) * innerRadius * 0.75
-        const rune = scene.add.image(rx, ry, TEX_ARCANE_RUNE)
-        rune.setBlendMode(Phaser.BlendModes.ADD).setScale(0.4).setAlpha(0.85)
-        innerOrbit.add(rune)
-      }
-      tweens.push(
-        scene.tweens.add({
-          targets: innerOrbit,
-          angle: { from: 0, to: -360 },
-          duration: 5000,
-          repeat: -1,
-          ease: 'Linear',
-        }),
-      )
-    }
 
     // Mystic core
-    if (rarity !== 'common') {
-      const core = scene.add.image(0, 0, TEX_ARCANE_CORE)
-      core.setBlendMode(Phaser.BlendModes.ADD).setScale(0.4).setAlpha(0.85)
-      container.add(core)
-      tweens.push(
-        scene.tweens.add({
-          targets: core,
-          scale: { from: 0.35, to: 0.55 },
-          alpha: { from: 0.75, to: 1 },
-          duration: rarity === 'epic' || rarity === 'legendary' ? 900 : 1300,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        }),
-      )
-    }
 
     // Sparks for epic+
-    if (rarity === 'epic' || rarity === 'legendary') {
-      for (let i = 0; i < 8; i++) {
-        const sangle = Math.random() * Math.PI * 2
-        const sr = 24 + Math.random() * 18
-        const sx = Math.cos(sangle) * sr
-        const sy = Math.sin(sangle) * sr * 0.7
-        const spark = scene.add.image(sx, sy, TEX_ARCANE_SPARK)
-        spark.setBlendMode(Phaser.BlendModes.ADD).setScale(0.4).setAlpha(0)
-        container.add(spark)
-        tweens.push(
-          scene.tweens.add({
-            targets: spark,
-            alpha: { from: 0, to: 1 },
-            duration: 600 + Math.random() * 400,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut',
-            delay: Math.random() * 1500,
-          }),
-        )
-      }
-    }
 
-    return { container, tweens, rarity }
+    return { container, tweens }
   },
 }
 
@@ -1558,7 +1215,7 @@ export const mechanicalSpec: AuraSpec = {
     ])
   },
 
-  createAura(scene, rarity): AuraInstance {
+  createAura(scene): AuraInstance {
     const container = scene.add.container(0, 0)
     const tweens: Phaser.Tweens.Tween[] = []
 
@@ -1578,18 +1235,12 @@ export const mechanicalSpec: AuraSpec = {
     )
 
     // Gears — шестерни вращаются. Каждая шестерня — это container с zubcami (radial dots)
-    const gearCount = rarity === 'epic' || rarity === 'legendary' ? 3 : 2
-    const gearPositions: Array<{ x: number; y: number; size: number }> =
-      gearCount === 3
-        ? [
-            { x: -22, y: -8, size: 0.85 },
-            { x: 20, y: -10, size: 0.7 },
-            { x: 0, y: 18, size: 1.0 },
-          ]
-        : [
-            { x: -18, y: -6, size: 1.0 },
-            { x: 18, y: 8, size: 0.8 },
-          ]
+    // Phase 22: dormant tier uses 2 gears only
+    const gearPositions: Array<{ x: number; y: number; size: number }> = [
+      { x: -18, y: -6, size: 1.0 },
+      { x: 18, y: 8, size: 0.8 },
+    ]
+    const gearCount = gearPositions.length
     for (let g = 0; g < gearCount; g++) {
       const pos = gearPositions[g]
       const gear = scene.add.container(pos.x, pos.y)
@@ -1620,24 +1271,8 @@ export const mechanicalSpec: AuraSpec = {
       )
     }
 
-    if (rarity !== 'common') {
-      const core = scene.add.image(0, 0, TEX_MECH_CORE)
-      core.setBlendMode(Phaser.BlendModes.ADD).setScale(0.4).setAlpha(0.85)
-      container.add(core)
-      tweens.push(
-        scene.tweens.add({
-          targets: core,
-          scale: { from: 0.35, to: 0.5 },
-          alpha: { from: 0.75, to: 1 },
-          duration: 1500,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        }),
-      )
-    }
 
-    return { container, tweens, rarity }
+    return { container, tweens }
   },
 }
 
@@ -1678,7 +1313,7 @@ export const warSpec: AuraSpec = {
     ])
   },
 
-  createAura(scene, rarity): AuraInstance {
+  createAura(scene): AuraInstance {
     const container = scene.add.container(0, 0)
     const tweens: Phaser.Tweens.Tween[] = []
 
@@ -1699,12 +1334,7 @@ export const warSpec: AuraSpec = {
     )
 
     // Blades — крест-накрест клинки крутятся
-    const bladeCount =
-      rarity === 'epic' || rarity === 'legendary'
-        ? 4
-        : rarity === 'rare'
-          ? 3
-          : 2
+    const bladeCount = 2
     const orbit = scene.add.container(0, 0)
     container.add(orbit)
     for (let i = 0; i < bladeCount; i++) {
@@ -1734,58 +1364,16 @@ export const warSpec: AuraSpec = {
       scene.tweens.add({
         targets: orbit,
         angle: { from: 0, to: 360 },
-        duration: rarity === 'epic' || rarity === 'legendary' ? 2500 : 4000,
+        duration: 4000,
         repeat: -1,
         ease: 'Linear',
       }),
     )
 
-    if (rarity !== 'common') {
-      const core = scene.add.image(0, 0, TEX_WAR_CORE)
-      core.setBlendMode(Phaser.BlendModes.ADD).setScale(0.4).setAlpha(0.9)
-      container.add(core)
-      tweens.push(
-        scene.tweens.add({
-          targets: core,
-          scale: { from: 0.35, to: 0.55 },
-          alpha: { from: 0.8, to: 1 },
-          duration: 600,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Cubic.easeInOut',
-        }),
-      )
-    }
 
     // Sparks разлетаются хаотично — для epic/legendary
-    if (rarity === 'epic' || rarity === 'legendary') {
-      for (let i = 0; i < 7; i++) {
-        const sangle = Math.random() * Math.PI * 2
-        const startX = Math.cos(sangle) * 10
-        const startY = Math.sin(sangle) * 10
-        const endR = 40 + Math.random() * 15
-        const endX = Math.cos(sangle) * endR
-        const endY = Math.sin(sangle) * endR * 0.7
-        const spark = scene.add.image(startX, startY, TEX_WAR_SPARK)
-        spark.setBlendMode(Phaser.BlendModes.ADD).setScale(0.4).setAlpha(0)
-        container.add(spark)
-        tweens.push(
-          scene.tweens.add({
-            targets: spark,
-            x: { from: startX, to: endX },
-            y: { from: startY, to: endY },
-            alpha: { from: 0, to: 1 },
-            scale: { from: 0.5, to: 0.2 },
-            duration: 700,
-            delay: i * 150,
-            repeat: -1,
-            ease: 'Cubic.easeOut',
-          }),
-        )
-      }
-    }
 
-    return { container, tweens, rarity }
+    return { container, tweens }
   },
 }
 
@@ -1839,7 +1427,7 @@ export const voidSpec: AuraSpec = {
     ])
   },
 
-  createAura(scene, rarity): AuraInstance {
+  createAura(scene): AuraInstance {
     const container = scene.add.container(0, 0)
     const tweens: Phaser.Tweens.Tween[] = []
 
@@ -1885,32 +1473,7 @@ export const voidSpec: AuraSpec = {
     )
 
     // Частицы засасываются в центр (для rare+)
-    if (rarity !== 'common') {
-      const particleCount = rarity === 'epic' || rarity === 'legendary' ? 8 : 5
-      for (let i = 0; i < particleCount; i++) {
-        const startAngle = Math.random() * Math.PI * 2
-        const startR = 40 + Math.random() * 15
-        const sx = Math.cos(startAngle) * startR
-        const sy = Math.sin(startAngle) * startR
-        const particle = scene.add.image(sx, sy, TEX_VOID_PARTICLE)
-        particle.setBlendMode(Phaser.BlendModes.ADD).setScale(0.5).setAlpha(0)
-        container.add(particle)
-        tweens.push(
-          scene.tweens.add({
-            targets: particle,
-            x: { from: sx, to: 0 },
-            y: { from: sy, to: 0 },
-            alpha: { from: 0.8, to: 0 },
-            scale: { from: 0.6, to: 0.15 },
-            duration: 1500,
-            delay: i * 250,
-            repeat: -1,
-            ease: 'Cubic.easeIn',
-          }),
-        )
-      }
-    }
 
-    return { container, tweens, rarity }
+    return { container, tweens }
   },
 }

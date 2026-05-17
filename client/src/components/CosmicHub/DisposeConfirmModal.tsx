@@ -1,7 +1,5 @@
-// Phase 17 (CARRIER-11, UX-11): confirm dialog для dispose action.
-//   Title:  "Утилизировать?"
-//   Body:   "Carrier {element} ({rarity}). 30% шанс вернуть сыворотку."
-//   Buttons: "Отмена" / "Утил."
+// Phase 22: DisposeConfirmModal — stub без rarity/feedCount.
+// Dispose = просто удалить carrier (serum recovery TBD в Plan 22-03).
 
 import { useTranslation } from 'react-i18next'
 import { ELEMENT_TINTS } from '../../game/effects/elements/elementTints'
@@ -18,7 +16,6 @@ export function DisposeConfirmModal({ carrier, onConfirm, onCancel }: Props) {
   const tintHex = ELEMENT_TINTS[carrier.element]
   const tintCss = `#${tintHex.toString(16).padStart(6, '0')}`
   const elementName = t(`cosmic_hub.elements.${carrier.element}`)
-  const rarityName = t(`rarity.${carrier.rarity}`)
 
   return (
     <div
@@ -42,13 +39,7 @@ export function DisposeConfirmModal({ carrier, onConfirm, onCancel }: Props) {
           </span>
         </div>
         <p className="text-white/80 text-sm">
-          {t('cosmic_hub.carrier.dispose.body', {
-            element: elementName,
-            rarity: rarityName,
-          })}
-        </p>
-        <p className="text-white/40 text-xs italic">
-          {t('cosmic_hub.carrier.dispose.warning')}
+          {elementName} L{carrier.level}
         </p>
         <div className="flex gap-2 mt-2">
           <button

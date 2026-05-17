@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { Element, Rarity } from '../../store/cosmic/types'
+import type { Element } from '../../store/cosmic/types'
+import type { LegacyRarity } from '../../store/cosmic/bestiary'
 import { eventBus } from '../../store/eventBus'
 import {
   ARCHETYPE_EMOJI,
@@ -13,7 +14,7 @@ import { GalleryDetailPreview } from './GalleryDetailPreview'
 export function GalleryDetailModal() {
   const [open, setOpen] = useState<{
     archetype: Element
-    rarity: Rarity
+    rarity: LegacyRarity
   } | null>(null)
 
   useEffect(() => {
@@ -22,7 +23,7 @@ export function GalleryDetailModal() {
       rarity,
     }: {
       archetype: Element
-      rarity: Rarity
+      rarity: LegacyRarity
     }) => {
       setOpen({ archetype, rarity })
     }

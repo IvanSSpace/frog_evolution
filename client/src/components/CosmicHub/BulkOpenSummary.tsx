@@ -4,13 +4,13 @@
 //
 // Lazy-loaded из BoxesTab (PERF-08 separate chunk).
 
+// Phase 22: rarity removed — BulkOpenResult groups by element only.
 import { useTranslation } from 'react-i18next'
-import type { Element, Rarity } from '../../store/cosmic/types'
+import type { Element } from '../../store/cosmic/types'
 import { ELEMENT_TINT } from './ElementGrid'
 
 export interface BulkOpenResult {
   element: Element
-  rarity: Rarity
   planetName: string
 }
 
@@ -21,36 +21,24 @@ interface Props {
 
 interface GroupedRow {
   element: Element
-  rarity: Rarity
   count: number
 }
 
 function groupResults(results: BulkOpenResult[]): GroupedRow[] {
   const map = new Map<string, GroupedRow>()
   for (const r of results) {
-    const key = `${r.element}:${r.rarity}`
+    const key = r.element
     const existing = map.get(key)
     if (existing) existing.count++
-    else map.set(key, { element: r.element, rarity: r.rarity, count: 1 })
+    else map.set(key, { element: r.element, count: 1 })
   }
-  // Sort: rarity DESC (legendary first), then by count DESC.
-  const order: Record<Rarity, number> = {
-    legendary: 0,
-    epic: 1,
-    rare: 2,
-    common: 3,
-  }
-  return Array.from(map.values()).sort((a, b) => {
-    const r = order[a.rarity] - order[b.rarity]
-    if (r !== 0) return r
-    return b.count - a.count
-  })
+  return Array.from(map.values()).sort((a, b) => b.count - a.count)
 }
 
 export default function BulkOpenSummary({ results, onClose }: Props) {
   const { t } = useTranslation()
   const grouped = groupResults(results)
-  const hasLegendary = grouped.some((g) => g.rarity === 'legendary')
+  const hasLegendary = false // Phase 22: rarity removed
 
   return (
     <div
@@ -101,7 +89,7 @@ export default function BulkOpenSummary({ results, onClose }: Props) {
         style={{ maxHeight: '60vh', width: '100%', maxWidth: 360 }}
       >
         {grouped.map((row) => (
-          <SummaryRow key={`${row.element}:${row.rarity}`} row={row} />
+          <SummaryRow key={row.element} row={row} />
         ))}
       </div>
 
@@ -148,31 +136,14 @@ function SummaryRow({ row }: { row: GroupedRow }) {
         }}
       />
       <span className="flex-1 text-sm text-white">
-        {t('cosmic_hub.bulk.summary_row', {
-          element: t(`cosmic_hub.elements.${row.element}`),
-          rarity: t(`rarity.${row.rarity}`),
-          count: row.count,
-        })}
+        {t('cosmic_hub.elements.${row.element}', { element: t(`cosmic_hub.elements.${row.element}`) })}
       </span>
       <span
         className="text-xs font-bold px-2 py-1 rounded uppercase"
-        style={{ backgroundColor: rarityColor(row.rarity), color: 'white' }}
+        style={{ backgroundColor: tint, color: 'white' }}
       >
         ×{row.count}
       </span>
     </div>
   )
-}
-
-function rarityColor(r: Rarity): string {
-  switch (r) {
-    case 'legendary':
-      return '#f59e0b'
-    case 'epic':
-      return '#a855f7'
-    case 'rare':
-      return '#3b82f6'
-    case 'common':
-      return '#6b7280'
-  }
 }
