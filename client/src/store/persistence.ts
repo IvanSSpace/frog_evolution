@@ -8,6 +8,8 @@ import { UPGRADE_CONFIG, type Upgrades } from '../game/config/upgrades'
 import { LOCATIONS } from '../game/config/locations'
 import { setGlobalFormat, type NumberFormat } from '../utils/formatting'
 import { makeInitialCosmicSlice, type BoxData } from './cosmic/types'
+// Phase 22 Plan 22-07: legacy state migration (idempotent).
+import { migratePhase22 } from './migrations/phase22'
 
 // ─── storage keys ────────────────────────────────────────────────────────────
 
@@ -204,7 +206,13 @@ export function loadCosmicSlice(): CosmicPersist {
   try {
     const raw = localStorage.getItem(COSMIC_KEY)
     if (!raw) return defaults
-    const parsed = JSON.parse(raw)
+    // Phase 22 Plan 22-07: legacy migration ДО типизированной валидации.
+    // migratePhase22:
+    //   - strip rarity/feedCount/stabilized/ceiling/rollHistory из carriers
+    //   - flatten nested serums {fire: {common, rare,...}} → {fire: sum}
+    //   - default Phase 22 fields (essence/ascendedCarriers/perma*/shopPurchaseCounts)
+    //   - inferring hasCosmosUnlocked (handled отдельно в gameStore init)
+    const parsed = migratePhase22(JSON.parse(raw))
     // Graceful fallback: каждое поле проверяется отдельно — поломанные части
     // заменяются дефолтами (T-11-01 mitigation).
 
@@ -414,7 +422,43 @@ export function loadCosmosUnlocked(): boolean {
   if (typeof localStorage === 'undefined') return false
   try {
     const raw = localStorage.getItem(COSMOS_UNLOCKED_KEY)
-    return raw === 'true'
+    if (raw === 'true') return true
+    if (raw === 'false') return false
+
+    // Phase 22 Plan 22-07: legacy inference — если ключ отсутствует, попробуем
+    // вывести из discovered[19] (cosmos sentinel из Phase 16).
+    // Migration single-shot: если inferred true → сохраняем под новым ключом
+    // чтобы следующие loads не пересчитывали.
+    const discRaw = localStorage.getItem(DISCOVERED_KEY)
+    if (discRaw) {
+      try {
+        const arr = JSON.parse(discRaw)
+        if (Array.isArray(arr) && arr.includes(19)) {
+          saveCosmosUnlocked(true)
+          return true
+        }
+      } catch {
+        /* ignore parse error */
+      }
+    }
+    // Также проверяем cosmic slice — если migrated state указал
+    // hasCosmosUnlocked=true (Plan 22-07 migration), берём оттуда.
+    const cosmicRaw = localStorage.getItem(COSMIC_KEY)
+    if (cosmicRaw) {
+      try {
+        const parsed = migratePhase22(JSON.parse(cosmicRaw)) as {
+          hasCosmosUnlocked?: boolean
+        }
+        if (parsed?.hasCosmosUnlocked === true) {
+          saveCosmosUnlocked(true)
+          return true
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    return false
   } catch {
     return false
   }
