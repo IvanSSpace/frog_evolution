@@ -71,8 +71,9 @@ export function MergeHintOverlay() {
   )
 }
 
-const TOAST_SHOW_MS = 3000
-const TOAST_FADE_MS = 300
+// 2× быстрее per user request.
+const TOAST_SHOW_MS = 1500
+const TOAST_FADE_MS = 150
 
 export function MergeSuccessToast() {
   const { t } = useTranslation()
@@ -100,44 +101,33 @@ export function MergeSuccessToast() {
 
   if (!visible) return null
 
-  // Text-only banner, no background — match new HintBanner стиль.
-  // User feedback: огромный pink prostokat при merge — fix: убрать background.
   return (
     <div
       style={{
         position: 'fixed',
-        bottom: 110,
-        left: 0,
-        right: 0,
+        bottom: 100,
+        left: '50%',
+        transform: 'translateX(-50%)',
         zIndex: 101,
-        display: 'flex',
-        justifyContent: 'center',
+        maxWidth: 'calc(100vw - 32px)',
+        padding: '6px 14px',
+        color: '#fff',
+        fontWeight: 800,
+        fontSize: 16,
+        lineHeight: 1.2,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        textAlign: 'center',
+        textShadow:
+          '0 1px 0 rgba(0,0,0,0.85), 0 0 4px rgba(0,0,0,0.7), 0 0 8px rgba(0,0,0,0.5)',
+        opacity: exiting ? 0 : 1,
+        transition: `opacity ${TOAST_FADE_MS}ms ease-out`,
         pointerEvents: 'none',
-        padding: '0 16px',
+        boxSizing: 'border-box',
       }}
     >
-      <div
-        style={{
-          display: 'inline-block',
-          maxWidth: '100%',
-          padding: '4px 10px',
-          color: '#fff',
-          fontWeight: 800,
-          fontSize: 16,
-          lineHeight: 1.2,
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          // Heavy text-shadow для readability без background.
-          textShadow:
-            '0 1px 0 rgba(0,0,0,0.85), 0 0 4px rgba(0,0,0,0.7), 0 0 8px rgba(0,0,0,0.5)',
-          opacity: exiting ? 0 : 1,
-          transition: `opacity ${TOAST_FADE_MS}ms ease-out`,
-          boxSizing: 'border-box',
-        }}
-      >
-        {t('onboarding.mergeHint.success')}
-      </div>
+      {t('onboarding.mergeHint.success')}
     </div>
   )
 }

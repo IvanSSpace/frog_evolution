@@ -132,38 +132,30 @@ export function LocationUnlockCelebration() {
       aria-live="polite"
       onClick={beginExit}
       style={{
-        // Text-only banner — no background block (per user feedback 2026-05-18).
+        // Text-only banner, viewport-center via translateX.
         position: 'fixed',
-        bottom: 110,
-        left: 0,
-        right: 0,
+        bottom: 100,
+        left: '50%',
+        transform: 'translateX(-50%)',
         zIndex: 101,
-        display: 'flex',
-        justifyContent: 'center',
+        maxWidth: 'calc(100vw - 32px)',
+        padding: '6px 14px',
+        color: '#fff',
+        fontWeight: 800,
+        fontSize: 16,
+        lineHeight: 1.2,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        textAlign: 'center',
         cursor: 'pointer',
         touchAction: 'manipulation',
-        padding: '0 16px',
+        textShadow:
+          '0 1px 0 rgba(0,0,0,0.85), 0 0 4px rgba(0,0,0,0.7), 0 0 8px rgba(0,0,0,0.5)',
+        boxSizing: 'border-box',
       }}
     >
-      <span
-        style={{
-          display: 'inline-block',
-          maxWidth: '100%',
-          padding: '4px 10px',
-          color: '#fff',
-          fontWeight: 800,
-          fontSize: 16,
-          lineHeight: 1.2,
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          textShadow:
-            '0 1px 0 rgba(0,0,0,0.85), 0 0 4px rgba(0,0,0,0.7), 0 0 8px rgba(0,0,0,0.5)',
-          boxSizing: 'border-box',
-        }}
-      >
-        {t('onboarding.location.unlocked', { name: `${info.emoji} ${name}` })}
-      </span>
+      {t('onboarding.location.unlocked', { name: `${info.emoji} ${name}` })}
     </div>
   )
 }

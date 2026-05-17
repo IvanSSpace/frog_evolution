@@ -19,8 +19,9 @@ import { useTranslation } from 'react-i18next'
 import { eventBus } from '../../store/eventBus'
 import { useOnboardingStore } from '../../store/onboarding/onboardingSlice'
 
-const FADE_OUT_MS = 300
-const TAP_AUTO_FADE_MS = 5000
+// 2× быстрее per user request: 300→150, 5000→2500.
+const FADE_OUT_MS = 150
+const TAP_AUTO_FADE_MS = 2500
 // Сколько раз нужно тапнуть в любом месте экрана, чтобы dismiss hint.
 const DISMISS_TAP_COUNT = 2
 
@@ -152,41 +153,36 @@ export function OnboardingHintBanner() {
       ? t('onboarding.tapHint.label')
       : t('onboarding.mergeHint.label')
 
+  // Center horizontally через transform translateX(-50%) — самый надёжный
+  // способ центрирования fixed элемента (flex-center иногда не работает с
+  // длинным текстом + maxWidth: 100%).
   return (
     <div
       style={{
         position: 'fixed',
-        bottom: 'calc(80px + 16px)', // над BottomBar ~80px + small gap
-        left: 0,
-        right: 0,
+        bottom: 100, // над BottomBar ~80px + small gap
+        left: '50%',
+        transform: 'translateX(-50%)',
         zIndex: 100,
-        display: 'flex',
-        justifyContent: 'center',
+        maxWidth: 'calc(100vw - 32px)',
+        padding: '6px 14px',
+        color: '#fff',
+        fontWeight: 800,
+        fontSize: 16,
+        lineHeight: 1.2,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        textAlign: 'center',
+        textShadow:
+          '0 1px 0 rgba(0,0,0,0.85), 0 0 4px rgba(0,0,0,0.7), 0 0 8px rgba(0,0,0,0.5)',
+        opacity: exiting ? 0 : 1,
+        transition: `opacity ${FADE_OUT_MS}ms ease-out`,
         pointerEvents: 'none',
-        padding: '0 16px',
+        boxSizing: 'border-box',
       }}
     >
-      <div
-        style={{
-          display: 'inline-block',
-          maxWidth: '100%',
-          padding: '6px 14px',
-          color: '#fff',
-          fontWeight: 800,
-          fontSize: 16,
-          lineHeight: 1.2,
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          textShadow:
-            '0 1px 0 rgba(0,0,0,0.85), 0 0 4px rgba(0,0,0,0.7), 0 0 8px rgba(0,0,0,0.5)',
-          opacity: exiting ? 0 : 1,
-          transition: `opacity ${FADE_OUT_MS}ms ease-out`,
-          boxSizing: 'border-box',
-        }}
-      >
-        {text}
-      </div>
+      {text}
     </div>
   )
 }
