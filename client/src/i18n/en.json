@@ -29,7 +29,8 @@
     "1": "Puddle",
     "2": "Swamp",
     "3": "Forest",
-    "4": "Continent"
+    "4": "Continent",
+    "6": "Star Map"
   },
   "header": {
     "per_sec": "/sec"

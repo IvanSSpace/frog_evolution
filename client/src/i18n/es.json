@@ -29,7 +29,8 @@
     "1": "Charco",
     "2": "Pantano",
     "3": "Bosque",
-    "4": "Continente"
+    "4": "Continente",
+    "6": "Mapa Estelar"
   },
   "header": {
     "per_sec": "/seg"
