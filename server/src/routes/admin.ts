@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../prisma'
 import { config } from '../config'
+import { CHAINS_RESPONSE } from '../data/chains'
 
 // ── Admin JWT payload ─────────────────────────────────────────────────────────
 
@@ -263,6 +264,15 @@ export async function adminRoutes(app: FastifyInstance) {
       }
 
       return reply.send({ success: true, newValue })
+    },
+  )
+
+  // GET /admin/chains — race chain + quest config (for admin Race Chains page)
+  app.get(
+    '/admin/chains',
+    { preHandler: [requireAdmin] },
+    async (_request, reply) => {
+      return reply.send(CHAINS_RESPONSE)
     },
   )
 

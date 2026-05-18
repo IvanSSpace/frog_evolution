@@ -7,6 +7,7 @@ import { LoginPage } from '@/pages/LoginPage'
 import { UsersPage } from '@/pages/UsersPage'
 import { UserDetailPage } from '@/pages/UserDetailPage'
 import { DashboardPage } from '@/pages/DashboardPage'
+import { RaceChainsPage } from '@/pages/RaceChainsPage'
 import { Toaster } from '@/components/ui/toaster'
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
                     <Route index element={<DashboardPage />} />
                     <Route path="users" element={<UsersPage />} />
                     <Route path="users/:id" element={<UserDetailPage />} />
+                    <Route path="chains" element={<RaceChainsPage />} />
                   </Routes>
                 </AppShell>
               </ProtectedRoute>
