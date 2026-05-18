@@ -5,6 +5,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AppShell } from '@/components/AppShell'
 import { LoginPage } from '@/pages/LoginPage'
 import { UsersPage } from '@/pages/UsersPage'
+import { UserDetailPage } from '@/pages/UserDetailPage'
 import { Toaster } from '@/components/ui/toaster'
 
 // Placeholder — Wave 3 plan 29-06 will implement charts
@@ -31,10 +32,7 @@ export default function App() {
                   <Routes>
                     <Route index element={<DashboardPage />} />
                     <Route path="users" element={<UsersPage />} />
-                    <Route
-                      path="users/:id"
-                      element={<div className="text-foreground">User Detail — Wave 3</div>}
-                    />
+                    <Route path="users/:id" element={<UserDetailPage />} />
                   </Routes>
                 </AppShell>
               </ProtectedRoute>
