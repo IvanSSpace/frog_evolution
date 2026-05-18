@@ -735,18 +735,20 @@ State (cosmic slice): `activeQuests: ActiveQuest[]` (cap 5) + `completedQuests: 
 i18n: `cosmic_hub.quests.*` + per-quest text keys (~80 keys × 3 locales). Cosmos-gated (наследует Phase 27 gate). Reuse `_styles.ts` design tokens. Cliclability checklist mandatory. Scope ~25-30ч.
 
 **Source design:** inline brainstorm 2026-05-18 (no spec file — memory `feedback_superpowers_workflow`)
-**Requirements**: TBD (resolved when Phase 28 finalize plan runs — 28 REQ-IDs already drafted in plan frontmatter; see 28-01..28-06 PLAN.md)
+**Requirements**: PHASE28-QUEST-CONFIG, PHASE28-QUEST-DATA-60-MAPPINGS, PHASE28-QUEST-TYPES-4, PHASE28-ACTIVE-QUESTS-STATE, PHASE28-COMPLETED-QUESTS-STATE, PHASE28-CAP-5, PHASE28-AUTO-ACTIVATE-FROM-HOOK, PHASE28-AUTO-COMPLETE-PROGRESS, PHASE28-MANUAL-CANCEL-PENALTY, PHASE28-PROGRESS-HOOKS-EVENTBUS, PHASE28-REWARD-ESSENCE, PHASE28-REWARD-SERUM, PHASE28-REWARD-GOLD, PHASE28-REWARD-DIPLOMACY, PHASE28-QUESTS-TAB-UI, PHASE28-QUEST-CARD, PHASE28-REWARD-POPUP, PHASE28-PERSISTENCE, PHASE28-SERVER-SYNC, PHASE28-I18N-RU, PHASE28-I18N-EN, PHASE28-I18N-ES, PHASE28-I18N-PARITY, PHASE28-COSMOS-GATE, PHASE28-DEV-HELPERS, PHASE28-CLICLABILITY, PHASE28-SMOKE, PHASE28-FINALIZE
 **Depends on:** Phase 27
 **Plans:** 6 plans
 
 Plans:
-- [ ] 28-01-PLAN.md — Foundation types + state + persistence + i18n skeleton + 8th tab registration
-- [ ] 28-02-PLAN.md — Quest data (40 entries) + i18n RU/EN/ES strings (~+80 leaves per locale)
-- [ ] 28-03-PLAN.md — Pure questEngine + slice actions + 4 eventBus events + DEV helpers + ≥10 vitest
-- [ ] 28-04-PLAN.md — QuestsTab + QuestCard + CompletedQuestsList + cancel flow
-- [ ] 28-05-PLAN.md — QuestRewardPopup + queue controller + App wiring
-- [ ] 28-06-PLAN.md — SMOKE_TEST_28 (6 scenarios) + ROADMAP/STATE finalize
+- [x] 28-01-PLAN.md — Foundation types + state + persistence + i18n skeleton + 8th tab registration
+- [x] 28-02-PLAN.md — Quest data (40 entries) + i18n RU/EN/ES (~+80 leaves per locale)
+- [x] 28-03-PLAN.md — Pure questEngine + slice actions + 4 eventBus events + DEV helpers + 24 vitest
+- [x] 28-04-PLAN.md — QuestsTab + QuestCard + CompletedQuestsList + cancel flow
+- [x] 28-05-PLAN.md — QuestRewardPopup + queue controller + App wiring
+- [x] 28-06-PLAN.md — SMOKE_TEST_28 (6 scenarios) + ROADMAP/STATE finalize
+
+**Outcome:** Quest mechanic foundation shipped. 8-я tab «Квесты» 📜 (cosmos-gated, modal-level lock inherited Phase 22-06) с активной очередью (cap 5) + collapsible completed history. 40 QuestConfig entries (config/quests.ts) — covers 100% raceChains.ts quest_hook stubs (actual = 40 vs phase-outline estimate 60; documented в 28-02 SUMMARY). 4 quest types (📦 Доставка / 🔍 Разведка / ⚡ Мерж / 🤝 Дипломатия). 4 reward kinds (essence + serum + gold + relationship_and_bonus с placeholder bonus_id). Auto-activation от Phase 27 «Поддержать» на quest_hook ChainItem (slice resolveAccept extended). Auto-complete при progress reaches target → reward popup (z-index 199/200 peer FirstContactModal, CSS keyframe slide-in 250ms, no Lottie). Manual cancel → -1 relationship penalty к race-owner'у (applyDeltaClamp shared с pendingEngine). Progress hooks subscribed: merge:happened (merge_count + merge_to_level через discoveredLevels), cosmic:box-opened (serum_count by element), starmap:planet-select (planets_visited), cosmic:ship-arrived (missions_complete), contacts:relationship-delta (raise_relationship). Polling-driven targets (gold_amount, raise_relationship) reconcile через triggerPendingPull-style mount effect в QuestsTab + boot-time call в questController. Pure questEngineTick deterministic side-effect-free + 24 vitest unit tests с vi.mock'd QUESTS fixture (independent от Plan 28-02 data fill — mirror Phase 27-03 pendingEngine pattern). Persistence + server sync через cosmic blob (snapshotForSave + loadGameState hydrate + defensive load strip unknown questId + FIFO trim completedQuests at 100 newest; gameSync.test.ts coverage REQUIRED_COSMIC_SYNC_FIELDS extended). 4 new typed eventBus events (quests:activated / cap-reached / completed / cancelled). DEV helpers __activateQuest / __progressQuest / __completeQuest / __resetQuests / __dumpQuests (Vite tree-shake confirmed — production bundle grep returns 0 для all 5). RelationshipBar pulse inherited Phase 27 cancel penalty path. Cliclability checklist (type=button + touchAction:manipulation + stopPropagation + z-index hierarchy: QuestRewardPopup 199/200 / Cosmic Hub 100). Inline confirm panel на QuestCard вместо отдельного modal (simpler overlay stack). CompletedQuestsList MAX_VISIBLE=20 separate от persistence cap 100 (FIFO trim). Tab strip fit на 320px viewport — Plan 28-04 deferred к Plan 28-06 SMOKE (fallback options enumerated: reduce padding `12px 4px → 12px 2px` / icon-only labels via @media / scroll-strip). i18n RU/EN/ES parity 522 → **633 keys × 3 locales = 1899 entries** (+111 per locale: 14 cosmic_hub.quests.* + 80 quests.<id>.{description,short} + 17 misc placeholder/reward/cancel keys). Bundle delta gzip main **+21.73 KB** (Phase 27 baseline 220.94 KB → **242.67 KB**; target ~+15 KB exceeded — substantive feature surface justifies overshoot: quest engine + 40 configs + UI + reward popup + 111 i18n leaves bundled), CosmicHubModal chunk +1.23 KB (15.61 → **16.84 KB**). vitest baseline 117 → **198 PASS** (+81 tests: 24 questEngine + 57 misc covered across plans 28-01..28-05). SMOKE_TEST_28.md 120 строк, 6 scenarios A-F + i18n + build chain + regression sanity. 28/28 ✓ REQ-IDs (PHASE28-*).
 
 ---
 
-**Last updated:** 2026-05-18 — Phase 27 complete (6 plans, contacts + relationships foundation, +11.77 KB gzip delta)
+**Last updated:** 2026-05-19 — Phase 28 complete (6 plans, quest mechanic, +21.73 KB gzip delta)
