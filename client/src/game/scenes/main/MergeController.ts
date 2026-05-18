@@ -287,6 +287,14 @@ export class MergeController {
         // Phase 22 Plan 22-06: cosmos unlock — реактивно открывает SerumBar,
         // Cosmic Hub button, Star Map ship controls во всех gated компонентах.
         storeL25.markCosmosUnlocked()
+        // Phase 24 Plan 24-04: cinematic trigger.
+        // Первый L18+L18 normal merge → cinematic (Plan 24-02 Phaser effect →
+        // Plan 24-03 modal → Plan 24-04 controller spawn'ит L1 + opens Star Map).
+        // markCaptainBirthSeen idempotent → повторные L18+L18 НЕ играют cinematic.
+        if (!storeL25.captainBirthSeen) {
+          storeL25.markCaptainBirthSeen()
+          eventBus.emit('captain:birth-start', { x: cx, y: cy })
+        }
         mergeApi(MAX_LEVEL, currentLocId)
           .then((res) => {
             useGameStore.setState({
