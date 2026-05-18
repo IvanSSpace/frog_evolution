@@ -30,8 +30,10 @@ const COSMOS_UNLOCKED_KEY = 'frog_evolution_cosmos_unlocked'
 // Phase 24 Plan 24-01: captain creation cinematic — per-user milestone flag,
 // server-sync через cosmic JSON blob (не per-device как onboarding).
 const CAPTAIN_BIRTH_SEEN_KEY = 'frog_evolution_captain_birth_seen'
-// 2026-05-18: L18+L18 merge bonus counter — каждый merge += 1, gives +10% gold.
+// 2026-05-18: L18+L18 merge bonus counter — для tiered % multiplier.
 const L18_MERGES_COUNT_KEY = 'frog_evolution_l18_merges_count'
+// 2026-05-18: absolute gold/sec bonus от first L18+L18 merge (= 2× L18 income).
+const L18_ABSOLUTE_BONUS_KEY = 'frog_evolution_l18_absolute_bonus'
 // Phase 23 Plan 23-01: onboarding flow per-device state.
 // Хранится отдельным ключом (не sync'ится с сервером) — это локальная UX-фича.
 const ONBOARDING_KEY = 'frog_evolution_onboarding'
@@ -565,6 +567,27 @@ export function saveL18MergesCount(n: number): void {
   if (typeof localStorage === 'undefined') return
   try {
     localStorage.setItem(L18_MERGES_COUNT_KEY, String(Math.max(0, Math.floor(n))))
+  } catch {
+    /* ignore */
+  }
+}
+
+export function loadL18AbsoluteBonusPerSec(): number {
+  if (typeof localStorage === 'undefined') return 0
+  try {
+    const raw = localStorage.getItem(L18_ABSOLUTE_BONUS_KEY)
+    if (!raw) return 0
+    const n = parseFloat(raw)
+    return Number.isFinite(n) && n >= 0 ? n : 0
+  } catch {
+    return 0
+  }
+}
+
+export function saveL18AbsoluteBonusPerSec(n: number): void {
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(L18_ABSOLUTE_BONUS_KEY, String(Math.max(0, n)))
   } catch {
     /* ignore */
   }

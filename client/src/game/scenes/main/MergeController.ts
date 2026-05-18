@@ -34,6 +34,7 @@ import {
   FROG_LEVELS,
   MAX_LEVEL,
   textureKeyForLevel,
+  getTargetIncomePerSec,
   type PoopType,
 } from '../../config/frogs'
 import { getLocationUnlockedByLevel } from '../../config/locationUnlocks'
@@ -295,10 +296,16 @@ export class MergeController {
           storeL25.markCaptainBirthSeen()
           eventBus.emit('captain:birth-start', { x: cx, y: cy })
         }
-        // 2026-05-18: каждый L18+L18 (включая первый) даёт +1 essence + +10%
-        // gold income permanent bonus через l18MergesCount counter.
-        // Прогресс не теряется при destroy 2× L18 frogs — bonus компенсирует.
+        // 2026-05-18: каждый L18+L18 даёт +1 essence + tiered bonus:
+        //   - First merge: +2× L18 income/sec ABSOLUTE permanent (compensates
+        //     loss of 2 destroyed L18 frogs symbolically — "ghost L18 income").
+        //   - Subsequent: +5% / +5% / +2.5%... (см. l18GoldMultiplier в gameStore).
         useGameStore.setState((s) => ({ essence: s.essence + 1 }))
+        if (storeL25.l18MergesCount === 0) {
+          // First merge: добавить absolute passive bonus = 2× L18 income/sec.
+          const l18IncomePerSec = getTargetIncomePerSec(MAX_LEVEL)
+          storeL25.addL18AbsoluteBonus(l18IncomePerSec * 2)
+        }
         storeL25.incrementL18Merges()
         mergeApi(MAX_LEVEL, currentLocId)
           .then((res) => {

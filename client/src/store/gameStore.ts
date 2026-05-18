@@ -48,6 +48,8 @@ import {
   saveCaptainBirthSeen,
   loadL18MergesCount,
   saveL18MergesCount,
+  loadL18AbsoluteBonusPerSec,
+  saveL18AbsoluteBonusPerSec,
 } from './persistence'
 
 // Re-exports for backward compat — many consumers import these from gameStore.
@@ -154,39 +156,43 @@ interface GameStateBase {
   markCaptainBirthSeen: () => void
 
   // 2026-05-18: L18+L18 normal merges count.
-  // Каждый успешный L18+L18 normal merge инкрементит counter, даёт +1 essence
-  // (см. MergeController), И накладывает permanent +10% bonus к gold income
-  // через addGold multiplier — компенсирует loss income при destroy L18 frogs
-  // и награждает прогресс.
+  // Каждый successful L18+L18 normal merge:
+  //   - Merge 1 (первый): даёт +2× L18 income (≈+393K/s) ABSOLUTE permanent
+  //     bonus (см. l18AbsoluteBonusPerSec). Multiplier = 1.0 (no % yet).
+  //   - Merge 2-3: +5% multiplier each (cumulative).
+  //   - Merge 4+: +2.5% multiplier each.
   l18MergesCount: number
   incrementL18Merges: () => void
+  // 2026-05-18: absolute passive income bonus в gold/sec, накопленный из first
+  // L18+L18 merge (= 2× target_income_per_sec(L18)).
+  // Тикает в MainScene update loop как ghost-frog income.
+  l18AbsoluteBonusPerSec: number
+  addL18AbsoluteBonus: (amount: number) => void
 }
 
 // Полный GameState = базовые поля + Cosmic Frogs System (Phase 11+)
 // CosmicState = CosmicSlice + CosmicSliceActions (см. cosmic/slice.ts)
 type GameState = GameStateBase & CosmicState
 
-// L18+L18 merge bonus: diminishing returns tiered schedule:
-//   Merge 1     : +10% (normal first reward)
-//   Merge 2     : +5%
-//   Merge 3     : +5%
-//   Merge 4..∞  : +2.5% each (perpetual)
+// L18+L18 merge bonus: hybrid schedule.
+//   Merge 1: ABSOLUTE bonus = 2× L18 income/sec permanent (handled separately
+//           через l18AbsoluteBonusPerSec). Multiplier = 1.0.
+//   Merge 2-3: +5% multiplier each.
+//   Merge 4..∞: +2.5% multiplier each.
 //
-// Cumulative multiplier:
-//   count=0 → 1.0   (no bonus)
-//   count=1 → 1.10
-//   count=2 → 1.15
-//   count=3 → 1.20
-//   count=N (N≥3) → 1.20 + (N - 3) * 0.025
-//
-// Применяется в addGold чтобы все gold-источники (tap, poop, tractor offline
-// applied client-side, bg income) автоматически получали multiplier.
+// Cumulative multiplier (применяется к ВСЕМ gold-источникам через addGold,
+// в т.ч. к absolute bonus tick'у — игрок видит как если бы 2 ghost-frogs всё
+// ещё лагали income, и они тоже получают multiplier):
+//   count=0 → 1.0
+//   count=1 → 1.0   (только absolute bonus)
+//   count=2 → 1.05
+//   count=3 → 1.10
+//   count=N (N≥3) → 1.10 + (N - 3) * 0.025
 function l18GoldMultiplier(count: number): number {
-  if (count <= 0) return 1
-  if (count === 1) return 1.10
-  if (count === 2) return 1.15
-  // count >= 3: base 1.20 from first 3 merges + 2.5% per additional
-  return 1.20 + (count - 3) * 0.025
+  if (count <= 1) return 1
+  if (count === 2) return 1.05
+  if (count === 3) return 1.10
+  return 1.10 + (count - 3) * 0.025
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -408,15 +414,23 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ captainBirthSeen: true })
   },
 
-  // 2026-05-18: L18+L18 merge bonus counter. Каждый L18+L18 normal merge
-  // инкрементит counter — это даёт +10% gold income permanently (см. addGold).
-  // Persistence через localStorage L18_MERGES_KEY (см. persistence.ts).
+  // 2026-05-18: L18+L18 merge bonus counter (см. l18GoldMultiplier выше).
   l18MergesCount: loadL18MergesCount(),
   incrementL18Merges: () => {
     const s = get()
     const next = s.l18MergesCount + 1
     saveL18MergesCount(next)
     set({ l18MergesCount: next })
+  },
+  // 2026-05-18: absolute passive income bonus от first L18+L18 merge
+  // (= 2× target_income_per_sec(L18) ≈ 393197/sec). Тикает в MainScene update
+  // как ghost-L18-frogs income, проходит через addGold (получает multiplier).
+  l18AbsoluteBonusPerSec: loadL18AbsoluteBonusPerSec(),
+  addL18AbsoluteBonus: (amount: number) => {
+    const s = get()
+    const next = s.l18AbsoluteBonusPerSec + amount
+    saveL18AbsoluteBonusPerSec(next)
+    set({ l18AbsoluteBonusPerSec: next })
   },
 
   // ============== COSMIC FROGS SYSTEM (Phase 11+) ==============

@@ -588,14 +588,16 @@ export class MainScene extends Phaser.Scene {
     this.syncIncomePerSec()
   }
 
-  // Суммарный доход в секунду — со ВСЕХ лягушек на ВСЕХ локациях
+  // Суммарный доход в секунду — со ВСЕХ лягушек на ВСЕХ локациях + L18 absolute bonus.
+  // 2026-05-18: l18AbsoluteBonusPerSec (passive ghost-frog income от first L18+L18
+  // merge) включается в total так чтобы Header показывал combined display.
   private syncIncomePerSec() {
-    const allLocs = useGameStore.getState().locationFrogs
-    let total = 0
-    for (const arr of allLocs) {
+    const state = useGameStore.getState()
+    let total = state.l18AbsoluteBonusPerSec
+    for (const arr of state.locationFrogs) {
       for (const lvl of arr) total += getTargetIncomePerSec(lvl)
     }
-    useGameStore.getState().setIncomePerSec(total)
+    state.setIncomePerSec(total)
   }
 
   // ============== UPDATE ==============
@@ -608,11 +610,13 @@ export class MainScene extends Phaser.Scene {
 
     const store = useGameStore.getState()
 
-    // Фоновый доход с лягушек на НЕ-текущих локациях.
+    // Фоновый доход с лягушек на НЕ-текущих локациях + L18 absolute bonus.
     // На текущей локации монеты приходят через анимацию какашек у visible-лягушек,
     // фоновые лягушки никогда не видны → начисляем им золото напрямую.
+    // 2026-05-18: l18AbsoluteBonusPerSec (от first L18+L18 merge) тикает здесь
+    // как ghost-frog income (см. gameStore). Multiplier applies через addGold.
     const currentLocId = store.currentLocation
-    let bgIncomePerSec = 0
+    let bgIncomePerSec = store.l18AbsoluteBonusPerSec
     store.locationFrogs.forEach((arr, idx) => {
       const locId = idx + 1
       if (locId === currentLocId) return
