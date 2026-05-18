@@ -7,7 +7,7 @@
 interface FrogEconomy {
   basePrice: number
   growthRate: number // multiplier per purchase (always 1.15)
-  location: number // 1=Лужа, 2=Болото, 3=Лес
+  location: number // 1=Болото, 2=Лес, 3=Континент
   availableInShop: boolean
 }
 

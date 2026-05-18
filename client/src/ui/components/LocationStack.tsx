@@ -16,10 +16,9 @@ const LOCATION_VISUAL: Record<
   number,
   { emoji: string; from: string; to: string; border: string }
 > = {
-  1: { emoji: '💧', from: '#bae6fd', to: '#0284c7', border: '#0c4a6e' }, // Лужа
-  2: { emoji: '🌿', from: '#bef264', to: '#65a30d', border: '#365314' }, // Болото
-  3: { emoji: '🌲', from: '#86efac', to: '#15803d', border: '#14532d' }, // Лес
-  4: { emoji: '🌍', from: '#fca5a5', to: '#b91c1c', border: '#7f1d1d' }, // Континент (upgrades/buildings)
+  1: { emoji: '🌿', from: '#bef264', to: '#65a30d', border: '#365314' }, // Болото
+  2: { emoji: '🌲', from: '#86efac', to: '#15803d', border: '#14532d' }, // Лес
+  3: { emoji: '🌍', from: '#fca5a5', to: '#b91c1c', border: '#7f1d1d' }, // Континент
   6: { emoji: '✨', from: '#67e8f9', to: '#0e7490', border: '#164e63' }, // Звёздная карта (тест)
 }
 
@@ -96,7 +95,7 @@ export function LocationStack() {
   // Сверху вниз: 6 (Звёздная карта) → 4 → 3 → 2 → 1
   // Phase 22 Plan 22-06: Звёздная карта (id=6) скрыта до cosmos unlock.
   // Фильтр локаций по наличию лягушек:
-  //   - Лужа (id=1) — всегда видна (стартовая локация)
+  //   - Болото (id=1) — всегда видна (стартовая локация)
   //   - Текущая локация — всегда видна (иначе игрок застрянет)
   //   - Остальные — только если на них есть хотя бы одна лягушка
   // Прогрессивный анлок по discoveredLevels отключён — populated-фильтр заменяет.
@@ -113,7 +112,7 @@ export function LocationStack() {
     ? [STAR_MAP_PROTOTYPE_LOC, ...farmLocations]
     : farmLocations
 
-  // Если visible только одна локация (Лужа) и cosmos не разблокирован —
+  // Если visible только одна локация (Болото) и cosmos не разблокирован —
   // блок переключения не нужен (нечего переключать).
   if (ordered.length <= 1) return null
 

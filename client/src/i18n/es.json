@@ -26,10 +26,9 @@
     "24": "Sapo Vidente"
   },
   "locations": {
-    "1": "Charco",
-    "2": "Pantano",
-    "3": "Bosque",
-    "4": "Continente",
+    "1": "Pantano",
+    "2": "Bosque",
+    "3": "Continente",
     "6": "Mapa Estelar"
   },
   "header": {

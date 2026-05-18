@@ -26,10 +26,9 @@
     "24": "Toad Seer"
   },
   "locations": {
-    "1": "Puddle",
-    "2": "Swamp",
-    "3": "Forest",
-    "4": "Continent",
+    "1": "Swamp",
+    "2": "Forest",
+    "3": "Continent",
     "6": "Star Map"
   },
   "header": {

@@ -454,12 +454,10 @@ export class MergeController {
   locationName(id: number): string {
     switch (id) {
       case 1:
-        return 'Лужа'
-      case 2:
         return 'Болото'
-      case 3:
+      case 2:
         return 'Лес'
-      case 4:
+      case 3:
         return 'Континент'
       default:
         return ''

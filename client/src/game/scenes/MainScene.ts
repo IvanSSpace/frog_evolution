@@ -164,7 +164,6 @@ export class MainScene extends Phaser.Scene {
       width: 18 * TEXTURE_QUALITY,
       height: 18 * TEXTURE_QUALITY,
     })
-    this.load.image('map0', '/map0.png')
     this.load.image('map', '/map.webp')
     this.load.image('map2', '/map2.webp')
     this.load.image('map3', '/map3.webp')

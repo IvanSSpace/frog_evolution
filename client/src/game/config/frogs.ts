@@ -13,7 +13,7 @@ interface FrogLevelConfig {
   growthRate: number // мультипликатор цены за каждую купленную (всегда 1.15)
   poopChances: PoopChances
   tint: number // тинт (Phaser hex)
-  location: number // 1=Лужа, 2=Болото, 3=Лес
+  location: number // 1=Болото, 2=Лес, 3=Континент
   availableInShop: boolean // true = можно купить за монеты; false = только через мерджи (L19+)
 }
 
