@@ -4,23 +4,15 @@ import { queryClient } from '@/lib/queryClient'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AppShell } from '@/components/AppShell'
 import { LoginPage } from '@/pages/LoginPage'
+import { UsersPage } from '@/pages/UsersPage'
 import { Toaster } from '@/components/ui/toaster'
 
-// Placeholder pages — Wave 3 will implement
+// Placeholder — Wave 3 plan 29-06 will implement charts
 function DashboardPage() {
   return (
     <div className="text-foreground">
       <h1 className="text-xl font-bold mb-4">Dashboard</h1>
       <p className="text-muted-foreground">Analytics coming soon.</p>
-    </div>
-  )
-}
-
-function UsersPage() {
-  return (
-    <div className="text-foreground">
-      <h1 className="text-xl font-bold">Users</h1>
-      <p className="text-muted-foreground">Loading...</p>
     </div>
   )
 }
