@@ -33,6 +33,7 @@ import { ActiveBonusesBar } from './components/HUD/ActiveBonusesBar'
 import { installBestiaryDevHelpers } from './utils/devHelpers'
 import { installOnboardingDevHelpers } from './utils/onboardingDevHelpers'
 import { installCaptainBirthDevHelpers } from './utils/captainBirthDevHelpers'
+import { installRaceDevHelpers } from './utils/devRaces'
 import { devLog } from './utils/devLog'
 import { pingHealth } from './api/client'
 import { ensureLogin } from './api/auth'
@@ -253,6 +254,10 @@ function App() {
     // Phase 24 Plan 24-05: captain birth dev helpers
     // (__triggerCaptainBirth / __resetCaptainBirth / __captainBirthState).
     installCaptainBirthDevHelpers()
+    // Phase 26 Plan 26-01: race / first-contact dev helpers
+    // (__listRaces / __markFirstContact / __resetFirstContacts / __firstContactsState).
+    // Returns cleanup function для symmetric uninstall в useEffect return.
+    const raceDevCleanup = installRaceDevHelpers()
 
     return () => {
       delete w.__resetCrewToday
@@ -270,6 +275,8 @@ function App() {
       delete w.__triggerCaptainBirth
       delete w.__resetCaptainBirth
       delete w.__captainBirthState
+      // Phase 26 Plan 26-01: race dev helpers cleanup.
+      raceDevCleanup()
     }
   }, [])
 
