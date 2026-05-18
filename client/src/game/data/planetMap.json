@@ -38,7 +38,11 @@
       "accent": 440020,
       "size": 58.300000000000004,
       "distFromCenter": 5105,
-      "distFromHome": 160
+      "distFromHome": 160,
+      "inhabitant": {
+        "raceId": "crystalloids",
+        "role": "home"
+      }
     },
     {
       "id": "drave",
@@ -64,7 +68,11 @@
       "accent": 10624175,
       "size": 69.30000000000001,
       "distFromCenter": 5055,
-      "distFromHome": 360
+      "distFromHome": 360,
+      "inhabitant": {
+        "raceId": "plasmaspirits",
+        "role": "colony"
+      }
     },
     {
       "id": "lyor",
@@ -77,7 +85,11 @@
       "accent": 7153881,
       "size": 63.800000000000004,
       "distFromCenter": 4373,
-      "distFromHome": 600
+      "distFromHome": 600,
+      "inhabitant": {
+        "raceId": "crystalloids",
+        "role": "colony"
+      }
     },
     {
       "id": "sayme",
@@ -207,7 +219,11 @@
       "accent": 1120295,
       "size": 55.00000000000001,
       "distFromCenter": 6237,
-      "distFromHome": 1900
+      "distFromHome": 1900,
+      "inhabitant": {
+        "raceId": "tenebrians",
+        "role": "home"
+      }
     },
     {
       "id": "altus",
@@ -373,7 +389,11 @@
       "hasMoon": false,
       "rngSeed": 487156395,
       "distFromCenter": 1876,
-      "distFromHome": 5696
+      "distFromHome": 5696,
+      "inhabitant": {
+        "raceId": "timeweavers",
+        "role": "colony"
+      }
     },
     {
       "id": "bg_26",
@@ -662,7 +682,11 @@
       "hasMoon": false,
       "rngSeed": 713583543,
       "distFromCenter": 6172,
-      "distFromHome": 7950
+      "distFromHome": 7950,
+      "inhabitant": {
+        "raceId": "cometfolk",
+        "role": "home"
+      }
     },
     {
       "id": "bg_75",
@@ -730,7 +754,11 @@
       "hasMoon": true,
       "rngSeed": 501755466,
       "distFromCenter": 5382,
-      "distFromHome": 9688
+      "distFromHome": 9688,
+      "inhabitant": {
+        "raceId": "liquidoids",
+        "role": "home"
+      }
     },
     {
       "id": "bg_89",
@@ -815,7 +843,11 @@
       "hasMoon": false,
       "rngSeed": 626688863,
       "distFromCenter": 6263,
-      "distFromHome": 8629
+      "distFromHome": 8629,
+      "inhabitant": {
+        "raceId": "timeweavers",
+        "role": "home"
+      }
     },
     {
       "id": "bg_99",
@@ -1308,7 +1340,11 @@
       "hasMoon": false,
       "rngSeed": 118262673,
       "distFromCenter": 4385,
-      "distFromHome": 2735
+      "distFromHome": 2735,
+      "inhabitant": {
+        "raceId": "gasouls",
+        "role": "colony"
+      }
     },
     {
       "id": "bg_186",
@@ -1325,7 +1361,11 @@
       "hasMoon": false,
       "rngSeed": 715597502,
       "distFromCenter": 3077,
-      "distFromHome": 1872
+      "distFromHome": 1872,
+      "inhabitant": {
+        "raceId": "gasouls",
+        "role": "home"
+      }
     },
     {
       "id": "bg_187",
@@ -1444,7 +1484,11 @@
       "hasMoon": false,
       "rngSeed": 666506985,
       "distFromCenter": 6203,
-      "distFromHome": 8229
+      "distFromHome": 8229,
+      "inhabitant": {
+        "raceId": "crystalloids",
+        "role": "colony"
+      }
     },
     {
       "id": "bg_211",
@@ -1529,7 +1573,11 @@
       "hasMoon": false,
       "rngSeed": 652582914,
       "distFromCenter": 4084,
-      "distFromHome": 2799
+      "distFromHome": 2799,
+      "inhabitant": {
+        "raceId": "cometfolk",
+        "role": "colony"
+      }
     },
     {
       "id": "bg_226",
@@ -1835,7 +1883,11 @@
       "hasMoon": true,
       "rngSeed": 500657100,
       "distFromCenter": 3382,
-      "distFromHome": 8194
+      "distFromHome": 8194,
+      "inhabitant": {
+        "raceId": "forestcores",
+        "role": "colony"
+      }
     },
     {
       "id": "bg_280",
@@ -2379,7 +2431,11 @@
       "hasMoon": false,
       "rngSeed": 595808193,
       "distFromCenter": 5157,
-      "distFromHome": 9946
+      "distFromHome": 9946,
+      "inhabitant": {
+        "raceId": "fireworms",
+        "role": "colony"
+      }
     },
     {
       "id": "bg_371",
@@ -2872,7 +2928,11 @@
       "hasMoon": false,
       "rngSeed": 192873612,
       "distFromCenter": 4845,
-      "distFromHome": 8373
+      "distFromHome": 8373,
+      "inhabitant": {
+        "raceId": "gasouls",
+        "role": "colony"
+      }
     },
     {
       "id": "bg_459",
@@ -2923,7 +2983,11 @@
       "hasMoon": false,
       "rngSeed": 762972771,
       "distFromCenter": 5546,
-      "distFromHome": 3769
+      "distFromHome": 3769,
+      "inhabitant": {
+        "raceId": "cometfolk",
+        "role": "colony"
+      }
     },
     {
       "id": "bg_466",
@@ -3076,7 +3140,11 @@
       "hasMoon": false,
       "rngSeed": 90078157,
       "distFromCenter": 3446,
-      "distFromHome": 8146
+      "distFromHome": 8146,
+      "inhabitant": {
+        "raceId": "forestcores",
+        "role": "colony"
+      }
     },
     {
       "id": "bg_498",
@@ -3110,7 +3178,11 @@
       "hasMoon": false,
       "rngSeed": 525338071,
       "distFromCenter": 5661,
-      "distFromHome": 9757
+      "distFromHome": 9757,
+      "inhabitant": {
+        "raceId": "tenebrians",
+        "role": "colony"
+      }
     },
     {
       "id": "bg_500",
@@ -3246,7 +3318,11 @@
       "hasMoon": true,
       "rngSeed": 788752985,
       "distFromCenter": 4583,
-      "distFromHome": 2921
+      "distFromHome": 2921,
+      "inhabitant": {
+        "raceId": "liquidoids",
+        "role": "colony"
+      }
     },
     {
       "id": "bg_524",
@@ -3433,7 +3509,11 @@
       "hasMoon": false,
       "rngSeed": 743551390,
       "distFromCenter": 5075,
-      "distFromHome": 5893
+      "distFromHome": 5893,
+      "inhabitant": {
+        "raceId": "plasmaspirits",
+        "role": "home"
+      }
     },
     {
       "id": "bg_555",
@@ -3484,7 +3564,11 @@
       "hasMoon": false,
       "rngSeed": 996834823,
       "distFromCenter": 2796,
-      "distFromHome": 2188
+      "distFromHome": 2188,
+      "inhabitant": {
+        "raceId": "tenebrians",
+        "role": "colony"
+      }
     },
     {
       "id": "bg_568",
@@ -3603,7 +3687,11 @@
       "hasMoon": false,
       "rngSeed": 156849032,
       "distFromCenter": 3357,
-      "distFromHome": 2695
+      "distFromHome": 2695,
+      "inhabitant": {
+        "raceId": "plasmaspirits",
+        "role": "colony"
+      }
     },
     {
       "id": "bg_587",
@@ -3892,7 +3980,11 @@
       "hasMoon": false,
       "rngSeed": 632828451,
       "distFromCenter": 5202,
-      "distFromHome": 6694
+      "distFromHome": 6694,
+      "inhabitant": {
+        "raceId": "fireworms",
+        "role": "home"
+      }
     },
     {
       "id": "bg_636",
@@ -4317,7 +4409,11 @@
       "hasMoon": false,
       "rngSeed": 54705534,
       "distFromCenter": 5661,
-      "distFromHome": 5473
+      "distFromHome": 5473,
+      "inhabitant": {
+        "raceId": "mechanidons",
+        "role": "colony"
+      }
     },
     {
       "id": "bg_712",
@@ -4572,7 +4668,11 @@
       "hasMoon": true,
       "rngSeed": 333059764,
       "distFromCenter": 5926,
-      "distFromHome": 3763
+      "distFromHome": 3763,
+      "inhabitant": {
+        "raceId": "mechanidons",
+        "role": "home"
+      }
     },
     {
       "id": "bg_754",
@@ -4623,7 +4723,11 @@
       "hasMoon": false,
       "rngSeed": 433361468,
       "distFromCenter": 5038,
-      "distFromHome": 9969
+      "distFromHome": 9969,
+      "inhabitant": {
+        "raceId": "forestcores",
+        "role": "home"
+      }
     },
     {
       "id": "bg_761",
@@ -4793,7 +4897,11 @@
       "hasMoon": false,
       "rngSeed": 702943462,
       "distFromCenter": 6193,
-      "distFromHome": 2577
+      "distFromHome": 2577,
+      "inhabitant": {
+        "raceId": "mechanidons",
+        "role": "colony"
+      }
     },
     {
       "id": "bg_794",
@@ -5014,7 +5122,11 @@
       "hasMoon": false,
       "rngSeed": 100916282,
       "distFromCenter": 4481,
-      "distFromHome": 2354
+      "distFromHome": 2354,
+      "inhabitant": {
+        "raceId": "timeweavers",
+        "role": "colony"
+      }
     },
     {
       "id": "bg_828",
@@ -5609,7 +5721,11 @@
       "hasMoon": false,
       "rngSeed": 934276384,
       "distFromCenter": 3112,
-      "distFromHome": 3670
+      "distFromHome": 3670,
+      "inhabitant": {
+        "raceId": "liquidoids",
+        "role": "colony"
+      }
     },
     {
       "id": "bg_936",
@@ -5762,7 +5878,11 @@
       "hasMoon": false,
       "rngSeed": 631444304,
       "distFromCenter": 4524,
-      "distFromHome": 9115
+      "distFromHome": 9115,
+      "inhabitant": {
+        "raceId": "fireworms",
+        "role": "colony"
+      }
     },
     {
       "id": "bg_961",
