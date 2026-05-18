@@ -47,7 +47,11 @@ export class PlanetRenderer {
 
   constructor(scene: StarMapScene) {
     this.scene = scene
-    this.raceGlow = new RaceGlowController(scene)
+    // Pass scene.lod.cullableData as the cull-sink — race overlays (glow / icon /
+    // home halo) теперь регистрируются в LOD-pipeline сцены, чтобы скрываться
+    // когда planet вне viewport или при far zoom. Без этого ~70 GameObjects
+    // (30 habitable × 2-3 объекта) обходились Phaser-render каждый кадр.
+    this.raceGlow = new RaceGlowController(scene, scene.lod.cullableData)
     this.lastCosmosUnlocked = useGameStore.getState().hasCosmosUnlocked === true
     // Subscribe на full state — diff'им вручную (см. memory `feedback_subagent_gates`
     // и pattern в gameStore.ts:449 — project использует plain useGameStore.subscribe).

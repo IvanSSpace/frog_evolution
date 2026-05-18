@@ -70,7 +70,13 @@ export class CoordinatesHUDController {
     scene.events.on('update', (_t: number, dt: number) => {
       const cam = scene.cameras.main
 
-      const instantFps = dt > 0 ? 1000 / dt : 60
+      // Cap displayed FPS at [1, 60].
+      // Phaser RAF tied to display refresh — на high-refresh devices (120/144Hz)
+      // game loop fires faster чем 60Hz, и instant FPS считается >60 even when
+      // фактический "feel" игры остаётся 60. Counter показывал >60 → bug.
+      // Min cap 1 защищает от спайков dt ≈ 0 (sub-millisecond resolution).
+      const rawFps = dt > 0 ? 1000 / dt : 60
+      const instantFps = Math.max(1, Math.min(60, rawFps))
       fpsSum -= fpsRing[fpsIdx]
       fpsRing[fpsIdx] = instantFps
       fpsSum += instantFps
