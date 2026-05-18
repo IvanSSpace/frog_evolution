@@ -153,6 +153,12 @@ type Events = {
   // отыграл (~3 сек). Subscribers:
   //   - CaptainBirthModal (Plan 24-03, DOM): mount modal с frog + glow + CTA.
   'captain:birth-effect-complete': void
+  // Phase 24 Plan 24-03 — Captain Birth modal CTA / dismiss.
+  // Эмитит CaptainBirthModal когда пользователь tap'нул CTA «В космос»
+  // (либо backdrop click). Subscribers:
+  //   - Plan 24-04 hook: spawn L1 frog (Beat 4) + eventBus.emit('starmap:open') (Beat 5).
+  // Idempotent: повторные emit'ы no-op для subscribers (modal one-shot).
+  'captain:birth-cta': void
 }
 
 export const eventBus = mitt<Events>()

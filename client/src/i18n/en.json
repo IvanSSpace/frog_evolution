@@ -458,5 +458,12 @@
     "location": {
       "unlocked": "{{name}} unlocked! Tap the icon to visit"
     }
+  },
+  "captain": {
+    "birth": {
+      "title": "You Created the Captain",
+      "subtitle": "The cosmos is open. Ready to explore?",
+      "cta": "To Cosmos →"
+    }
   }
 }
