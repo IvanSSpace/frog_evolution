@@ -159,6 +159,16 @@ type Events = {
   //   - Plan 24-04 hook: spawn L1 frog (Beat 4) + eventBus.emit('starmap:open') (Beat 5).
   // Idempotent: повторные emit'ы no-op для subscribers (modal one-shot).
   'captain:birth-cta': void
+  // Phase 26 Plan 26-01 — first contact narrative trigger.
+  // Эмитит FirstContactController (Plan 26-05) после user visit'а habitable
+  // planet (inhabitant.role === 'home' OR 'colony') если
+  // firstContactsSeen[raceId] === false. x, y — экранные координаты planet'ы
+  // (anchor для Phaser cinematic light burst, per CONTEXT.md First Contact Event).
+  // raceId: string а не `RaceId` намеренно — eventBus.ts избегает импорта RaceId
+  // чтобы не создать цикл eventBus → cosmic/slice → races → cosmic/types → eventBus.
+  // Consumer (Plan 26-05 FirstContactController) делает narrow cast.
+  // Pattern consistent с LegacyRarity (локальный type в eventBus.ts).
+  'cosmos:first-contact': { raceId: string; x: number; y: number }
 }
 
 export const eventBus = mitt<Events>()
