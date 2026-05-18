@@ -687,13 +687,18 @@ Plans:
 **Goal:** Реализовать foundation для большой космической экспансии: 10 чуждых рас с уникальным лором (Кристаллозиды/Газо-облака/Механидоны/Огнечервы/Жидко-сферы/Тенебрисы/Плазма-духи/Лесо-кореня/Время-ткачи/Кометники), 30 обитаемых планет (1 home + 2 colonies per race), visual race indicators на Star Map, и новый «Инвентарь» tab в Cosmic Hub. Phase 27 — quests, Phase 28 — communications, Phase 29 — relationships.
 
 **Source design:** `frog_obsidian/Design Notes/2026-05-18-cosmos-races-foundation.md`
-**Requirements**: TBD
+**Requirements**: PHASE26-RACES-CONFIG, PHASE26-FIRSTCONTACT-STATE, PHASE26-I18N-RACES, PHASE26-EVENTBUS, PHASE26-INHABITED-PLANETS, PHASE26-PLANET-SELECTION, PHASE26-PLANET-INHABITANT-TYPE, PHASE26-STARMAP-GLOW, PHASE26-STARMAP-ICONS, PHASE26-COSMOS-GATE-INHABITANTS, PHASE26-POPOVER-RACE-INFO, PHASE26-INVENTORY-TAB, PHASE26-INVENTORY-CURRENCIES, PHASE26-INVENTORY-SERUMS, PHASE26-INVENTORY-PLACEHOLDERS, PHASE26-I18N-INVENTORY, PHASE26-FIRSTCONTACT-EFFECT, PHASE26-FIRSTCONTACT-MODAL, PHASE26-FIRSTCONTACT-WIRING, PHASE26-FIRSTCONTACT-IDEMPOTENT, PHASE26-SMOKE, PHASE26-I18N-PARITY, PHASE26-FINALIZE
 **Depends on:** Phase 25
-**Plans:** 0 plans
+**Plans:** 6 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 26 --prd "<design-note>" to break down)
+- [ ] 26-01-PLAN.md — Race data model (config/races.ts) + firstContactsSeen state + persistence + i18n races.* + cosmos.first_contact.* + eventBus
+- [ ] 26-02-PLAN.md — 30 habitable planets selection (Mulberry32 seed 19450718) + PlanetInhabitant type + helpers + 7 vitest
+- [ ] 26-03-PLAN.md — Star Map RaceGlowController (race-color glow + gold home pulse halo + emoji icon overlay) + popover race info + cosmos gate
+- [ ] 26-04-PLAN.md — Inventory tab 6-я в Cosmic Hub (currencies/16-serum grid/artifacts placeholder/race relationships placeholder) + i18n cosmic_hub.inventory.*
+- [ ] 26-05-PLAN.md — First contact cinematic (Phaser ~2s burst) + DOM modal (race lore reveal) + firstContactController + StarMapScene wiring
+- [ ] 26-06-PLAN.md — SMOKE_TEST_26 (7 scenarios A-G) + i18n parity + build chain + ROADMAP/STATE finalize
 
 ---
 
-**Last updated:** 2026-05-18 — Phase 25 complete (4 plans, visual restyle)
+**Last updated:** 2026-05-18 — Phase 26 planned (6 plans, ~18h scope, races foundation)
