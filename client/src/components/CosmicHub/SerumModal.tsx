@@ -31,7 +31,7 @@ export function SerumModal({ onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
         style={{
           position: 'fixed',
-          top: '12%',
+          top: 'calc(12% + 54px)',
           bottom: '13%',
           left: 0,
           right: 0,

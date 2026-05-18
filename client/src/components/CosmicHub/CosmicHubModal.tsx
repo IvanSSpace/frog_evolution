@@ -198,7 +198,7 @@ export default function CosmicHubModal({ onClose }: Props) {
       <div
         className="fixed z-50 flex flex-col"
         style={{
-          top: '12%',
+          top: 'calc(12% + 54px)',
           bottom: '13%',
           left: 0,
           right: 0,
