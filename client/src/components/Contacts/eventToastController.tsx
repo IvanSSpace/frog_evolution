@@ -11,7 +11,7 @@
 // CSS keyframes mounted once at top of component — slide-in for new + fade-out for dismiss.
 // No Lottie.
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { eventBus } from '../../store/eventBus'
 import { EventToast } from './EventToast'
@@ -65,9 +65,14 @@ export function EventToastController() {
     }
   }, [])
 
-  const dismissToast = (id: string) => {
+  // Perf audit 2026-05-18 (Phase 27): wrap in useCallback so the reference stays
+  // stable across re-renders. EventToast keys an effect on [id, onDismiss]; without
+  // stability the auto-dismiss setTimeout is torn down + recreated every time the
+  // controller re-renders (e.g. when a new sibling toast arrives), effectively
+  // resetting the visible 3s countdown on already-mounted toasts.
+  const dismissToast = useCallback((id: string) => {
     setQueue((prev) => prev.filter((t) => t.id !== id))
-  }
+  }, [])
 
   if (queue.length === 0) return null
 
