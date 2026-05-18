@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useGameStore } from '../../store/gameStore'
 import { CarrierInfoCard } from './CarrierInfoCard'
+import { CarrierBonusesPanel } from './CarrierBonusesPanel'
 import { DisposeConfirmModal } from './DisposeConfirmModal'
 import type { CarrierData } from '../../store/cosmic/types'
 import { TEXT_DIM, TEXT_VERY_DIM, EMPTY_STATE_TEXT_STYLE } from './_styles'
@@ -19,20 +20,24 @@ export function CarriersTab() {
 
   if (carriers.length === 0) {
     return (
-      <div className="p-6 text-center">
-        <div style={{ fontSize: 40, lineHeight: 1, marginBottom: 8 }}>🐸</div>
-        <div style={EMPTY_STATE_TEXT_STYLE}>
-          {t('cosmic_hub.carrier.empty_state')}
-        </div>
-        <div
-          style={{
-            fontSize: 12,
-            marginTop: 4,
-            color: TEXT_VERY_DIM,
-            textAlign: 'center',
-          }}
-        >
-          {t('cosmic_hub.carrier.empty_hint')}
+      <div className="p-3">
+        {/* Panel показывается даже без carrier'ов — может быть ascended bonuses. */}
+        <CarrierBonusesPanel />
+        <div className="p-6 text-center">
+          <div style={{ fontSize: 40, lineHeight: 1, marginBottom: 8 }}>🐸</div>
+          <div style={EMPTY_STATE_TEXT_STYLE}>
+            {t('cosmic_hub.carrier.empty_state')}
+          </div>
+          <div
+            style={{
+              fontSize: 12,
+              marginTop: 4,
+              color: TEXT_VERY_DIM,
+              textAlign: 'center',
+            }}
+          >
+            {t('cosmic_hub.carrier.empty_hint')}
+          </div>
         </div>
       </div>
     )
@@ -56,6 +61,9 @@ export function CarriersTab() {
   return (
     <>
       <div className="p-3 flex flex-col gap-2">
+        {/* Active archetype bonuses (full + mini). Display-only.
+            Самостоятельно гасит пустой state (нет ascended + нет carriers). */}
+        <CarrierBonusesPanel />
         <div
           style={{
             fontSize: 12,

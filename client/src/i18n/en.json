@@ -244,6 +244,7 @@
       "empty_state": "No carriers",
       "empty_hint": "Apply serums to create carriers",
       "count": "{{count}} carriers",
+      "no_active_bonuses": "No active bonuses",
       "dispose_button": "Dispose",
       "merge_blocked_mismatch": "Incompatible carriers",
       "merge_cross_location_warn": "Cross-location merge — carrier restored later",

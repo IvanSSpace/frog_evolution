@@ -36,7 +36,6 @@ import { QuestController } from './game/quests/questController'
 import { QuestRewardController } from './components/Quests/questRewardController'
 import { SerumModal } from './components/CosmicHub/SerumModal'
 import { SerumBar } from './components/SerumBar'
-import { ActiveBonusesBar } from './components/HUD/ActiveBonusesBar'
 import { installBestiaryDevHelpers } from './utils/devHelpers'
 import { installOnboardingDevHelpers } from './utils/onboardingDevHelpers'
 import { installCaptainBirthDevHelpers } from './utils/captainBirthDevHelpers'
@@ -357,9 +356,9 @@ function App() {
       <StarMapHUD />
       <ShipFollowButton />
       <SerumBar />
-      {/* Phase 22 Plan 22-04: HUD строка активных archetype bonuses.
-          Bar самостоятельно скрывается если bonus pool пуст. z-index 50 — выше Phaser overlays. */}
-      <ActiveBonusesBar />
+      {/* tech-debt 2026-05-19: ActiveBonusesBar removed from HUD.
+          Bonuses теперь показаны в Cosmic Hub → Carriers tab как
+          CarrierBonusesPanel (display-only section, не интерактивный HUD pill). */}
       <LocationStack />
 
       {galleryOpen && <GalleryModal onClose={() => setGalleryOpen(false)} />}
