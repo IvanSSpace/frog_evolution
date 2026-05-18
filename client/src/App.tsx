@@ -27,6 +27,7 @@ import { MilestoneToast } from './components/CosmicHub/bestiary/MilestoneToast'
 import { OnboardingController } from './components/Onboarding/OnboardingController'
 import { CaptainBirthModal } from './components/Captain/CaptainBirthModal'
 import { installCaptainBirthController } from './components/Captain/captainBirthController'
+import { FirstContactController } from './components/FirstContact/firstContactController'
 import { SerumModal } from './components/CosmicHub/SerumModal'
 import { SerumBar } from './components/SerumBar'
 import { ActiveBonusesBar } from './components/HUD/ActiveBonusesBar'
@@ -357,6 +358,11 @@ function App() {
           eventBus 'captain:birth-effect-complete' (Plan 24-02), null-render'ит
           когда invisible. Cinematic trigger — MergeController L18+L18 branch. */}
       <CaptainBirthModal />
+      {/* Phase 26 Plan 26-05: first-contact event flow coordinator —
+          listens starmap:planet-tapped → gate firstContactsSeen → emits
+          cosmos:first-contact → Phaser cinematic → on completion mounts
+          FirstContactModal с race lore. Per-race idempotent. */}
+      <FirstContactController />
       {discovered !== null && (
         <DiscoveryModal
           level={discovered}
