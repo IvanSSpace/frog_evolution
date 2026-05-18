@@ -16,10 +16,7 @@ import type { OnboardingState } from './onboarding/types'
 import type { RaceId } from '../game/config/races'
 // Phase 27 Plan 27-01: pending engine types + relationship clamp bounds.
 import type { PendingItem, ChainItem } from '../game/config/raceChains'
-import {
-  RELATIONSHIP_MIN,
-  RELATIONSHIP_MAX,
-} from '../game/config/raceChains'
+import { RELATIONSHIP_MIN, RELATIONSHIP_MAX } from '../game/config/raceChains'
 
 // ─── storage keys ────────────────────────────────────────────────────────────
 
