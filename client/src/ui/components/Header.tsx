@@ -145,17 +145,17 @@ function BoxProgress({
 }) {
   const pct = Math.round(progress * 100)
   return (
-    <div className="flex flex-col items-end gap-1">
-      <div
-        className={`text-2xl leading-none ${waiting ? 'animate-pulse' : ''}`}
-      >
-        📦
-      </div>
-      <div className="ff-progress-track w-24 h-2.5">
+    <div className="flex flex-row items-center gap-1.5">
+      <div className="ff-progress-track w-14 h-2.5">
         <div
           className={`ff-progress-fill ${waiting ? 'waiting' : ''}`}
           style={{ width: `${pct}%` }}
         />
+      </div>
+      <div
+        className={`text-xl leading-none ${waiting ? 'animate-pulse' : ''}`}
+      >
+        📦
       </div>
     </div>
   )
@@ -165,13 +165,8 @@ function RareBoxProgress({ progress }: { progress: number }) {
   const pct = Math.round(progress * 100)
   const isReady = pct >= 100
   return (
-    <div className="flex flex-col items-end gap-1">
-      <div
-        className={`text-2xl leading-none ${isReady ? 'animate-pulse' : ''}`}
-      >
-        ✨
-      </div>
-      <div className="ff-progress-track w-24 h-2.5">
+    <div className="flex flex-row items-center gap-1.5">
+      <div className="ff-progress-track w-14 h-2.5">
         <div
           className="ff-progress-fill"
           style={{
@@ -181,6 +176,11 @@ function RareBoxProgress({ progress }: { progress: number }) {
               : 'linear-gradient(90deg, #c4b5fd, #8b5cf6)',
           }}
         />
+      </div>
+      <div
+        className={`text-xl leading-none ${isReady ? 'animate-pulse' : ''}`}
+      >
+        ✨
       </div>
     </div>
   )
