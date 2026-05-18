@@ -7,6 +7,8 @@
 import type { RaceId } from '../../game/config/races'
 import type { PendingItem } from '../../game/config/raceChains'
 import { INITIAL_RELATIONSHIP } from '../../game/config/raceChains'
+// Phase 28 Plan 28-01: quest mechanic state types.
+import type { ActiveQuest, CompletedQuest } from '../../game/config/quests'
 
 /**
  * Phase 26 Plan 26-02: race ownership of a habitable planet.
@@ -128,6 +130,7 @@ export interface PityCounters {
 // Phase 22 Plan 22-05: добавлен shop tab (cosmic shop с двумя валютами).
 // Phase 26 Plan 26-04: добавлен inventory tab (read-only single-view все ресурсы).
 // Phase 27 Plan 27-04: добавлен contacts tab (relationship + chain UI).
+// Phase 28 Plan 28-01: добавлен quests tab (active + completed quest tracker UI in Plan 28-04).
 export type CosmicTab =
   | 'scouts'
   | 'boxes'
@@ -136,6 +139,7 @@ export type CosmicTab =
   | 'shop'
   | 'inventory'
   | 'contacts'
+  | 'quests'
 
 // Phase 22 Plan 22-05: ShopItemId mirror (импорт из config/cosmicShop вызвал бы
 // циклическую зависимость types <-> config). Источник истины — config/cosmicShop.ts.
@@ -254,6 +258,15 @@ export interface CosmicSlice {
   raceRelationships: Record<RaceId, number>
   chainProgress: Record<RaceId, number>
   pendingItems: PendingItem[]
+
+  // Phase 28 Plan 28-01: quest mechanic state.
+  //   activeQuests: cap ACTIVE_QUEST_CAP=5 enforced by engine при activation
+  //     (Plan 28-03 activateQuestFromHook). Defensive load NOT enforce cap —
+  //     forward-compat если cap raised в будущем (mirror CHAIN_PENDING_CAP pattern).
+  //   completedQuests: history list, capped at COMPLETED_QUEST_HISTORY_CAP=100 newest
+  //     (FIFO trim on defensive load by completedAt desc).
+  activeQuests: ActiveQuest[]
+  completedQuests: CompletedQuest[]
 }
 
 // Phase 26 Plan 26-01: canonical race-id array для init `firstContactsSeen` и
@@ -355,5 +368,8 @@ export function makeInitialCosmicSlice(): CosmicSlice {
     raceRelationships,
     chainProgress,
     pendingItems: [],
+    // Phase 28 Plan 28-01: quest state — engine fills через Plan 28-03 activateQuestFromHook.
+    activeQuests: [],
+    completedQuests: [],
   }
 }

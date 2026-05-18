@@ -114,6 +114,9 @@ const REQUIRED_COSMIC_SYNC_FIELDS = [
   'raceRelationships',
   'chainProgress',
   'pendingItems',
+  // Phase 28 quest mechanic (Phase 28 Plan 28-01).
+  'activeQuests',
+  'completedQuests',
 ] as const
 
 // Ephemeral runtime state — NOT persisted, NOT synced. Explicit list keeps

@@ -86,6 +86,9 @@ function snapshotForSave() {
       raceRelationships: s.raceRelationships,
       chainProgress: s.chainProgress,
       pendingItems: s.pendingItems,
+      // Phase 28 Plan 28-01: cross-device sync quest state (active + completed history).
+      activeQuests: s.activeQuests,
+      completedQuests: s.completedQuests,
       // 2026-05-18 audit fix: toplevel-but-meta state served через cosmic blob
       // (consistent pattern с captainBirthSeen — server schema accepts opaque
       // cosmic JSON, no schema change). All three — per-user permanent progress:
@@ -217,6 +220,11 @@ export async function loadGameState(): Promise<boolean> {
         cosmicUpdate.raceRelationships = c.raceRelationships
       if ('chainProgress' in c) cosmicUpdate.chainProgress = c.chainProgress
       if ('pendingItems' in c) cosmicUpdate.pendingItems = c.pendingItems
+      // Phase 28 Plan 28-01: hydrate quest state from server. Defensive validation
+      // runs в loadCosmicSlice на following persist cycle (clamp/strip/cap).
+      if ('activeQuests' in c) cosmicUpdate.activeQuests = c.activeQuests
+      if ('completedQuests' in c)
+        cosmicUpdate.completedQuests = c.completedQuests
       if (Object.keys(cosmicUpdate).length > 0) {
         useGameStore.setState(cosmicUpdate as Partial<typeof store>)
       }

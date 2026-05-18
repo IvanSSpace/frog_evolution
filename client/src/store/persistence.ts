@@ -17,6 +17,13 @@ import type { RaceId } from '../game/config/races'
 // Phase 27 Plan 27-01: pending engine types + relationship clamp bounds.
 import type { PendingItem, ChainItem } from '../game/config/raceChains'
 import { RELATIONSHIP_MIN, RELATIONSHIP_MAX } from '../game/config/raceChains'
+// Phase 28 Plan 28-01: quest state types + cap + skeleton lookup для defensive load.
+import type {
+  ActiveQuest,
+  CompletedQuest,
+  QuestType,
+} from '../game/config/quests'
+import { QUESTS, COMPLETED_QUEST_HISTORY_CAP } from '../game/config/quests'
 
 // ─── storage keys ────────────────────────────────────────────────────────────
 
@@ -364,7 +371,9 @@ export function loadCosmicSlice(): CosmicPersist {
         parsed.lastActiveTab === 'carriers' ||
         parsed.lastActiveTab === 'shop' ||
         parsed.lastActiveTab === 'inventory' ||
-        parsed.lastActiveTab === 'contacts'
+        parsed.lastActiveTab === 'contacts' ||
+        // Phase 28 Plan 28-01: accept 'quests' as new 8-й tab literal.
+        parsed.lastActiveTab === 'quests'
           ? parsed.lastActiveTab
           : 'scouts',
       crew: parsed.crew ?? defaults.crew,
@@ -499,6 +508,95 @@ export function loadCosmicSlice(): CosmicPersist {
           })
         }
         return out
+      })(),
+      // Phase 28 Plan 28-01: defensive load activeQuests.
+      // Strip entries with invalid shape:
+      //   - missing id/questId/raceId/type
+      //   - questId not present в QUESTS lookup (forward-compat: drops removed/renamed quests)
+      //   - raceId not in known set
+      //   - type not in 4 known QuestType variants
+      //   - progress not non-negative finite number → floored to integer
+      //   - startedAt non-number → Date.now() fallback (display ordering only)
+      //   - target field shape NOT validated here (trusted from QUESTS lookup) — engine в
+      //     Plan 28-03 validates on activation путём шаблона из QUESTS[questId].target.
+      // NOT enforce ACTIVE_QUEST_CAP=5 — forward-compat (mirror CHAIN_PENDING_CAP pattern).
+      activeQuests: (() => {
+        const raw = parsed.activeQuests
+        if (!Array.isArray(raw)) return defaults.activeQuests
+        const knownRaceIds = new Set(Object.keys(defaults.raceRelationships))
+        const knownTypes = new Set<QuestType>([
+          'delivery',
+          'exploration',
+          'merge',
+          'diplomacy',
+        ])
+        const out: ActiveQuest[] = []
+        for (const e of raw) {
+          if (!e || typeof e !== 'object') continue
+          const r = e as Record<string, unknown>
+          if (typeof r.id !== 'string') continue
+          if (typeof r.questId !== 'string') continue
+          // Drop entries pointing at unknown questIds — QUESTS skeleton fills в Plan 28-02;
+          // before then ALL persisted activeQuests get cleaned out here (acceptable: no
+          // production data exists for Plan 28-01 wave).
+          if (!(r.questId in QUESTS)) continue
+          if (typeof r.raceId !== 'string' || !knownRaceIds.has(r.raceId))
+            continue
+          if (
+            typeof r.type !== 'string' ||
+            !knownTypes.has(r.type as QuestType)
+          )
+            continue
+          if (!r.target || typeof r.target !== 'object') continue
+          const progress =
+            typeof r.progress === 'number' &&
+            Number.isFinite(r.progress) &&
+            r.progress >= 0
+              ? Math.floor(r.progress)
+              : 0
+          const startedAt =
+            typeof r.startedAt === 'number' ? r.startedAt : Date.now()
+          out.push({
+            id: r.id,
+            questId: r.questId,
+            raceId: r.raceId as RaceId,
+            type: r.type as QuestType,
+            target: r.target as ActiveQuest['target'],
+            progress,
+            startedAt,
+          })
+        }
+        return out
+      })(),
+      // Phase 28 Plan 28-01: defensive load completedQuests.
+      // Strip entries with invalid shape (same pattern as activeQuests). FIFO trim
+      // at COMPLETED_QUEST_HISTORY_CAP=100 newest by completedAt desc.
+      // rewardClaimed field shape NOT deep-validated — kept opaque (engine wrote it).
+      completedQuests: (() => {
+        const raw = parsed.completedQuests
+        if (!Array.isArray(raw)) return defaults.completedQuests
+        const knownRaceIds = new Set(Object.keys(defaults.raceRelationships))
+        const out: CompletedQuest[] = []
+        for (const e of raw) {
+          if (!e || typeof e !== 'object') continue
+          const r = e as Record<string, unknown>
+          if (typeof r.id !== 'string') continue
+          if (typeof r.questId !== 'string') continue
+          if (typeof r.raceId !== 'string' || !knownRaceIds.has(r.raceId))
+            continue
+          if (typeof r.completedAt !== 'number') continue
+          if (!r.rewardClaimed || typeof r.rewardClaimed !== 'object') continue
+          out.push({
+            id: r.id,
+            questId: r.questId,
+            raceId: r.raceId as RaceId,
+            completedAt: r.completedAt,
+            rewardClaimed: r.rewardClaimed as CompletedQuest['rewardClaimed'],
+          })
+        }
+        // FIFO trim: sort desc by completedAt, keep newest CAP entries.
+        out.sort((a, b) => b.completedAt - a.completedAt)
+        return out.slice(0, COMPLETED_QUEST_HISTORY_CAP)
       })(),
     }
   } catch {

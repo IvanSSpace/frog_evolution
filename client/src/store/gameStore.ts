@@ -474,7 +474,10 @@ useGameStore.subscribe((state, prev) => {
     // Phase 27 Plan 27-01: relationship/chain/pending state persisted.
     state.raceRelationships !== prev.raceRelationships ||
     state.chainProgress !== prev.chainProgress ||
-    state.pendingItems !== prev.pendingItems
+    state.pendingItems !== prev.pendingItems ||
+    // Phase 28 Plan 28-01: quest state — active + completed history.
+    state.activeQuests !== prev.activeQuests ||
+    state.completedQuests !== prev.completedQuests
   ) {
     saveCosmicSlice({
       serums: state.serums,
@@ -513,6 +516,9 @@ useGameStore.subscribe((state, prev) => {
       raceRelationships: state.raceRelationships,
       chainProgress: state.chainProgress,
       pendingItems: state.pendingItems,
+      // Phase 28 Plan 28-01: quest state persisted (defensive load в loadCosmicSlice).
+      activeQuests: state.activeQuests,
+      completedQuests: state.completedQuests,
     })
   }
 })
