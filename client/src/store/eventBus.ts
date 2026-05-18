@@ -199,6 +199,50 @@ type Events = {
     delta: number
     textKey: string
   }
+  // Phase 28 Plan 28-03 — quest activation broadcast.
+  // Emitted by slice action activateQuestFromHook after successful activation
+  // (cap not reached + questId known).
+  // Subscribers:
+  //   - Plan 28-04 QuestsTab (re-render active quest list with new entry).
+  //   - Phase 29 may add analytics.
+  // questId/raceId/activeQuestId typed as `string` (not QuestId/RaceId) — mirrors
+  // Phase 27 pattern to avoid the eventBus → slice → races/quests → types → eventBus
+  // dependency cycle. Subscribers narrow-cast on consumption.
+  'quests:activated': {
+    raceId: string
+    questId: string
+    activeQuestId: string
+  }
+  // Phase 28 Plan 28-03 — quest activation rejected due to cap.
+  // Emitted by activateQuestFromHook when activeQuests.length >= ACTIVE_QUEST_CAP=5.
+  // The quest_hook relationship +1 IS still applied (per CONTEXT D-Quest activation
+  // cap path) — only the quest push is skipped.
+  // Subscribers:
+  //   - Plan 28-04 QuestsTab (toast «Лимит активных квестов»).
+  'quests:cap-reached': { raceId: string; questId: string }
+  // Phase 28 Plan 28-03 — quest completion + reward applied.
+  // Emitted by markQuestProgress per quest reaching its target this tick.
+  // Subscribers:
+  //   - Plan 28-05 QuestRewardPopup (modal mount with reward summary).
+  //   - Plan 28-04 QuestsTab (re-render: quest moves to completed history).
+  // reward: imported QuestReward type — subscriber narrow-casts on consumption.
+  // The `import('...')` form keeps the eventBus module free of value-imports from
+  // the quests config (no top-level cycle risk; types are erased at compile time).
+  'quests:completed': {
+    raceId: string
+    questId: string
+    activeQuestId: string
+    reward: import('../game/config/quests').QuestReward
+  }
+  // Phase 28 Plan 28-03 — quest cancelled by player.
+  // Emitted by cancelQuest after removal + relationship -1 penalty.
+  // Subscribers:
+  //   - Plan 28-04 QuestsTab (re-render without the cancelled row).
+  'quests:cancelled': {
+    raceId: string
+    questId: string
+    activeQuestId: string
+  }
 }
 
 export const eventBus = mitt<Events>()

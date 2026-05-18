@@ -29,6 +29,8 @@ import { CaptainBirthModal } from './components/Captain/CaptainBirthModal'
 import { installCaptainBirthController } from './components/Captain/captainBirthController'
 import { FirstContactController } from './components/FirstContact/firstContactController'
 import { EventToastController } from './components/Contacts/eventToastController'
+// Phase 28 Plan 28-03: quest progress eventBus wiring + boot reconcile.
+import { QuestController } from './game/quests/questController'
 import { SerumModal } from './components/CosmicHub/SerumModal'
 import { SerumBar } from './components/SerumBar'
 import { ActiveBonusesBar } from './components/HUD/ActiveBonusesBar'
@@ -37,6 +39,9 @@ import { installOnboardingDevHelpers } from './utils/onboardingDevHelpers'
 import { installCaptainBirthDevHelpers } from './utils/captainBirthDevHelpers'
 import { installRaceDevHelpers } from './utils/devRaces'
 import { installContactsDevHelpers } from './utils/devContacts'
+// Phase 28 Plan 28-03: quest DEV helpers (__activateQuest / __progressQuest /
+// __completeQuest / __resetQuests / __dumpQuests).
+import { installQuestDevHelpers } from './utils/devQuests'
 import { devLog } from './utils/devLog'
 import { pingHealth } from './api/client'
 import { ensureLogin } from './api/auth'
@@ -264,6 +269,10 @@ function App() {
     // Phase 27 Plan 27-03: contacts / relationship / chain dev helpers
     // (__addPending / __resetRelationships / __advanceChain / __dumpContacts).
     const contactsDevCleanup = installContactsDevHelpers()
+    // Phase 28 Plan 28-03: quest mechanic dev helpers
+    // (__activateQuest / __progressQuest / __completeQuest / __resetQuests /
+    // __dumpQuests). Tree-shaken from production via import.meta.env.DEV guard.
+    const questDevCleanup = installQuestDevHelpers()
 
     return () => {
       delete w.__resetCrewToday
@@ -285,6 +294,8 @@ function App() {
       raceDevCleanup()
       // Phase 27 Plan 27-03: contacts dev helpers cleanup.
       contactsDevCleanup()
+      // Phase 28 Plan 28-03: quest dev helpers cleanup.
+      questDevCleanup()
     }
   }, [])
 
@@ -376,6 +387,12 @@ function App() {
           stack of up to 3 toasts (z-index 150, between hub 100 and modal 200),
           each auto-dismissing after 3s via CSS keyframes. */}
       <EventToastController />
+      {/* Phase 28 Plan 28-03: quest progress eventBus → slice wiring +
+          boot-time reconcile (gold/relationship/discoveredLevels polling).
+          Null-render; controller-only. Subscribes to merge:happened,
+          cosmic:box-opened, starmap:planet-select, cosmic:ship-arrived,
+          contacts:relationship-delta and delegates to markQuestProgress. */}
+      <QuestController />
       {discovered !== null && (
         <DiscoveryModal
           level={discovered}
