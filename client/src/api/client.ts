@@ -18,9 +18,9 @@ export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY)
 }
 
-export async function apiFetch(
+async function doFetch(
   path: string,
-  options: RequestInit = {},
+  options: RequestInit,
 ): Promise<Response> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -28,8 +28,40 @@ export async function apiFetch(
   }
   const token = getToken()
   if (token) headers.Authorization = `Bearer ${token}`
-
   return fetch(`${API_URL}${path}`, { ...options, headers })
+}
+
+// Auto-recovery: при 401 один раз re-auth через Telegram initData + retry original.
+// Помогает в dev когда server restart / JWT_SECRET change инвалидирует token.
+// _retry guard блокирует infinite loop если auth снова fails.
+export async function apiFetch(
+  path: string,
+  options: RequestInit = {},
+  _retry = true,
+): Promise<Response> {
+  const res = await doFetch(path, options)
+  if (res.status === 401 && _retry && path !== '/auth/telegram') {
+    clearToken()
+    try {
+      const tgInitData = window.Telegram?.WebApp?.initData
+      const initData =
+        tgInitData && tgInitData.length > 0
+          ? tgInitData
+          : 'telegramId=dev&username=dev-user&firstName=Dev'
+      const authRes = await doFetch('/auth/telegram', {
+        method: 'POST',
+        body: JSON.stringify({ initData }),
+      })
+      if (authRes.ok) {
+        const { token } = (await authRes.json()) as { token: string }
+        setToken(token)
+        return apiFetch(path, options, false)
+      }
+    } catch {
+      // fall through — return original 401
+    }
+  }
+  return res
 }
 
 export async function apiJson<T>(
