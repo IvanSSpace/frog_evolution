@@ -735,12 +735,17 @@ State (cosmic slice): `activeQuests: ActiveQuest[]` (cap 5) + `completedQuests: 
 i18n: `cosmic_hub.quests.*` + per-quest text keys (~80 keys × 3 locales). Cosmos-gated (наследует Phase 27 gate). Reuse `_styles.ts` design tokens. Cliclability checklist mandatory. Scope ~25-30ч.
 
 **Source design:** inline brainstorm 2026-05-18 (no spec file — memory `feedback_superpowers_workflow`)
-**Requirements**: TBD (resolved при /gsd-plan-phase 28)
+**Requirements**: TBD (resolved when Phase 28 finalize plan runs — 28 REQ-IDs already drafted in plan frontmatter; see 28-01..28-06 PLAN.md)
 **Depends on:** Phase 27
-**Plans:** TBD plans
+**Plans:** 6 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 28 to break down)
+- [ ] 28-01-PLAN.md — Foundation types + state + persistence + i18n skeleton + 8th tab registration
+- [ ] 28-02-PLAN.md — Quest data (40 entries) + i18n RU/EN/ES strings (~+80 leaves per locale)
+- [ ] 28-03-PLAN.md — Pure questEngine + slice actions + 4 eventBus events + DEV helpers + ≥10 vitest
+- [ ] 28-04-PLAN.md — QuestsTab + QuestCard + CompletedQuestsList + cancel flow
+- [ ] 28-05-PLAN.md — QuestRewardPopup + queue controller + App wiring
+- [ ] 28-06-PLAN.md — SMOKE_TEST_28 (6 scenarios) + ROADMAP/STATE finalize
 
 ---
 
