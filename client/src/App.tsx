@@ -337,7 +337,7 @@ function App() {
         </div>
       )}
       <div className="w-full h-full flex flex-col">
-        <div style={{ height: '12%' }}>
+        <div style={{ height: 'calc(12% + 54px)' }}>
           <Header />
         </div>
         <div className="flex-1" />
