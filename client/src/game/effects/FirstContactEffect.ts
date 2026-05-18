@@ -168,10 +168,7 @@ export function installFirstContactEffect(): () => void {
       )
       // setTimeout 0 — micro-async (mitt off → on protection if controller
       // только-только подписался; queueMicrotask тоже работает).
-      setTimeout(
-        () => eventBus.emit('cosmos:first-contact-effect-complete'),
-        0,
-      )
+      setTimeout(() => eventBus.emit('cosmos:first-contact-effect-complete'), 0)
       return
     }
 

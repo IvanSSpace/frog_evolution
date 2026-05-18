@@ -13,11 +13,18 @@
 //                                controller subscribe'нется на state и переоткроет
 //                                cinematic на следующем visit'е (no reload required).
 //   __firstContactsState()     — console.table снапшот firstContactsSeen.
+//   __triggerFirstContact(id)  — Phase 26 Plan 26-05: эмитит cosmos:first-contact
+//                                напрямую (bypass'ит per-planet gate). НЕ markSeen
+//                                — для replay testing нужно вызвать
+//                                __resetFirstContacts() заранее (controller подписан
+//                                на cosmos:first-contact-effect-complete и mount'ит
+//                                modal независимо от firstContactsSeen state).
 //
 // Returned cleanup function симметрично deletes window props (используется
 // useEffect return ветка в App.tsx).
 
 import { useGameStore } from '../store/gameStore'
+import { eventBus } from '../store/eventBus'
 import { RACES, type RaceId } from '../game/config/races'
 
 type FirstContactsSnapshot = Record<RaceId, boolean>
@@ -28,6 +35,8 @@ declare global {
     __markFirstContact?: (raceId: RaceId) => void
     __resetFirstContacts?: () => void
     __firstContactsState?: () => FirstContactsSnapshot
+    /** Phase 26 Plan 26-05: эмитит cosmos:first-contact напрямую. */
+    __triggerFirstContact?: (raceId: RaceId) => void
   }
 }
 
@@ -70,8 +79,37 @@ export function installRaceDevHelpers(): () => void {
     return snap
   }
 
+  // Phase 26 Plan 26-05: trigger cosmos:first-contact event напрямую.
+  // Caveat (per Plan 26-05 Task 4): controller (App.tsx) подписан на
+  // 'cosmos:first-contact' (capture raceId) И на effect-complete (mount modal),
+  // НЕ зависит от firstContactsSeen state — modal будет показан даже если
+  // race уже seen. Для full-replay testing сначала вызови
+  // __resetFirstContacts() (опционально) — иначе modal закроется без эффекта
+  // на state (markSeen idempotent: уже true → no-op).
+  // Coords: camera center StarMapScene/MainScene если доступна, иначе fallback.
+  window.__triggerFirstContact = (raceId: RaceId) => {
+    const w = window as unknown as {
+      __starMapScene?: {
+        cameras?: { main?: { centerX: number; centerY: number } }
+      }
+      __mainScene?: {
+        cameras?: { main?: { centerX: number; centerY: number } }
+      }
+    }
+    const scene = w.__starMapScene ?? w.__mainScene
+    const cam = scene?.cameras?.main
+    const x = cam?.centerX ?? 200
+    const y = cam?.centerY ?? 300
+
+    eventBus.emit('cosmos:first-contact', { raceId, x, y })
+    console.info(
+      `[devRaces] triggered first-contact для '${raceId}' at (${x}, ${y}). ` +
+        `Tip: вызови __resetFirstContacts() заранее если хочешь replay.`,
+    )
+  }
+
   console.log(
-    '[devRaces] helpers installed: __listRaces(), __markFirstContact(id), __resetFirstContacts(), __firstContactsState()',
+    '[devRaces] helpers installed: __listRaces(), __markFirstContact(id), __resetFirstContacts(), __firstContactsState(), __triggerFirstContact(id)',
   )
 
   return () => {
@@ -79,5 +117,6 @@ export function installRaceDevHelpers(): () => void {
     delete window.__markFirstContact
     delete window.__resetFirstContacts
     delete window.__firstContactsState
+    delete window.__triggerFirstContact
   }
 }
