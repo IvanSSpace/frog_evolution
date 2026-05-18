@@ -720,6 +720,28 @@ Plans:
 
 **Outcome:** Relationship-driven contacts foundation для multi-phase космической экспансии. 7-я tab «Контакты» 📡 в Cosmic Hub (cosmos-gated, наследует Phase 22-06 modal-level gate) с list view 10 рас (emoji + name + tier badge + pink unread dot if pending) + race detail view (back arrow + lore card с home planet/personality/lore_short + RelationshipBar 1-10 с 5 tiers через TIER_COLORS + pending interaction renderer для msg/dialog/quest_hook). RACE_CHAINS data 10 рас × 10 ChainItem each (40 msg + 30 dialog + 20 quest_hook + 10 event) с уникальным narrative tone matching personality (Огнечервы aggressive demands, Кристаллозиды patient geometric, Кометники cheerful traveling). Pure pendingEngineTick (deterministic side-effect-free; lowest-progress-first pull с alphabetical tiebreak; cap CHAIN_PENDING_CAP=3; event ChainItems auto-apply delta + emit toast NOT push to inbox; firstContactsSeen + cosmosUnlocked gate) + 13 vitest unit tests. cosmic slice extended raceRelationships/chainProgress/pendingItems (INITIAL_RELATIONSHIP=2 low threshold; defensive load clamps to [1,10]) + 4 actions (resolveAccept/Refuse/Acknowledge/triggerPendingPull) + 2 typed eventBus events ('contacts:relationship-delta' для tier pulse + 'contacts:event-applied' для toast subscription). EventToast top-center stack (max 3 visible, auto-dismiss 3s, CSS keyframes contacts-toast-slide + contacts-toast-fade, z-index 150 между Cosmic Hub 100 и modal 200, без Lottie memory feedback_animations). Persistence + server sync routes new fields через cosmic blob (snapshotForSave + loadGameState hydrate + defensive load). DEV helpers __addPending/__resetRelationships/__advanceChain/__dumpContacts (DEV-gated через import.meta.env.DEV — Vite tree-shake в production). RelationshipBar pulse на tier change через 'contacts:relationship-delta' subscription. i18n RU/EN/ES parity 402 (Phase 26) → **522 keys × 3 locales** (+120 keys per locale: 15 cosmic_hub.contacts.* + 100 races.<id>.chain.<step>.* (10 races × 10 steps) + 5 cosmos.event.* + 1 notification template). Quest hooks = STUB (accept = +1 relationship + cosmic_hub.contacts.quest_stub hint; quest_id field reserved для Phase 28 wiring). NO Lottie (CSS keyframes для tier pulse + toast slide/fade), НЕ trogает frog.container.alpha (DOM-only), cliclability checklist (type='button' + touchAction: manipulation + stopPropagation + z-index hierarchy preserved). Bundle delta gzip main +11.77 KB (Phase 26 baseline 209.17 KB → 220.94 KB; cap ~+15 KB ✓), CosmicHubModal chunk +1.35 KB (14.26 KB → 15.61 KB). SMOKE_TEST_27.md 140 строк, 6 scenarios A-F + i18n + build chain + regression sanity. 25/25 ✓ REQ-IDs (PHASE27-*).
 
+### Phase 28: Quests
+
+**Goal:** Wire реальную quest mechanic под existing `quest_hook` stubs из Phase 27 chains. Новая tab 📜 «Квесты» (8-я в Cosmic Hub) с active quest tracker. 4 типа:
+- 📦 **Доставка** — target: collect N серум одного element / gold amount → reward: essence
+- 🔍 **Разведка** — target: visit K planets / complete N ship missions → reward: серум random element
+- ⚡ **Мерж** — target: merge to level LX / N merges total → reward: gold lumpsum
+- 🤝 **Дипломатия** — target: raise relationship с расой X до tier Y → reward: +1 relationship + permanent bonus
+
+Cap 5 global active quests. Auto-activate from Phase 27 «Поддержать» на quest_hook ChainItem. Auto-complete on progress reach target → reward popup. Manual cancel = relationship -1 penalty к race-owner'у. No real-time expiry (player-paced per Phase 27 design).
+
+State (cosmic slice): `activeQuests: ActiveQuest[]` (cap 5) + `completedQuests: CompletedQuest[]` (history) + quest config в `client/src/game/config/quests.ts` (~60 quest_id mappings из Phase 27 _b/_c suffixes). Progress tracking через eventBus hooks (`frog:merged`, `cosmos:box-opened`, `starmap:planet-visited`, `contacts:relationship-delta`). Quest tracker UI = card list с progress bars per quest + reward preview. Persistence + server sync.
+
+i18n: `cosmic_hub.quests.*` + per-quest text keys (~80 keys × 3 locales). Cosmos-gated (наследует Phase 27 gate). Reuse `_styles.ts` design tokens. Cliclability checklist mandatory. Scope ~25-30ч.
+
+**Source design:** inline brainstorm 2026-05-18 (no spec file — memory `feedback_superpowers_workflow`)
+**Requirements**: TBD (resolved при /gsd-plan-phase 28)
+**Depends on:** Phase 27
+**Plans:** TBD plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 28 to break down)
+
 ---
 
 **Last updated:** 2026-05-18 — Phase 27 complete (6 plans, contacts + relationships foundation, +11.77 KB gzip delta)
