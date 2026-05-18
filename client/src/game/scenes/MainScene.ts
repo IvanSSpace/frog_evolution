@@ -15,6 +15,7 @@ import {
 import { FrogOverlayManager } from '../effects/FrogOverlayManager'
 import { ElementAuraOverlay } from '../effects/ElementAuraOverlay'
 import { playAscensionTween } from '../effects/CarrierAscensionTween'
+import { CaptainBirthEffect } from '../effects/CaptainBirthEffect'
 import {
   fireSpec,
   waterSpec,
@@ -228,6 +229,12 @@ export class MainScene extends Phaser.Scene {
     eventBus.on('cosmic:carrier-ascended', this.onCarrierAscended)
     // Plan 22-05: cosmic shop «Cosmic Box» purchase → spawn 3 L7 frogs at random.
     eventBus.on('cosmic:cosmic-box-purchased', this.onCosmicBoxPurchased)
+
+    // Phase 24 Plan 24-02: cinematic при 'captain:birth-start'
+    // (emit'ит MergeController в Plan 24-04 при первом L18+L18 normal merge).
+    // Listener живёт всю жизнь scene; uninstall — в destroy() ниже.
+    // Idempotent: install() сам снимает старый handler перед регистрацией.
+    CaptainBirthEffect.install(this)
 
     eventBus.on('rareCrate:claim', ({ level }) => {
       const store = useGameStore.getState()
@@ -712,6 +719,8 @@ export class MainScene extends Phaser.Scene {
     eventBus.off('cosmic:carrier-ascended', this.onCarrierAscended)
     // Plan 22-05: shop cosmic-box event handler cleanup.
     eventBus.off('cosmic:cosmic-box-purchased', this.onCosmicBoxPurchased)
+    // Phase 24 Plan 24-02: снимаем global captain:birth-start handler.
+    CaptainBirthEffect.uninstall()
     // Phase 12: освобождаем все overlay'ы и dropAll pool.
     this.overlayManager?.dispose()
     this.overlayManager = null
