@@ -37,6 +37,19 @@ import {
   pendingEngineTick,
   applyDeltaClamp,
 } from '../../game/contacts/pendingEngine'
+// Phase 28 Plan 28-03: quest engine helpers + quest config (cap + reward lookup).
+import {
+  activateQuestFromHook as engineActivate,
+  checkActiveQuestsProgress,
+  applyQuestReward,
+} from '../../game/quests/questEngine'
+import { QUESTS, COMPLETED_QUEST_HISTORY_CAP } from '../../game/config/quests'
+import type {
+  ActiveQuest,
+  CompletedQuest,
+  QuestId,
+  QuestReward,
+} from '../../game/config/quests'
 
 // Phase 22: Rarity type removed from serum/carrier system.
 // LegacyRarity kept only for bestiary bitset dimension (Plan 22-07 will shrink).
@@ -217,6 +230,49 @@ export interface CosmicSliceActions {
    * transitions (UI components subscribe to those flags and call this).
    */
   triggerPendingPull: () => void
+
+  /**
+   * Phase 28 Plan 28-03: activate a quest from accepted quest_hook ChainItem.
+   * Calls engine.activateQuestFromHook(currentActiveQuests, questId, raceId).
+   *   - cap reached  → no push, emit 'quests:cap-reached', return.
+   *   - unknown id   → engine logs DEV warn, no push, no event, return.
+   *   - otherwise    → push to activeQuests + emit 'quests:activated'.
+   * Idempotent on unknown id (engine handles defensively).
+   */
+  activateQuestFromHook: (questId: QuestId, raceId: RaceId) => void
+
+  /**
+   * Phase 28 Plan 28-03: cancel an active quest by id.
+   * Idempotent on unknown activeQuestId. Applies -1 relationship penalty to
+   * quest.raceId (clamped [1,10] via applyDeltaClamp). Emits
+   * 'contacts:relationship-delta' if value changed + 'quests:cancelled'.
+   */
+  cancelQuest: (activeQuestId: string) => void
+
+  /**
+   * Phase 28 Plan 28-03: event-driven progress check.
+   * Called by Plan 28-03 questController eventBus subscriptions. Engine returns
+   * deltas + completed ids; slice atomically applies (progress updates + reward
+   * deltas + move to completedQuests) and emits 'quests:completed' per quest.
+   * event === null means polling reconcile (used by reconcileQuestProgress).
+   */
+  markQuestProgress: (
+    event:
+      | { kind: 'merge'; level: number }
+      | { kind: 'box-opened'; element: Element }
+      | { kind: 'planet-select'; planetId: string }
+      | { kind: 'ship-arrived'; planetId: string }
+      | { kind: 'relationship-delta'; raceId: RaceId; newValue: number }
+      | null,
+  ) => void
+
+  /**
+   * Phase 28 Plan 28-03: full polling reconcile (no event).
+   * Used at boot + Quests tab mount + DEV __progressQuest helper. Engine receives
+   * event:null and snapshots current state for polled targets (gold_amount,
+   * raise_relationship, merge_to_level via discoveredLevels).
+   */
+  reconcileQuestProgress: () => void
 }
 
 export type CosmicState = CosmicSlice & CosmicSliceActions
@@ -283,6 +339,14 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
         newValue,
         delta,
       })
+    }
+
+    // Phase 28 Plan 28-03: wire quest_hook accept → quest activation.
+    // Engine handles cap + unknown questId defensively (no-op + DEV warn).
+    // Relationship +1 already applied above, so even at-cap quests still gain the
+    // social credit (matches CONTEXT D-Quest activation cap path).
+    if (mode === 'accept' && item.type === 'quest_hook') {
+      get().activateQuestFromHook(item.quest_id, pending.raceId)
     }
 
     get().triggerPendingPull()
@@ -477,6 +541,222 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
       for (const rd of relationshipDeltas) {
         eventBus.emit('contacts:relationship-delta', rd)
       }
+    },
+
+    // ─── Phase 28 Plan 28-03: quest activation / cancel / progress / reconcile ──
+    //
+    // Quest engine wrappers: each action calls a pure engine helper, then applies
+    // the resulting delta atomically via one set() call, then emits eventBus events
+    // OUTSIDE set() (mirror Phase 27 pattern — keeps subscribers from racing the
+    // store mutation).
+
+    activateQuestFromHook: (questId, raceId) => {
+      const s = get()
+      const result = engineActivate({
+        questId,
+        raceId,
+        currentActiveQuests: s.activeQuests,
+        now: Date.now(),
+      })
+      if (result.capReached) {
+        eventBus.emit('quests:cap-reached', { questId, raceId })
+        return
+      }
+      if (!result.newActiveQuest) return // unknown questId — engine logged in DEV
+      const newActive = result.newActiveQuest
+      set({ activeQuests: [...s.activeQuests, newActive] })
+      eventBus.emit('quests:activated', {
+        questId,
+        raceId,
+        activeQuestId: newActive.id,
+      })
+    },
+
+    cancelQuest: (activeQuestId) => {
+      const s = get()
+      const idx = s.activeQuests.findIndex((q) => q.id === activeQuestId)
+      if (idx < 0) return // idempotent — unknown id is no-op
+      const quest = s.activeQuests[idx]
+      const oldValue = s.raceRelationships[quest.raceId] ?? 1
+      const newValue = applyDeltaClamp(oldValue, -1)
+      const newActive = [
+        ...s.activeQuests.slice(0, idx),
+        ...s.activeQuests.slice(idx + 1),
+      ]
+      const newRelationships =
+        oldValue !== newValue
+          ? { ...s.raceRelationships, [quest.raceId]: newValue }
+          : s.raceRelationships
+      set({
+        activeQuests: newActive,
+        raceRelationships: newRelationships,
+      })
+      if (oldValue !== newValue) {
+        eventBus.emit('contacts:relationship-delta', {
+          raceId: quest.raceId,
+          oldValue,
+          newValue,
+          delta: -1,
+        })
+      }
+      eventBus.emit('quests:cancelled', {
+        questId: quest.questId,
+        raceId: quest.raceId,
+        activeQuestId,
+      })
+    },
+
+    markQuestProgress: (event) => {
+      const s = get()
+      if (s.activeQuests.length === 0) return // fast-path no-op
+
+      // root snapshot for polled targets: gold (from gameStore) +
+      // discoveredLevels (also gameStore root) + addGold dispatcher.
+      const root = get() as unknown as {
+        gold?: number
+        discoveredLevels?: readonly number[]
+        addGold?: (n: number) => void
+      }
+      const progressInput = {
+        activeQuests: s.activeQuests,
+        serumCounts: s.serums,
+        goldAmount: typeof root.gold === 'number' ? root.gold : 0,
+        discoveredLevels: Array.isArray(root.discoveredLevels)
+          ? root.discoveredLevels
+          : [],
+        raceRelationships: s.raceRelationships,
+        event,
+      }
+      const output = checkActiveQuestsProgress(progressInput)
+      if (
+        output.progressDeltas.length === 0 &&
+        output.completedQuestIds.length === 0
+      ) {
+        return
+      }
+
+      const progressMap = new Map(
+        output.progressDeltas.map((d) => [d.activeQuestId, d.newProgress]),
+      )
+      const completedSet = new Set(output.completedQuestIds)
+
+      // Partition activeQuests into (still-active with possibly-bumped progress)
+      // vs (newly-completed → applies reward + moves to completedQuests).
+      const stillActive: ActiveQuest[] = []
+      const newlyCompleted: Array<{
+        quest: ActiveQuest
+        reward: QuestReward
+        rewardDelta: ReturnType<typeof applyQuestReward>
+      }> = []
+      for (const q of s.activeQuests) {
+        const updatedProgress = progressMap.has(q.id)
+          ? (progressMap.get(q.id) as number)
+          : q.progress
+        const updated = { ...q, progress: updatedProgress }
+        if (completedSet.has(q.id)) {
+          const cfg = QUESTS[q.questId]
+          if (cfg) {
+            newlyCompleted.push({
+              quest: updated,
+              reward: cfg.reward,
+              rewardDelta: applyQuestReward(cfg.reward),
+            })
+          } else {
+            // Defensive: QUESTS[questId] vanished between activation and
+            // completion (data migration drift). Keep quest active so future
+            // ticks may reconcile, rather than silently dropping it.
+            stillActive.push(updated)
+          }
+        } else {
+          stillActive.push(updated)
+        }
+      }
+
+      // Aggregate reward deltas + collect relationship emission payloads.
+      let newSerums = s.serums
+      let newEssence = s.essence
+      let newRelationships = s.raceRelationships
+      const relationshipEmits: Array<{
+        raceId: string
+        oldValue: number
+        newValue: number
+        delta: number
+      }> = []
+      let goldToAdd = 0
+      for (const c of newlyCompleted) {
+        const d = c.rewardDelta
+        if (d.serumDelta) {
+          // Clone serums on first write to avoid mutating snapshot.
+          newSerums = { ...newSerums }
+          for (const el of Object.keys(d.serumDelta) as Element[]) {
+            newSerums[el] = (newSerums[el] ?? 0) + (d.serumDelta[el] ?? 0)
+          }
+        }
+        if (typeof d.essenceDelta === 'number') {
+          newEssence = newEssence + d.essenceDelta
+        }
+        if (typeof d.goldDelta === 'number') {
+          goldToAdd += d.goldDelta
+        }
+        if (d.relationshipDelta) {
+          const rid = d.relationshipDelta.raceId
+          const oldV = newRelationships[rid] ?? 1
+          const newV = applyDeltaClamp(oldV, d.relationshipDelta.delta)
+          if (oldV !== newV) {
+            newRelationships = { ...newRelationships, [rid]: newV }
+            relationshipEmits.push({
+              raceId: rid,
+              oldValue: oldV,
+              newValue: newV,
+              delta: d.relationshipDelta.delta,
+            })
+          }
+        }
+      }
+
+      // Append newly-completed to completedQuests history, trim to cap (FIFO).
+      const newCompletedEntries: CompletedQuest[] = newlyCompleted.map((c) => ({
+        id: c.quest.id,
+        questId: c.quest.questId,
+        raceId: c.quest.raceId,
+        completedAt: Date.now(),
+        rewardClaimed: c.reward,
+      }))
+      const newCompleted = [...newCompletedEntries, ...s.completedQuests].slice(
+        0,
+        COMPLETED_QUEST_HISTORY_CAP,
+      )
+
+      set({
+        activeQuests: stillActive,
+        completedQuests: newCompleted,
+        serums: newSerums,
+        essence: newEssence,
+        raceRelationships: newRelationships,
+      })
+
+      // Gold reward goes via root.addGold (Phase 1 multiplier path).
+      if (goldToAdd > 0 && typeof root.addGold === 'function') {
+        root.addGold(goldToAdd)
+      }
+
+      // Emit relationship + completion events AFTER set() — keeps subscribers
+      // reading fresh state.
+      for (const rd of relationshipEmits) {
+        eventBus.emit('contacts:relationship-delta', rd)
+      }
+      for (const c of newlyCompleted) {
+        eventBus.emit('quests:completed', {
+          questId: c.quest.questId,
+          raceId: c.quest.raceId,
+          activeQuestId: c.quest.id,
+          reward: c.reward,
+        })
+      }
+    },
+
+    reconcileQuestProgress: () => {
+      get().markQuestProgress(null)
     },
   }
 }
