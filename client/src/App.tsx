@@ -31,6 +31,9 @@ import { FirstContactController } from './components/FirstContact/firstContactCo
 import { EventToastController } from './components/Contacts/eventToastController'
 // Phase 28 Plan 28-03: quest progress eventBus wiring + boot reconcile.
 import { QuestController } from './game/quests/questController'
+// Phase 28 Plan 28-05: quest reward popup controller — subscribes to
+// 'quests:completed' and renders QuestRewardPopup for head of queue.
+import { QuestRewardController } from './components/Quests/questRewardController'
 import { SerumModal } from './components/CosmicHub/SerumModal'
 import { SerumBar } from './components/SerumBar'
 import { ActiveBonusesBar } from './components/HUD/ActiveBonusesBar'
@@ -393,6 +396,12 @@ function App() {
           cosmic:box-opened, starmap:planet-select, cosmic:ship-arrived,
           contacts:relationship-delta and delegates to markQuestProgress. */}
       <QuestController />
+      {/* Phase 28 Plan 28-05: quest reward popup controller — subscribes to
+          eventBus 'quests:completed' (emitted by markQuestProgress in Plan 28-03)
+          и queue'ит popups для sequential display. Renders QuestRewardPopup
+          для head of queue; auto-pops on dismiss. Null-render when queue empty
+          (peer level с FirstContactController + EventToastController). */}
+      <QuestRewardController />
       {discovered !== null && (
         <DiscoveryModal
           level={discovered}
