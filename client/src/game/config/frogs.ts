@@ -80,7 +80,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog1.svg',
     name: 'Фрогги',
     size: 0.8,
-    basePrice: 560,
+    basePrice: 560,  /* formula: 560 × 2.8^0 */
     growthRate: 1.15,
     tint: 0xcbeb83,
     location: 1,
@@ -91,7 +91,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog2.svg',
     name: 'Фрог',
     size: 1.1,
-    basePrice: 1_570,
+    basePrice: 1_568,  /* formula: 560 × 2.8^1 */
     growthRate: 1.15,
     tint: 0xcfeb87,
     location: 1,
@@ -102,7 +102,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog3.svg',
     name: 'Кваключка',
     size: 1.4,
-    basePrice: 4_390,
+    basePrice: 4_390,  /* formula: 560 × 2.8^2 */
     growthRate: 1.15,
     tint: 0xbddb73,
     location: 1,
@@ -113,7 +113,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog4.svg',
     name: 'Квакус',
     size: 1.6,
-    basePrice: 12_290,
+    basePrice: 12_293,  /* formula: 560 × 2.8^3 */
     growthRate: 1.15,
     tint: 0xabcb61,
     location: 1,
@@ -124,7 +124,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog5.svg',
     name: 'Квакер',
     size: 1.6,
-    basePrice: 34_420,
+    basePrice: 34_421,  /* formula: 560 × 2.8^4 */
     growthRate: 1.15,
     tint: 0x99b951,
     location: 1,
@@ -135,7 +135,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog6.svg',
     name: 'Квакозавр',
     size: 1.9,
-    basePrice: 96_380,
+    basePrice: 96_378,  /* formula: 560 × 2.8^5 */
     growthRate: 1.15,
     tint: 0x87a743,
     location: 1,
@@ -148,7 +148,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog7.svg',
     name: 'Глазастик',
     size: 2.0,
-    basePrice: 269_860,
+    basePrice: 269_859,  /* formula: 560 × 2.8^6 */
     growthRate: 1.15,
     tint: 0xb3db71,
     location: 2,
@@ -159,7 +159,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog8.svg',
     name: 'Громозека',
     size: 2.0,
-    basePrice: 755_600,
+    basePrice: 755_604,  /* formula: 560 × 2.8^7 */
     growthRate: 1.15,
     tint: 0x8bcf6f,
     location: 2,
@@ -170,7 +170,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog9.svg',
     name: 'Лягозилла',
     size: 2.0,
-    basePrice: 2_100_000,
+    basePrice: 2_115_691,  /* formula: 560 × 2.8^8 */
     growthRate: 1.15,
     tint: 0x7dbf61,
     location: 2,
@@ -181,7 +181,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog10.svg',
     name: 'Кваколось',
     size: 2.0,
-    basePrice: 5_900_000,
+    basePrice: 5_923_935,  /* formula: 560 × 2.8^9 */
     growthRate: 1.15,
     tint: 0x71af57,
     location: 2,
@@ -192,7 +192,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog11.svg',
     name: 'Длиннолап',
     size: 2.0,
-    basePrice: 16_600_000,
+    basePrice: 16_587_019,  /* formula: 560 × 2.8^10 */
     growthRate: 1.15,
     tint: 0x659f4f,
     location: 2,
@@ -203,7 +203,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog12.svg',
     name: 'Кикиморка',
     size: 2.0,
-    basePrice: 46_400_000,
+    basePrice: 46_443_653,  /* formula: 560 × 2.8^11 */
     growthRate: 1.15,
     tint: 0x5b8f47,
     location: 2,
@@ -218,7 +218,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog13.svg',
     name: 'Квакатлас',
     size: 2.0,
-    basePrice: 130_000_000,
+    basePrice: 130_042_228,  /* formula: 560 × 2.8^12 */
     growthRate: 1.15,
     tint: 0x99db6b,
     location: 3,
@@ -229,7 +229,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog14.svg',
     name: 'Лягобог',
     size: 2.0,
-    basePrice: 364_000_000,
+    basePrice: 364_118_240,  /* formula: 560 × 2.8^13 */
     growthRate: 1.15,
     tint: 0x89cb5f,
     location: 3,
@@ -240,7 +240,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog15.svg',
     name: 'Вселенжаб',
     size: 2.0,
-    basePrice: 1_020_000_000,
+    basePrice: 1_019_531_071,  /* formula: 560 × 2.8^14 */
     growthRate: 1.15,
     tint: 0x7bbd55,
     location: 3,
@@ -251,7 +251,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog16.svg',
     name: 'Уроборосква',
     size: 2.0,
-    basePrice: 2_850_000_000,
+    basePrice: 2_854_686_999,  /* formula: 560 × 2.8^15 */
     growthRate: 1.15,
     tint: 0x6fad4b,
     location: 3,
@@ -262,7 +262,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog17.svg',
     name: 'Призмоляг',
     size: 2.0,
-    basePrice: 7_990_000_000,
+    basePrice: 7_993_123_597,  /* formula: 560 × 2.8^16 */
     growthRate: 1.15,
     tint: 0x639d43,
     location: 3,
@@ -273,7 +273,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog18.svg',
     name: 'Жаб-Провидец',
     size: 2.0,
-    basePrice: 22_360_000_000,
+    basePrice: 22_380_746_072,  /* formula: 560 × 2.8^17 */
     growthRate: 1.15,
     tint: 0x578d3b,
     location: 3,

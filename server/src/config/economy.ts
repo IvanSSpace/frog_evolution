@@ -14,28 +14,28 @@ interface FrogEconomy {
 // Copied from client/src/game/config/frogs.ts FROG_LEVELS.
 // Order matches level (index 0 = L1, index 17 = L18).
 export const FROG_ECONOMY: readonly FrogEconomy[] = [
+  // Цены по формуле: basePrice(T) = round(560 × 2.8^(T-1)), growthRate = 1.15.
   // ─── Лужа (L1-6) ───
-  { basePrice: 560, growthRate: 1.15, location: 1, availableInShop: true },
-  { basePrice: 1_570, growthRate: 1.15, location: 1, availableInShop: true },
-  { basePrice: 4_390, growthRate: 1.15, location: 1, availableInShop: true },
-  { basePrice: 12_290, growthRate: 1.15, location: 1, availableInShop: true },
-  { basePrice: 34_420, growthRate: 1.15, location: 1, availableInShop: true },
-  { basePrice: 96_380, growthRate: 1.15, location: 1, availableInShop: true },
+  { basePrice: 560, growthRate: 1.15, location: 1, availableInShop: true },           /* 2.8^0  */
+  { basePrice: 1_568, growthRate: 1.15, location: 1, availableInShop: true },         /* 2.8^1  */
+  { basePrice: 4_390, growthRate: 1.15, location: 1, availableInShop: true },         /* 2.8^2  */
+  { basePrice: 12_293, growthRate: 1.15, location: 1, availableInShop: true },        /* 2.8^3  */
+  { basePrice: 34_421, growthRate: 1.15, location: 1, availableInShop: true },        /* 2.8^4  */
+  { basePrice: 96_378, growthRate: 1.15, location: 1, availableInShop: true },        /* 2.8^5  */
   // ─── Болото (L7-12) ───
-  { basePrice: 269_860, growthRate: 1.15, location: 2, availableInShop: true },
-  { basePrice: 755_600, growthRate: 1.15, location: 2, availableInShop: true },
-  { basePrice: 2_100_000, growthRate: 1.15, location: 2, availableInShop: true },
-  { basePrice: 5_900_000, growthRate: 1.15, location: 2, availableInShop: true },
-  { basePrice: 16_600_000, growthRate: 1.15, location: 2, availableInShop: true },
-  { basePrice: 46_400_000, growthRate: 1.15, location: 2, availableInShop: true },
-  // ─── Лес (L13-18) — 2026-05-18 fix: natural ×2.8 progression от L12.
-  // Раньше были billions (legacy от L19+ когда была 4-я локация Континент). ───
-  { basePrice: 130_000_000, growthRate: 1.15, location: 3, availableInShop: true },
-  { basePrice: 364_000_000, growthRate: 1.15, location: 3, availableInShop: true },
-  { basePrice: 1_020_000_000, growthRate: 1.15, location: 3, availableInShop: true },
-  { basePrice: 2_850_000_000, growthRate: 1.15, location: 3, availableInShop: true },
-  { basePrice: 7_990_000_000, growthRate: 1.15, location: 3, availableInShop: true },
-  { basePrice: 22_360_000_000, growthRate: 1.15, location: 3, availableInShop: true },
+  { basePrice: 269_859, growthRate: 1.15, location: 2, availableInShop: true },       /* 2.8^6  */
+  { basePrice: 755_604, growthRate: 1.15, location: 2, availableInShop: true },       /* 2.8^7  */
+  { basePrice: 2_115_691, growthRate: 1.15, location: 2, availableInShop: true },     /* 2.8^8  */
+  { basePrice: 5_923_935, growthRate: 1.15, location: 2, availableInShop: true },     /* 2.8^9  */
+  { basePrice: 16_587_019, growthRate: 1.15, location: 2, availableInShop: true },    /* 2.8^10 */
+  { basePrice: 46_443_653, growthRate: 1.15, location: 2, availableInShop: true },    /* 2.8^11 */
+  // ─── Лес (L13-18) ───
+  { basePrice: 130_042_228, growthRate: 1.15, location: 3, availableInShop: true },   /* 2.8^12 */
+  { basePrice: 364_118_240, growthRate: 1.15, location: 3, availableInShop: true },   /* 2.8^13 */
+  { basePrice: 1_019_531_071, growthRate: 1.15, location: 3, availableInShop: true }, /* 2.8^14 */
+  { basePrice: 2_854_686_999, growthRate: 1.15, location: 3, availableInShop: true }, /* 2.8^15 */
+  { basePrice: 7_993_123_597, growthRate: 1.15, location: 3, availableInShop: true }, /* 2.8^16 */
+  { basePrice: 22_380_746_072, growthRate: 1.15, location: 3, availableInShop: true },/* 2.8^17 */
 ]
 
 export const MAX_LEVEL = FROG_ECONOMY.length // = 18
