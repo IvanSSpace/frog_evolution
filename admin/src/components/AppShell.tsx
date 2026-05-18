@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 const NAV_ITEMS = [
   { label: 'Dashboard', href: '/' },
   { label: 'Users', href: '/users' },
+  { label: 'Race Chains', href: '/chains' },
 ]
 
 type AppShellProps = {
