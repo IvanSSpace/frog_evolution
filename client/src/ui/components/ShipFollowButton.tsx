@@ -69,7 +69,7 @@ export function ShipFollowButton() {
       aria-label={label}
       style={{
         position: 'fixed',
-        top: 'calc(12% + 10px)',
+        top: 'calc(12% + 54px + 10px)',
         left: 12,
         zIndex: 1000,
         display: 'flex',
