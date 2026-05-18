@@ -14,6 +14,12 @@ import { migratePhase22 } from './migrations/phase22'
 import type { OnboardingState } from './onboarding/types'
 // Phase 26 Plan 26-01: per-race first contact tracker (defensive load).
 import type { RaceId } from '../game/config/races'
+// Phase 27 Plan 27-01: pending engine types + relationship clamp bounds.
+import type { PendingItem, ChainItem } from '../game/config/raceChains'
+import {
+  RELATIONSHIP_MIN,
+  RELATIONSHIP_MAX,
+} from '../game/config/raceChains'
 
 // ─── storage keys ────────────────────────────────────────────────────────────
 
@@ -413,6 +419,81 @@ export function loadCosmicSlice(): CosmicPersist {
           }
         }
         return fcs
+      })(),
+      // Phase 27 Plan 27-01: defensive load raceRelationships.
+      // T-27-01-01 / T-27-01-02 mitigation:
+      //   - iterate over known raceIds (defaults.raceRelationships keys) — unknown
+      //     server-side raceIds silently dropped (forward-compat).
+      //   - accept ONLY finite number, clamp to [RELATIONSHIP_MIN, RELATIONSHIP_MAX]
+      //     через Math.floor + min/max. Any other shape → default INITIAL_RELATIONSHIP.
+      raceRelationships: (() => {
+        const result = { ...defaults.raceRelationships }
+        const raw = parsed.raceRelationships
+        if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+          const rawRec = raw as Record<string, unknown>
+          for (const id of Object.keys(result) as RaceId[]) {
+            const v = rawRec[id]
+            if (typeof v === 'number' && Number.isFinite(v)) {
+              result[id] = Math.max(
+                RELATIONSHIP_MIN,
+                Math.min(RELATIONSHIP_MAX, Math.floor(v)),
+              )
+            }
+          }
+        }
+        return result
+      })(),
+      // Phase 27 Plan 27-01: defensive load chainProgress.
+      // Accept ONLY non-negative finite number; floor дробные; default 0.
+      chainProgress: (() => {
+        const result = { ...defaults.chainProgress }
+        const raw = parsed.chainProgress
+        if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+          const rawRec = raw as Record<string, unknown>
+          for (const id of Object.keys(result) as RaceId[]) {
+            const v = rawRec[id]
+            if (typeof v === 'number' && Number.isFinite(v) && v >= 0) {
+              result[id] = Math.floor(v)
+            }
+          }
+        }
+        return result
+      })(),
+      // Phase 27 Plan 27-01: defensive load pendingItems.
+      // T-27-01-01 mitigation — strip entries with invalid shape:
+      //   - missing id/raceId/chainStep
+      //   - raceId not in known set
+      //   - chainStep negative
+      //   - item.type not in 4 known variants
+      // createdAt missing/non-number → Date.now() fallback (acceptable; ordering used
+      // только for UI sort, not gameplay).
+      pendingItems: (() => {
+        const raw = parsed.pendingItems
+        if (!Array.isArray(raw)) return defaults.pendingItems
+        const knownRaceIds = new Set(Object.keys(defaults.raceRelationships))
+        const knownTypes = new Set(['msg', 'dialog', 'quest_hook', 'event'])
+        const out: PendingItem[] = []
+        for (const e of raw) {
+          if (!e || typeof e !== 'object') continue
+          const r = e as Record<string, unknown>
+          if (typeof r.id !== 'string') continue
+          if (typeof r.raceId !== 'string' || !knownRaceIds.has(r.raceId))
+            continue
+          if (typeof r.chainStep !== 'number' || r.chainStep < 0) continue
+          if (!r.item || typeof r.item !== 'object') continue
+          const item = r.item as Record<string, unknown>
+          if (typeof item.type !== 'string' || !knownTypes.has(item.type))
+            continue
+          out.push({
+            id: r.id,
+            raceId: r.raceId as RaceId,
+            chainStep: Math.floor(r.chainStep),
+            item: r.item as ChainItem,
+            createdAt:
+              typeof r.createdAt === 'number' ? r.createdAt : Date.now(),
+          })
+        }
+        return out
       })(),
     }
   } catch {

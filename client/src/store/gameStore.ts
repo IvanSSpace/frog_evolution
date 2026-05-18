@@ -470,7 +470,11 @@ useGameStore.subscribe((state, prev) => {
     state.permaSerumDropBonus !== prev.permaSerumDropBonus ||
     state.shopPurchaseCounts !== prev.shopPurchaseCounts ||
     // Phase 26 Plan 26-01: per-race first contact tracker — persist on change.
-    state.firstContactsSeen !== prev.firstContactsSeen
+    state.firstContactsSeen !== prev.firstContactsSeen ||
+    // Phase 27 Plan 27-01: relationship/chain/pending state persisted.
+    state.raceRelationships !== prev.raceRelationships ||
+    state.chainProgress !== prev.chainProgress ||
+    state.pendingItems !== prev.pendingItems
   ) {
     saveCosmicSlice({
       serums: state.serums,
@@ -505,6 +509,10 @@ useGameStore.subscribe((state, prev) => {
       latestShipPos: null,
       // Phase 26 Plan 26-01: per-race first contact tracker persisted.
       firstContactsSeen: state.firstContactsSeen,
+      // Phase 27 Plan 27-01: relationship/chain/pending state persisted.
+      raceRelationships: state.raceRelationships,
+      chainProgress: state.chainProgress,
+      pendingItems: state.pendingItems,
     })
   }
 })

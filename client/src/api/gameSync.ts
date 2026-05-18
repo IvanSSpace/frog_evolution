@@ -67,6 +67,10 @@ function snapshotForSave() {
       captainBirthSeen: s.captainBirthSeen,
       // Phase 26 Plan 26-01: cross-device sync per-race first contact tracker.
       firstContactsSeen: s.firstContactsSeen,
+      // Phase 27 Plan 27-01: cross-device sync relationship + chain + pending state.
+      raceRelationships: s.raceRelationships,
+      chainProgress: s.chainProgress,
+      pendingItems: s.pendingItems,
       // Phase 22: user preferences (cross-device sync).
       preferences: {
         numberFormat: s.numberFormat,
@@ -145,6 +149,14 @@ export async function loadGameState(): Promise<boolean> {
       // не блокирует unknown extra raceIds — forward-compat).
       if ('firstContactsSeen' in c)
         cosmicUpdate.firstContactsSeen = c.firstContactsSeen
+      // Phase 27 Plan 27-01: hydrate from server. Defensive filtering already runs
+      // в loadCosmicSlice на следующем persistence read; server snapshot trusts
+      // cosmic blob shape для immediate hydrate (unknown raceIds get cleaned out
+      // на next save→load cycle через loadCosmicSlice clamp/strip logic).
+      if ('raceRelationships' in c)
+        cosmicUpdate.raceRelationships = c.raceRelationships
+      if ('chainProgress' in c) cosmicUpdate.chainProgress = c.chainProgress
+      if ('pendingItems' in c) cosmicUpdate.pendingItems = c.pendingItems
       if (Object.keys(cosmicUpdate).length > 0) {
         useGameStore.setState(cosmicUpdate as Partial<typeof store>)
       }

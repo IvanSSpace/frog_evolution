@@ -5,6 +5,8 @@
 // Phase 26 Plan 26-02: добавлен PlanetInhabitant type — race ownership of planet.
 
 import type { RaceId } from '../../game/config/races'
+import type { PendingItem } from '../../game/config/raceChains'
+import { INITIAL_RELATIONSHIP } from '../../game/config/raceChains'
 
 /**
  * Phase 26 Plan 26-02: race ownership of a habitable planet.
@@ -238,6 +240,18 @@ export interface CosmicSlice {
   // Server-syncable (cosmic JSON blob via gameSync.ts).
   // Default: все 10 false. markFirstContactSeen(raceId) idempotent.
   firstContactsSeen: Record<RaceId, boolean>
+
+  // Phase 27 Plan 27-01: relationship-driven contacts foundation.
+  // raceRelationships: per-race score 1-10 integer (5 tiers in raceChains.ts).
+  //   Default INITIAL_RELATIONSHIP=2 (low threshold per CONTEXT D-Relationship system).
+  //   Clamped via slice actions (Plan 27-03 applyAccept/applyRefuse/applyEvent).
+  // chainProgress: per-race index into RACE_CHAINS[raceId]. 0 = first item.
+  //   Advanced by Plan 27-03 pending engine after each item consumed.
+  // pendingItems: global queue (cap CHAIN_PENDING_CAP=3 — enforced by engine, NOT slice shape).
+  //   Persisted; cross-device sync via cosmic blob.
+  raceRelationships: Record<RaceId, number>
+  chainProgress: Record<RaceId, number>
+  pendingItems: PendingItem[]
 }
 
 // Phase 26 Plan 26-01: canonical race-id array для init `firstContactsSeen` и
@@ -289,6 +303,15 @@ export function makeInitialCosmicSlice(): CosmicSlice {
   for (const id of ALL_RACE_IDS) {
     firstContactsSeen[id] = false
   }
+  // Phase 27 Plan 27-01: per-race relationship + chain progress init.
+  // raceRelationships = INITIAL_RELATIONSHIP (2) per race; chainProgress = 0 per race.
+  // pendingItems = [] (engine fills через Plan 27-03).
+  const raceRelationships = {} as Record<RaceId, number>
+  const chainProgress = {} as Record<RaceId, number>
+  for (const id of ALL_RACE_IDS) {
+    raceRelationships[id] = INITIAL_RELATIONSHIP
+    chainProgress[id] = 0
+  }
   return {
     serums,
     boxes: [],
@@ -326,5 +349,9 @@ export function makeInitialCosmicSlice(): CosmicSlice {
     latestShipPos: null,
     // Phase 26 Plan 26-01: per-race first contact (все 10 false initial).
     firstContactsSeen,
+    // Phase 27 Plan 27-01: relationship/chain/pending foundation.
+    raceRelationships,
+    chainProgress,
+    pendingItems: [],
   }
 }
