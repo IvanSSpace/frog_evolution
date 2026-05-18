@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useGameStore } from '../../store/gameStore'
 import { fmt, fmtRate } from '../../utils/formatting'
+import { useCosmosUnlocked } from '../../utils/cosmosGate'
 
 // L18+L18 merge bonus multiplier — same formula как в gameStore.addGold.
 // Diminishing returns: merge1=+10%, merge2/3=+5%, merge4+=+2.5%.
@@ -19,10 +20,19 @@ export function Header() {
   const boxProgress = useGameStore((s) => s.boxProgress)
   const boxWaiting = useGameStore((s) => s.boxWaiting)
   const rareBoxProgress = useGameStore((s) => s.rareBoxProgress)
+  const essence = useGameStore((s) => s.essence)
+  const serums = useGameStore((s) => s.serums)
   useGameStore((s) => s.numberFormat) // subscribe to format changes
+  // Cosmos gate — отображаем essence + серум только после unlock'а космоса.
+  const cosmosUnlocked = useCosmosUnlocked()
 
   const multiplier = l18GoldMultiplier(l18MergesCount)
   const bonusPct = Math.round((multiplier - 1) * 1000) / 10 // 1 decimal: 12.5
+
+  // Total серум across all elements (single counter, не per-element).
+  const totalSerum = cosmosUnlocked
+    ? Object.values(serums).reduce((sum, n) => sum + (n || 0), 0)
+    : 0
 
   return (
     <div
@@ -32,7 +42,36 @@ export function Header() {
         pointerEvents: 'auto',
       }}
     >
-      <div />
+      <div className="flex flex-col items-start gap-0.5">
+        {cosmosUnlocked && (
+          <>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: '#fde047',
+                textShadow: '0 1px 0 rgba(0,0,0,0.4)',
+                lineHeight: 1.2,
+              }}
+              title="Эссенция"
+            >
+              💎 {fmt(essence)}
+            </div>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: '#a78bfa',
+                textShadow: '0 1px 0 rgba(0,0,0,0.4)',
+                lineHeight: 1.2,
+              }}
+              title="Серум (все элементы)"
+            >
+              🧪 {fmt(totalSerum)}
+            </div>
+          </>
+        )}
+      </div>
 
       <div className="flex flex-col items-center gap-1">
         <div className="ff-balance">
