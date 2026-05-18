@@ -189,6 +189,7 @@
     "tab_shop": "Shop",
     "tab_inventory": "Inventory",
     "tab_contacts": "Contacts",
+    "tab_quests": "Quests",
     "lock_first_feed": "Unlocks after first feed",
     "lock_first_mission": "Unlocks after first mission",
     "elements": {
@@ -320,6 +321,23 @@
       "relationship_label": "Relationship",
       "quest_stub": "Request accepted. Details to follow.",
       "pending_count": "Queue: {{count}}/3"
+    },
+    "quests": {
+      "placeholder": "Quests panel under construction",
+      "header_active": "Active quests: {{current}}/{{cap}}",
+      "header_completed": "Completed",
+      "empty_state": "No active quests. Open Contacts to accept.",
+      "cap_reached": "Active quest limit: {{cap}}. Complete current ones.",
+      "cancel_confirm": "Abandon quest? Relationship with «{{race}}» will drop by 1.",
+      "cancel_button": "Abandon",
+      "reward_popup_title": "Quest completed!",
+      "reward_popup_dismiss": "Claim",
+      "type": {
+        "delivery": "Delivery",
+        "exploration": "Exploration",
+        "merge": "Merge",
+        "diplomacy": "Diplomacy"
+      }
     }
   },
   "cosmic_shop": {

@@ -189,6 +189,7 @@
     "tab_shop": "Магазин",
     "tab_inventory": "Инвентарь",
     "tab_contacts": "Контакты",
+    "tab_quests": "Квесты",
     "lock_first_feed": "Откроется после первого кормления",
     "lock_first_mission": "Откроется после первой миссии",
     "elements": {
@@ -320,6 +321,23 @@
       "relationship_label": "Отношение",
       "quest_stub": "Запрос принят. Детали скоро прояснятся.",
       "pending_count": "Очередь: {{count}}/3"
+    },
+    "quests": {
+      "placeholder": "Раздел квестов в разработке",
+      "header_active": "Активные квесты: {{current}}/{{cap}}",
+      "header_completed": "Выполненные",
+      "empty_state": "Нет активных квестов. Откройте Контакты, чтобы принять.",
+      "cap_reached": "Лимит активных квестов: {{cap}}. Завершите текущие.",
+      "cancel_confirm": "Отказаться от квеста? Отношения с расой «{{race}}» упадут на 1.",
+      "cancel_button": "Отказаться",
+      "reward_popup_title": "Квест выполнен!",
+      "reward_popup_dismiss": "Забрать",
+      "type": {
+        "delivery": "Доставка",
+        "exploration": "Разведка",
+        "merge": "Мерж",
+        "diplomacy": "Дипломатия"
+      }
     }
   },
   "cosmic_shop": {

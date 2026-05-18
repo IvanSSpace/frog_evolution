@@ -33,7 +33,9 @@ function getInitialTab(): CosmicTab {
       saved === 'carriers' ||
       saved === 'shop' ||
       saved === 'inventory' ||
-      saved === 'contacts'
+      saved === 'contacts' ||
+      // Phase 28 Plan 28-01: accept 'quests' literal for 8th tab persistence.
+      saved === 'quests'
     ) {
       return saved
     }
@@ -122,6 +124,15 @@ export default function CosmicHubModal({ onClose }: Props) {
       // Phase 22-06 + Phase 26-04).
       enabled: true,
     },
+    {
+      id: 'quests',
+      label: t('cosmic_hub.tab_quests'),
+      icon: '📜',
+      // Phase 28 Plan 28-01: quests tab всегда visible after cosmos unlock —
+      // modal-level cosmos lock gates entire tab strip (existing pattern from
+      // Phase 22-06 / 26-04 / 27-04).
+      enabled: true,
+    },
   ]
 
   // Если активный таб теперь disabled — fall back на первый enabled
@@ -165,6 +176,16 @@ export default function CosmicHubModal({ onClose }: Props) {
       // Phase 27 Plan 27-04: contacts tab — 10 races list + race detail in-tab nav.
       case 'contacts':
         return <ContactsTab />
+      // Phase 28 Plan 28-01: quests tab placeholder. Plan 28-04 replaces this
+      // inline element с реальным <QuestsTab /> (active quest cards + completed
+      // history). Foundation plan ships skeleton so tab is wired через render
+      // switch и tsc остаётся exhaustive over CosmicTab union.
+      case 'quests':
+        return (
+          <div style={{ padding: 12, color: '#fff' }}>
+            {t('cosmic_hub.quests.placeholder')}
+          </div>
+        )
     }
   }
 

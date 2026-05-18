@@ -189,6 +189,7 @@
     "tab_shop": "Tienda",
     "tab_inventory": "Inventario",
     "tab_contacts": "Contactos",
+    "tab_quests": "Misiones",
     "lock_first_feed": "Se desbloquea tras la primera alimentación",
     "lock_first_mission": "Se desbloquea tras la primera misión",
     "elements": {
@@ -320,6 +321,23 @@
       "relationship_label": "Relación",
       "quest_stub": "Solicitud aceptada. Detalles próximamente.",
       "pending_count": "Cola: {{count}}/3"
+    },
+    "quests": {
+      "placeholder": "Panel de misiones en desarrollo",
+      "header_active": "Misiones activas: {{current}}/{{cap}}",
+      "header_completed": "Completadas",
+      "empty_state": "No hay misiones activas. Abre Contactos para aceptar.",
+      "cap_reached": "Límite de misiones activas: {{cap}}. Completa las actuales.",
+      "cancel_confirm": "¿Abandonar misión? La relación con «{{race}}» caerá en 1.",
+      "cancel_button": "Abandonar",
+      "reward_popup_title": "¡Misión completada!",
+      "reward_popup_dismiss": "Reclamar",
+      "type": {
+        "delivery": "Entrega",
+        "exploration": "Exploración",
+        "merge": "Fusión",
+        "diplomacy": "Diplomacia"
+      }
     }
   },
   "cosmic_shop": {
