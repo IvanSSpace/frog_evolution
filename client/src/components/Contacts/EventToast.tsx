@@ -8,7 +8,7 @@
 // Description resolved from props.textKey (cosmos.event.<key> or race-specific).
 // Race name resolved from props.raceId → RACES_BY_ID lookup.
 
-import { useEffect, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { RACES_BY_ID, type RaceId } from '../../game/config/races'
 import { DARK_CARD_STYLE } from '../CosmicHub/_styles'
@@ -24,7 +24,7 @@ interface Props {
   onDismiss: (id: string) => void
 }
 
-export function EventToast({ id, raceId, delta, textKey, onDismiss }: Props) {
+function EventToastInner({ id, raceId, delta, textKey, onDismiss }: Props) {
   const { t } = useTranslation()
   const [fadingOut, setFadingOut] = useState(false)
 
@@ -96,3 +96,9 @@ export function EventToast({ id, raceId, delta, textKey, onDismiss }: Props) {
     </div>
   )
 }
+
+// Perf audit 2026-05-18 (Phase 27): wrap in React.memo. Props (id/raceId/delta/
+// textKey/onDismiss) are stable per toast instance — onDismiss is now memoized
+// in the controller. When the controller re-renders to add/remove a sibling
+// toast, existing toast instances skip their virtual-DOM diff entirely.
+export const EventToast = memo(EventToastInner)
