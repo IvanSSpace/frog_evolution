@@ -166,13 +166,27 @@ interface GameStateBase {
 // CosmicState = CosmicSlice + CosmicSliceActions (см. cosmic/slice.ts)
 type GameState = GameStateBase & CosmicState
 
-// L18+L18 merge bonus: each merge gives +10% к ВСЕМ gold awards (multiplicative
-// через counter). Применяется в addGold чтобы все gold-источники (tap, poop,
-// tractor offline, bg income) включали бонус автоматически.
-const L18_BONUS_PER_MERGE = 0.10
-
+// L18+L18 merge bonus: diminishing returns tiered schedule:
+//   Merge 1     : +10% (normal first reward)
+//   Merge 2     : +5%
+//   Merge 3     : +5%
+//   Merge 4..∞  : +2.5% each (perpetual)
+//
+// Cumulative multiplier:
+//   count=0 → 1.0   (no bonus)
+//   count=1 → 1.10
+//   count=2 → 1.15
+//   count=3 → 1.20
+//   count=N (N≥3) → 1.20 + (N - 3) * 0.025
+//
+// Применяется в addGold чтобы все gold-источники (tap, poop, tractor offline
+// applied client-side, bg income) автоматически получали multiplier.
 function l18GoldMultiplier(count: number): number {
-  return 1 + count * L18_BONUS_PER_MERGE
+  if (count <= 0) return 1
+  if (count === 1) return 1.10
+  if (count === 2) return 1.15
+  // count >= 3: base 1.20 from first 3 merges + 2.5% per additional
+  return 1.20 + (count - 3) * 0.025
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
