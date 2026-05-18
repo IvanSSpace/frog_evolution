@@ -181,9 +181,7 @@
   },
   "cosmic_hub": {
     "title": "Cosmic Hub",
-    "tab_scouts": "Scouts",
     "tab_ship": "Ship",
-    "tab_boxes": "Boxes",
     "tab_station": "Station",
     "tab_serums": "Serums",
     "tab_bestiary": "Bestiary",
@@ -193,15 +191,6 @@
     "tab_contacts": "Contacts",
     "lock_first_feed": "Unlocks after first feed",
     "lock_first_mission": "Unlocks after first mission",
-    "scouts_placeholder": "Scouts coming in next update",
-    "boxes_placeholder": "Boxes coming in next update",
-    "serums_placeholder": "Serums coming in next update",
-    "bestiary_placeholder": "Bestiary coming in next update",
-    "toast_scout_returned": "Scout returned! Box received.",
-    "toast_scout_returned_plural": "{{count}} scouts returned! {{count}} boxes received.",
-    "toast_open_box": "Open box",
-    "toast_grouped": "{{count}} events",
-    "crew_tired": "Crew is tired. Come back tomorrow.",
     "elements": {
       "fire": "Fire",
       "ice": "Ice",
@@ -234,7 +223,6 @@
     "slot": {
       "spinning": "Rolling…",
       "skip": "Skip",
-      "tap_to_skip": "Tap to skip",
       "checkpoint_common": "common",
       "checkpoint_rare": "rare",
       "checkpoint_epic": "epic",
@@ -244,60 +232,25 @@
     },
     "bulk": {
       "summary_title": "Serums obtained",
-      "summary_row": "{{element}} {{rarity}} ×{{count}}",
       "summary_close": "Claim all"
     },
     "serums_empty": "Serums will appear after opening boxes",
     "serums": {
-      "section_common": "Common",
-      "section_rare": "Rare",
-      "section_epic": "Epic",
-      "section_legendary": "Legendary",
-      "section_count": "{{kinds}} types · {{count}} qty",
-      "section_empty": "—",
       "applied": "Serum applied",
-      "undo_label": "Undo",
-      "undo_hint": "Revert last apply",
-      "mis_tap_msg": "This serum works only on a level {{level}} frog ({{location}})",
-      "location_puddle": "Puddle",
-      "location_swamp": "Swamp",
-      "location_forest": "Forest",
-      "location_continent": "Continent"
+      "undo_label": "Undo"
     },
     "carrier": {
       "empty_state": "No carriers",
       "empty_hint": "Apply serums to create carriers",
       "count": "{{count}} carriers",
-      "ceiling_label": "Ceiling",
-      "ceiling_high": "High",
-      "ceiling_mid": "Mid",
-      "ceiling_low": "Low",
-      "progress_stabilized": "Stable",
       "dispose_button": "Dispose",
-      "feed_fail": "Failed",
-      "merge_blocked_unstabilized": "Carrier must stabilize first",
       "merge_blocked_mismatch": "Incompatible carriers",
-      "merge_blocked_stabilized": "Carrier has reached its ceiling! Merge two stabilized carriers of the same element.",
       "merge_cross_location_warn": "Cross-location merge — carrier restored later",
-      "stabilize": {
-        "title": "Stabilized",
-        "rolling": "Rolling...",
-        "s_top": "Top-tier!",
-        "a_high": "High",
-        "b_mid": "Mid",
-        "c_low": "Stable",
-        "tap_to_dismiss": "Tap to dismiss",
-        "modal_label": "Carrier stabilization"
-      },
       "dispose": {
         "title": "Dispose?",
-        "body": "Carrier {{element}} ({{rarity}}). 30% chance to recover serum.",
-        "warning": "This is irreversible.",
         "confirm": "Dispose",
         "cancel": "Cancel",
-        "modal_label": "Confirm dispose",
-        "toast_recovered": "Serum recovered!",
-        "toast_no_recovery": "Carrier disposed"
+        "modal_label": "Confirm dispose"
       }
     },
     "bestiary": {
@@ -639,8 +592,7 @@
   "cosmos": {
     "first_contact": {
       "title": "First Contact",
-      "cta": "Got it",
-      "subtitle_template": "Connection established with the {{raceName}}"
+      "cta": "Got it"
     },
     "role_home": "⭐ Capital",
     "role_colony": "· Colony",
