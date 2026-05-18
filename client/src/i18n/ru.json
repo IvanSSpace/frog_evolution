@@ -39,7 +39,6 @@
     "title": "ЛЯГУШКИ",
     "bought": "Куплено:",
     "income": "Доход:",
-    "income_unit": "слизи / сек",
     "no_gold": "Не хватает слизи",
     "cap_full": "Поле занято ({{cap}}/{{cap}})"
   },
@@ -107,7 +106,6 @@
     "format_short": "Короткий (1.5К)",
     "format_full": "Полный (1 500)",
     "bug_report": "Баг репорт 🐛",
-    "sounds_stub": "Скоро будет",
     "cosmic": "🧬 Космос",
     "instant_boxes": "Боксы мгновенно",
     "instant_boxes_desc": "Сокращает анимацию слот-машины до 1с",
@@ -165,11 +163,7 @@
     "state_docked": "Пристыкован у {{name}}",
     "state_transit": "В пути → {{name}}",
     "transit_eta": "Прибытие через {{mins}}:{{secs}}",
-    "open_map": "Открыть карту",
-    "investigate": "Изучить",
-    "investigate_tooltip_capped": "Экипаж устал. Возвращайтесь завтра.",
-    "investigate_tooltip_transit": "Сначала прилетите на планету.",
-    "arrived_toast": "Прибыли на {{name}}"
+    "open_map": "Открыть карту"
   },
   "crew": {
     "indicator_label": "Сегодня: {{used}}/{{cap}} миссий",
@@ -184,20 +178,6 @@
     "in_transit": "Вы редиректнёте курс с {{from}} на {{to}}",
     "confirm": "Лететь",
     "cancel": "Отмена"
-  },
-  "mission": {
-    "title_rhythm": "Кликни планету",
-    "title_defend": "Защити корабль",
-    "title_hotspot": "Найди скрытое",
-    "intro_warmup": "Приготовьтесь...",
-    "skip": "Пропустить",
-    "rhythm_label": "{{taps}} / {{target}}",
-    "rhythm_tap_button": "Тап",
-    "defend_label": "Отбито: {{hits}} / 3",
-    "defend_flash": "Вспышка",
-    "hotspot_label": "Найдено: {{found}} / {{total}}",
-    "time_left": "{{secs}}с",
-    "box_received_toast": "Получен ящик {{name}}"
   },
   "cosmic_hub": {
     "title": "Космический центр",

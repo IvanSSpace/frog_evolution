@@ -39,7 +39,6 @@
     "title": "FROGS",
     "bought": "Owned:",
     "income": "Income:",
-    "income_unit": "goo / sec",
     "no_gold": "Not enough goo",
     "cap_full": "Field full ({{cap}}/{{cap}})"
   },
@@ -107,7 +106,6 @@
     "format_short": "Short (1.5K)",
     "format_full": "Full (1,500)",
     "bug_report": "Bug Report 🐛",
-    "sounds_stub": "Coming soon",
     "cosmic": "🧬 Cosmic",
     "instant_boxes": "Instant boxes",
     "instant_boxes_desc": "Shortens slot machine animation to 1s",
@@ -165,11 +163,7 @@
     "state_docked": "Docked at {{name}}",
     "state_transit": "En route → {{name}}",
     "transit_eta": "Arrival in {{mins}}:{{secs}}",
-    "open_map": "Open map",
-    "investigate": "Investigate",
-    "investigate_tooltip_capped": "Crew is tired. Come back tomorrow.",
-    "investigate_tooltip_transit": "Arrive at the planet first.",
-    "arrived_toast": "Arrived at {{name}}"
+    "open_map": "Open map"
   },
   "crew": {
     "indicator_label": "Today: {{used}}/{{cap}} missions",
@@ -184,20 +178,6 @@
     "in_transit": "You will redirect course from {{from}} to {{to}}",
     "confirm": "Fly",
     "cancel": "Cancel"
-  },
-  "mission": {
-    "title_rhythm": "Tap the planet",
-    "title_defend": "Defend ship",
-    "title_hotspot": "Find hidden",
-    "intro_warmup": "Get ready...",
-    "skip": "Skip",
-    "rhythm_label": "{{taps}} / {{target}}",
-    "rhythm_tap_button": "Tap",
-    "defend_label": "Hits: {{hits}} / 3",
-    "defend_flash": "Flash",
-    "hotspot_label": "Found: {{found}} / {{total}}",
-    "time_left": "{{secs}}s",
-    "box_received_toast": "Box received: {{name}}"
   },
   "cosmic_hub": {
     "title": "Cosmic Hub",

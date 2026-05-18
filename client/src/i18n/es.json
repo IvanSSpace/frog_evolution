@@ -39,7 +39,6 @@
     "title": "RANAS",
     "bought": "Compradas:",
     "income": "Ingreso:",
-    "income_unit": "baba / seg",
     "no_gold": "No hay suficiente baba",
     "cap_full": "Campo lleno ({{cap}}/{{cap}})"
   },
@@ -107,7 +106,6 @@
     "format_short": "Corto (1.5K)",
     "format_full": "Completo (1.500)",
     "bug_report": "Reportar error 🐛",
-    "sounds_stub": "Próximamente",
     "cosmic": "🧬 Cósmico",
     "instant_boxes": "Cajas instantáneas",
     "instant_boxes_desc": "Acorta la animación a 1s",
@@ -165,11 +163,7 @@
     "state_docked": "Atracada en {{name}}",
     "state_transit": "En ruta → {{name}}",
     "transit_eta": "Llegada en {{mins}}:{{secs}}",
-    "open_map": "Abrir mapa",
-    "investigate": "Investigar",
-    "investigate_tooltip_capped": "Tripulación cansada. Vuelve mañana.",
-    "investigate_tooltip_transit": "Llega al planeta primero.",
-    "arrived_toast": "Llegada a {{name}}"
+    "open_map": "Abrir mapa"
   },
   "crew": {
     "indicator_label": "Hoy: {{used}}/{{cap}} misiones",
@@ -184,20 +178,6 @@
     "in_transit": "Redirigirás de {{from}} a {{to}}",
     "confirm": "Volar",
     "cancel": "Cancelar"
-  },
-  "mission": {
-    "title_rhythm": "Toca el planeta",
-    "title_defend": "Defiende la nave",
-    "title_hotspot": "Encuentra oculto",
-    "intro_warmup": "Prepárate...",
-    "skip": "Saltar",
-    "rhythm_label": "{{taps}} / {{target}}",
-    "rhythm_tap_button": "Toca",
-    "defend_label": "Aciertos: {{hits}} / 3",
-    "defend_flash": "Destello",
-    "hotspot_label": "Encontrado: {{found}} / {{total}}",
-    "time_left": "{{secs}}s",
-    "box_received_toast": "Caja recibida: {{name}}"
   },
   "cosmic_hub": {
     "title": "Centro Cósmico",
