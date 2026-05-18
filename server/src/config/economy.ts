@@ -29,13 +29,14 @@ export const FROG_ECONOMY: readonly FrogEconomy[] = [
   { basePrice: 5_923_935, growthRate: 1.15, location: 2, availableInShop: true },     /* 2.8^9  */
   { basePrice: 16_587_019, growthRate: 1.15, location: 2, availableInShop: true },    /* 2.8^10 */
   { basePrice: 46_443_653, growthRate: 1.15, location: 2, availableInShop: true },    /* 2.8^11 */
-  // ─── Лес (L13-18) ───
-  { basePrice: 130_042_228, growthRate: 1.15, location: 3, availableInShop: true },   /* 2.8^12 */
-  { basePrice: 364_118_240, growthRate: 1.15, location: 3, availableInShop: true },   /* 2.8^13 */
-  { basePrice: 1_019_531_071, growthRate: 1.15, location: 3, availableInShop: true }, /* 2.8^14 */
-  { basePrice: 2_854_686_999, growthRate: 1.15, location: 3, availableInShop: true }, /* 2.8^15 */
-  { basePrice: 7_993_123_597, growthRate: 1.15, location: 3, availableInShop: true }, /* 2.8^16 */
-  { basePrice: 22_380_746_072, growthRate: 1.15, location: 3, availableInShop: true },/* 2.8^17 */
+  // ─── Лес (L13-18) — original 3-этап values (rounded round numbers,
+  // restored from commit pre-2d6f2cb). Formula approx 560 × 2.8^(T-1). ───
+  { basePrice: 130_000_000, growthRate: 1.15, location: 3, availableInShop: true },
+  { basePrice: 364_100_000, growthRate: 1.15, location: 3, availableInShop: true },
+  { basePrice: 1_000_000_000, growthRate: 1.15, location: 3, availableInShop: true },
+  { basePrice: 2_900_000_000, growthRate: 1.15, location: 3, availableInShop: true },
+  { basePrice: 8_000_000_000, growthRate: 1.15, location: 3, availableInShop: true },
+  { basePrice: 22_400_000_000, growthRate: 1.15, location: 3, availableInShop: true },
 ]
 
 export const MAX_LEVEL = FROG_ECONOMY.length // = 18
