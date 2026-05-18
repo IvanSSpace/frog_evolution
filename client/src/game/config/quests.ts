@@ -191,20 +191,465 @@ export function generateActiveQuestId(now: number): string {
   return `aq-${now}-${__activeQuestIdCounter}-${rnd}`
 }
 
-// ─── Quest catalogue (skeleton) ──────────────────────────────────────────────
+// ─── Quest catalogue (filled — Plan 28-02) ───────────────────────────────────
 
 /**
- * Phase 28 Plan 28-01: empty quest skeleton record.
+ * Phase 28 Plan 28-02: full quest catalogue (40 entries — one per quest_id
+ * stub mined from raceChains.ts quest_hook items, 4 hooks per race × 10 races).
  *
- * Plan 28-02 fills 40 entries — one per quest_id stub mined from raceChains.ts
- * quest_hook items (4 quest_hooks per race × 10 races). Runtime lookup via
- * QUESTS[questId] returns `undefined` for unknown ids; the engine in Plan
- * 28-03 must defensively handle this case (no-op activation + `devWarn` log
- * in dev builds; in prod silently skip the activation step but still resolve
- * the quest_hook as a plain dialog +1 relationship).
+ * Runtime lookup via QUESTS[questId] returns `undefined` for unknown ids; the
+ * engine in Plan 28-03 must defensively handle this case (no-op activation +
+ * `devWarn` log in dev builds; in prod silently skip the activation step but
+ * still resolve the quest_hook as a plain dialog +1 relationship).
  *
- * Empty record is intentional — keeps Plan 28-01 foundation atomic so Plan
- * 28-02 (data) and Plan 28-03 (engine) can land in parallel waves without
- * touching the same TS file.
+ * Type/target/reward assignment table is from Plan 28-02 action block —
+ * deterministic per quest_id (no judgment calls so the file stays reviewable).
+ * Difficulty follows the suffix convention: no suffix = easy, _b = medium,
+ * _c = hard. Reward magnitudes per Plan 28-02 placeholder scaling
+ * (essence 1/3/5, serum 1/2/3, gold 10M/100M/500M).
  */
-export const QUESTS: Record<QuestId, QuestConfig> = {}
+export const QUESTS: Record<QuestId, QuestConfig> = {
+  // ─── crystalloids ──────────────────────────────────────────────────────────
+  crystalloids_silent_scout: {
+    id: 'crystalloids_silent_scout',
+    raceId: 'crystalloids',
+    type: 'exploration',
+    target: { kind: 'planets_visited', value: 5 },
+    reward: { kind: 'essence', value: 1 },
+    description_key: 'quests.crystalloids_silent_scout.description',
+    short_key: 'quests.crystalloids_silent_scout.short',
+    difficulty: 'easy',
+  },
+  crystalloids_shard_delivery: {
+    id: 'crystalloids_shard_delivery',
+    raceId: 'crystalloids',
+    type: 'delivery',
+    target: { kind: 'serum_count', element: 'crystal', value: 5 },
+    reward: { kind: 'gold', value: 10_000_000 },
+    description_key: 'quests.crystalloids_shard_delivery.description',
+    short_key: 'quests.crystalloids_shard_delivery.short',
+    difficulty: 'easy',
+  },
+  crystalloids_lattice_survey_b: {
+    id: 'crystalloids_lattice_survey_b',
+    raceId: 'crystalloids',
+    type: 'diplomacy',
+    target: { kind: 'raise_relationship', raceId: 'crystalloids', tier: 6 },
+    reward: {
+      kind: 'relationship_and_bonus',
+      raceId: 'crystalloids',
+      bonus_id: 'gold_income_1pct',
+    },
+    description_key: 'quests.crystalloids_lattice_survey_b.description',
+    short_key: 'quests.crystalloids_lattice_survey_b.short',
+    difficulty: 'medium',
+  },
+  crystalloids_lattice_survey_c: {
+    id: 'crystalloids_lattice_survey_c',
+    raceId: 'crystalloids',
+    type: 'merge',
+    target: { kind: 'merge_to_level', level: 17 },
+    reward: { kind: 'essence', value: 5 },
+    description_key: 'quests.crystalloids_lattice_survey_c.description',
+    short_key: 'quests.crystalloids_lattice_survey_c.short',
+    difficulty: 'hard',
+  },
+
+  // ─── gasouls ───────────────────────────────────────────────────────────────
+  gasouls_lost_note: {
+    id: 'gasouls_lost_note',
+    raceId: 'gasouls',
+    type: 'delivery',
+    target: { kind: 'serum_count', element: 'gas', value: 5 },
+    reward: { kind: 'essence', value: 1 },
+    description_key: 'quests.gasouls_lost_note.description',
+    short_key: 'quests.gasouls_lost_note.short',
+    difficulty: 'easy',
+  },
+  gasouls_sunken_resonator: {
+    id: 'gasouls_sunken_resonator',
+    raceId: 'gasouls',
+    type: 'exploration',
+    target: { kind: 'missions_complete', value: 3 },
+    reward: { kind: 'serum', element: 'gas', count: 1 },
+    description_key: 'quests.gasouls_sunken_resonator.description',
+    short_key: 'quests.gasouls_sunken_resonator.short',
+    difficulty: 'easy',
+  },
+  gasouls_silent_chorus_b: {
+    id: 'gasouls_silent_chorus_b',
+    raceId: 'gasouls',
+    type: 'diplomacy',
+    target: { kind: 'raise_relationship', raceId: 'gasouls', tier: 6 },
+    reward: { kind: 'gold', value: 100_000_000 },
+    description_key: 'quests.gasouls_silent_chorus_b.description',
+    short_key: 'quests.gasouls_silent_chorus_b.short',
+    difficulty: 'medium',
+  },
+  gasouls_silent_chorus_c: {
+    id: 'gasouls_silent_chorus_c',
+    raceId: 'gasouls',
+    type: 'merge',
+    target: { kind: 'merge_count', value: 200 },
+    reward: { kind: 'essence', value: 5 },
+    description_key: 'quests.gasouls_silent_chorus_c.description',
+    short_key: 'quests.gasouls_silent_chorus_c.short',
+    difficulty: 'hard',
+  },
+
+  // ─── mechanidons ───────────────────────────────────────────────────────────
+  mechanidons_module_delivery: {
+    id: 'mechanidons_module_delivery',
+    raceId: 'mechanidons',
+    type: 'delivery',
+    target: { kind: 'serum_count', element: 'mechanical', value: 5 },
+    reward: { kind: 'essence', value: 1 },
+    description_key: 'quests.mechanidons_module_delivery.description',
+    short_key: 'quests.mechanidons_module_delivery.short',
+    difficulty: 'easy',
+  },
+  mechanidons_diagnostics: {
+    id: 'mechanidons_diagnostics',
+    raceId: 'mechanidons',
+    type: 'exploration',
+    target: { kind: 'missions_complete', value: 3 },
+    reward: { kind: 'gold', value: 10_000_000 },
+    description_key: 'quests.mechanidons_diagnostics.description',
+    short_key: 'quests.mechanidons_diagnostics.short',
+    difficulty: 'easy',
+  },
+  mechanidons_audit_route_b: {
+    id: 'mechanidons_audit_route_b',
+    raceId: 'mechanidons',
+    type: 'diplomacy',
+    target: { kind: 'raise_relationship', raceId: 'mechanidons', tier: 6 },
+    reward: {
+      kind: 'relationship_and_bonus',
+      raceId: 'mechanidons',
+      bonus_id: 'ship_speed_1pct',
+    },
+    description_key: 'quests.mechanidons_audit_route_b.description',
+    short_key: 'quests.mechanidons_audit_route_b.short',
+    difficulty: 'medium',
+  },
+  mechanidons_audit_route_c: {
+    id: 'mechanidons_audit_route_c',
+    raceId: 'mechanidons',
+    type: 'merge',
+    target: { kind: 'merge_to_level', level: 17 },
+    reward: { kind: 'gold', value: 500_000_000 },
+    description_key: 'quests.mechanidons_audit_route_c.description',
+    short_key: 'quests.mechanidons_audit_route_c.short',
+    difficulty: 'hard',
+  },
+
+  // ─── fireworms ─────────────────────────────────────────────────────────────
+  fireworms_runaway_acolyte: {
+    id: 'fireworms_runaway_acolyte',
+    raceId: 'fireworms',
+    type: 'exploration',
+    target: { kind: 'planets_visited', value: 5 },
+    reward: { kind: 'serum', element: 'fire', count: 1 },
+    description_key: 'quests.fireworms_runaway_acolyte.description',
+    short_key: 'quests.fireworms_runaway_acolyte.short',
+    difficulty: 'easy',
+  },
+  fireworms_shard_to_tenebrians: {
+    id: 'fireworms_shard_to_tenebrians',
+    raceId: 'fireworms',
+    type: 'delivery',
+    target: { kind: 'serum_count', element: 'fire', value: 5 },
+    reward: { kind: 'gold', value: 10_000_000 },
+    description_key: 'quests.fireworms_shard_to_tenebrians.description',
+    short_key: 'quests.fireworms_shard_to_tenebrians.short',
+    difficulty: 'easy',
+  },
+  fireworms_blood_oath_b: {
+    id: 'fireworms_blood_oath_b',
+    raceId: 'fireworms',
+    type: 'merge',
+    target: { kind: 'merge_count', value: 50 },
+    reward: { kind: 'essence', value: 3 },
+    description_key: 'quests.fireworms_blood_oath_b.description',
+    short_key: 'quests.fireworms_blood_oath_b.short',
+    difficulty: 'medium',
+  },
+  fireworms_blood_oath_c: {
+    id: 'fireworms_blood_oath_c',
+    raceId: 'fireworms',
+    type: 'merge',
+    target: { kind: 'merge_to_level', level: 17 },
+    reward: {
+      kind: 'relationship_and_bonus',
+      raceId: 'fireworms',
+      bonus_id: 'serum_drop_1pct',
+    },
+    description_key: 'quests.fireworms_blood_oath_c.description',
+    short_key: 'quests.fireworms_blood_oath_c.short',
+    difficulty: 'hard',
+  },
+
+  // ─── liquidoids ────────────────────────────────────────────────────────────
+  liquidoids_caravan: {
+    id: 'liquidoids_caravan',
+    raceId: 'liquidoids',
+    type: 'delivery',
+    target: { kind: 'serum_count', element: 'water', value: 5 },
+    reward: { kind: 'gold', value: 10_000_000 },
+    description_key: 'quests.liquidoids_caravan.description',
+    short_key: 'quests.liquidoids_caravan.short',
+    difficulty: 'easy',
+  },
+  liquidoids_stolen_cargo: {
+    id: 'liquidoids_stolen_cargo',
+    raceId: 'liquidoids',
+    type: 'delivery',
+    target: { kind: 'gold_amount', value: 50_000_000 },
+    reward: { kind: 'serum', element: 'water', count: 1 },
+    description_key: 'quests.liquidoids_stolen_cargo.description',
+    short_key: 'quests.liquidoids_stolen_cargo.short',
+    difficulty: 'easy',
+  },
+  liquidoids_market_truce_b: {
+    id: 'liquidoids_market_truce_b',
+    raceId: 'liquidoids',
+    type: 'diplomacy',
+    target: { kind: 'raise_relationship', raceId: 'liquidoids', tier: 6 },
+    reward: { kind: 'gold', value: 100_000_000 },
+    description_key: 'quests.liquidoids_market_truce_b.description',
+    short_key: 'quests.liquidoids_market_truce_b.short',
+    difficulty: 'medium',
+  },
+  liquidoids_market_truce_c: {
+    id: 'liquidoids_market_truce_c',
+    raceId: 'liquidoids',
+    type: 'diplomacy',
+    target: { kind: 'raise_relationship', raceId: 'liquidoids', tier: 8 },
+    reward: {
+      kind: 'relationship_and_bonus',
+      raceId: 'liquidoids',
+      bonus_id: 'shop_discount_1pct',
+    },
+    description_key: 'quests.liquidoids_market_truce_c.description',
+    short_key: 'quests.liquidoids_market_truce_c.short',
+    difficulty: 'hard',
+  },
+
+  // ─── tenebrians ────────────────────────────────────────────────────────────
+  tenebrians_hidden_gate: {
+    id: 'tenebrians_hidden_gate',
+    raceId: 'tenebrians',
+    type: 'exploration',
+    target: { kind: 'planets_visited', value: 5 },
+    reward: { kind: 'essence', value: 1 },
+    description_key: 'quests.tenebrians_hidden_gate.description',
+    short_key: 'quests.tenebrians_hidden_gate.short',
+    difficulty: 'easy',
+  },
+  tenebrians_last_shard: {
+    id: 'tenebrians_last_shard',
+    raceId: 'tenebrians',
+    type: 'delivery',
+    target: { kind: 'serum_count', element: 'shadow', value: 5 },
+    reward: { kind: 'gold', value: 10_000_000 },
+    description_key: 'quests.tenebrians_last_shard.description',
+    short_key: 'quests.tenebrians_last_shard.short',
+    difficulty: 'easy',
+  },
+  tenebrians_veil_walk_b: {
+    id: 'tenebrians_veil_walk_b',
+    raceId: 'tenebrians',
+    type: 'exploration',
+    target: { kind: 'planets_visited', value: 15 },
+    reward: { kind: 'serum', element: 'shadow', count: 2 },
+    description_key: 'quests.tenebrians_veil_walk_b.description',
+    short_key: 'quests.tenebrians_veil_walk_b.short',
+    difficulty: 'medium',
+  },
+  tenebrians_veil_walk_c: {
+    id: 'tenebrians_veil_walk_c',
+    raceId: 'tenebrians',
+    type: 'exploration',
+    target: { kind: 'planets_visited', value: 50 },
+    reward: { kind: 'essence', value: 5 },
+    description_key: 'quests.tenebrians_veil_walk_c.description',
+    short_key: 'quests.tenebrians_veil_walk_c.short',
+    difficulty: 'hard',
+  },
+
+  // ─── plasmaspirits ─────────────────────────────────────────────────────────
+  plasmaspirits_lost_flock: {
+    id: 'plasmaspirits_lost_flock',
+    raceId: 'plasmaspirits',
+    type: 'exploration',
+    target: { kind: 'planets_visited', value: 5 },
+    reward: { kind: 'serum', element: 'plasma', count: 1 },
+    description_key: 'quests.plasmaspirits_lost_flock.description',
+    short_key: 'quests.plasmaspirits_lost_flock.short',
+    difficulty: 'easy',
+  },
+  plasmaspirits_outrun: {
+    id: 'plasmaspirits_outrun',
+    raceId: 'plasmaspirits',
+    type: 'exploration',
+    target: { kind: 'missions_complete', value: 3 },
+    reward: { kind: 'gold', value: 10_000_000 },
+    description_key: 'quests.plasmaspirits_outrun.description',
+    short_key: 'quests.plasmaspirits_outrun.short',
+    difficulty: 'easy',
+  },
+  plasmaspirits_storm_race_b: {
+    id: 'plasmaspirits_storm_race_b',
+    raceId: 'plasmaspirits',
+    type: 'merge',
+    target: { kind: 'merge_count', value: 50 },
+    reward: { kind: 'serum', element: 'plasma', count: 2 },
+    description_key: 'quests.plasmaspirits_storm_race_b.description',
+    short_key: 'quests.plasmaspirits_storm_race_b.short',
+    difficulty: 'medium',
+  },
+  plasmaspirits_storm_race_c: {
+    id: 'plasmaspirits_storm_race_c',
+    raceId: 'plasmaspirits',
+    type: 'exploration',
+    target: { kind: 'missions_complete', value: 30 },
+    reward: { kind: 'essence', value: 5 },
+    description_key: 'quests.plasmaspirits_storm_race_c.description',
+    short_key: 'quests.plasmaspirits_storm_race_c.short',
+    difficulty: 'hard',
+  },
+
+  // ─── forestcores ───────────────────────────────────────────────────────────
+  forestcores_young_forest: {
+    id: 'forestcores_young_forest',
+    raceId: 'forestcores',
+    type: 'merge',
+    target: { kind: 'merge_count', value: 10 },
+    reward: { kind: 'essence', value: 1 },
+    description_key: 'quests.forestcores_young_forest.description',
+    short_key: 'quests.forestcores_young_forest.short',
+    difficulty: 'easy',
+  },
+  forestcores_spore_migration: {
+    id: 'forestcores_spore_migration',
+    raceId: 'forestcores',
+    type: 'delivery',
+    target: { kind: 'serum_count', element: 'forest', value: 5 },
+    reward: { kind: 'serum', element: 'forest', count: 1 },
+    description_key: 'quests.forestcores_spore_migration.description',
+    short_key: 'quests.forestcores_spore_migration.short',
+    difficulty: 'easy',
+  },
+  forestcores_root_bridge_b: {
+    id: 'forestcores_root_bridge_b',
+    raceId: 'forestcores',
+    type: 'merge',
+    target: { kind: 'merge_to_level', level: 13 },
+    reward: { kind: 'essence', value: 3 },
+    description_key: 'quests.forestcores_root_bridge_b.description',
+    short_key: 'quests.forestcores_root_bridge_b.short',
+    difficulty: 'medium',
+  },
+  forestcores_root_bridge_c: {
+    id: 'forestcores_root_bridge_c',
+    raceId: 'forestcores',
+    type: 'diplomacy',
+    target: { kind: 'raise_relationship', raceId: 'forestcores', tier: 8 },
+    reward: {
+      kind: 'relationship_and_bonus',
+      raceId: 'forestcores',
+      bonus_id: 'gold_income_1pct',
+    },
+    description_key: 'quests.forestcores_root_bridge_c.description',
+    short_key: 'quests.forestcores_root_bridge_c.short',
+    difficulty: 'hard',
+  },
+
+  // ─── timeweavers ───────────────────────────────────────────────────────────
+  timeweavers_spiral_link: {
+    id: 'timeweavers_spiral_link',
+    raceId: 'timeweavers',
+    type: 'merge',
+    target: { kind: 'merge_to_level', level: 8 },
+    reward: { kind: 'essence', value: 1 },
+    description_key: 'quests.timeweavers_spiral_link.description',
+    short_key: 'quests.timeweavers_spiral_link.short',
+    difficulty: 'easy',
+  },
+  timeweavers_temporal_knot: {
+    id: 'timeweavers_temporal_knot',
+    raceId: 'timeweavers',
+    type: 'merge',
+    target: { kind: 'merge_count', value: 10 },
+    reward: { kind: 'gold', value: 10_000_000 },
+    description_key: 'quests.timeweavers_temporal_knot.description',
+    short_key: 'quests.timeweavers_temporal_knot.short',
+    difficulty: 'easy',
+  },
+  timeweavers_unspun_thread_b: {
+    id: 'timeweavers_unspun_thread_b',
+    raceId: 'timeweavers',
+    type: 'merge',
+    target: { kind: 'merge_to_level', level: 13 },
+    reward: { kind: 'serum', element: 'void', count: 2 },
+    description_key: 'quests.timeweavers_unspun_thread_b.description',
+    short_key: 'quests.timeweavers_unspun_thread_b.short',
+    difficulty: 'medium',
+  },
+  timeweavers_unspun_thread_c: {
+    id: 'timeweavers_unspun_thread_c',
+    raceId: 'timeweavers',
+    type: 'diplomacy',
+    target: { kind: 'raise_relationship', raceId: 'timeweavers', tier: 8 },
+    reward: { kind: 'essence', value: 5 },
+    description_key: 'quests.timeweavers_unspun_thread_c.description',
+    short_key: 'quests.timeweavers_unspun_thread_c.short',
+    difficulty: 'hard',
+  },
+
+  // ─── cometfolk ─────────────────────────────────────────────────────────────
+  cometfolk_young_comet: {
+    id: 'cometfolk_young_comet',
+    raceId: 'cometfolk',
+    type: 'exploration',
+    target: { kind: 'planets_visited', value: 5 },
+    reward: { kind: 'serum', element: 'binary', count: 1 },
+    description_key: 'quests.cometfolk_young_comet.description',
+    short_key: 'quests.cometfolk_young_comet.short',
+    difficulty: 'easy',
+  },
+  cometfolk_lost_crest: {
+    id: 'cometfolk_lost_crest',
+    raceId: 'cometfolk',
+    type: 'exploration',
+    target: { kind: 'missions_complete', value: 3 },
+    reward: { kind: 'gold', value: 10_000_000 },
+    description_key: 'quests.cometfolk_lost_crest.description',
+    short_key: 'quests.cometfolk_lost_crest.short',
+    difficulty: 'easy',
+  },
+  cometfolk_long_orbit_b: {
+    id: 'cometfolk_long_orbit_b',
+    raceId: 'cometfolk',
+    type: 'exploration',
+    target: { kind: 'planets_visited', value: 15 },
+    reward: { kind: 'serum', element: 'binary', count: 2 },
+    description_key: 'quests.cometfolk_long_orbit_b.description',
+    short_key: 'quests.cometfolk_long_orbit_b.short',
+    difficulty: 'medium',
+  },
+  cometfolk_long_orbit_c: {
+    id: 'cometfolk_long_orbit_c',
+    raceId: 'cometfolk',
+    type: 'exploration',
+    target: { kind: 'planets_visited', value: 50 },
+    reward: {
+      kind: 'relationship_and_bonus',
+      raceId: 'cometfolk',
+      bonus_id: 'ship_speed_1pct',
+    },
+    description_key: 'quests.cometfolk_long_orbit_c.description',
+    short_key: 'quests.cometfolk_long_orbit_c.short',
+    difficulty: 'hard',
+  },
+}
