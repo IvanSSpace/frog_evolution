@@ -646,6 +646,19 @@ Plans:
 
 **Demo-build qualification:** все timings (5s/7s/8s) placeholder для A/B tuning post-pilot; confetti palettes hardcoded — конфигурируется в `ConfettiBurst.ts` если потребуется (например для будущих локаций L19+).
 
+### Phase 24: Captain creation cinematic
+
+**Goal:** Реализовать 5-beat cinematic sequence при первом L18+L18 merge:
+(1) merge flash → (2) Phaser cosmic growing effect (particles + rings + camera zoom, ~3s) → (3) DOM "Captain Birth" modal с L1 frog SVG + glow + CTA «В космос» → (4) спавн L1 frog → (5) автоматический переход в Star Map. Только первый раз через `captainBirthSeen` flag в gameStore (server-syncable).
+
+**Source design:** `frog_obsidian/Design Notes/2026-05-18-captain-creation-cinematic.md`
+**Requirements**: TBD
+**Depends on:** Phase 23
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 24 --prd "<design-note>" to break down)
+
 ---
 
 **Last updated:** 2026-05-18 — Phase 23 complete
