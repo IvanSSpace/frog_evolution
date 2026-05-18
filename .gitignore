@@ -2,3 +2,16 @@
 # Playwright test artifacts
 test-results/
 playwright-report/
+
+# Planning artifacts (sub-agent generated, not for git going forward)
+.planning/phases/**/*-PLAN.md
+.planning/phases/**/*-CONTEXT.md
+.planning/phases/**/*-SUMMARY.md
+.planning/phases/**/*-RESEARCH.md
+.planning/phases/**/PATTERNS.md
+.planning/phases/**/deferred-items.md
+.planning/tech-debt/**/*-SUMMARY.md
+.planning/tech-debt/**/*-REPORT.md
+
+# macOS Finder metadata
+.DS_Store
