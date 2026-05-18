@@ -15,6 +15,7 @@ import { BestiaryTab } from './BestiaryTab'
 import { CarriersTab } from './CarriersTab'
 import { CosmicShopTab } from './CosmicShopTab'
 import { InventoryTab } from './InventoryTab'
+import { ContactsTab } from './ContactsTab'
 import { PityCounterDisplay } from './PityCounterDisplay'
 // Phase 22 Plan 22-06: defensive cosmos gate — даже если каким-то путём modal
 // открыт без unlock (legacy state, dev tool), показать lock screen.
@@ -31,7 +32,8 @@ function getInitialTab(): CosmicTab {
       saved === 'bestiary' ||
       saved === 'carriers' ||
       saved === 'shop' ||
-      saved === 'inventory'
+      saved === 'inventory' ||
+      saved === 'contacts'
     ) {
       return saved
     }
@@ -111,6 +113,15 @@ export default function CosmicHubModal({ onClose }: Props) {
       // tab strip если !cosmosUnlocked — enabled: true достаточно).
       enabled: true,
     },
+    {
+      id: 'contacts',
+      label: t('cosmic_hub.tab_contacts'),
+      icon: '📡',
+      // Phase 27 Plan 27-04: contacts tab всегда visible после cosmos unlock —
+      // modal-level cosmos lock gates entire tab strip (existing pattern from
+      // Phase 22-06 + Phase 26-04).
+      enabled: true,
+    },
   ]
 
   // Если активный таб теперь disabled — fall back на первый enabled
@@ -151,6 +162,9 @@ export default function CosmicHubModal({ onClose }: Props) {
       // + artifacts placeholder + race relationships placeholder).
       case 'inventory':
         return <InventoryTab />
+      // Phase 27 Plan 27-04: contacts tab — 10 races list + race detail in-tab nav.
+      case 'contacts':
+        return <ContactsTab />
     }
   }
 
