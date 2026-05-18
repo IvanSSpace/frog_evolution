@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 // Phase 19-02 (BALANCE-08) — Monte Carlo simulation for box-open rarity distribution.
 //
-// MIRROR of client/src/utils/rarityRoll.ts (pure logic, no React/Phaser).
-// Keep in sync — last verified against rarityRoll.ts: 2026-05-08 (Phase 19-02).
+// SELF-CONTAINED Phase 19-02 Monte-Carlo sim. Originally mirrored
+// client/src/utils/rarityRoll.ts (4-tier rarity rolling + pity guarantees).
+// Phase 22 removed the rarity dimension from серум/box flow and deleted
+// rarityRoll.ts — sim retained for historical box-rarity baseline reference.
 //
 // ─── BASELINE NUMBERS (committed snapshot, seed = Math.random) ───
 //

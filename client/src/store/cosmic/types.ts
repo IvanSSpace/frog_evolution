@@ -188,7 +188,7 @@ export interface CosmicSlice {
   // Все ×N (raw counter, не процент). Game systems читают и применяют:
   //   - permaSlotBonus → FrogSpawner.slotCap += N
   //   - permaShipSpeedBonus → travelTimeMs / (1 + 0.05 * N)
-  //   - permaSerumDropBonus → rollSerumDrop base + 0.005 * N
+  //   - permaSerumDropBonus → serumDropChance(base, N) (см. game/utils/shopBonuses.ts)
   // Cost scaling геометрический (см. config/cosmicShop.ts) — shopPurchaseCounts хранит
   // historical count для каждого item id.
   permaSlotBonus: number
