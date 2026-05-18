@@ -23,12 +23,122 @@ import type { Race, BgSystem } from '../types'
 import { mulberry32 } from '../helpers'
 import { createSparkleAt } from '../starfield'
 import { DPR, BG_PLANET_MIN_ZOOM, generatePalette } from '../planetarium'
+// Phase 26 Plan 26-03: race-overlay visuals (glow halo + emoji icon + home pulse)
+// для habitable planets. Только если cosmos unlocked.
+import { RaceGlowController } from '../effects/raceGlow'
+import {
+  HABITABLE_PLANET_IDS,
+  getPlanetInhabitant,
+} from '../../../data/habitablePlanets'
+import { useGameStore } from '../../../../store/gameStore'
 
 export class PlanetRenderer {
   private scene: StarMapScene
+  // Phase 26 Plan 26-03: race-overlay controller. Создаётся в конструкторе,
+  // destroy() в this.destroy() при scene shutdown.
+  private raceGlow: RaceGlowController
+  // Phase 26 Plan 26-03: reactive subscription на cosmos unlock — overlays
+  // appear/disappear без reload при flag flip. Unsubscribe в destroy().
+  private cosmosUnsubscribe?: () => void
+  // Phase 26 Plan 26-03: tracking previous cosmos flag value для diff inside
+  // subscribe listener (project uses plain useGameStore.subscribe без
+  // subscribeWithSelector middleware).
+  private lastCosmosUnlocked: boolean
 
   constructor(scene: StarMapScene) {
     this.scene = scene
+    this.raceGlow = new RaceGlowController(scene)
+    this.lastCosmosUnlocked = useGameStore.getState().hasCosmosUnlocked === true
+    // Subscribe на full state — diff'им вручную (см. memory `feedback_subagent_gates`
+    // и pattern в gameStore.ts:449 — project использует plain useGameStore.subscribe).
+    this.cosmosUnsubscribe = useGameStore.subscribe((state) => {
+      const next = state.hasCosmosUnlocked === true
+      if (next === this.lastCosmosUnlocked) return
+      this.lastCosmosUnlocked = next
+      if (next) {
+        // 0 → 1: cosmos unlocked во время открытого Star Map. Attach overlays
+        // для всех 30 habitable planets, чьи containers уже отрендерены.
+        this.attachAllHabitable()
+      } else {
+        // 1 → 0: пока gameplay-flow не предусматривает re-lock'а, но defensive
+        // cleanup чтобы overlays исчезли (consistent с D-CosmosGate intent).
+        this.raceGlow.destroy()
+      }
+    })
+  }
+
+  /**
+   * Phase 26 Plan 26-03: cosmos-gated race overlay attach для одной planet'ы.
+   * Вызывается из renderMain/renderBg ПОСЛЕ того как container зарегистрирован
+   * в systemSprites. Gate: hasCosmosUnlocked + HABITABLE_PLANET_IDS membership
+   * + planet.id !== 'home' (player home никогда не получает overlay).
+   */
+  private tryAttachRaceOverlay(
+    sys: Race | BgSystem,
+    container: Phaser.GameObjects.Container,
+  ): void {
+    if (!this.lastCosmosUnlocked) return
+    if (sys.id === 'home') return // player home — НЕ inhabitant
+    if (!HABITABLE_PLANET_IDS.has(sys.id)) return
+    const inhabitant = getPlanetInhabitant(sys.id)
+    if (!inhabitant) return
+    this.raceGlow.attach({
+      planetId: sys.id,
+      x: sys.x,
+      y: sys.y,
+      size: sys.size,
+      depth: container.depth,
+      inhabitant,
+    })
+  }
+
+  /**
+   * Phase 26 Plan 26-03: reactive attach всех 30 habitable planets, когда
+   * cosmos переключается false → true во время открытого Star Map. Использует
+   * уже отрендеренные containers из scene.systemSprites; если planet не
+   * отрендерена (LOD cull / нет в текущей scene) — skip.
+   */
+  private attachAllHabitable(): void {
+    for (const id of HABITABLE_PLANET_IDS) {
+      if (id === 'home') continue // defensive: player home никогда не overlay'ится
+      const container = this.scene.systemSprites.get(id)
+      if (!container) continue
+      const inhabitant = getPlanetInhabitant(id)
+      if (!inhabitant) continue
+      // sys.x/y/size недоступны напрямую — берём из container position +
+      // hit-area registration. systemSprites хранит containers с world coords.
+      this.raceGlow.attach({
+        planetId: id,
+        x: container.x,
+        y: container.y,
+        size: this.resolvePlanetSize(id),
+        depth: container.depth,
+        inhabitant,
+      })
+    }
+  }
+
+  /**
+   * Helper: достаёт visual radius planet'ы для reactive attach. allSystems
+   * scene-state хранит Race | BgSystem с size — ищем по id. Возвращает 14*DPR
+   * fallback (типичный bg size) если не найдено.
+   */
+  private resolvePlanetSize(planetId: string): number {
+    const sys = this.scene.allSystems.find((s) => s.id === planetId)
+    return sys ? sys.size : 14 * DPR
+  }
+
+  /**
+   * Phase 26 Plan 26-03: cleanup на scene shutdown.
+   * - Unsubscribe Zustand subscriber (T-26-03-04 leak mitigation).
+   * - Destroy RaceGlowController (T-26-03-03 GameObject + tween leak mitigation).
+   */
+  destroy(): void {
+    if (this.cosmosUnsubscribe) {
+      this.cosmosUnsubscribe()
+      this.cosmosUnsubscribe = undefined
+    }
+    this.raceGlow.destroy()
   }
 
   // Phase 20-04 (Wave 4): package-public — вызывается из starfield.ts (renderSystem dispatcher).
@@ -581,7 +691,13 @@ export class PlanetRenderer {
         // Main planet: показать тот же popup что у bg-планет (имя + тип + Лететь/Изучить)
         this.scene.popoverController.scheduleBgNamePopup(sys)
         // Tap-effect: rings + particles per-type (pooled, zero alloc)
-        this.scene.tapEffects.play(sys.x, sys.y, sys.size, sys.type ?? '', sys.color)
+        this.scene.tapEffects.play(
+          sys.x,
+          sys.y,
+          sys.size,
+          sys.type ?? '',
+          sys.color,
+        )
         // Spring-анимация (как у BG): squish по вертикали → bounce-back.
         if (springTween) {
           springTween.stop()
@@ -620,6 +736,9 @@ export class PlanetRenderer {
     this.scene.mainPlanetHits.push({ container, baseR, circle: hitArea })
     // Регистрируем для batch-toggle interactive по zoom (как BG)
     this.scene.lod.bgInteractiveContainers.push(container)
+    // Phase 26 Plan 26-03: race overlay (glow halo + icon) для habitable
+    // main planets. Cosmos-gated. Player home (sys.id === 'home') skipped.
+    this.tryAttachRaceOverlay(sys, container)
   }
 
   // Phase 20-04 (Wave 4): package-public — вызывается из starfield.ts (renderSystem dispatcher).
@@ -1739,7 +1858,13 @@ export class PlanetRenderer {
         // BG: показать модалку с именем через 400ms
         this.scene.popoverController.scheduleBgNamePopup(sys)
         // Tap-effect: rings + particles per-archetype (pooled, zero alloc)
-        this.scene.tapEffects.play(sys.x, sys.y, sys.size, sys.archetype, sys.color)
+        this.scene.tapEffects.play(
+          sys.x,
+          sys.y,
+          sys.size,
+          sys.archetype,
+          sys.color,
+        )
         // Spring-анимация: squish по вертикали → bounce, как у лягушек
         if (springTween) {
           springTween.stop()
@@ -1779,5 +1904,8 @@ export class PlanetRenderer {
     })
     // Адаптивный hit-area — растёт при zoom-out, чтобы было удобно тапать
     this.scene.mainPlanetHits.push({ container, baseR, circle: hitArea })
+    // Phase 26 Plan 26-03: race overlay (glow halo + icon) для habitable bg
+    // planets. Cosmos-gated. Большинство 30 habitable planets — bg.
+    this.tryAttachRaceOverlay(sys, container)
   }
 }

@@ -773,6 +773,10 @@ export class StarMapScene extends Phaser.Scene {
       eventBus.off('starmap:goto-ship', this.onEbGotoShip)
       this.onEbGotoShip = undefined
     }
+    // Phase 26 Plan 26-03: cleanup race-overlay controller + Zustand
+    // subscriber (T-26-03-03 / T-26-03-04 leak mitigation). Должно идти до
+    // tweens.killAll() — destroy() сам останавливает home-halo tween'ы.
+    this.planetRenderer?.destroy()
     this.time.removeAllEvents()
     this.tweens.killAll()
   }
