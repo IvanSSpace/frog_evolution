@@ -152,7 +152,7 @@ export const TIER_I18N_KEYS: Record<RelationshipTier, string> = {
 //   item 13    — 'event' (self-targeted, delta=-1, references cosmos.event.<key>) — second beat
 //   item 14    — 'msg' (closing narrative cadence)
 // Totals across 10 races (tech-debt 2026-05-18 expansion):
-//   60 msg + 50 dialog + 30 quest_hook + 20 event = 150 items.
+//   50 msg + 50 dialog + 30 quest_hook + 20 event = 150 items.
 export const RACE_CHAINS: Record<RaceId, readonly ChainItem[]> = {
   crystalloids: [
     { type: 'msg', text_key: 'races.crystalloids.chain.0.text' },
