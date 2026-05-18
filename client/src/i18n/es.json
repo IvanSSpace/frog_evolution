@@ -39,7 +39,6 @@
     "title": "RANAS",
     "bought": "Compradas:",
     "income": "Ingreso:",
-    "income_unit": "baba / seg",
     "no_gold": "No hay suficiente baba",
     "cap_full": "Campo lleno ({{cap}}/{{cap}})"
   },
@@ -107,7 +106,6 @@
     "format_short": "Corto (1.5K)",
     "format_full": "Completo (1.500)",
     "bug_report": "Reportar error 🐛",
-    "sounds_stub": "Próximamente",
     "cosmic": "🧬 Cósmico",
     "instant_boxes": "Cajas instantáneas",
     "instant_boxes_desc": "Acorta la animación a 1s",
@@ -165,11 +163,7 @@
     "state_docked": "Atracada en {{name}}",
     "state_transit": "En ruta → {{name}}",
     "transit_eta": "Llegada en {{mins}}:{{secs}}",
-    "open_map": "Abrir mapa",
-    "investigate": "Investigar",
-    "investigate_tooltip_capped": "Tripulación cansada. Vuelve mañana.",
-    "investigate_tooltip_transit": "Llega al planeta primero.",
-    "arrived_toast": "Llegada a {{name}}"
+    "open_map": "Abrir mapa"
   },
   "crew": {
     "indicator_label": "Hoy: {{used}}/{{cap}} misiones",
@@ -185,25 +179,9 @@
     "confirm": "Volar",
     "cancel": "Cancelar"
   },
-  "mission": {
-    "title_rhythm": "Toca el planeta",
-    "title_defend": "Defiende la nave",
-    "title_hotspot": "Encuentra oculto",
-    "intro_warmup": "Prepárate...",
-    "skip": "Saltar",
-    "rhythm_label": "{{taps}} / {{target}}",
-    "rhythm_tap_button": "Toca",
-    "defend_label": "Aciertos: {{hits}} / 3",
-    "defend_flash": "Destello",
-    "hotspot_label": "Encontrado: {{found}} / {{total}}",
-    "time_left": "{{secs}}s",
-    "box_received_toast": "Caja recibida: {{name}}"
-  },
   "cosmic_hub": {
     "title": "Centro Cósmico",
-    "tab_scouts": "Exploradores",
     "tab_ship": "Nave",
-    "tab_boxes": "Cajas",
     "tab_station": "Estación",
     "tab_serums": "Sueros",
     "tab_bestiary": "Bestiario",
@@ -213,15 +191,6 @@
     "tab_contacts": "Contactos",
     "lock_first_feed": "Se desbloquea tras la primera alimentación",
     "lock_first_mission": "Se desbloquea tras la primera misión",
-    "scouts_placeholder": "Exploradores llegando próximamente",
-    "boxes_placeholder": "Cajas llegando próximamente",
-    "serums_placeholder": "Sueros llegando próximamente",
-    "bestiary_placeholder": "Bestiario llegando próximamente",
-    "toast_scout_returned": "¡Explorador regresó! Caja recibida.",
-    "toast_scout_returned_plural": "¡{{count}} exploradores regresaron! {{count}} cajas recibidas.",
-    "toast_open_box": "Abrir caja",
-    "toast_grouped": "{{count}} eventos",
-    "crew_tired": "La tripulación está cansada. Vuelve mañana.",
     "elements": {
       "fire": "Fuego",
       "ice": "Hielo",
@@ -254,7 +223,6 @@
     "slot": {
       "spinning": "Tirando…",
       "skip": "Saltar",
-      "tap_to_skip": "Toca para saltar",
       "checkpoint_common": "común",
       "checkpoint_rare": "raro",
       "checkpoint_epic": "épico",
@@ -264,60 +232,26 @@
     },
     "bulk": {
       "summary_title": "Sueros obtenidos",
-      "summary_row": "{{element}} {{rarity}} ×{{count}}",
       "summary_close": "Recoger todo"
     },
     "serums_empty": "Los sueros aparecerán después de abrir cajas",
     "serums": {
-      "section_common": "Comunes",
-      "section_rare": "Raras",
-      "section_epic": "Épicas",
-      "section_legendary": "Legendarias",
-      "section_count": "{{kinds}} tipos · {{count}} u.",
-      "section_empty": "—",
       "applied": "Suero aplicado",
       "undo_label": "Deshacer",
-      "undo_hint": "Revertir último uso",
-      "mis_tap_msg": "Este suero solo funciona en una rana de nivel {{level}} ({{location}})",
-      "location_puddle": "Charco",
-      "location_swamp": "Pantano",
-      "location_forest": "Bosque",
-      "location_continent": "Continente"
+      "already_carrier": "La rana ya es carrier"
     },
     "carrier": {
       "empty_state": "Sin carriers",
       "empty_hint": "Aplica sueros para crear carriers",
       "count": "{{count}} carriers",
-      "ceiling_label": "Tope",
-      "ceiling_high": "Alto",
-      "ceiling_mid": "Medio",
-      "ceiling_low": "Bajo",
-      "progress_stabilized": "Est.",
       "dispose_button": "Util.",
-      "feed_fail": "Fallido",
-      "merge_blocked_unstabilized": "Carrier debe estabilizar",
       "merge_blocked_mismatch": "Carriers incompatibles",
-      "merge_blocked_stabilized": "¡El portador ha alcanzado su techo! Fusiona dos portadores estabilizados del mismo elemento.",
       "merge_cross_location_warn": "Merge entre ubicaciones — restaurado",
-      "stabilize": {
-        "title": "Estabilizada",
-        "rolling": "Rolando...",
-        "s_top": "¡Top!",
-        "a_high": "Alta",
-        "b_mid": "Media",
-        "c_low": "Estable",
-        "tap_to_dismiss": "Toca para cerrar",
-        "modal_label": "Estabilización del carrier"
-      },
       "dispose": {
         "title": "¿Utilizar?",
-        "body": "Carrier {{element}} ({{rarity}}). 30% probabilidad de recuperar suero.",
-        "warning": "Acción irreversible.",
         "confirm": "Utilizar",
         "cancel": "Cancelar",
-        "modal_label": "Confirmar utilizar",
-        "toast_recovered": "¡Suero recuperado!",
-        "toast_no_recovery": "Carrier utilizado"
+        "modal_label": "Confirmar utilizar"
       }
     },
     "bestiary": {
@@ -699,8 +633,7 @@
   "cosmos": {
     "first_contact": {
       "title": "Primer Contacto",
-      "cta": "Entendido",
-      "subtitle_template": "Conexión establecida con los {{raceName}}"
+      "cta": "Entendido"
     },
     "role_home": "⭐ Mundo Capital",
     "role_colony": "· Colonia",

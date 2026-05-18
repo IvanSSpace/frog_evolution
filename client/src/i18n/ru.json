@@ -39,7 +39,6 @@
     "title": "ЛЯГУШКИ",
     "bought": "Куплено:",
     "income": "Доход:",
-    "income_unit": "слизи / сек",
     "no_gold": "Не хватает слизи",
     "cap_full": "Поле занято ({{cap}}/{{cap}})"
   },
@@ -107,7 +106,6 @@
     "format_short": "Короткий (1.5К)",
     "format_full": "Полный (1 500)",
     "bug_report": "Баг репорт 🐛",
-    "sounds_stub": "Скоро будет",
     "cosmic": "🧬 Космос",
     "instant_boxes": "Боксы мгновенно",
     "instant_boxes_desc": "Сокращает анимацию слот-машины до 1с",
@@ -165,11 +163,7 @@
     "state_docked": "Пристыкован у {{name}}",
     "state_transit": "В пути → {{name}}",
     "transit_eta": "Прибытие через {{mins}}:{{secs}}",
-    "open_map": "Открыть карту",
-    "investigate": "Изучить",
-    "investigate_tooltip_capped": "Экипаж устал. Возвращайтесь завтра.",
-    "investigate_tooltip_transit": "Сначала прилетите на планету.",
-    "arrived_toast": "Прибыли на {{name}}"
+    "open_map": "Открыть карту"
   },
   "crew": {
     "indicator_label": "Сегодня: {{used}}/{{cap}} миссий",
@@ -185,25 +179,9 @@
     "confirm": "Лететь",
     "cancel": "Отмена"
   },
-  "mission": {
-    "title_rhythm": "Кликни планету",
-    "title_defend": "Защити корабль",
-    "title_hotspot": "Найди скрытое",
-    "intro_warmup": "Приготовьтесь...",
-    "skip": "Пропустить",
-    "rhythm_label": "{{taps}} / {{target}}",
-    "rhythm_tap_button": "Тап",
-    "defend_label": "Отбито: {{hits}} / 3",
-    "defend_flash": "Вспышка",
-    "hotspot_label": "Найдено: {{found}} / {{total}}",
-    "time_left": "{{secs}}с",
-    "box_received_toast": "Получен ящик {{name}}"
-  },
   "cosmic_hub": {
     "title": "Космический центр",
-    "tab_scouts": "Скауты",
     "tab_ship": "Корабль",
-    "tab_boxes": "Боксы",
     "tab_station": "Станция",
     "tab_serums": "Сыворотки",
     "tab_bestiary": "Бестиарий",
@@ -213,15 +191,6 @@
     "tab_contacts": "Контакты",
     "lock_first_feed": "Откроется после первого кормления",
     "lock_first_mission": "Откроется после первой миссии",
-    "scouts_placeholder": "Скауты появятся в следующем обновлении",
-    "boxes_placeholder": "Боксы появятся в следующем обновлении",
-    "serums_placeholder": "Сыворотки появятся в следующем обновлении",
-    "bestiary_placeholder": "Бестиарий появится в следующем обновлении",
-    "toast_scout_returned": "Скаут вернулся! Получен бокс.",
-    "toast_scout_returned_plural": "{{count}} скаутов вернулись! {{count}} боксов получено.",
-    "toast_open_box": "Открыть бокс",
-    "toast_grouped": "{{count}} событий",
-    "crew_tired": "Экипаж устал. Возвращайтесь завтра.",
     "elements": {
       "fire": "Огонь",
       "ice": "Лёд",
@@ -254,7 +223,6 @@
     "slot": {
       "spinning": "Бросаем…",
       "skip": "Пропустить",
-      "tap_to_skip": "Тапни чтобы пропустить",
       "checkpoint_common": "обычная",
       "checkpoint_rare": "редкая",
       "checkpoint_epic": "эпик",
@@ -264,60 +232,26 @@
     },
     "bulk": {
       "summary_title": "Получено сывороток",
-      "summary_row": "{{element}} {{rarity}} ×{{count}}",
       "summary_close": "Забрать всё"
     },
     "serums_empty": "Сыворотки появятся после открытия боксов",
     "serums": {
-      "section_common": "Обычные",
-      "section_rare": "Редкие",
-      "section_epic": "Эпические",
-      "section_legendary": "Легендарные",
-      "section_count": "{{kinds}} видов · {{count}} шт",
-      "section_empty": "—",
       "applied": "Сыворотка применена",
       "undo_label": "Откатить",
-      "undo_hint": "Отменить последнее применение",
-      "mis_tap_msg": "Эта сыворотка работает только на L{{level}} лягушку ({{location}})",
-      "location_puddle": "Лужа",
-      "location_swamp": "Болото",
-      "location_forest": "Лес",
-      "location_continent": "Континент"
+      "already_carrier": "Лягушка уже carrier"
     },
     "carrier": {
       "empty_state": "Нет carrier'ов",
       "empty_hint": "Применяйте сыворотки чтобы создавать carrier'ов",
       "count": "{{count}} carrier'ов",
-      "ceiling_label": "Потолок",
-      "ceiling_high": "Высокий",
-      "ceiling_mid": "Средний",
-      "ceiling_low": "Низкий",
-      "progress_stabilized": "Стаб.",
       "dispose_button": "Утил.",
-      "feed_fail": "Не вышло",
-      "merge_blocked_unstabilized": "Carrier должен стабилизироваться",
       "merge_blocked_mismatch": "Несовместимые carrier'ы",
-      "merge_blocked_stabilized": "Лягушка достигла потолка! Объедините двух стабилизированных носителей одного элемента.",
       "merge_cross_location_warn": "Cross-location merge — carrier восстановит позицию",
-      "stabilize": {
-        "title": "Стабилизация",
-        "rolling": "Roll'ит...",
-        "s_top": "Топ-редкая!",
-        "a_high": "Высокая",
-        "b_mid": "Средняя",
-        "c_low": "Стабильная",
-        "tap_to_dismiss": "Нажмите чтобы закрыть",
-        "modal_label": "Стабилизация carrier'а"
-      },
       "dispose": {
         "title": "Утилизировать?",
-        "body": "Carrier {{element}} ({{rarity}}). 30% шанс вернуть сыворотку.",
-        "warning": "Действие необратимо.",
         "confirm": "Утил.",
         "cancel": "Отмена",
-        "modal_label": "Подтвердить утилизацию",
-        "toast_recovered": "Сыворотка возвращена!",
-        "toast_no_recovery": "Carrier утилизирован"
+        "modal_label": "Подтвердить утилизацию"
       }
     },
     "bestiary": {
@@ -699,8 +633,7 @@
   "cosmos": {
     "first_contact": {
       "title": "Первый контакт",
-      "cta": "Понятно",
-      "subtitle_template": "Связь установлена с расой «{{raceName}}»"
+      "cta": "Понятно"
     },
     "role_home": "⭐ Главный мир",
     "role_colony": "· Колония",
