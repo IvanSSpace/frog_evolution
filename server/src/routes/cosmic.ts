@@ -34,6 +34,10 @@ export async function cosmicRoutes(app: FastifyInstance) {
       if (typeof level !== 'number' || level < 1 || level > 24) {
         return reply.code(400).send({ error: 'invalid level' })
       }
+      // 2026-05-19: серум applies только на L1 frogs.
+      if (level !== 1) {
+        return reply.code(400).send({ error: 'serum L1 only' })
+      }
 
       const state = await prisma.gameState.findUnique({
         where: { userId: request.user.id },

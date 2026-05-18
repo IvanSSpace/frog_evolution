@@ -28,11 +28,12 @@ import type { MainScene } from '../MainScene'
 import type { FrogSpawner } from './FrogSpawner'
 import type { MergeController } from './MergeController'
 
-/** Phase 22: Simple eligibility — frog is eligible if not already a carrier. */
+/** Phase 22 + 2026-05-19 rule: серум applies только на L1 frogs which are not yet carriers. */
 function isEligible(
   frog: { id: string; level: number },
   carriers: ReadonlyArray<{ frogId: string }>,
 ): boolean {
+  if (frog.level !== 1) return false
   return !carriers.some((c) => c.frogId === frog.id)
 }
 
