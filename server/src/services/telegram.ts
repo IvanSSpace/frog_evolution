@@ -11,18 +11,20 @@ export interface ParsedInitData {
 }
 
 export function validateInitData(initData: string): ParsedInitData | null {
-  // Dev fallback: no bot token, no real validation. Accept mock initData like "telegramId=dev".
-  if (isDev && !config.telegramBotToken) {
-    const params = new URLSearchParams(initData)
+  const urlParams = new URLSearchParams(initData)
+  const hash = urlParams.get('hash')
+
+  // Dev fallback: in development mode accept mock initData без hash (e.g. "telegramId=dev&username=...").
+  // Срабатывает даже если TELEGRAM_BOT_TOKEN set (чтобы можно было оба сценария: dev-browser + real TG client).
+  // Real TG WebApp всегда отправляет initData С hash field, так что safe heuristic.
+  if (isDev && !hash) {
     return {
-      telegramId: params.get('telegramId') ?? 'dev',
-      username: params.get('username') ?? 'dev-user',
-      firstName: params.get('firstName') ?? 'Dev',
+      telegramId: urlParams.get('telegramId') ?? 'dev',
+      username: urlParams.get('username') ?? 'dev-user',
+      firstName: urlParams.get('firstName') ?? 'Dev',
     }
   }
 
-  const urlParams = new URLSearchParams(initData)
-  const hash = urlParams.get('hash')
   if (!hash) return null
   urlParams.delete('hash')
 
