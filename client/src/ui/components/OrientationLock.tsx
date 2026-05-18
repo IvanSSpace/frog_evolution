@@ -14,10 +14,24 @@ export function OrientationLock() {
   const [landscape, setLandscape] = useState(isLandscape)
 
   useEffect(() => {
+    // matchMedia 'change' иногда не fires в Telegram WebView при rotation.
+    // Подключаем 3 источника: matchMedia + window.resize + window.orientationchange.
+    // Каждый event re-evaluate orientation чтобы не пропустить.
+    const check = () => setLandscape(isLandscape())
+
     const mq = window.matchMedia('(orientation: landscape)')
-    const handler = (e: MediaQueryListEvent) => setLandscape(e.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
+    mq.addEventListener('change', check)
+    window.addEventListener('resize', check)
+    window.addEventListener('orientationchange', check)
+    // Также recompute on visibility change (returning from background).
+    document.addEventListener('visibilitychange', check)
+
+    return () => {
+      mq.removeEventListener('change', check)
+      window.removeEventListener('resize', check)
+      window.removeEventListener('orientationchange', check)
+      document.removeEventListener('visibilitychange', check)
+    }
   }, [])
 
   if (!landscape) return null
