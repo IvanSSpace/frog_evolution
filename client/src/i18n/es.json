@@ -483,7 +483,9 @@
       "title": "Primer Contacto",
       "cta": "Entendido",
       "subtitle_template": "Conexión establecida con los {{raceName}}"
-    }
+    },
+    "role_home": "⭐ Mundo Capital",
+    "role_colony": "· Colonia"
   },
   "tutorial": {
     "cta_understood": "¡Entendido!",

@@ -483,7 +483,9 @@
       "title": "Первый контакт",
       "cta": "Понятно",
       "subtitle_template": "Связь установлена с расой «{{raceName}}»"
-    }
+    },
+    "role_home": "⭐ Главный мир",
+    "role_colony": "· Колония"
   },
   "tutorial": {
     "cta_understood": "Понятно!",

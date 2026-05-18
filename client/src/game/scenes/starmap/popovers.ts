@@ -34,6 +34,12 @@ import { eventBus } from '../../../store/eventBus'
 import { useGameStore } from '../../../store/gameStore'
 import { DAILY_CAP } from '../../data/missionConfig'
 import { AnimationOrchestrator } from './popovers/animationOrchestrator'
+// Phase 26 Plan 26-03: race info badge в popover для habitable planets.
+// Cosmos-gated через useGameStore.getState().hasCosmosUnlocked (consistent
+// с planetRenderer cosmos gate).
+import { getPlanetInhabitant } from '../../data/habitablePlanets'
+import { RACES_BY_ID, type RaceId } from '../../config/races'
+import i18n from '../../../i18n'
 
 const DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 3))
 
@@ -131,75 +137,75 @@ export class PopoverController {
     // Popup с именем планеты (bgNamePopup) — отдельный канал, работает.
     void sys
     if (false as boolean) {
-    const scene = this.scene
-    if (this.selectionMarker) this.selectionMarker.destroy()
-    const m = scene.add.graphics()
-    const sz = sys.size || 14 * DPR
-    m.lineStyle(2 * DPR, 0xffd700, 1)
-    m.strokeCircle(sys.x, sys.y, sz + 14 * DPR)
-    m.lineStyle(1 * DPR, 0xffd700, 0.5)
-    m.strokeCircle(sys.x, sys.y, sz + 22 * DPR)
-    m.setDepth(15)
-    this.selectionMarker = m
-    scene.tweens.add({
-      targets: m,
-      alpha: { from: 1, to: 0.4 },
-      yoyo: true,
-      repeat: -1,
-      duration: 700,
-      ease: 'Sine.easeInOut',
-    })
-
-    // Selection marker, анимация и музыка планет — отрабатывают ниже.
-    // Popup с именем + кнопкой Лететь — теперь показывается одинаково для всех
-    // планет (main + bg) через scheduleBgNamePopup в pointerup-handler'е.
-
-    const sprite = scene.systemSprites.get(sys.id)
-    if (sprite) {
-      scene.tweens.killTweensOf(sprite)
+      const scene = this.scene
+      if (this.selectionMarker) this.selectionMarker.destroy()
+      const m = scene.add.graphics()
+      const sz = sys.size || 14 * DPR
+      m.lineStyle(2 * DPR, 0xffd700, 1)
+      m.strokeCircle(sys.x, sys.y, sz + 14 * DPR)
+      m.lineStyle(1 * DPR, 0xffd700, 0.5)
+      m.strokeCircle(sys.x, sys.y, sz + 22 * DPR)
+      m.setDepth(15)
+      this.selectionMarker = m
       scene.tweens.add({
-        targets: sprite,
-        scaleY: 0.85,
-        scaleX: 1.15,
-        duration: 100,
+        targets: m,
+        alpha: { from: 1, to: 0.4 },
         yoyo: true,
-        ease: 'Power2',
-        onComplete: () => {
-          scene.tweens.add({
-            targets: sprite,
-            scale: { from: 1.05, to: 1 },
-            duration: 200,
-            ease: 'Back.easeOut',
-            onComplete: () => {
-              scene.tweens.add({
-                targets: sprite,
-                scale: { from: 0.97, to: 1.03 },
-                duration: 2500,
-                yoyo: true,
-                repeat: -1,
-                ease: 'Sine.easeInOut',
-              })
-            },
-          })
-        },
+        repeat: -1,
+        duration: 700,
+        ease: 'Sine.easeInOut',
       })
-    }
 
-    const archKey = (sys as BgSystem).archetype
-    const emoji = EMOJI_MAP[archKey] || EMOJI_MAP[sys.type] || '?'
-    const float = scene.add.text(sys.x, sys.y - sz - 8 * DPR, emoji, {
-      fontSize: 22 * DPR,
-    })
-    float.setOrigin(0.5)
-    float.setDepth(80)
-    scene.tweens.add({
-      targets: float,
-      y: sys.y - sz - 50 * DPR,
-      alpha: { from: 1, to: 0 },
-      duration: 1400,
-      ease: 'Sine.easeOut',
-      onComplete: () => float.destroy(),
-    })
+      // Selection marker, анимация и музыка планет — отрабатывают ниже.
+      // Popup с именем + кнопкой Лететь — теперь показывается одинаково для всех
+      // планет (main + bg) через scheduleBgNamePopup в pointerup-handler'е.
+
+      const sprite = scene.systemSprites.get(sys.id)
+      if (sprite) {
+        scene.tweens.killTweensOf(sprite)
+        scene.tweens.add({
+          targets: sprite,
+          scaleY: 0.85,
+          scaleX: 1.15,
+          duration: 100,
+          yoyo: true,
+          ease: 'Power2',
+          onComplete: () => {
+            scene.tweens.add({
+              targets: sprite,
+              scale: { from: 1.05, to: 1 },
+              duration: 200,
+              ease: 'Back.easeOut',
+              onComplete: () => {
+                scene.tweens.add({
+                  targets: sprite,
+                  scale: { from: 0.97, to: 1.03 },
+                  duration: 2500,
+                  yoyo: true,
+                  repeat: -1,
+                  ease: 'Sine.easeInOut',
+                })
+              },
+            })
+          },
+        })
+      }
+
+      const archKey = (sys as BgSystem).archetype
+      const emoji = EMOJI_MAP[archKey] || EMOJI_MAP[sys.type] || '?'
+      const float = scene.add.text(sys.x, sys.y - sz - 8 * DPR, emoji, {
+        fontSize: 22 * DPR,
+      })
+      float.setOrigin(0.5)
+      float.setDepth(80)
+      scene.tweens.add({
+        targets: float,
+        y: sys.y - sz - 50 * DPR,
+        alpha: { from: 1, to: 0 },
+        duration: 1400,
+        ease: 'Sine.easeOut',
+        onComplete: () => float.destroy(),
+      })
     } // closing if(false) для ВРЕМЕННОГО отключения tap-эффектов
   }
 
@@ -257,9 +263,41 @@ export class PopoverController {
     })
     subText.setOrigin(0.5, 0.5)
 
-    // Фон-капсула
-    const w = Math.max(nameText.width, subText.width) + PADDING_X * 2
-    const h = nameText.height + subText.height + PADDING_Y * 2 + 4
+    // Phase 26 Plan 26-03: race info badge — race emoji + name + role label.
+    // Показывается ТОЛЬКО когда planet is habitable AND cosmos unlocked.
+    // Pre-cosmos behavior идентичен uninhabited (D-CosmosGate intent).
+    const cosmosUnlocked = useGameStore.getState().hasCosmosUnlocked === true
+    const inhabitant = cosmosUnlocked ? getPlanetInhabitant(sys.id) : undefined
+    let raceText: Phaser.GameObjects.Text | undefined
+    if (inhabitant) {
+      const race = RACES_BY_ID[inhabitant.raceId as RaceId]
+      if (race) {
+        const raceName = i18n.t(race.nameKey)
+        const roleKey =
+          inhabitant.role === 'home' ? 'cosmos.role_home' : 'cosmos.role_colony'
+        const roleLabel = i18n.t(roleKey)
+        // Single string с emoji + race name + role indicator (compact 2-line
+        // layout не нужен — capsule остаётся one-line per row).
+        const raceLabel = `${race.emojiIcon} ${raceName} ${roleLabel}`
+        // Размещается под subText (y = 14*DPR + ~11*DPR spacing).
+        raceText = scene.add.text(0, 26 * DPR, raceLabel, {
+          fontFamily: 'Nunito, system-ui, sans-serif',
+          fontSize: `${9 * DPR}px`,
+          color: '#fde047',
+          fontStyle: 'bold',
+        })
+        raceText.setOrigin(0.5, 0.5)
+      }
+    }
+
+    // Фон-капсула — width учитывает все 3 строки, height растёт при наличии
+    // raceText (cosmos-gated).
+    const widthCandidates = [nameText.width, subText.width]
+    if (raceText) widthCandidates.push(raceText.width)
+    const w = Math.max(...widthCandidates) + PADDING_X * 2
+    const raceHeightDelta = raceText ? raceText.height + 4 : 0
+    const h =
+      nameText.height + subText.height + raceHeightDelta + PADDING_Y * 2 + 4
     const bg = scene.add.graphics()
     bg.fillStyle(0x1f2a14, 0.92)
     bg.fillRoundedRect(-w / 2, -h / 2 + 4, w, h, 8 * DPR)
@@ -269,6 +307,7 @@ export class PopoverController {
     container.add(bg)
     container.add(nameText)
     container.add(subText)
+    if (raceText) container.add(raceText)
 
     // Кнопка действия под капсулой: «Изучить» если здесь, «Лететь» если docked-elsewhere,
     // «Перенаправить» если в полёте к ДРУГОЙ планете, ничего если уже летим именно сюда.

@@ -483,7 +483,9 @@
       "title": "First Contact",
       "cta": "Got it",
       "subtitle_template": "Connection established with the {{raceName}}"
-    }
+    },
+    "role_home": "⭐ Capital",
+    "role_colony": "· Colony"
   },
   "tutorial": {
     "cta_understood": "Got it!",
