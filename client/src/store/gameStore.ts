@@ -46,6 +46,8 @@ import {
   saveCosmosUnlocked,
   loadCaptainBirthSeen,
   saveCaptainBirthSeen,
+  loadL18MergesCount,
+  saveL18MergesCount,
 } from './persistence'
 
 // Re-exports for backward compat — many consumers import these from gameStore.
@@ -150,16 +152,36 @@ interface GameStateBase {
   // Server-sync через cosmic JSON blob (см. gameSync.ts).
   captainBirthSeen: boolean
   markCaptainBirthSeen: () => void
+
+  // 2026-05-18: L18+L18 normal merges count.
+  // Каждый успешный L18+L18 normal merge инкрементит counter, даёт +1 essence
+  // (см. MergeController), И накладывает permanent +10% bonus к gold income
+  // через addGold multiplier — компенсирует loss income при destroy L18 frogs
+  // и награждает прогресс.
+  l18MergesCount: number
+  incrementL18Merges: () => void
 }
 
 // Полный GameState = базовые поля + Cosmic Frogs System (Phase 11+)
 // CosmicState = CosmicSlice + CosmicSliceActions (см. cosmic/slice.ts)
 type GameState = GameStateBase & CosmicState
 
+// L18+L18 merge bonus: each merge gives +10% к ВСЕМ gold awards (multiplicative
+// через counter). Применяется в addGold чтобы все gold-источники (tap, poop,
+// tractor offline, bg income) включали бонус автоматически.
+const L18_BONUS_PER_MERGE = 0.10
+
+function l18GoldMultiplier(count: number): number {
+  return 1 + count * L18_BONUS_PER_MERGE
+}
+
 export const useGameStore = create<GameState>((set, get) => ({
   gold: 0,
 
-  addGold: (amount) => set((s) => ({ gold: s.gold + amount })),
+  addGold: (amount) =>
+    set((s) => ({
+      gold: s.gold + amount * l18GoldMultiplier(s.l18MergesCount),
+    })),
 
   spendGold: (amount) => {
     if (get().gold < amount) return false
@@ -370,6 +392,17 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (s.captainBirthSeen) return // idempotent
     saveCaptainBirthSeen(true)
     set({ captainBirthSeen: true })
+  },
+
+  // 2026-05-18: L18+L18 merge bonus counter. Каждый L18+L18 normal merge
+  // инкрементит counter — это даёт +10% gold income permanently (см. addGold).
+  // Persistence через localStorage L18_MERGES_KEY (см. persistence.ts).
+  l18MergesCount: loadL18MergesCount(),
+  incrementL18Merges: () => {
+    const s = get()
+    const next = s.l18MergesCount + 1
+    saveL18MergesCount(next)
+    set({ l18MergesCount: next })
   },
 
   // ============== COSMIC FROGS SYSTEM (Phase 11+) ==============

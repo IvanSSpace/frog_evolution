@@ -295,6 +295,11 @@ export class MergeController {
           storeL25.markCaptainBirthSeen()
           eventBus.emit('captain:birth-start', { x: cx, y: cy })
         }
+        // 2026-05-18: каждый L18+L18 (включая первый) даёт +1 essence + +10%
+        // gold income permanent bonus через l18MergesCount counter.
+        // Прогресс не теряется при destroy 2× L18 frogs — bonus компенсирует.
+        useGameStore.setState((s) => ({ essence: s.essence + 1 }))
+        storeL25.incrementL18Merges()
         mergeApi(MAX_LEVEL, currentLocId)
           .then((res) => {
             useGameStore.setState({
