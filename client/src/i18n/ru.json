@@ -210,6 +210,7 @@
     "tab_carriers": "Карьеры",
     "tab_shop": "Магазин",
     "tab_inventory": "Инвентарь",
+    "tab_contacts": "Контакты",
     "lock_first_feed": "Откроется после первого кормления",
     "lock_first_mission": "Откроется после первой миссии",
     "scouts_placeholder": "Скауты появятся в следующем обновлении",
@@ -368,6 +369,23 @@
       "placeholder_artifacts": "Скоро…",
       "placeholder_relationship_value": "?",
       "tooltip_relationship_pending": "Откроется в следующих обновлениях"
+    },
+    "contacts": {
+      "empty_state": "Ожидание сообщения",
+      "all_read": "Все сообщения прочитаны",
+      "tier": {
+        "1": "враждебный",
+        "2": "прохладный",
+        "3": "нейтральный",
+        "4": "дружелюбный",
+        "5": "союзник"
+      },
+      "support": "Поддержать",
+      "refuse": "Отказать",
+      "acknowledge": "Понятно",
+      "relationship_label": "Отношение",
+      "quest_stub": "Запрос принят. Детали скоро прояснятся.",
+      "pending_count": "Очередь: {{count}}/3"
     }
   },
   "cosmic_shop": {
@@ -485,7 +503,10 @@
       "subtitle_template": "Связь установлена с расой «{{raceName}}»"
     },
     "role_home": "⭐ Главный мир",
-    "role_colony": "· Колония"
+    "role_colony": "· Колония",
+    "event": {
+      "notification": "{{raceName}} {{description}}: {{delta}} к отношениям"
+    }
   },
   "tutorial": {
     "cta_understood": "Понятно!",

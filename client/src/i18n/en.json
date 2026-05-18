@@ -210,6 +210,7 @@
     "tab_carriers": "Carriers",
     "tab_shop": "Shop",
     "tab_inventory": "Inventory",
+    "tab_contacts": "Contacts",
     "lock_first_feed": "Unlocks after first feed",
     "lock_first_mission": "Unlocks after first mission",
     "scouts_placeholder": "Scouts coming in next update",
@@ -368,6 +369,23 @@
       "placeholder_artifacts": "Coming soon…",
       "placeholder_relationship_value": "?",
       "tooltip_relationship_pending": "Unlocks in future updates"
+    },
+    "contacts": {
+      "empty_state": "Awaiting message",
+      "all_read": "All messages read",
+      "tier": {
+        "1": "hostile",
+        "2": "cool",
+        "3": "neutral",
+        "4": "friendly",
+        "5": "ally"
+      },
+      "support": "Support",
+      "refuse": "Refuse",
+      "acknowledge": "OK",
+      "relationship_label": "Relationship",
+      "quest_stub": "Request accepted. Details to follow.",
+      "pending_count": "Queue: {{count}}/3"
     }
   },
   "cosmic_shop": {
@@ -485,7 +503,10 @@
       "subtitle_template": "Connection established with the {{raceName}}"
     },
     "role_home": "⭐ Capital",
-    "role_colony": "· Colony"
+    "role_colony": "· Colony",
+    "event": {
+      "notification": "{{raceName}} {{description}}: {{delta}} to relationship"
+    }
   },
   "tutorial": {
     "cta_understood": "Got it!",

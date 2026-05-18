@@ -210,6 +210,7 @@
     "tab_carriers": "Carriers",
     "tab_shop": "Tienda",
     "tab_inventory": "Inventario",
+    "tab_contacts": "Contactos",
     "lock_first_feed": "Se desbloquea tras la primera alimentación",
     "lock_first_mission": "Se desbloquea tras la primera misión",
     "scouts_placeholder": "Exploradores llegando próximamente",
@@ -368,6 +369,23 @@
       "placeholder_artifacts": "Próximamente…",
       "placeholder_relationship_value": "?",
       "tooltip_relationship_pending": "Se desbloquea en futuras actualizaciones"
+    },
+    "contacts": {
+      "empty_state": "Esperando mensaje",
+      "all_read": "Todos los mensajes leídos",
+      "tier": {
+        "1": "hostil",
+        "2": "frío",
+        "3": "neutral",
+        "4": "amistoso",
+        "5": "aliado"
+      },
+      "support": "Apoyar",
+      "refuse": "Rechazar",
+      "acknowledge": "Entendido",
+      "relationship_label": "Relación",
+      "quest_stub": "Solicitud aceptada. Detalles próximamente.",
+      "pending_count": "Cola: {{count}}/3"
     }
   },
   "cosmic_shop": {
@@ -485,7 +503,10 @@
       "subtitle_template": "Conexión establecida con los {{raceName}}"
     },
     "role_home": "⭐ Mundo Capital",
-    "role_colony": "· Colonia"
+    "role_colony": "· Colonia",
+    "event": {
+      "notification": "{{raceName}} {{description}}: {{delta}} a relación"
+    }
   },
   "tutorial": {
     "cta_understood": "¡Entendido!",
