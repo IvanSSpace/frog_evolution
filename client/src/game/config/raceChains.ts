@@ -1,15 +1,18 @@
-// Phase 27 Plan 27-01: race chain config + pending engine types + relationship constants.
+// Phase 27 Plan 27-02: RACE_CHAINS data filled (10 races × 10 items each).
+// Hybrid scripted (items 0-4: intro/lore) + templated (items 5-9: quest_hook/event/dialog mix).
+// Item 6 of every race = inline 'event' ChainItem (target='self', delta=-1) — auto-applied at
+// pull time by Plan 27-03 engine (toast fired, NOT pushed to inbox).
+// text_key fields reference races.<id>.chain.<N>.text|description i18n keys (Task 1 of this plan).
+// shared event descriptions reference cosmos.event.<key> i18n keys (5 reusable strings).
 //
 // ChainItem discriminated union models per-race linear message progression. RACE_CHAINS is
-// built as Record<RaceId, readonly ChainItem[]>; this file ships SKELETON (empty arrays).
-// Plan 27-02 fills each race's array with ~10 hybrid scripted+templated items.
+// Record<RaceId, readonly ChainItem[]>. Data lives explicitly (no skeleton loop) since 27-02.
 //
 // Relationship system: 1-10 integer scale, 5 tiers, initial value INITIAL_RELATIONSHIP=2
 // (low threshold per CONTEXT — все стартуют с подозрения). getRelationshipTier() clamps
 // input to [1, 10] before tier mapping.
 //
 // No runtime side-effects. Pure config + helpers. Consumed by:
-//   - 27-02 (chain data fill)
 //   - 27-03 (pending engine pulls from RACE_CHAINS[raceId][chainProgress])
 //   - 27-04 (UI reads tier label + tier color via getRelationshipTier + TIER_COLORS)
 
@@ -132,30 +135,455 @@ export const TIER_I18N_KEYS: Record<RelationshipTier, string> = {
   ally: 'cosmic_hub.contacts.tier.5',
 }
 
-// ─── RACE_CHAINS skeleton ────────────────────────────────────────────────────
+// ─── RACE_CHAINS data ────────────────────────────────────────────────────────
 
-// Imported RaceId list — hardcoded ALL_RACE_IDS pattern из Phase 26-01 чтобы избежать
-// циклической deps через cosmic/types.ts. Plan 27-02 fills each array with ~10 items.
-const ALL_RACE_IDS_LOCAL: readonly RaceId[] = [
-  'crystalloids',
-  'gasouls',
-  'mechanidons',
-  'fireworms',
-  'liquidoids',
-  'tenebrians',
-  'plasmaspirits',
-  'forestcores',
-  'timeweavers',
-  'cometfolk',
-] as const
-
-// Skeleton. Plan 27-02 replaces with race-specific arrays in same file.
-// Built через explicit typed `for` loop (mirror RACES_BY_ID pattern в races.ts) —
-// Object.fromEntries теряет literal-key TS typing.
-export const RACE_CHAINS: Record<RaceId, readonly ChainItem[]> = (() => {
-  const out = {} as Record<RaceId, readonly ChainItem[]>
-  for (const id of ALL_RACE_IDS_LOCAL) {
-    out[id] = []
-  }
-  return out
-})()
+// Phase 27 Plan 27-02: explicit per-race arrays. Each race ships 10 ChainItem entries:
+//   item 0,1,3 — 'msg' (lore reveal / status updates)
+//   item 2,4   — 'dialog' (small/medium social ask, +1/-1 deltas)
+//   item 5,8   — 'quest_hook' (Phase 28 will wire quest_id → real quest)
+//   item 6     — 'event' (self-targeted, delta=-1, references cosmos.event.<key>)
+//   item 7     — 'dialog'
+//   item 9     — 'msg' (templated narrative tail)
+// Totals across 10 races: 40 msg + 30 dialog + 20 quest_hook + 10 event = 100 items.
+export const RACE_CHAINS: Record<RaceId, readonly ChainItem[]> = {
+  crystalloids: [
+    { type: 'msg', text_key: 'races.crystalloids.chain.0.text' },
+    { type: 'msg', text_key: 'races.crystalloids.chain.1.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.crystalloids.chain.2.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    { type: 'msg', text_key: 'races.crystalloids.chain.3.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.crystalloids.chain.4.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.crystalloids.chain.5.text',
+      quest_id: 'crystalloids_silent_scout',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'event',
+      target: 'self',
+      delta: -1,
+      text_key: 'cosmos.event.ritual_disrupted',
+    },
+    {
+      type: 'dialog',
+      text_key: 'races.crystalloids.chain.7.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.crystalloids.chain.8.text',
+      quest_id: 'crystalloids_shard_delivery',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    { type: 'msg', text_key: 'races.crystalloids.chain.9.text' },
+  ],
+  gasouls: [
+    { type: 'msg', text_key: 'races.gasouls.chain.0.text' },
+    { type: 'msg', text_key: 'races.gasouls.chain.1.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.gasouls.chain.2.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    { type: 'msg', text_key: 'races.gasouls.chain.3.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.gasouls.chain.4.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.gasouls.chain.5.text',
+      quest_id: 'gasouls_lost_note',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'event',
+      target: 'self',
+      delta: -1,
+      text_key: 'cosmos.event.crystal_resonance',
+    },
+    {
+      type: 'dialog',
+      text_key: 'races.gasouls.chain.7.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.gasouls.chain.8.text',
+      quest_id: 'gasouls_sunken_resonator',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    { type: 'msg', text_key: 'races.gasouls.chain.9.text' },
+  ],
+  mechanidons: [
+    { type: 'msg', text_key: 'races.mechanidons.chain.0.text' },
+    { type: 'msg', text_key: 'races.mechanidons.chain.1.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.mechanidons.chain.2.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    { type: 'msg', text_key: 'races.mechanidons.chain.3.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.mechanidons.chain.4.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.mechanidons.chain.5.text',
+      quest_id: 'mechanidons_module_delivery',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'event',
+      target: 'self',
+      delta: -1,
+      text_key: 'cosmos.event.failed_pact',
+    },
+    {
+      type: 'dialog',
+      text_key: 'races.mechanidons.chain.7.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.mechanidons.chain.8.text',
+      quest_id: 'mechanidons_diagnostics',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    { type: 'msg', text_key: 'races.mechanidons.chain.9.text' },
+  ],
+  fireworms: [
+    { type: 'msg', text_key: 'races.fireworms.chain.0.text' },
+    { type: 'msg', text_key: 'races.fireworms.chain.1.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.fireworms.chain.2.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    { type: 'msg', text_key: 'races.fireworms.chain.3.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.fireworms.chain.4.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.fireworms.chain.5.text',
+      quest_id: 'fireworms_runaway_acolyte',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'event',
+      target: 'self',
+      delta: -1,
+      text_key: 'cosmos.event.solar_flare',
+    },
+    {
+      type: 'dialog',
+      text_key: 'races.fireworms.chain.7.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.fireworms.chain.8.text',
+      quest_id: 'fireworms_shard_to_tenebrians',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    { type: 'msg', text_key: 'races.fireworms.chain.9.text' },
+  ],
+  liquidoids: [
+    { type: 'msg', text_key: 'races.liquidoids.chain.0.text' },
+    { type: 'msg', text_key: 'races.liquidoids.chain.1.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.liquidoids.chain.2.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    { type: 'msg', text_key: 'races.liquidoids.chain.3.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.liquidoids.chain.4.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.liquidoids.chain.5.text',
+      quest_id: 'liquidoids_caravan',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'event',
+      target: 'self',
+      delta: -1,
+      text_key: 'cosmos.event.lost_envoy',
+    },
+    {
+      type: 'dialog',
+      text_key: 'races.liquidoids.chain.7.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.liquidoids.chain.8.text',
+      quest_id: 'liquidoids_stolen_cargo',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    { type: 'msg', text_key: 'races.liquidoids.chain.9.text' },
+  ],
+  tenebrians: [
+    { type: 'msg', text_key: 'races.tenebrians.chain.0.text' },
+    { type: 'msg', text_key: 'races.tenebrians.chain.1.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.tenebrians.chain.2.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    { type: 'msg', text_key: 'races.tenebrians.chain.3.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.tenebrians.chain.4.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.tenebrians.chain.5.text',
+      quest_id: 'tenebrians_hidden_gate',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'event',
+      target: 'self',
+      delta: -1,
+      text_key: 'cosmos.event.ritual_disrupted',
+    },
+    {
+      type: 'dialog',
+      text_key: 'races.tenebrians.chain.7.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.tenebrians.chain.8.text',
+      quest_id: 'tenebrians_last_shard',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    { type: 'msg', text_key: 'races.tenebrians.chain.9.text' },
+  ],
+  plasmaspirits: [
+    { type: 'msg', text_key: 'races.plasmaspirits.chain.0.text' },
+    { type: 'msg', text_key: 'races.plasmaspirits.chain.1.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.plasmaspirits.chain.2.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    { type: 'msg', text_key: 'races.plasmaspirits.chain.3.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.plasmaspirits.chain.4.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.plasmaspirits.chain.5.text',
+      quest_id: 'plasmaspirits_outrun',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'event',
+      target: 'self',
+      delta: -1,
+      text_key: 'cosmos.event.solar_flare',
+    },
+    {
+      type: 'dialog',
+      text_key: 'races.plasmaspirits.chain.7.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.plasmaspirits.chain.8.text',
+      quest_id: 'plasmaspirits_lost_flock',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    { type: 'msg', text_key: 'races.plasmaspirits.chain.9.text' },
+  ],
+  forestcores: [
+    { type: 'msg', text_key: 'races.forestcores.chain.0.text' },
+    { type: 'msg', text_key: 'races.forestcores.chain.1.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.forestcores.chain.2.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    { type: 'msg', text_key: 'races.forestcores.chain.3.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.forestcores.chain.4.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.forestcores.chain.5.text',
+      quest_id: 'forestcores_young_forest',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'event',
+      target: 'self',
+      delta: -1,
+      text_key: 'cosmos.event.failed_pact',
+    },
+    {
+      type: 'dialog',
+      text_key: 'races.forestcores.chain.7.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.forestcores.chain.8.text',
+      quest_id: 'forestcores_spore_migration',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    { type: 'msg', text_key: 'races.forestcores.chain.9.text' },
+  ],
+  timeweavers: [
+    { type: 'msg', text_key: 'races.timeweavers.chain.0.text' },
+    { type: 'msg', text_key: 'races.timeweavers.chain.1.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.timeweavers.chain.2.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    { type: 'msg', text_key: 'races.timeweavers.chain.3.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.timeweavers.chain.4.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.timeweavers.chain.5.text',
+      quest_id: 'timeweavers_temporal_knot',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'event',
+      target: 'self',
+      delta: -1,
+      text_key: 'cosmos.event.ritual_disrupted',
+    },
+    {
+      type: 'dialog',
+      text_key: 'races.timeweavers.chain.7.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.timeweavers.chain.8.text',
+      quest_id: 'timeweavers_spiral_link',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    { type: 'msg', text_key: 'races.timeweavers.chain.9.text' },
+  ],
+  cometfolk: [
+    { type: 'msg', text_key: 'races.cometfolk.chain.0.text' },
+    { type: 'msg', text_key: 'races.cometfolk.chain.1.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.cometfolk.chain.2.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    { type: 'msg', text_key: 'races.cometfolk.chain.3.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.cometfolk.chain.4.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.cometfolk.chain.5.text',
+      quest_id: 'cometfolk_young_comet',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'event',
+      target: 'self',
+      delta: -1,
+      text_key: 'cosmos.event.lost_envoy',
+    },
+    {
+      type: 'dialog',
+      text_key: 'races.cometfolk.chain.7.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.cometfolk.chain.8.text',
+      quest_id: 'cometfolk_lost_crest',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    { type: 'msg', text_key: 'races.cometfolk.chain.9.text' },
+  ],
+}
