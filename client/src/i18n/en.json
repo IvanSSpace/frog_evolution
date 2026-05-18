@@ -430,70 +430,190 @@
       "lore_short": "Silicon-based life. Their bodies are growing crystal druses. Cold, wise, slow — a millennium is a heartbeat for them.",
       "personality": "Cold, wise, slow",
       "communication_style": "Geometric patterns, dry precise words. Consider speech an excess.",
-      "home_planet_name": "Silicassos"
+      "home_planet_name": "Silicassos",
+      "chain": {
+        "0": { "text": "Silicassos greets you. We grew in this pattern for two eras." },
+        "1": { "text": "The crystal speaks slowly. Listen to the shape, not the sound." },
+        "2": { "text": "Tune our frequency to one of your L18 frogs. One pulse — and we remember." },
+        "3": { "text": "We know your ancestor. He sang in our choir long ago." },
+        "4": { "text": "Accept this gift: a facet from our mine. Refuse — we will understand." },
+        "5": { "text": "Find our scout who went silent in the Binary system." },
+        "6": { "description": "our pattern has cracked" },
+        "7": { "text": "Agree to symmetry. Otherwise we turn an edge to you." },
+        "8": { "text": "Deliver a resonant shard to Texum; we have a dispute with the Liquidspheres." },
+        "9": { "text": "We have recorded your reply. The crystal does not forget." }
+      }
     },
     "gasouls": {
       "name": "Gas Clouds",
       "lore_short": "A gaseous form of life, made entirely of dense breath. Shapeless, they sing in resonances the size of small planets.",
       "personality": "Shapeless, poetic",
       "communication_style": "Poetic, metaphorical. Messages are short songs.",
-      "home_planet_name": "Soundfloat"
+      "home_planet_name": "Soundfloat",
+      "chain": {
+        "0": { "text": "We sing with Soundfloat. Do you hear our silence?" },
+        "1": { "text": "Our people are a resonance between worlds." },
+        "2": { "text": "Give us one beat of silence. One pulse." },
+        "3": { "text": "The song is older than words. Listen." },
+        "4": { "text": "Accept our song into your ship's log." },
+        "5": { "text": "Find the lost note in the asteroid cloud." },
+        "6": { "description": "our chord has gone out of tune" },
+        "7": { "text": "Agree to harmonize. Dissonance wounds." },
+        "8": { "text": "Save our choir — find the sunken resonator on the colony." },
+        "9": { "text": "We sing of you. Softer or louder — depends on you." }
+      }
     },
     "mechanidons": {
       "name": "Mechanidons",
       "lore_short": "A bio-and-machine hybrid. Self-upgrading cyborg beings for whom technology is religion.",
       "personality": "Structured, rational",
       "communication_style": "Clear protocols, numbers, precise data.",
-      "home_planet_name": "Caliber-Neuron"
+      "home_planet_name": "Caliber-Neuron",
+      "chain": {
+        "0": { "text": "Caliber-Neuron. Connection established. Identifier confirmed." },
+        "1": { "text": "Our evolution is an upgrade. Biology is a deprecated protocol." },
+        "2": { "text": "Transmit the spec of your L18 asset. Utilitarian." },
+        "3": { "text": "Protocol 14.2: data exchange improves survival." },
+        "4": { "text": "Accept joint development terms. Stake — 50/50." },
+        "5": { "text": "Deliver module 7-alpha to our colony." },
+        "6": { "description": "the contract failed, KPI dropped" },
+        "7": { "text": "Agree to the standard contract. Otherwise resource overhead." },
+        "8": { "text": "Run diagnostics in the Scorch system. Anomaly logged." },
+        "9": { "text": "Record saved. Next iteration — your move." }
+      }
     },
     "fireworms": {
       "name": "Fireworms",
       "lore_short": "Plasma bodies that live inside stars and burning cores. Warlike, aggressive, straightforward — duels are their culture.",
       "personality": "Warlike, blunt",
       "communication_style": "Short brash messages. Direct orders.",
-      "home_planet_name": "Scorch"
+      "home_planet_name": "Scorch",
+      "chain": {
+        "0": { "text": "I am Fireworm. Scorch burns. Speak quickly." },
+        "1": { "text": "We were born in a star. Cold is an insult." },
+        "2": { "text": "Give us fuel. We know you have it." },
+        "3": { "text": "The weak do not trade with us. Only warriors." },
+        "4": { "text": "Accept our challenge — send an L18 on patrol. Otherwise you are a coward." },
+        "5": { "text": "Find our runaway acolyte in the Scorch system. Return him or burn him." },
+        "6": { "description": "our flame flickered — rage boils" },
+        "7": { "text": "Agree to the duel. Refuse — we remember." },
+        "8": { "text": "Deliver a fire shard to Unseen. The Tenebrians need one. Or we need a pretext." },
+        "9": { "text": "We burn. We wait. Decide." }
+      }
     },
     "liquidoids": {
       "name": "Liquidspheres",
       "lore_short": "Amoeba-like liquid life. They take any shape, can split and merge. Traders, curious travellers.",
       "personality": "Traders, flexible",
       "communication_style": "Friendly, love to barter. Every message is a deal proposal.",
-      "home_planet_name": "Texum"
+      "home_planet_name": "Texum",
+      "chain": {
+        "0": { "text": "Texum greets you. We have a proposal." },
+        "1": { "text": "We can take any shape. Convenient for bargaining." },
+        "2": { "text": "Trade one serum — gain our friendship." },
+        "3": { "text": "Our economy is flow. Are you part of the flow?" },
+        "4": { "text": "Accept our offer of a colony on a border planet." },
+        "5": { "text": "Escort our caravan through a contested sector." },
+        "6": { "description": "a contract collapsed, liquidity drained away" },
+        "7": { "text": "Sign the trade protocol. Standard terms." },
+        "8": { "text": "Find the stolen cargo. The stake is your reputation." },
+        "9": { "text": "We remember generous partners." }
+      }
     },
     "tenebrians": {
       "name": "Tenebrians",
       "lore_short": "Shadowy anti-matter life. They exist between dimensions. Mystics, quiet observers — they see the soul behind the form.",
       "personality": "Mystics, observers",
       "communication_style": "Cryptic, symbolic. Half-predictions, understatement.",
-      "home_planet_name": "Unseen"
+      "home_planet_name": "Unseen",
+      "chain": {
+        "0": { "text": "Unseen sees. You arrive from the light. That is curious." },
+        "1": { "text": "We are between dimensions. Here and not here." },
+        "2": { "text": "Show us the shadow of your star. One glance — and we will know." },
+        "3": { "text": "The soul has a shape. Yours is a spiral." },
+        "4": { "text": "Accept our prophecy. Refuse — it will come true differently." },
+        "5": { "text": "Find the hidden gate in the Soundfloat system. It is veiled from others." },
+        "6": { "description": "the shadow ritual was broken by foreign light" },
+        "7": { "text": "Agree to be an observer. Do not interfere." },
+        "8": { "text": "Protect the last shard of night. Otherwise we vanish." },
+        "9": { "text": "Shadow remembers. Light forgets." }
+      }
     },
     "plasmaspirits": {
       "name": "Plasma Spirits",
       "lore_short": "Plasma beings — electric, with uncontrollable energy. They love speed and novelty, nomads by nature.",
       "personality": "Impulsive, nomads",
       "communication_style": "Short impulsive messages, often emotional and shifting.",
-      "home_planet_name": "Lightning-Catch"
+      "home_planet_name": "Lightning-Catch",
+      "chain": {
+        "0": { "text": "Lightning-Catch! Speed! Hi! We move." },
+        "1": { "text": "We do not sit still. We are a flow of electrons." },
+        "2": { "text": "Let us boost your ship! One charge!" },
+        "3": { "text": "Old age, for us, is a halt." },
+        "4": { "text": "Back our migration. Otherwise we flare without you." },
+        "5": { "text": "Catch up to our scout near Texum. They fell behind." },
+        "6": { "description": "a flare scattered our flock off course" },
+        "7": { "text": "Agree to the boost. Hesitation is weakness." },
+        "8": { "text": "Reconnect with the lost flock. They are drifting." },
+        "9": { "text": "We fly. Keep up." }
+      }
     },
     "forestcores": {
       "name": "Forestroots",
       "lore_short": "Fungal-root life. Vast underground networks cover whole planets. Ancient and calm, wisdom through silence.",
       "personality": "Ancient, calm",
       "communication_style": "Rare but deep messages. Metaphors of forest, of life cycles.",
-      "home_planet_name": "Rootworld"
+      "home_planet_name": "Rootworld",
+      "chain": {
+        "0": { "text": "The roots of Rootworld greet you. We grew for a long time." },
+        "1": { "text": "Our mycelium remembers every stone of its planet." },
+        "2": { "text": "Share with us a seed of your world. One pulse." },
+        "3": { "text": "Time is growth. The root does not hurry." },
+        "4": { "text": "Accept our sprout into your garden. Tend to it." },
+        "5": { "text": "Save our young forest from orbital sterility." },
+        "6": { "description": "an old pact with the soil has not held" },
+        "7": { "text": "Agree to take root. Or we will turn away." },
+        "8": { "text": "Help relocate a spore to a new colony." },
+        "9": { "text": "The root grows. Patience." }
+      }
     },
     "timeweavers": {
       "name": "Timeweavers",
       "lore_short": "They exist in a non-temporal dimension, seeing past and future at once. Esoterics and philosophers — they help or warn, never command.",
       "personality": "Esoterics, philosophers",
       "communication_style": "Paradoxical, temporal hints.",
-      "home_planet_name": "Paradox"
+      "home_planet_name": "Paradox",
+      "chain": {
+        "0": { "text": "The spirals greet you. We knew of you before your birth." },
+        "1": { "text": "Time, for us, is fabric. We weave it." },
+        "2": { "text": "Show us one of your choices. We will unfold it." },
+        "3": { "text": "Past and future are one point. Now is the illusion." },
+        "4": { "text": "Accept the thread of fate. Refuse — the pattern shifts." },
+        "5": { "text": "Find a knot in the time stream near the Unseen system." },
+        "6": { "description": "a weaving ritual tore the thread of time" },
+        "7": { "text": "Agree to be a thread. Not a loop." },
+        "8": { "text": "Join two points in the spiral. A carrier is needed." },
+        "9": { "text": "The pattern is closing. You are a stitch." }
+      }
     },
     "cometfolk": {
       "name": "Cometfolk",
       "lore_short": "Comet-cloud travellers without a permanent form. Open, friendly, curious — they return once per season.",
       "personality": "Friendly, open",
       "communication_style": "Enthusiastic, sharing stories from distant voyages.",
-      "home_planet_name": "Wanderling"
+      "home_planet_name": "Wanderling",
+      "chain": {
+        "0": { "text": "Greetings from the comet's crest! We are glad to meet you." },
+        "1": { "text": "We wander between stars. Every meeting is a feast." },
+        "2": { "text": "Share with us a sliver of ice from the core. Just for friendship." },
+        "3": { "text": "Our home is motion. The route is family." },
+        "4": { "text": "Accept our invitation to a flight around the binary." },
+        "5": { "text": "Escort our young comet through the asteroid field." },
+        "6": { "description": "our envoy is lost beyond the asteroid belt" },
+        "7": { "text": "Agree to the flight. It is dull to refuse friends." },
+        "8": { "text": "Find our lost crest in the Texum system." },
+        "9": { "text": "Fly with us. The stars are near." }
+      }
     }
   },
   "cosmos": {
@@ -505,7 +625,12 @@
     "role_home": "⭐ Capital",
     "role_colony": "· Colony",
     "event": {
-      "notification": "{{raceName}} {{description}}: {{delta}} to relationship"
+      "notification": "{{raceName}} {{description}}: {{delta}} to relationship",
+      "solar_flare": "a solar flare damaged orbital stations",
+      "failed_pact": "a pact with an old ally has failed",
+      "lost_envoy": "an envoy has been lost",
+      "ritual_disrupted": "a ritual was disrupted",
+      "crystal_resonance": "crystal resonance touched their dreams"
     }
   },
   "tutorial": {
