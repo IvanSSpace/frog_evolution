@@ -32,6 +32,7 @@ import { SerumBar } from './components/SerumBar'
 import { ActiveBonusesBar } from './components/HUD/ActiveBonusesBar'
 import { installBestiaryDevHelpers } from './utils/devHelpers'
 import { installOnboardingDevHelpers } from './utils/onboardingDevHelpers'
+import { installCaptainBirthDevHelpers } from './utils/captainBirthDevHelpers'
 import { devLog } from './utils/devLog'
 import { pingHealth } from './api/client'
 import { ensureLogin } from './api/auth'
@@ -249,6 +250,9 @@ function App() {
     installBestiaryDevHelpers()
     // Phase 23 Plan 23-01: onboarding dev helpers (__resetOnboarding / __skipOnboarding).
     installOnboardingDevHelpers()
+    // Phase 24 Plan 24-05: captain birth dev helpers
+    // (__triggerCaptainBirth / __resetCaptainBirth / __captainBirthState).
+    installCaptainBirthDevHelpers()
 
     return () => {
       delete w.__resetCrewToday
@@ -263,6 +267,9 @@ function App() {
       delete w.__resetBestiary
       delete w.__resetOnboarding
       delete w.__skipOnboarding
+      delete w.__triggerCaptainBirth
+      delete w.__resetCaptainBirth
+      delete w.__captainBirthState
     }
   }, [])
 
