@@ -28,6 +28,7 @@ import { OnboardingController } from './components/Onboarding/OnboardingControll
 import { CaptainBirthModal } from './components/Captain/CaptainBirthModal'
 import { installCaptainBirthController } from './components/Captain/captainBirthController'
 import { FirstContactController } from './components/FirstContact/firstContactController'
+import { EventToastController } from './components/Contacts/eventToastController'
 import { SerumModal } from './components/CosmicHub/SerumModal'
 import { SerumBar } from './components/SerumBar'
 import { ActiveBonusesBar } from './components/HUD/ActiveBonusesBar'
@@ -369,6 +370,12 @@ function App() {
           cosmos:first-contact → Phaser cinematic → on completion mounts
           FirstContactModal с race lore. Per-race idempotent. */}
       <FirstContactController />
+      {/* Phase 27 Plan 27-05: event toast coordinator — subscribes to
+          eventBus 'contacts:event-applied' (emitted by pendingEngineTick
+          when inline event ChainItem auto-applies). Renders top-center
+          stack of up to 3 toasts (z-index 150, between hub 100 and modal 200),
+          each auto-dismissing after 3s via CSS keyframes. */}
+      <EventToastController />
       {discovered !== null && (
         <DiscoveryModal
           level={discovered}
