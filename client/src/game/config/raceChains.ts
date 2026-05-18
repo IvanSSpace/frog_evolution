@@ -1,7 +1,10 @@
-// Phase 27 Plan 27-02: RACE_CHAINS data filled (10 races × 10 items each).
-// Hybrid scripted (items 0-4: intro/lore) + templated (items 5-9: quest_hook/event/dialog mix).
+// Phase 27 Plan 27-02: RACE_CHAINS data filled (10 races × 15 items each).
+// Tech-debt 2026-05-18: expanded items 10-14 per race (50 new entries) — deeper narrative arc.
+// Hybrid scripted (items 0-4: intro/lore) + templated (items 5-9: quest_hook/event/dialog mix)
+// + late-arc deepening (items 10-14: continuation, mix of dialog/quest_hook/event/msg).
 // Item 6 of every race = inline 'event' ChainItem (target='self', delta=-1) — auto-applied at
 // pull time by Plan 27-03 engine (toast fired, NOT pushed to inbox).
+// Items 10-14 reuse existing cosmos.event.* keys where 'event' variant is used to avoid i18n bloat.
 // text_key fields reference races.<id>.chain.<N>.text|description i18n keys (Task 1 of this plan).
 // shared event descriptions reference cosmos.event.<key> i18n keys (5 reusable strings).
 //
@@ -137,14 +140,19 @@ export const TIER_I18N_KEYS: Record<RelationshipTier, string> = {
 
 // ─── RACE_CHAINS data ────────────────────────────────────────────────────────
 
-// Phase 27 Plan 27-02: explicit per-race arrays. Each race ships 10 ChainItem entries:
+// Phase 27 Plan 27-02: explicit per-race arrays. Each race ships 15 ChainItem entries:
 //   item 0,1,3 — 'msg' (lore reveal / status updates)
 //   item 2,4   — 'dialog' (small/medium social ask, +1/-1 deltas)
 //   item 5,8   — 'quest_hook' (Phase 28 will wire quest_id → real quest)
 //   item 6     — 'event' (self-targeted, delta=-1, references cosmos.event.<key>)
 //   item 7     — 'dialog'
-//   item 9     — 'msg' (templated narrative tail)
-// Totals across 10 races: 40 msg + 30 dialog + 20 quest_hook + 10 event = 100 items.
+//   item 9     — 'msg' (mid-arc narrative tail)
+//   item 10,11 — 'dialog' (late-arc deepening, recommitting voice)
+//   item 12    — 'quest_hook' (Phase 28 will wire quest_id → real quest; suffix _b…_f variants)
+//   item 13    — 'event' (self-targeted, delta=-1, references cosmos.event.<key>) — second beat
+//   item 14    — 'msg' (closing narrative cadence)
+// Totals across 10 races (tech-debt 2026-05-18 expansion):
+//   60 msg + 50 dialog + 30 quest_hook + 20 event = 150 items.
 export const RACE_CHAINS: Record<RaceId, readonly ChainItem[]> = {
   crystalloids: [
     { type: 'msg', text_key: 'races.crystalloids.chain.0.text' },
@@ -189,6 +197,32 @@ export const RACE_CHAINS: Record<RaceId, readonly ChainItem[]> = {
       refuse_delta: -1,
     },
     { type: 'msg', text_key: 'races.crystalloids.chain.9.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.crystalloids.chain.10.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'dialog',
+      text_key: 'races.crystalloids.chain.11.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.crystalloids.chain.12.text',
+      quest_id: 'crystalloids_lattice_survey_b',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'event',
+      target: 'self',
+      delta: -1,
+      text_key: 'cosmos.event.crystal_resonance',
+    },
+    { type: 'msg', text_key: 'races.crystalloids.chain.14.text' },
   ],
   gasouls: [
     { type: 'msg', text_key: 'races.gasouls.chain.0.text' },
@@ -233,6 +267,32 @@ export const RACE_CHAINS: Record<RaceId, readonly ChainItem[]> = {
       refuse_delta: -1,
     },
     { type: 'msg', text_key: 'races.gasouls.chain.9.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.gasouls.chain.10.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'dialog',
+      text_key: 'races.gasouls.chain.11.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.gasouls.chain.12.text',
+      quest_id: 'gasouls_silent_chorus_b',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'event',
+      target: 'self',
+      delta: -1,
+      text_key: 'cosmos.event.lost_envoy',
+    },
+    { type: 'msg', text_key: 'races.gasouls.chain.14.text' },
   ],
   mechanidons: [
     { type: 'msg', text_key: 'races.mechanidons.chain.0.text' },
@@ -277,6 +337,32 @@ export const RACE_CHAINS: Record<RaceId, readonly ChainItem[]> = {
       refuse_delta: -1,
     },
     { type: 'msg', text_key: 'races.mechanidons.chain.9.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.mechanidons.chain.10.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'dialog',
+      text_key: 'races.mechanidons.chain.11.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.mechanidons.chain.12.text',
+      quest_id: 'mechanidons_audit_route_b',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'event',
+      target: 'self',
+      delta: -1,
+      text_key: 'cosmos.event.failed_pact',
+    },
+    { type: 'msg', text_key: 'races.mechanidons.chain.14.text' },
   ],
   fireworms: [
     { type: 'msg', text_key: 'races.fireworms.chain.0.text' },
@@ -321,6 +407,32 @@ export const RACE_CHAINS: Record<RaceId, readonly ChainItem[]> = {
       refuse_delta: -1,
     },
     { type: 'msg', text_key: 'races.fireworms.chain.9.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.fireworms.chain.10.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'dialog',
+      text_key: 'races.fireworms.chain.11.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.fireworms.chain.12.text',
+      quest_id: 'fireworms_blood_oath_b',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'event',
+      target: 'self',
+      delta: -1,
+      text_key: 'cosmos.event.solar_flare',
+    },
+    { type: 'msg', text_key: 'races.fireworms.chain.14.text' },
   ],
   liquidoids: [
     { type: 'msg', text_key: 'races.liquidoids.chain.0.text' },
@@ -365,6 +477,32 @@ export const RACE_CHAINS: Record<RaceId, readonly ChainItem[]> = {
       refuse_delta: -1,
     },
     { type: 'msg', text_key: 'races.liquidoids.chain.9.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.liquidoids.chain.10.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'dialog',
+      text_key: 'races.liquidoids.chain.11.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.liquidoids.chain.12.text',
+      quest_id: 'liquidoids_market_truce_b',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'event',
+      target: 'self',
+      delta: -1,
+      text_key: 'cosmos.event.failed_pact',
+    },
+    { type: 'msg', text_key: 'races.liquidoids.chain.14.text' },
   ],
   tenebrians: [
     { type: 'msg', text_key: 'races.tenebrians.chain.0.text' },
@@ -409,6 +547,32 @@ export const RACE_CHAINS: Record<RaceId, readonly ChainItem[]> = {
       refuse_delta: -1,
     },
     { type: 'msg', text_key: 'races.tenebrians.chain.9.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.tenebrians.chain.10.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'dialog',
+      text_key: 'races.tenebrians.chain.11.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.tenebrians.chain.12.text',
+      quest_id: 'tenebrians_veil_walk_b',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'event',
+      target: 'self',
+      delta: -1,
+      text_key: 'cosmos.event.crystal_resonance',
+    },
+    { type: 'msg', text_key: 'races.tenebrians.chain.14.text' },
   ],
   plasmaspirits: [
     { type: 'msg', text_key: 'races.plasmaspirits.chain.0.text' },
@@ -453,6 +617,32 @@ export const RACE_CHAINS: Record<RaceId, readonly ChainItem[]> = {
       refuse_delta: -1,
     },
     { type: 'msg', text_key: 'races.plasmaspirits.chain.9.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.plasmaspirits.chain.10.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'dialog',
+      text_key: 'races.plasmaspirits.chain.11.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.plasmaspirits.chain.12.text',
+      quest_id: 'plasmaspirits_storm_race_b',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'event',
+      target: 'self',
+      delta: -1,
+      text_key: 'cosmos.event.lost_envoy',
+    },
+    { type: 'msg', text_key: 'races.plasmaspirits.chain.14.text' },
   ],
   forestcores: [
     { type: 'msg', text_key: 'races.forestcores.chain.0.text' },
@@ -497,6 +687,32 @@ export const RACE_CHAINS: Record<RaceId, readonly ChainItem[]> = {
       refuse_delta: -1,
     },
     { type: 'msg', text_key: 'races.forestcores.chain.9.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.forestcores.chain.10.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'dialog',
+      text_key: 'races.forestcores.chain.11.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.forestcores.chain.12.text',
+      quest_id: 'forestcores_root_bridge_b',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'event',
+      target: 'self',
+      delta: -1,
+      text_key: 'cosmos.event.ritual_disrupted',
+    },
+    { type: 'msg', text_key: 'races.forestcores.chain.14.text' },
   ],
   timeweavers: [
     { type: 'msg', text_key: 'races.timeweavers.chain.0.text' },
@@ -541,6 +757,32 @@ export const RACE_CHAINS: Record<RaceId, readonly ChainItem[]> = {
       refuse_delta: -1,
     },
     { type: 'msg', text_key: 'races.timeweavers.chain.9.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.timeweavers.chain.10.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'dialog',
+      text_key: 'races.timeweavers.chain.11.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.timeweavers.chain.12.text',
+      quest_id: 'timeweavers_unspun_thread_b',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'event',
+      target: 'self',
+      delta: -1,
+      text_key: 'cosmos.event.failed_pact',
+    },
+    { type: 'msg', text_key: 'races.timeweavers.chain.14.text' },
   ],
   cometfolk: [
     { type: 'msg', text_key: 'races.cometfolk.chain.0.text' },
@@ -585,5 +827,31 @@ export const RACE_CHAINS: Record<RaceId, readonly ChainItem[]> = {
       refuse_delta: -1,
     },
     { type: 'msg', text_key: 'races.cometfolk.chain.9.text' },
+    {
+      type: 'dialog',
+      text_key: 'races.cometfolk.chain.10.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'dialog',
+      text_key: 'races.cometfolk.chain.11.text',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'quest_hook',
+      text_key: 'races.cometfolk.chain.12.text',
+      quest_id: 'cometfolk_long_orbit_b',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
+    {
+      type: 'event',
+      target: 'self',
+      delta: -1,
+      text_key: 'cosmos.event.solar_flare',
+    },
+    { type: 'msg', text_key: 'races.cometfolk.chain.14.text' },
   ],
 }
