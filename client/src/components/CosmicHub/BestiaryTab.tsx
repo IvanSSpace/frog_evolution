@@ -1,3 +1,4 @@
+// Phase 25-02: light pass restyle (только top-level BestiaryTab; bestiary/ subdir НЕ trogается)
 // Phase 18: бестиарий 2.0 — 4 location tabs (rarity-based) × 384 cells virtualized.
 // REQ BESTIARY-01..09.
 
@@ -20,6 +21,7 @@ import {
   useBestiaryView,
   BestiaryDetailModal,
 } from './bestiary'
+import { PINK, TEXT_DIM, TEXT_VERY_DIM } from './_styles'
 
 interface LocationTab {
   rarity: LegacyRarity
@@ -95,22 +97,38 @@ export function BestiaryTab() {
   }, [selectedCell, bitset])
 
   return (
-    <div className="flex flex-col h-full bg-gray-950">
+    <div
+      className="flex flex-col h-full"
+      style={{ background: 'transparent' }}
+    >
       {/* Global counter */}
-      <div className="px-3 py-2 text-xs text-white/60 border-b border-white/10 flex justify-between items-center">
+      <div
+        className="px-3 py-2 flex justify-between items-center"
+        style={{
+          fontSize: 12,
+          color: TEXT_DIM,
+          borderBottom: '1px solid rgba(255,255,255,0.1)',
+        }}
+      >
         <span>
           {t('cosmic_hub.bestiary.discovered_total', {
             count: totalUnlocked,
             total: BESTIARY_BIT_COUNT,
           })}
         </span>
-        <span className="text-white/40 tabular-nums">
+        <span
+          className="tabular-nums"
+          style={{ color: TEXT_VERY_DIM }}
+        >
           {Math.round((totalUnlocked / BESTIARY_BIT_COUNT) * 100)}%
         </span>
       </div>
 
       {/* Location tabs row */}
-      <div className="flex border-b border-white/10 flex-shrink-0">
+      <div
+        className="flex flex-shrink-0"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}
+      >
         {LOCATION_TABS.map((loc) => {
           const isActive = activeLocation === loc.rarity
           const locUnlocked = perLocationCounts[loc.rarity]
@@ -119,16 +137,26 @@ export function BestiaryTab() {
               key={loc.rarity}
               type="button"
               onClick={() => setActiveLocation(loc.rarity)}
-              className={[
-                'flex-1 py-1.5 text-xs font-medium transition-colors',
-                isActive
-                  ? 'text-white border-b-2 border-emerald-400'
-                  : 'text-white/40 hover:text-white/60',
-              ].join(' ')}
+              className="flex-1 py-1.5"
+              style={{
+                fontSize: 12,
+                fontWeight: 500,
+                color: isActive ? '#fff' : TEXT_VERY_DIM,
+                borderBottom: isActive ? `2px solid ${PINK}` : '2px solid transparent',
+                background: 'transparent',
+                cursor: 'pointer',
+                touchAction: 'manipulation',
+                transition: 'color 0.15s, border-color 0.15s',
+              }}
             >
-              <span className="block text-base">{loc.icon}</span>
+              <span style={{ display: 'block', fontSize: 16, lineHeight: 1.2 }}>
+                {loc.icon}
+              </span>
               <span>{t(loc.labelKey)}</span>
-              <span className="block text-[10px] text-white/50 tabular-nums">
+              <span
+                className="block tabular-nums"
+                style={{ fontSize: 10, color: TEXT_VERY_DIM }}
+              >
                 {locUnlocked}/288
               </span>
             </button>

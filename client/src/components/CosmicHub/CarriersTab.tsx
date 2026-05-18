@@ -1,3 +1,4 @@
+// Phase 25-02: visual restyle (dark cards + pink CTAs)
 // Phase 22: простой список carriers (element + level + frogId).
 // Удалены: stabilized badge, feedCount progress, disposeCarrier action.
 // DisposeConfirmModal остаётся как stub — dispose TBD в Plan 22-03 (ascension flow).
@@ -8,6 +9,7 @@ import { useGameStore } from '../../store/gameStore'
 import { CarrierInfoCard } from './CarrierInfoCard'
 import { DisposeConfirmModal } from './DisposeConfirmModal'
 import type { CarrierData } from '../../store/cosmic/types'
+import { TEXT_DIM, TEXT_VERY_DIM, EMPTY_STATE_TEXT_STYLE } from './_styles'
 
 export function CarriersTab() {
   const { t } = useTranslation()
@@ -17,10 +19,19 @@ export function CarriersTab() {
 
   if (carriers.length === 0) {
     return (
-      <div className="p-6 text-center text-white/50">
-        <div className="text-4xl mb-2">🐸</div>
-        <div className="text-sm">{t('cosmic_hub.carrier.empty_state')}</div>
-        <div className="text-xs mt-1 text-white/30">
+      <div className="p-6 text-center">
+        <div style={{ fontSize: 40, lineHeight: 1, marginBottom: 8 }}>🐸</div>
+        <div style={EMPTY_STATE_TEXT_STYLE}>
+          {t('cosmic_hub.carrier.empty_state')}
+        </div>
+        <div
+          style={{
+            fontSize: 12,
+            marginTop: 4,
+            color: TEXT_VERY_DIM,
+            textAlign: 'center',
+          }}
+        >
           {t('cosmic_hub.carrier.empty_hint')}
         </div>
       </div>
@@ -45,7 +56,13 @@ export function CarriersTab() {
   return (
     <>
       <div className="p-3 flex flex-col gap-2">
-        <div className="text-xs text-white/50 mb-1">
+        <div
+          style={{
+            fontSize: 12,
+            color: TEXT_DIM,
+            marginBottom: 4,
+          }}
+        >
           {t('cosmic_hub.carrier.count', { count: carriers.length })}
         </div>
         {sorted.map((c) => (
