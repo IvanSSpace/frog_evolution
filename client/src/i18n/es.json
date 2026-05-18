@@ -209,6 +209,7 @@
     "tab_bestiary": "Bestiario",
     "tab_carriers": "Carriers",
     "tab_shop": "Tienda",
+    "tab_inventory": "Inventario",
     "lock_first_feed": "Se desbloquea tras la primera alimentación",
     "lock_first_mission": "Se desbloquea tras la primera misión",
     "scouts_placeholder": "Exploradores llegando próximamente",
@@ -356,6 +357,17 @@
       "milestone_24": "Recompensa: suero épico por 24 celdas",
       "milestone_96": "Recompensa: suero legendario por 96 celdas",
       "milestone_576": "Recompensa: visual exclusivo de rana por 576 celdas"
+    },
+    "inventory": {
+      "section_currencies": "MONEDAS",
+      "section_serums": "SUEROS",
+      "section_artifacts": "ARTEFACTOS",
+      "section_relationships": "RELACIONES CON RAZAS",
+      "currency_essence": "Esencia",
+      "currency_gold": "Limo",
+      "placeholder_artifacts": "Próximamente…",
+      "placeholder_relationship_value": "?",
+      "tooltip_relationship_pending": "Se desbloquea en futuras actualizaciones"
     }
   },
   "cosmic_shop": {

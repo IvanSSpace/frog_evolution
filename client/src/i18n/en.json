@@ -209,6 +209,7 @@
     "tab_bestiary": "Bestiary",
     "tab_carriers": "Carriers",
     "tab_shop": "Shop",
+    "tab_inventory": "Inventory",
     "lock_first_feed": "Unlocks after first feed",
     "lock_first_mission": "Unlocks after first mission",
     "scouts_placeholder": "Scouts coming in next update",
@@ -356,6 +357,17 @@
       "milestone_24": "Reward: epic serum for 24 cells",
       "milestone_96": "Reward: legendary serum for 96 cells",
       "milestone_576": "Reward: exclusive frog visual for 576 cells"
+    },
+    "inventory": {
+      "section_currencies": "CURRENCIES",
+      "section_serums": "SERUMS",
+      "section_artifacts": "ARTIFACTS",
+      "section_relationships": "RELATIONS WITH RACES",
+      "currency_essence": "Essence",
+      "currency_gold": "Slime",
+      "placeholder_artifacts": "Coming soon…",
+      "placeholder_relationship_value": "?",
+      "tooltip_relationship_pending": "Unlocks in future updates"
     }
   },
   "cosmic_shop": {
