@@ -36,7 +36,7 @@ model GameState {
   discoveredLevels Json     @default("[1]")
   magnetEnabled    Boolean  @default(true) @map("magnet_enabled")
   currentLocation  Int      @default(1) @map("current_location")
-  locationFrogs    Json     @default("[[1,2,3,4,5,6],[],[]]") @map("location_frogs")
+  locationFrogs    Json     @default("[[1],[],[]]") @map("location_frogs")
   cosmic           Json? // serums/boxes/ship/carriers/bestiary — лениво (JSONB)
   boxOpenCount     Int      @default(0) @map("box_open_count")
   incomePerSec     Float    @default(0) @map("income_per_sec")
