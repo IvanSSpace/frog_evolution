@@ -17,6 +17,8 @@ export function SerumBar() {
   const setSerumDragActive = useGameStore((s) => s.setSerumDragActive)
   const selectedSerum = useGameStore((s) => s.selectedSerum)
   const serumDragActive = useGameStore((s) => s.serumDragActive)
+  // Серум applies только на L1 frogs (которые живут только на 1-й локации — Болото).
+  const currentLocation = useGameStore((s) => s.currentLocation)
 
   const [starMapActive, setStarMapActive] = useState(false)
 
@@ -40,6 +42,7 @@ export function SerumBar() {
 
   if (!unlocked) return null // Phase 22 Plan 22-06: cosmos gate
   if (starMapActive) return null
+  if (currentLocation !== 1) return null // серум applies только на L1 frogs (только Болото id=1)
   if (slots.length === 0) return null
 
   const handleTap = (element: Element) => {
