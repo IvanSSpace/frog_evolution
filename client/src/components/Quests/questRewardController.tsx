@@ -43,8 +43,17 @@ export function QuestRewardController() {
       reward: QuestReward
     }) => {
       setQueue((q) => {
-        // Defensive — drop overflow silently
-        if (q.length >= QUEUE_CAP) return q
+        // Defensive — drop overflow. DEV-only warn чтобы помочь обнаружить
+        // pathological event burst (production: silent no-op).
+        if (q.length >= QUEUE_CAP) {
+          if (import.meta.env.DEV) {
+            console.warn(
+              '[QuestRewardController] queue cap reached, dropping completion',
+              { questId: e.questId, activeQuestId: e.activeQuestId },
+            )
+          }
+          return q
+        }
         // Dedup: same activeQuestId already queued → no-op (DEV reissue, StrictMode)
         if (q.some((entry) => entry.key === e.activeQuestId)) return q
         return [
