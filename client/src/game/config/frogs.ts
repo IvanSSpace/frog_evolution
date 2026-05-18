@@ -30,17 +30,18 @@ export type PoopType = keyof typeof POOP_VALUES
 export const POOP_INTERVAL_MS = 1700
 
 // Целевой доход в секунду на лягушку — официальная экономика.
-// Прогрессия ~2× на каждый level (continuing ratio from Болото L7-L12).
+// Source-of-truth: frog_obsidian_archive/Frog Evolution/Economy/
+//   Экономика лягушек — 24 уровня.md
+// Формула: income(T) = 2 × income(T-1) + (T-1)/2, L1 = 0.5.
 // 2026-05-18 fix: L13-L18 имели cap 393206 (legacy от L19+ когда была 4-я
-// локация Континент). После удаления Континента — natural ×2 progression
-// от L12=3065.5.
+// локация Космос). После удаления — natural progression по архивной формуле.
 export const TARGET_INCOME_PER_SEC: readonly number[] = [
   // Лужа (L1-6)
   0.5, 1.5, 4.0, 9.5, 21.0, 44.5,
   // Болото (L7-12)
   92.0, 187.5, 379.0, 762.5, 1530.0, 3065.5,
-  // Лес (L13-18) — natural ×2 progression
-  6131.0, 12262.0, 24524.0, 49048.0, 98096.0, 196192.0,
+  // Лес (L13-18) — точные значения по формуле из архива
+  6137.0, 12280.5, 24568.0, 49143.5, 98295.0, 196598.5,
 ]
 
 export function getTargetIncomePerSec(level: number): number {
