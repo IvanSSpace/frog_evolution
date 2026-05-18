@@ -602,7 +602,7 @@ export class MainScene extends Phaser.Scene {
 
   // ============== UPDATE ==============
 
-  update(_time: number, delta: number) {
+  override update(_time: number, delta: number) {
     // Во время перехода между локациями замораживаем всю логику —
     // лягушки в wrapper-контейнере с локальными координатами, любые расчёты
     // позиций выдадут неправильные значения.
