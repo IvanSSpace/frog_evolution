@@ -45,6 +45,13 @@ import { installContactsDevHelpers } from './utils/devContacts'
 // Phase 28 Plan 28-03: quest DEV helpers (__activateQuest / __progressQuest /
 // __completeQuest / __resetQuests / __dumpQuests).
 import { installQuestDevHelpers } from './utils/devQuests'
+// Tech-debt 2026-05-19: DEV-only Telegram safe-area visual overlay.
+// Tree-shaken из production через import.meta.env.DEV guard в самом компоненте
+// + mount-site guard ниже. Toggle: window.__toggleTgSafeAreaDebug().
+import {
+  TelegramSafeAreaDebugOverlay,
+  installTelegramSafeAreaDebugHelper,
+} from './components/Debug/TelegramSafeAreaDebugOverlay'
 import { devLog } from './utils/devLog'
 import { pingHealth } from './api/client'
 import { ensureLogin } from './api/auth'
@@ -276,6 +283,9 @@ function App() {
     // (__activateQuest / __progressQuest / __completeQuest / __resetQuests /
     // __dumpQuests). Tree-shaken from production via import.meta.env.DEV guard.
     const questDevCleanup = installQuestDevHelpers()
+    // Tech-debt 2026-05-19: TG safe-area overlay helper
+    // (__toggleTgSafeAreaDebug / __tgSafeAreaDebug). Default OFF.
+    const tgSafeAreaDevCleanup = installTelegramSafeAreaDebugHelper()
 
     return () => {
       delete w.__resetCrewToday
@@ -299,6 +309,8 @@ function App() {
       contactsDevCleanup()
       // Phase 28 Plan 28-03: quest dev helpers cleanup.
       questDevCleanup()
+      // Tech-debt 2026-05-19: TG safe-area helper cleanup.
+      tgSafeAreaDevCleanup()
     }
   }, [])
 
@@ -422,6 +434,10 @@ function App() {
           onClose={() => setWelcomeBack(null)}
         />
       )}
+      {/* Tech-debt 2026-05-19: DEV-only Telegram safe-area visual overlay.
+          import.meta.env.DEV guard здесь + повторный guard внутри компонента
+          → Vite tree-shake'ит и mount-site, и сам компонент в production. */}
+      {import.meta.env.DEV && <TelegramSafeAreaDebugOverlay />}
     </QueryClientProvider>
   )
 }
