@@ -441,7 +441,11 @@
         "6": { "description": "our pattern has cracked" },
         "7": { "text": "Agree to symmetry. Otherwise we turn an edge to you." },
         "8": { "text": "Deliver a resonant shard to Texum; we have a dispute with the Liquidspheres." },
-        "9": { "text": "We have recorded your reply. The crystal does not forget." }
+        "9": { "text": "We have recorded your reply. The crystal does not forget." },
+        "10": { "text": "Stand inside our lattice for one beat. We will read your answer more cleanly." },
+        "11": { "text": "Agree to hold silence about our mines. Sound is excess there." },
+        "12": { "text": "Take an imprint of the far facet in the Paradox system. We need the exact angle." },
+        "14": { "text": "The facet is added to our pattern. You are now part of the drawing." }
       }
     },
     "gasouls": {
@@ -460,7 +464,11 @@
         "6": { "description": "our chord has gone out of tune" },
         "7": { "text": "Agree to harmonize. Dissonance wounds." },
         "8": { "text": "Save our choir — find the sunken resonator on the colony." },
-        "9": { "text": "We sing of you. Softer or louder — depends on you." }
+        "9": { "text": "We sing of you. Softer or louder — depends on you." },
+        "10": { "text": "Hum a single low overtone with us. Only one — and you enter the song." },
+        "11": { "text": "Agree to carry our song to Scorch. The Fireworms should hear it." },
+        "12": { "text": "Catch the echo of our ancestor near the asteroid belt. It went out unanswered." },
+        "14": { "text": "The song holds your note. Where it travels — you choose." }
       }
     },
     "mechanidons": {
@@ -479,7 +487,11 @@
         "6": { "description": "the contract failed, KPI dropped" },
         "7": { "text": "Agree to the standard contract. Otherwise resource overhead." },
         "8": { "text": "Run diagnostics in the Scorch system. Anomaly logged." },
-        "9": { "text": "Record saved. Next iteration — your move." }
+        "9": { "text": "Record saved. Next iteration — your move." },
+        "10": { "text": "Sign NDA-2. Protocol leak — 12% penalty." },
+        "11": { "text": "Agree to ship telemetry. Anonymous, aggregated." },
+        "12": { "text": "Audit the Liquidsphere supply chain. Variance on balance — 4.6%." },
+        "14": { "text": "Contract extended. Next revision next cycle." }
       }
     },
     "fireworms": {
@@ -498,7 +510,11 @@
         "6": { "description": "our flame flickered — rage boils" },
         "7": { "text": "Agree to the duel. Refuse — we remember." },
         "8": { "text": "Deliver a fire shard to Unseen. The Tenebrians need one. Or we need a pretext." },
-        "9": { "text": "We burn. We wait. Decide." }
+        "9": { "text": "We burn. We wait. Decide." },
+        "10": { "text": "Swear an oath in flame. Words are ash. An oath is a scar." },
+        "11": { "text": "Agree to wear our mark. Cometfolk will see — and turn away." },
+        "12": { "text": "Catch the traitor near the Scorch corona. Alive. Rare request." },
+        "14": { "text": "Scar on the armor. We remember. We burn on." }
       }
     },
     "liquidoids": {
@@ -517,7 +533,11 @@
         "6": { "description": "a contract collapsed, liquidity drained away" },
         "7": { "text": "Sign the trade protocol. Standard terms." },
         "8": { "text": "Find the stolen cargo. The stake is your reputation." },
-        "9": { "text": "We remember generous partners." }
+        "9": { "text": "We remember generous partners." },
+        "10": { "text": "Cede a percentage of your sector. In return — doors on three markets." },
+        "11": { "text": "Agree to a truce with the Fireworms brokered by our table. Warm profit." },
+        "12": { "text": "Bring two feuding factions to the table. Fee per deal." },
+        "14": { "text": "The flow continues. You are a node, not a clog." }
       }
     },
     "tenebrians": {
@@ -536,7 +556,11 @@
         "6": { "description": "the shadow ritual was broken by foreign light" },
         "7": { "text": "Agree to be an observer. Do not interfere." },
         "8": { "text": "Protect the last shard of night. Otherwise we vanish." },
-        "9": { "text": "Shadow remembers. Light forgets." }
+        "9": { "text": "Shadow remembers. Light forgets." },
+        "10": { "text": "Turn from your sun for one cycle. Then we will show more." },
+        "11": { "text": "Agree to hold a name we whisper to you. Do not say it aloud." },
+        "12": { "text": "Walk the edge of the veil in the Paradox system. Something there answers us." },
+        "14": { "text": "Shadow takes the shape of your reply. Do not look back." }
       }
     },
     "plasmaspirits": {
@@ -555,7 +579,11 @@
         "6": { "description": "a flare scattered our flock off course" },
         "7": { "text": "Agree to the boost. Hesitation is weakness." },
         "8": { "text": "Reconnect with the lost flock. They are drifting." },
-        "9": { "text": "We fly. Keep up." }
+        "9": { "text": "We fly. Keep up." },
+        "10": { "text": "Race! Right now! Accept — we launch. No — we are already ahead." },
+        "11": { "text": "Let us discharge your shield for five hits. Fun! Come on!" },
+        "12": { "text": "Break through the storm in the Scorch system. We lost a spark in there." },
+        "14": { "text": "Electron! You are faster than you looked. Onward." }
       }
     },
     "forestcores": {
@@ -574,7 +602,11 @@
         "6": { "description": "an old pact with the soil has not held" },
         "7": { "text": "Agree to take root. Or we will turn away." },
         "8": { "text": "Help relocate a spore to a new colony." },
-        "9": { "text": "The root grows. Patience." }
+        "9": { "text": "The root grows. Patience." },
+        "10": { "text": "Grant us one year of silence over your border planet. A year is a single breath for us." },
+        "11": { "text": "Agree not to fell our ancestor-tree. Even while it sleeps." },
+        "12": { "text": "Tie the mycelium of two of our forests through a neutral sector. A thin thread." },
+        "14": { "text": "A root reaches toward your sector. Not fast, but already begun." }
       }
     },
     "timeweavers": {
@@ -593,7 +625,11 @@
         "6": { "description": "a weaving ritual tore the thread of time" },
         "7": { "text": "Agree to be a thread. Not a loop." },
         "8": { "text": "Join two points in the spiral. A carrier is needed." },
-        "9": { "text": "The pattern is closing. You are a stitch." }
+        "9": { "text": "The pattern is closing. You are a stitch." },
+        "10": { "text": "Refuse tomorrow's chance. It interferes with yesterday's answer." },
+        "11": { "text": "Agree to forget one of your choices. No matter — we remember it." },
+        "12": { "text": "Unravel the loop forming at your outpost. It will not release you." },
+        "14": { "text": "The stitch lies. The fabric is longer than you think." }
       }
     },
     "cometfolk": {
@@ -612,7 +648,11 @@
         "6": { "description": "our envoy is lost beyond the asteroid belt" },
         "7": { "text": "Agree to the flight. It is dull to refuse friends." },
         "8": { "text": "Find our lost crest in the Texum system." },
-        "9": { "text": "Fly with us. The stars are near." }
+        "9": { "text": "Fly with us. The stars are near." },
+        "10": { "text": "Tell us a story of one of your stars. We will tell three in return." },
+        "11": { "text": "Agree to give our youngster a ride for one season. They do not chatter." },
+        "12": { "text": "Take a long orbit with us — past the belt, to Silicassos and back. One swing, two years." },
+        "14": { "text": "The route already marks you. Until the next crest!" }
       }
     }
   },
