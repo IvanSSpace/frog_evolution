@@ -18,7 +18,6 @@
 import Phaser from 'phaser'
 import { useGameStore } from '../../../store/gameStore'
 import { eventBus } from '../../../store/eventBus'
-import { MAX_LEVEL } from '../../config/frogs'
 import { hapticImpact, hapticNotification } from '../../../utils/telegram'
 import { burstEffect } from '../../effects/elements/burstEffect'
 import { ELEMENT_TINT } from '../../../components/CosmicHub/ElementGrid'
@@ -134,8 +133,9 @@ export class FrogInteraction {
       return
     }
 
-    // Тап-мердж: ищем рядом с точкой тапа другую лягушку того же уровня
-    if (frog.level < MAX_LEVEL) {
+    // Тап-мердж: ищем рядом с точкой тапа другую лягушку того же уровня.
+    // L18+L18 разрешён — MergeController обрабатывает special cosmos sentinel path.
+    {
       const target = this.merge.findMergeTarget(tapX, tapY, frog.level, frog)
       if (target) {
         this.merge.performMerge(frog, target, tapX, tapY)

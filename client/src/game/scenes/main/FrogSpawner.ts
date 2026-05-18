@@ -26,7 +26,6 @@ import { useGameStore } from '../../../store/gameStore'
 import { eventBus } from '../../../store/eventBus'
 import {
   FROG_LEVELS,
-  MAX_LEVEL,
   textureKeyForLevel,
   rollPoopType,
   POOP_INTERVAL_MS,
@@ -262,8 +261,10 @@ export class FrogSpawner {
       // Tap-as-drag-end остаётся (handler ниже route'ит через onFrogTapped → handleSerumTap).
       const serumActive = useGameStore.getState().serumDragActive
 
-      // Сначала проверяем мердж в позиции отпускания пальца
-      if (!serumActive && frog.level < MAX_LEVEL) {
+      // Сначала проверяем мердж в позиции отпускания пальца.
+      // L18+L18 разрешён — MergeController обрабатывает special cosmos sentinel path
+      // (markCosmosUnlocked + captain birth cinematic в Phase 24).
+      if (!serumActive) {
         const target = scene.findMergeTarget(
           pointer.x,
           pointer.y,
