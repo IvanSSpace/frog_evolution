@@ -1,18 +1,21 @@
 // Phase 15 Plan 15-01 Task 2: unit tests for box actions in cosmicSlice.
 // Phase 22: rewritten — rarity removed, flat serums model.
-// Run: tsx client/src/store/cosmic/slice.test.ts
+// Phase 22 Plan 22-06: commitOpenedBox is cosmos-gated. Tests below set
+// hasCosmosUnlocked=true at the harness level so the serum increment path runs.
+// See client/src/store/cosmic/slices/boxSlice.ts (cosmosUnlocked guard).
 //
-// Тестируем addBox, rollBoxRarity, commitOpenedBox, removeBox.
+// Phase 28 tech-debt: migrated from top-level `node:assert/strict` ad-hoc runner
+// to vitest describe/it (vitest 4 не подбирал старый формат — «No test suite found»).
 
-import assert from 'node:assert/strict'
+import { describe, it, expect } from 'vitest'
 
-// Polyfill crypto.randomUUID для node test (Node 19+ has it natively, but ensure).
+// Polyfill crypto.randomUUID (vitest happy-dom уже даёт, но безопасно).
 if (
   !(globalThis as { crypto?: { randomUUID?: () => string } }).crypto?.randomUUID
 ) {
-  ;(globalThis as { crypto?: { randomUUID: () => string } }).crypto = {
-    randomUUID: () => `${Date.now()}-${Math.random()}`,
-  }
+  Object.defineProperty(globalThis, 'crypto', {
+    value: { randomUUID: () => `${Date.now()}-${Math.random()}` },
+  })
 }
 
 import { createCosmicSlice } from './slice'
@@ -22,6 +25,9 @@ interface Harness {
   state: () => CosmicState
 }
 
+// Harness shape mirrors other cosmic tests. hasCosmosUnlocked lives on the
+// root gameStore; we inject it через spread set() so boxSlice's narrow cast
+// видит флаг (Phase 22 Plan 22-06 cosmos gate).
 function makeHarness(): Harness {
   let state: CosmicState | undefined
   const set = (partial: Partial<CosmicState>): void => {
@@ -29,198 +35,163 @@ function makeHarness(): Harness {
   }
   const get = (): CosmicState => state as CosmicState
   state = createCosmicSlice(set, get)
+  set({ hasCosmosUnlocked: true } as unknown as Partial<CosmicState>)
   return { state: () => state as CosmicState }
 }
 
-// ─── Test 1: addBox returns BoxData with auto-id, opened=false, createdAt > 0 ───
-{
-  const h = makeHarness()
-  const box = h.state().addBox({
-    planetId: 'p1',
-    planetName: 'Kepler',
-    archetype: 'lava',
-    element: 'fire',
+describe('cosmic slice — box actions (cosmos-unlocked)', () => {
+  it('Test 1: addBox returns BoxData with auto-id, opened=false, createdAt > 0', () => {
+    const h = makeHarness()
+    const box = h.state().addBox({
+      planetId: 'p1',
+      planetName: 'Kepler',
+      archetype: 'lava',
+      element: 'fire',
+    })
+    expect(typeof box.id).toBe('string')
+    expect(box.id.length).toBeGreaterThan(0)
+    expect(box.opened).toBe(false)
+    expect(box.createdAt).toBeGreaterThan(0)
+    expect(box.element).toBe('fire')
+    expect(h.state().boxes.length).toBe(1)
   })
-  assert.equal(typeof box.id, 'string', 'Test 1: id is string')
-  assert(box.id.length > 0, 'Test 1: id non-empty')
-  assert.equal(box.opened, false, 'Test 1: opened=false')
-  assert(box.createdAt > 0, 'Test 1: createdAt > 0')
-  assert.equal(box.element, 'fire', 'Test 1: element=fire')
-  assert.equal(h.state().boxes.length, 1, 'Test 1: boxes.length=1')
-}
 
-// ─── Test 2: addBox дважды → 2 boxes, ids различаются ───
-{
-  const h = makeHarness()
-  const a = h.state().addBox({
-    planetId: 'p',
-    planetName: 'A',
-    archetype: 'lava',
-    element: 'fire',
+  it('Test 2: addBox дважды → 2 boxes, ids различаются', () => {
+    const h = makeHarness()
+    const a = h.state().addBox({
+      planetId: 'p',
+      planetName: 'A',
+      archetype: 'lava',
+      element: 'fire',
+    })
+    const b = h.state().addBox({
+      planetId: 'p',
+      planetName: 'B',
+      archetype: 'ice',
+      element: 'ice',
+    })
+    expect(h.state().boxes.length).toBe(2)
+    expect(a.id).not.toBe(b.id)
   })
-  const b = h.state().addBox({
-    planetId: 'p',
-    planetName: 'B',
-    archetype: 'ice',
-    element: 'ice',
-  })
-  assert.equal(h.state().boxes.length, 2, 'Test 2: 2 boxes')
-  assert.notEqual(a.id, b.id, 'Test 2: ids differ')
-}
 
-// ─── Test 3: rollBoxRarity unknown id → null ───
-{
-  const h = makeHarness()
-  assert.equal(
-    h.state().rollBoxRarity('unknown'),
-    null,
-    'Test 3: unknown id → null',
-  )
-}
+  it('Test 3: rollBoxRarity unknown id → null', () => {
+    const h = makeHarness()
+    expect(h.state().rollBoxRarity('unknown')).toBeNull()
+  })
 
-// ─── Test 4: rollBoxRarity для removed box → null ───
-{
-  const h = makeHarness()
-  const box = h.state().addBox({
-    planetId: 'p',
-    planetName: 'A',
-    archetype: 'lava',
-    element: 'fire',
+  it('Test 4: rollBoxRarity для removed box → null', () => {
+    const h = makeHarness()
+    const box = h.state().addBox({
+      planetId: 'p',
+      planetName: 'A',
+      archetype: 'lava',
+      element: 'fire',
+    })
+    h.state().commitOpenedBox(box.id)
+    expect(h.state().rollBoxRarity(box.id)).toBeNull()
   })
-  h.state().commitOpenedBox(box.id)
-  assert.equal(
-    h.state().rollBoxRarity(box.id),
-    null,
-    'Test 4: removed box → null',
-  )
-}
 
-// ─── Test 5: rollBoxRarity returns {element} без mutation ───
-{
-  const h = makeHarness()
-  const box = h.state().addBox({
-    planetId: 'p',
-    planetName: 'A',
-    archetype: 'lava',
-    element: 'fire',
+  it('Test 5: rollBoxRarity returns {element} без mutation', () => {
+    const h = makeHarness()
+    const box = h.state().addBox({
+      planetId: 'p',
+      planetName: 'A',
+      archetype: 'lava',
+      element: 'fire',
+    })
+    const before = JSON.stringify({
+      serums: h.state().serums,
+      boxesLen: h.state().boxes.length,
+    })
+    const result = h.state().rollBoxRarity(box.id)
+    expect(result).not.toBeNull()
+    expect(result!.element).toBe('fire')
+    const after = JSON.stringify({
+      serums: h.state().serums,
+      boxesLen: h.state().boxes.length,
+    })
+    expect(after).toBe(before)
   })
-  const before = JSON.stringify({
-    serums: h.state().serums,
-    boxesLen: h.state().boxes.length,
-  })
-  const result = h.state().rollBoxRarity(box.id)
-  assert(result !== null, 'Test 5: result not null')
-  assert.equal(result!.element, 'fire', 'Test 5: element=fire')
-  const after = JSON.stringify({
-    serums: h.state().serums,
-    boxesLen: h.state().boxes.length,
-  })
-  assert.equal(
-    before,
-    after,
-    'Test 5: rollBoxRarity must be pure (no mutations)',
-  )
-}
 
-// ─── Test 6: commitOpenedBox → serum[element]++, box removed ───
-{
-  const h = makeHarness()
-  const box = h.state().addBox({
-    planetId: 'p',
-    planetName: 'A',
-    archetype: 'lava',
-    element: 'fire',
+  it('Test 6: commitOpenedBox → serum[element]++, box removed', () => {
+    const h = makeHarness()
+    const box = h.state().addBox({
+      planetId: 'p',
+      planetName: 'A',
+      archetype: 'lava',
+      element: 'fire',
+    })
+    const before = h.state().serums.fire ?? 0
+    h.state().commitOpenedBox(box.id)
+    expect(h.state().serums.fire).toBe(before + 1)
+    expect(h.state().boxes.length).toBe(0)
   })
-  const before = h.state().serums.fire ?? 0
-  h.state().commitOpenedBox(box.id)
-  assert.equal(
-    h.state().serums.fire,
-    before + 1,
-    'Test 6: fire serum incremented',
-  )
-  assert.equal(h.state().boxes.length, 0, 'Test 6: box removed')
-}
 
-// ─── Test 7: commitOpenedBox unknown id → no-op ───
-{
-  const h = makeHarness()
-  const before = JSON.stringify({ serums: h.state().serums })
-  h.state().commitOpenedBox('unknown')
-  const after = JSON.stringify({ serums: h.state().serums })
-  assert.equal(before, after, 'Test 7: unknown id no-op')
-}
-
-// ─── Test 8: commitOpenedBox arcane box → arcane serum +1 ───
-{
-  const h = makeHarness()
-  const box = h.state().addBox({
-    planetId: 'p',
-    planetName: 'A',
-    archetype: 'mystic',
-    element: 'arcane',
+  it('Test 7: commitOpenedBox unknown id → no-op', () => {
+    const h = makeHarness()
+    const before = JSON.stringify({ serums: h.state().serums })
+    h.state().commitOpenedBox('unknown')
+    const after = JSON.stringify({ serums: h.state().serums })
+    expect(after).toBe(before)
   })
-  const before = h.state().serums.arcane ?? 0
-  h.state().commitOpenedBox(box.id)
-  assert.equal(
-    h.state().serums.arcane,
-    before + 1,
-    'Test 8: arcane serum +1',
-  )
-}
 
-// ─── Test 9: removeBox filters by id ───
-{
-  const h = makeHarness()
-  const a = h.state().addBox({
-    planetId: 'p',
-    planetName: 'A',
-    archetype: 'lava',
-    element: 'fire',
+  it('Test 8: commitOpenedBox arcane box → arcane serum +1', () => {
+    const h = makeHarness()
+    const box = h.state().addBox({
+      planetId: 'p',
+      planetName: 'A',
+      archetype: 'mystic',
+      element: 'arcane',
+    })
+    const before = h.state().serums.arcane ?? 0
+    h.state().commitOpenedBox(box.id)
+    expect(h.state().serums.arcane).toBe(before + 1)
   })
-  const b = h.state().addBox({
-    planetId: 'p',
-    planetName: 'B',
-    archetype: 'ice',
-    element: 'ice',
-  })
-  h.state().removeBox(a.id)
-  assert.equal(h.state().boxes.length, 1, 'Test 9: 1 box left')
-  assert.equal(h.state().boxes[0].id, b.id, 'Test 9: kept box B')
-}
 
-// ─── Test 10: bonusRarity cosmetic flag preserved in addBox ───
-{
-  const h = makeHarness()
-  const box = h.state().addBox({
-    planetId: 'p',
-    planetName: 'A',
-    archetype: 'lava',
-    element: 'fire',
-    bonusRarity: 'epic',
+  it('Test 9: removeBox filters by id', () => {
+    const h = makeHarness()
+    const a = h.state().addBox({
+      planetId: 'p',
+      planetName: 'A',
+      archetype: 'lava',
+      element: 'fire',
+    })
+    const b = h.state().addBox({
+      planetId: 'p',
+      planetName: 'B',
+      archetype: 'ice',
+      element: 'ice',
+    })
+    h.state().removeBox(a.id)
+    expect(h.state().boxes.length).toBe(1)
+    expect(h.state().boxes[0].id).toBe(b.id)
   })
-  assert.equal(box.bonusRarity, 'epic', 'Test 10: bonusRarity stored')
-  // rollBoxRarity still returns {element} only
-  const r = h.state().rollBoxRarity(box.id)
-  assert(r !== null, 'Test 10: roll not null')
-  assert.equal(r!.element, 'fire', 'Test 10: element=fire')
-}
 
-// ─── Test 11: hasOpenedAnyBox toggled на commitOpenedBox ───
-{
-  const h = makeHarness()
-  assert.equal(h.state().hasOpenedAnyBox, false, 'Test 11a: default false')
-  const box = h.state().addBox({
-    planetId: 'p',
-    planetName: 'A',
-    archetype: 'lava',
-    element: 'fire',
+  it('Test 10: bonusRarity cosmetic flag preserved in addBox', () => {
+    const h = makeHarness()
+    const box = h.state().addBox({
+      planetId: 'p',
+      planetName: 'A',
+      archetype: 'lava',
+      element: 'fire',
+      bonusRarity: 'epic',
+    })
+    expect(box.bonusRarity).toBe('epic')
+    const r = h.state().rollBoxRarity(box.id)
+    expect(r).not.toBeNull()
+    expect(r!.element).toBe('fire')
   })
-  h.state().commitOpenedBox(box.id)
-  assert.equal(
-    h.state().hasOpenedAnyBox,
-    true,
-    'Test 11b: toggled after commit',
-  )
-}
 
-console.log('All slice tests passed.')
+  it('Test 11: hasOpenedAnyBox toggled на commitOpenedBox', () => {
+    const h = makeHarness()
+    expect(h.state().hasOpenedAnyBox).toBe(false)
+    const box = h.state().addBox({
+      planetId: 'p',
+      planetName: 'A',
+      archetype: 'lava',
+      element: 'fire',
+    })
+    h.state().commitOpenedBox(box.id)
+    expect(h.state().hasOpenedAnyBox).toBe(true)
+  })
+})
