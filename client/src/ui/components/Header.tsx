@@ -40,6 +40,9 @@ export function Header() {
       style={{
         gridTemplateColumns: '1fr auto 1fr',
         pointerEvents: 'auto',
+        // 54px gap сверху чтобы content не залезал под Telegram header кнопки
+        // (close + ⋮) когда WebApp в fullscreen mode.
+        paddingTop: 54,
       }}
     >
       <div className="flex flex-col items-start gap-0.5">
