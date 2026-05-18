@@ -37,7 +37,7 @@ const PLANET_MAP_PATH = path.join(
   'src',
   'game',
   'data',
-  'planetMap.json'
+  'planetMap.json',
 )
 
 // === Constants (must match config/races.ts canonical order) ===
@@ -93,8 +93,7 @@ function selectHabitable(planetMap) {
   for (const race of RACE_ORDER) {
     // Step a-b: matching pool (type === affinity, не 'home', не assigned)
     const matching = planets.filter(
-      (p) =>
-        p.type === race.affinity && p.id !== 'home' && !assigned.has(p.id)
+      (p) => p.type === race.affinity && p.id !== 'home' && !assigned.has(p.id),
     )
 
     let chosen = []
@@ -106,17 +105,14 @@ function selectHabitable(planetMap) {
       // d: take all matching + добрать random'ом из unassigned non-'home'
       chosen = matching.slice() // 0..matching.length
       const pool = planets.filter(
-        (p) =>
-          p.id !== 'home' &&
-          !assigned.has(p.id) &&
-          !chosen.includes(p)
+        (p) => p.id !== 'home' && !assigned.has(p.id) && !chosen.includes(p),
       )
       const shuffledPool = shuffle(pool, rng)
       while (chosen.length < 3) {
         const next = shuffledPool.shift()
         if (!next) {
           throw new Error(
-            `Cannot find 3 planets for race ${race.id} — pool exhausted`
+            `Cannot find 3 planets for race ${race.id} — pool exhausted`,
           )
         }
         chosen.push(next)
@@ -197,7 +193,7 @@ function validate(planetMap) {
 
   if (planetMap.planets.length !== 350)
     throw new Error(
-      `total planet count changed to ${planetMap.planets.length} (expected 350)`
+      `total planet count changed to ${planetMap.planets.length} (expected 350)`,
     )
 }
 
@@ -234,7 +230,7 @@ function main() {
     const home = raceAssigns.find((a) => a.role === 'home')
     const cols = raceAssigns.filter((a) => a.role === 'colony')
     console.log(
-      `  ${race.id.padEnd(14)} affinity=${race.affinity.padEnd(11)} home=${home.planetId.padEnd(10)} colonies=[${cols.map((c) => c.planetId).join(', ')}]`
+      `  ${race.id.padEnd(14)} affinity=${race.affinity.padEnd(11)} home=${home.planetId.padEnd(10)} colonies=[${cols.map((c) => c.planetId).join(', ')}]`,
     )
   }
 }

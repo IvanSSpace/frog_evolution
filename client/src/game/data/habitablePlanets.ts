@@ -45,7 +45,7 @@ export function getHabitablePlanets(): PlanetWithInhabitant[] {
   // narrow здесь через single `as` cast — downstream получает typed shape.
   const all = (planetMap as { planets: Array<Record<string, unknown>> }).planets
   const filtered = all.filter(
-    (p) => (p as { inhabitant?: unknown }).inhabitant !== undefined
+    (p) => (p as { inhabitant?: unknown }).inhabitant !== undefined,
   ) as unknown as PlanetWithInhabitant[]
   cachedHabitable = filtered
   return cachedHabitable
@@ -56,7 +56,7 @@ export function getHabitablePlanets(): PlanetWithInhabitant[] {
  * (или planet ID не существует в planetMap).
  */
 export function getPlanetInhabitant(
-  planetId: string
+  planetId: string,
 ): PlanetInhabitant | undefined {
   const found = getHabitablePlanets().find((p) => p.id === planetId)
   return found?.inhabitant
@@ -75,5 +75,5 @@ export function getPlanetsByRace(raceId: RaceId): PlanetWithInhabitant[] {
  * Eager-инициализирован (вызывает getHabitablePlanets() и кеширует).
  */
 export const HABITABLE_PLANET_IDS: ReadonlySet<string> = new Set(
-  getHabitablePlanets().map((p) => p.id)
+  getHabitablePlanets().map((p) => p.id),
 )
