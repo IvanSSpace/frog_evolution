@@ -30,14 +30,17 @@ export type PoopType = keyof typeof POOP_VALUES
 export const POOP_INTERVAL_MS = 1700
 
 // Целевой доход в секунду на лягушку — официальная экономика.
-// L19+ имеют одинаковый доход (cap). L19+ нельзя купить в магазине, только через мерджи.
+// Прогрессия ~2× на каждый level (continuing ratio from Болото L7-L12).
+// 2026-05-18 fix: L13-L18 имели cap 393206 (legacy от L19+ когда была 4-я
+// локация Континент). После удаления Континента — natural ×2 progression
+// от L12=3065.5.
 export const TARGET_INCOME_PER_SEC: readonly number[] = [
   // Лужа (L1-6)
   0.5, 1.5, 4.0, 9.5, 21.0, 44.5,
   // Болото (L7-12)
   92.0, 187.5, 379.0, 762.5, 1530.0, 3065.5,
-  // Лес (L13-18) — все одинаковые (cap)
-  393206.0, 393206.0, 393206.0, 393206.0, 393206.0, 393206.0,
+  // Лес (L13-18) — natural ×2 progression
+  6131.0, 12262.0, 24524.0, 49048.0, 98096.0, 196192.0,
 ]
 
 export function getTargetIncomePerSec(level: number): number {
@@ -208,14 +211,14 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     poopChances: HUGE_CHANCES,
   },
 
-  // ─── Лес (L13-18) — доступны в shop, цены по формуле 560 × 2.8^(T-1) ───
-  // Тёплый оливково-зелёный: контрастирует с синим фоном космоса,
-  // отличается от forest=0x4ade80 (лайм H=142°) по hue (~94° vs 142°).
+  // ─── Лес (L13-18) — natural ×2.8 prices progression от L12=46.4M ───
+  // 2026-05-18 fix: prices были billions (legacy от L19+ когда была 4-я
+  // локация Континент). После удаления Континента — natural progression.
   {
     path: '/frogs_svg/frog13.svg',
     name: 'Квакатлас',
     size: 2.0,
-    basePrice: 62_700_000_000,
+    basePrice: 130_000_000,
     growthRate: 1.15,
     tint: 0x99db6b,
     location: 3,
@@ -226,7 +229,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog14.svg',
     name: 'Лягобог',
     size: 2.0,
-    basePrice: 175_600_000_000,
+    basePrice: 364_000_000,
     growthRate: 1.15,
     tint: 0x89cb5f,
     location: 3,
@@ -237,7 +240,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog15.svg',
     name: 'Вселенжаб',
     size: 2.0,
-    basePrice: 491_500_000_000,
+    basePrice: 1_020_000_000,
     growthRate: 1.15,
     tint: 0x7bbd55,
     location: 3,
@@ -248,7 +251,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog16.svg',
     name: 'Уроборосква',
     size: 2.0,
-    basePrice: 1_376_000_000_000,
+    basePrice: 2_850_000_000,
     growthRate: 1.15,
     tint: 0x6fad4b,
     location: 3,
@@ -259,7 +262,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog17.svg',
     name: 'Призмоляг',
     size: 2.0,
-    basePrice: 3_853_000_000_000,
+    basePrice: 7_990_000_000,
     growthRate: 1.15,
     tint: 0x639d43,
     location: 3,
@@ -270,7 +273,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     path: '/frogs_svg/frog18.svg',
     name: 'Жаб-Провидец',
     size: 2.0,
-    basePrice: 10_789_000_000_000,
+    basePrice: 22_360_000_000,
     growthRate: 1.15,
     tint: 0x578d3b,
     location: 3,

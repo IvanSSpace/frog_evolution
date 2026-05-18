@@ -7,34 +7,35 @@
 interface FrogEconomy {
   basePrice: number
   growthRate: number // multiplier per purchase (always 1.15)
-  location: number // 1=Болото, 2=Лес, 3=Планета
+  location: number // 1=Лужа, 2=Болото, 3=Лес
   availableInShop: boolean
 }
 
 // Copied from client/src/game/config/frogs.ts FROG_LEVELS.
 // Order matches level (index 0 = L1, index 17 = L18).
 export const FROG_ECONOMY: readonly FrogEconomy[] = [
-  // ─── Болото (L1-6) ───
+  // ─── Лужа (L1-6) ───
   { basePrice: 560, growthRate: 1.15, location: 1, availableInShop: true },
   { basePrice: 1_570, growthRate: 1.15, location: 1, availableInShop: true },
   { basePrice: 4_390, growthRate: 1.15, location: 1, availableInShop: true },
   { basePrice: 12_290, growthRate: 1.15, location: 1, availableInShop: true },
   { basePrice: 34_420, growthRate: 1.15, location: 1, availableInShop: true },
   { basePrice: 96_380, growthRate: 1.15, location: 1, availableInShop: true },
-  // ─── Лес (L7-12) ───
+  // ─── Болото (L7-12) ───
   { basePrice: 269_860, growthRate: 1.15, location: 2, availableInShop: true },
   { basePrice: 755_600, growthRate: 1.15, location: 2, availableInShop: true },
   { basePrice: 2_100_000, growthRate: 1.15, location: 2, availableInShop: true },
   { basePrice: 5_900_000, growthRate: 1.15, location: 2, availableInShop: true },
   { basePrice: 16_600_000, growthRate: 1.15, location: 2, availableInShop: true },
   { basePrice: 46_400_000, growthRate: 1.15, location: 2, availableInShop: true },
-  // ─── Планета (L13-18) ───
-  { basePrice: 62_700_000_000, growthRate: 1.15, location: 3, availableInShop: true },
-  { basePrice: 175_600_000_000, growthRate: 1.15, location: 3, availableInShop: true },
-  { basePrice: 491_500_000_000, growthRate: 1.15, location: 3, availableInShop: true },
-  { basePrice: 1_376_000_000_000, growthRate: 1.15, location: 3, availableInShop: true },
-  { basePrice: 3_853_000_000_000, growthRate: 1.15, location: 3, availableInShop: true },
-  { basePrice: 10_789_000_000_000, growthRate: 1.15, location: 3, availableInShop: true },
+  // ─── Лес (L13-18) — 2026-05-18 fix: natural ×2.8 progression от L12.
+  // Раньше были billions (legacy от L19+ когда была 4-я локация Континент). ───
+  { basePrice: 130_000_000, growthRate: 1.15, location: 3, availableInShop: true },
+  { basePrice: 364_000_000, growthRate: 1.15, location: 3, availableInShop: true },
+  { basePrice: 1_020_000_000, growthRate: 1.15, location: 3, availableInShop: true },
+  { basePrice: 2_850_000_000, growthRate: 1.15, location: 3, availableInShop: true },
+  { basePrice: 7_990_000_000, growthRate: 1.15, location: 3, availableInShop: true },
+  { basePrice: 22_360_000_000, growthRate: 1.15, location: 3, availableInShop: true },
 ]
 
 export const MAX_LEVEL = FROG_ECONOMY.length // = 18
