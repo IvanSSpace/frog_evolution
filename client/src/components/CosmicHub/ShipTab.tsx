@@ -1,3 +1,4 @@
+// Phase 25-02: visual restyle (Tailwind color utilities → inline styles)
 // Phase 16: Tab «Корабль» в Cosmic Hub.
 // Заменяет ScoutsTab из Phase 11 (placeholder). Tab id остаётся 'scouts' в
 // CosmicTab union для backward compat sessionStorage (Phase 19 polish может
@@ -14,6 +15,15 @@ import {
 } from '../../game/data/missionConfig'
 import { CrewIndicator } from './CrewIndicator'
 import { ELEMENT_TINT } from './ElementGrid'
+import {
+  DARK_CARD_STYLE,
+  PINK_CTA_STYLE,
+  DISABLED_CTA_OVERRIDES,
+  TEXT_DIM,
+  TEXT_VERY_DIM,
+  SECTION_HEADER_STYLE,
+  EMPTY_STATE_TEXT_STYLE,
+} from './_styles'
 
 interface Props {
   onClose: () => void // close Cosmic Hub modal (для «Открыть карту»)
@@ -49,9 +59,12 @@ export function ShipTab({ onClose }: Props) {
   if (!ship) {
     // Empty state (defensive — после ensureShipExists не должно случиться)
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-3 text-white/60 p-4">
-        <div className="text-4xl">🚀</div>
-        <p className="text-sm">{t('ship.empty_state')}</p>
+      <div
+        className="flex flex-col items-center justify-center h-full gap-3 p-4"
+        style={{ color: TEXT_VERY_DIM }}
+      >
+        <div style={{ fontSize: 40, lineHeight: 1 }}>🚀</div>
+        <p style={EMPTY_STATE_TEXT_STYLE}>{t('ship.empty_state')}</p>
       </div>
     )
   }
@@ -72,20 +85,36 @@ export function ShipTab({ onClose }: Props) {
     const secs = Math.floor((remainingMs % 60_000) / 1000)
     stateLabel = t('ship.state_transit', { name })
     stateDetail = (
-      <div className="text-sm text-white/70 mt-1">
+      <div
+        style={{
+          fontSize: 13,
+          color: TEXT_DIM,
+          marginTop: 4,
+        }}
+      >
         {t('ship.transit_eta', { mins, secs: String(secs).padStart(2, '0') })}
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col h-full gap-4 p-4 text-white">
+    <div className="flex flex-col h-full gap-4 p-4" style={{ color: '#fff' }}>
       {/* State pill */}
-      <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-        <div className="text-xs text-white/40 uppercase tracking-wide">
+      <div style={DARK_CARD_STYLE}>
+        <div
+          style={{
+            fontSize: 11,
+            color: TEXT_VERY_DIM,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            fontWeight: 600,
+          }}
+        >
           {t('ship.section_state')}
         </div>
-        <div className="text-base font-medium">{stateLabel}</div>
+        <div style={{ fontSize: 15, fontWeight: 600, marginTop: 2 }}>
+          {stateLabel}
+        </div>
         {stateDetail}
       </div>
 
@@ -99,8 +128,9 @@ export function ShipTab({ onClose }: Props) {
       {/* Action buttons */}
       <div className="flex flex-col gap-2">
         <button
+          type="button"
           onClick={handleOpenMap}
-          className="py-2 px-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-md text-sm font-medium"
+          style={PINK_CTA_STYLE}
         >
           {t('ship.open_map')}
         </button>
@@ -109,15 +139,14 @@ export function ShipTab({ onClose }: Props) {
       {/* Boxes section */}
       {boxes.length > 0 && (
         <div className="flex flex-col gap-2">
-          <div className="text-xs text-white/60 uppercase tracking-wide">
-            📦 Боксы
-          </div>
+          <div style={SECTION_HEADER_STYLE}>📦 Боксы</div>
           {boxes.map((box) => {
             const atHome = ship?.state === 'docked' && ship.planetId === 'home'
             return (
               <div
                 key={box.id}
-                className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-2 border border-white/10"
+                className="flex items-center gap-2"
+                style={{ ...DARK_CARD_STYLE, padding: '8px 12px' }}
               >
                 <div
                   style={{
@@ -129,10 +158,15 @@ export function ShipTab({ onClose }: Props) {
                   }}
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm text-white truncate">
+                  <div
+                    className="truncate"
+                    style={{ fontSize: 13, color: '#fff' }}
+                  >
                     {box.planetName || box.planetId}
                   </div>
-                  <div className="text-xs text-white/40">{box.archetype}</div>
+                  <div style={{ fontSize: 11, color: TEXT_VERY_DIM }}>
+                    {box.archetype}
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -142,13 +176,22 @@ export function ShipTab({ onClose }: Props) {
                     if (!atHome) return
                     useGameStore.getState().openBox(box.id)
                   }}
-                  style={{ pointerEvents: 'auto' }}
-                  className={[
-                    'text-xs px-3 py-1 rounded-md font-medium',
+                  style={
                     atHome
-                      ? 'bg-amber-500 hover:bg-amber-600 text-gray-900 cursor-pointer'
-                      : 'bg-gray-700 text-gray-400 cursor-not-allowed',
-                  ].join(' ')}
+                      ? {
+                          ...PINK_CTA_STYLE,
+                          padding: '6px 12px',
+                          fontSize: 12,
+                          pointerEvents: 'auto',
+                        }
+                      : {
+                          ...PINK_CTA_STYLE,
+                          ...DISABLED_CTA_OVERRIDES,
+                          padding: '6px 12px',
+                          fontSize: 12,
+                          pointerEvents: 'auto',
+                        }
+                  }
                 >
                   Открыть
                 </button>

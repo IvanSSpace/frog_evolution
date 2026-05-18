@@ -1,3 +1,4 @@
+// Phase 25-02: visual restyle (Tailwind color utilities → inline styles)
 // Phase 22: SerumInventoryTab — упрощённый.
 // Один тип серума per element (без секций common/rare/epic/legendary).
 // Boxes section остаётся (для открытия боксов).
@@ -10,6 +11,12 @@ import { ELEMENTS, type Element } from '../../store/cosmic/types'
 import type { BoxData } from '../../store/cosmic/types'
 import { ELEMENT_TINT, ELEMENT_BOTTLE_FILTER } from './ElementGrid'
 import { hapticImpact } from '../../utils/telegram'
+import {
+  PINK_BADGE_STYLE,
+  GOLD,
+  TEXT_DIM,
+  EMPTY_STATE_TEXT_STYLE,
+} from './_styles'
 
 const CascadeRevealModal = lazy(() => import('./CascadeRevealModal'))
 
@@ -69,13 +76,16 @@ export function SerumInventoryTab({ onClose }: Props) {
 
   if (totalSerumCount === 0 && boxes.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-3 text-white/60">
+      <div
+        className="flex flex-col items-center justify-center h-full gap-3"
+        style={{ color: TEXT_DIM }}
+      >
         <img
           src="/genBottle.svg"
           alt="serum"
           style={{ height: 96, width: 'auto', opacity: 0.4 }}
         />
-        <p className="text-sm text-center px-6">
+        <p style={{ ...EMPTY_STATE_TEXT_STYLE, paddingLeft: 24, paddingRight: 24 }}>
           {t('cosmic_hub.serums_empty')}
         </p>
       </div>
@@ -97,17 +107,33 @@ export function SerumInventoryTab({ onClose }: Props) {
                     key={element}
                     type="button"
                     onClick={() => handleBoxTap(element)}
-                    className="relative aspect-square rounded-lg border-2 flex flex-col items-center justify-center gap-1 active:scale-95 transition"
+                    className="relative aspect-square flex flex-col items-center justify-center gap-1 active:scale-95 transition"
                     style={{
-                      borderColor: tint,
-                      backgroundColor: 'rgba(10, 10, 15, 0.72)',
+                      borderRadius: 12,
+                      border: `2px solid ${tint}`,
+                      background: 'rgba(255,255,255,0.06)',
+                      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+                      touchAction: 'manipulation',
+                      cursor: 'pointer',
                     }}
                   >
-                    <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-xs font-bold rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1">
+                    <span
+                      className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 flex items-center justify-center"
+                      style={{
+                        ...PINK_BADGE_STYLE,
+                        background: GOLD,
+                        color: '#1a2e1a',
+                        fontSize: 11,
+                        padding: '0 6px',
+                      }}
+                    >
                       {count > 99 ? '99+' : count}
                     </span>
                     <span style={{ fontSize: 26, lineHeight: 1 }}>🎁</span>
-                    <span className="text-[9px] text-white/60 truncate w-full text-center px-1">
+                    <span
+                      className="truncate w-full text-center px-1"
+                      style={{ fontSize: 9, color: TEXT_DIM }}
+                    >
                       {element.slice(0, 4)}
                     </span>
                   </button>
@@ -136,16 +162,27 @@ export function SerumInventoryTab({ onClose }: Props) {
                     key={element}
                     type="button"
                     onClick={() => handleSerumTap(element)}
-                    className="relative aspect-square rounded-lg border-2 flex flex-col items-center justify-center gap-1 active:scale-95 transition"
+                    className="relative aspect-square flex flex-col items-center justify-center gap-1 active:scale-95 transition"
                     style={{
-                      borderColor: tint,
-                      backgroundColor: 'rgba(10, 10, 15, 0.72)',
+                      borderRadius: 12,
+                      border: `2px solid ${tint}`,
+                      background: 'rgba(255,255,255,0.06)',
+                      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
                       outline: isSelected ? `2px solid ${tint}` : undefined,
                       outlineOffset: 2,
                       transform: isSelected ? 'scale(1.07)' : undefined,
+                      touchAction: 'manipulation',
+                      cursor: 'pointer',
                     }}
                   >
-                    <span className="absolute -top-1 -right-1 bg-emerald-500 text-white text-xs font-bold rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1">
+                    <span
+                      className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 flex items-center justify-center"
+                      style={{
+                        ...PINK_BADGE_STYLE,
+                        fontSize: 11,
+                        padding: '0 6px',
+                      }}
+                    >
                       {count > 99 ? '99+' : count}
                     </span>
                     <img
@@ -158,7 +195,10 @@ export function SerumInventoryTab({ onClose }: Props) {
                         pointerEvents: 'none',
                       }}
                     />
-                    <span className="text-[9px] text-white/60 truncate w-full text-center px-1">
+                    <span
+                      className="truncate w-full text-center px-1"
+                      style={{ fontSize: 9, color: TEXT_DIM }}
+                    >
                       {element.slice(0, 4)}
                     </span>
                   </button>
