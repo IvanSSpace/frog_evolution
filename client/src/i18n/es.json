@@ -394,6 +394,85 @@
       }
     }
   },
+  "races": {
+    "crystalloids": {
+      "name": "Cristaloides",
+      "lore_short": "Vida basada en silicio. Sus cuerpos son drusas cristalinas en crecimiento. Fríos, sabios, lentos — un milenio es un latido para ellos.",
+      "personality": "Fríos, sabios, lentos",
+      "communication_style": "Patrones geométricos, palabras secas y precisas. Consideran que el habla es un exceso.",
+      "home_planet_name": "Silicasos"
+    },
+    "gasouls": {
+      "name": "Nubes de Gas",
+      "lore_short": "Forma de vida gaseosa, hecha enteramente de mezclas respiratorias densas. Sin forma, cantan en resonancias del tamaño de pequeños planetas.",
+      "personality": "Sin forma, poéticos",
+      "communication_style": "Poéticos, metafóricos. Sus mensajes son canciones breves.",
+      "home_planet_name": "Sonoflotante"
+    },
+    "mechanidons": {
+      "name": "Mecanidones",
+      "lore_short": "Híbrido entre bio y máquina. Seres cyborg que se auto-mejoran, para quienes la tecnología es religión.",
+      "personality": "Estructurados, racionales",
+      "communication_style": "Protocolos claros, números, datos precisos.",
+      "home_planet_name": "Calibre-Neurona"
+    },
+    "fireworms": {
+      "name": "Gusanos de Fuego",
+      "lore_short": "Cuerpos de plasma que viven dentro de estrellas y núcleos ardientes. Belicosos, agresivos, directos — los duelos son su cultura.",
+      "personality": "Belicosos, directos",
+      "communication_style": "Mensajes cortos e insolentes. Órdenes directas.",
+      "home_planet_name": "Calcinante"
+    },
+    "liquidoids": {
+      "name": "Esferas Líquidas",
+      "lore_short": "Vida líquida ameboidea. Toman cualquier forma, pueden dividirse y fusionarse. Comerciantes, viajeros curiosos.",
+      "personality": "Comerciantes, flexibles",
+      "communication_style": "Amistosos, aman regatear. Cada mensaje es una propuesta de trato.",
+      "home_planet_name": "Texum"
+    },
+    "tenebrians": {
+      "name": "Tenebrianos",
+      "lore_short": "Vida sombra de antimateria. Existen entre dimensiones. Místicos, observadores silenciosos — ven el alma detrás de la forma.",
+      "personality": "Místicos, observadores",
+      "communication_style": "Crípticos, simbólicos. Semipredicciones, subentendidos.",
+      "home_planet_name": "Invisia"
+    },
+    "plasmaspirits": {
+      "name": "Espíritus de Plasma",
+      "lore_short": "Seres de plasma — eléctricos, con energía incontrolable. Aman la velocidad y la novedad, nómadas por naturaleza.",
+      "personality": "Impulsivos, nómadas",
+      "communication_style": "Mensajes cortos e impulsivos, a menudo emocionales y cambiantes.",
+      "home_planet_name": "Atrapa-Rayos"
+    },
+    "forestcores": {
+      "name": "Raíces Forestales",
+      "lore_short": "Vida fúngica-radicular. Vastas redes subterráneas cubren planetas enteros. Antiguos y tranquilos, sabiduría a través del silencio.",
+      "personality": "Antiguos, tranquilos",
+      "communication_style": "Mensajes raros pero profundos. Metáforas del bosque, del ciclo de la vida.",
+      "home_planet_name": "Mundo-Raíz"
+    },
+    "timeweavers": {
+      "name": "Tejedores del Tiempo",
+      "lore_short": "Existen en una dimensión fuera del tiempo, ven pasado y futuro a la vez. Esotéricos y filósofos — ayudan o advierten, nunca ordenan.",
+      "personality": "Esotéricos, filósofos",
+      "communication_style": "Paradójicos, insinuaciones temporales.",
+      "home_planet_name": "Paradoja"
+    },
+    "cometfolk": {
+      "name": "Pueblo Cometa",
+      "lore_short": "Viajeros cometa-nube sin forma permanente. Abiertos, amistosos, curiosos — regresan una vez por temporada.",
+      "personality": "Amistosos, abiertos",
+      "communication_style": "Entusiastas, comparten historias de viajes lejanos.",
+      "home_planet_name": "Errantia"
+    }
+  },
+  "cosmos": {
+    "first_contact": {
+      "title": "Primer Contacto",
+      "cta": "Entendido",
+      "subtitle_template": "Conexión establecida con los {{raceName}}"
+    }
+  },
   "tutorial": {
     "cta_understood": "¡Entendido!",
     "first_box": {

@@ -394,6 +394,85 @@
       }
     }
   },
+  "races": {
+    "crystalloids": {
+      "name": "Crystalloids",
+      "lore_short": "Silicon-based life. Their bodies are growing crystal druses. Cold, wise, slow — a millennium is a heartbeat for them.",
+      "personality": "Cold, wise, slow",
+      "communication_style": "Geometric patterns, dry precise words. Consider speech an excess.",
+      "home_planet_name": "Silicassos"
+    },
+    "gasouls": {
+      "name": "Gas Clouds",
+      "lore_short": "A gaseous form of life, made entirely of dense breath. Shapeless, they sing in resonances the size of small planets.",
+      "personality": "Shapeless, poetic",
+      "communication_style": "Poetic, metaphorical. Messages are short songs.",
+      "home_planet_name": "Soundfloat"
+    },
+    "mechanidons": {
+      "name": "Mechanidons",
+      "lore_short": "A bio-and-machine hybrid. Self-upgrading cyborg beings for whom technology is religion.",
+      "personality": "Structured, rational",
+      "communication_style": "Clear protocols, numbers, precise data.",
+      "home_planet_name": "Caliber-Neuron"
+    },
+    "fireworms": {
+      "name": "Fireworms",
+      "lore_short": "Plasma bodies that live inside stars and burning cores. Warlike, aggressive, straightforward — duels are their culture.",
+      "personality": "Warlike, blunt",
+      "communication_style": "Short brash messages. Direct orders.",
+      "home_planet_name": "Scorch"
+    },
+    "liquidoids": {
+      "name": "Liquidspheres",
+      "lore_short": "Amoeba-like liquid life. They take any shape, can split and merge. Traders, curious travellers.",
+      "personality": "Traders, flexible",
+      "communication_style": "Friendly, love to barter. Every message is a deal proposal.",
+      "home_planet_name": "Texum"
+    },
+    "tenebrians": {
+      "name": "Tenebrians",
+      "lore_short": "Shadowy anti-matter life. They exist between dimensions. Mystics, quiet observers — they see the soul behind the form.",
+      "personality": "Mystics, observers",
+      "communication_style": "Cryptic, symbolic. Half-predictions, understatement.",
+      "home_planet_name": "Unseen"
+    },
+    "plasmaspirits": {
+      "name": "Plasma Spirits",
+      "lore_short": "Plasma beings — electric, with uncontrollable energy. They love speed and novelty, nomads by nature.",
+      "personality": "Impulsive, nomads",
+      "communication_style": "Short impulsive messages, often emotional and shifting.",
+      "home_planet_name": "Lightning-Catch"
+    },
+    "forestcores": {
+      "name": "Forestroots",
+      "lore_short": "Fungal-root life. Vast underground networks cover whole planets. Ancient and calm, wisdom through silence.",
+      "personality": "Ancient, calm",
+      "communication_style": "Rare but deep messages. Metaphors of forest, of life cycles.",
+      "home_planet_name": "Rootworld"
+    },
+    "timeweavers": {
+      "name": "Timeweavers",
+      "lore_short": "They exist in a non-temporal dimension, seeing past and future at once. Esoterics and philosophers — they help or warn, never command.",
+      "personality": "Esoterics, philosophers",
+      "communication_style": "Paradoxical, temporal hints.",
+      "home_planet_name": "Paradox"
+    },
+    "cometfolk": {
+      "name": "Cometfolk",
+      "lore_short": "Comet-cloud travellers without a permanent form. Open, friendly, curious — they return once per season.",
+      "personality": "Friendly, open",
+      "communication_style": "Enthusiastic, sharing stories from distant voyages.",
+      "home_planet_name": "Wanderling"
+    }
+  },
+  "cosmos": {
+    "first_contact": {
+      "title": "First Contact",
+      "cta": "Got it",
+      "subtitle_template": "Connection established with the {{raceName}}"
+    }
+  },
   "tutorial": {
     "cta_understood": "Got it!",
     "first_box": {
