@@ -45,6 +45,23 @@ interface TelegramWebApp {
   lockOrientation?(orientation?: 'portrait' | 'landscape'): void
   unlockOrientation?(): void
   isOrientationLocked?: boolean
+  // Bot API 8.0+ — safe area inset of *content* (excludes Telegram chrome).
+  // Используется для позиционирования game UI так, чтобы он не залезал под
+  // close / more / status bar. Доступно только на свежих клиентах — fallback
+  // к hardcoded значениям, см. TelegramSafeAreaDebugOverlay.
+  contentSafeAreaInset?: {
+    top: number
+    right: number
+    bottom: number
+    left: number
+  }
+  // Bot API 8.0+ — full safe area (включая системные insets, напр. iOS notch).
+  safeAreaInset?: {
+    top: number
+    right: number
+    bottom: number
+    left: number
+  }
   onEvent?(eventType: string, handler: (...args: unknown[]) => void): void
   offEvent?(eventType: string, handler: (...args: unknown[]) => void): void
 }
