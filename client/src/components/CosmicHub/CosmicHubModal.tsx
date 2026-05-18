@@ -16,6 +16,7 @@ import { CarriersTab } from './CarriersTab'
 import { CosmicShopTab } from './CosmicShopTab'
 import { InventoryTab } from './InventoryTab'
 import { ContactsTab } from './ContactsTab'
+import { QuestsTab } from './QuestsTab'
 import { PityCounterDisplay } from './PityCounterDisplay'
 // Phase 22 Plan 22-06: defensive cosmos gate — даже если каким-то путём modal
 // открыт без unlock (legacy state, dev tool), показать lock screen.
@@ -176,16 +177,11 @@ export default function CosmicHubModal({ onClose }: Props) {
       // Phase 27 Plan 27-04: contacts tab — 10 races list + race detail in-tab nav.
       case 'contacts':
         return <ContactsTab />
-      // Phase 28 Plan 28-01: quests tab placeholder. Plan 28-04 replaces this
-      // inline element с реальным <QuestsTab /> (active quest cards + completed
-      // history). Foundation plan ships skeleton so tab is wired через render
-      // switch и tsc остаётся exhaustive over CosmicTab union.
+      // Phase 28 Plan 28-04: real QuestsTab replaces Plan 28-01 inline stub.
+      // Foundation i18n key (cosmic_hub.quests for the stub copy) remains in
+      // JSON for backward compat / fallback but is no longer rendered.
       case 'quests':
-        return (
-          <div style={{ padding: 12, color: '#fff' }}>
-            {t('cosmic_hub.quests.placeholder')}
-          </div>
-        )
+        return <QuestsTab />
     }
   }
 
