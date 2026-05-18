@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: cosmic-frogs-system
-current_phase: 24 (complete); Phase 20 (Pre-release safety net) deferred до prod-релиза
+current_phase: 25 (complete); Phase 20 (Pre-release safety net) deferred до prod-релиза
 status: completed
-last_updated: "2026-05-18T23:30:00.000Z"
+last_updated: "2026-05-18T07:48:00.000Z"
 progress:
   total_phases: 14
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 36
-  completed_plans: 24
-  percent: 67
+  completed_plans: 28
+  percent: 78
 ---
 
 # Project State
@@ -39,6 +39,7 @@ progress:
 | 22 | Carrier merge redesign | **complete** (2026-05-17) — 7 plans, ~23h scope, all atomic commits + per-plan SUMMARY; Rarity dimension removed (carrier shape = {frogId, element, level}); flat serum inventory Record<Element, number>; carrier merge rules (carrier+normal element-inherit, carrier+carrier target-wins); L18 ascension instant + pulse tween + ascendedCarriers pool + essence reward; HUD ActiveBonusesBar with mini/full breakdown + tooltip + i18n; Cosmic Shop (6 items, 2 currencies: essence + серум; perma slot/ship-speed/serum-drop + consumables cosmic_box/skip/trade-up); Cosmos gate via useCosmosUnlocked hook + persisted hasCosmosUnlocked flag (top-level, separate key) — pre-cosmos SerumBar/Hub/Star Map/HUD bonuses hidden + data-layer guards in box/ship slices; legacy migration migratePhase22() (idempotent, 10/10 vitest PASS — strip Phase 21 fields, flatten nested serums, infer hasCosmosUnlocked from discovered[19]); SMOKE_TEST_22.md (9 scenarios A-I); deferred: balance phase для precise essence/bonus/cost magnitudes + glossary refresh checklist (GLOSSARY_UPDATES.md). 10 REQ-IDs (PHASE22-CLEANUP, PHASE22-MERGE-RULES, PHASE22-ASCENSION, PHASE22-ARCHETYPE-POOL, PHASE22-HUD-BONUSES, PHASE22-COSMIC-SHOP, PHASE22-CURRENCIES, PHASE22-COSMOS-GATE, PHASE22-MIGRATION, PHASE22-SMOKE). |
 | 23 | Onboarding flow (soft 4-beat) | **complete** (2026-05-18) — 6 plans, ~22h scope, 13 atomic commits + per-plan SUMMARY; soft 4-beat tutorial (Welcome modal Beat 1, Phaser tap-hint ring Beat 2, ghost-frog merge demo Beat 3, location unlock celebration с confetti burst + LocationStack pulse + DOM toast Beat 4); per-device localStorage state без server sync; reusable TutorialPulseRing/GhostFrogTrail/ConfettiBurst Phaser effects; dev helpers (__resetOnboarding/__skipOnboarding/__triggerBeat2/__triggerBeat4/__onboardingState); SMOKE_TEST_23.md (8 scenarios A-H); i18n RU/EN/ES parity verified (334 keys × 3 PASS); 8/8 vitest для onboardingSlice. 8 REQ-IDs (PHASE23-STATE/CONTROLLER/BEAT1-WELCOME/BEAT2-TAPHINT/BEAT3-MERGE/BEAT4-LOCATION/I18N/SMOKE). |
 | 24 | Captain creation cinematic | **complete** (2026-05-18) — 5 plans, ~18h scope, atomic commits + per-plan SUMMARY; captainBirthSeen flag (gameStore toplevel + server-sync via cosmic JSON blob + legacy migration from discovered[19]); CaptainBirthEffect.ts Phaser-native (~70 particles golden/white/cyan + 3 concentric rings + camera zoom 1.0→1.08→1.0 ~3s); CaptainBirthModal.tsx DOM (L1 frog SVG + gold drop-shadow + CSS pulse 1.5s + pink #ec4899 CTA «В космос →»); MergeController L18+L18 hook (idempotent, повторные merges no-op); captainBirthController coordinator (Beat 4 addFrogToLocation на currentLocation + Beat 5 eventBus.emit('starmap:open')); i18n RU/EN/ES (captain.birth.{title,subtitle,cta}, parity verified 337 keys × 3 PASS); dev helpers __triggerCaptainBirth/__resetCaptainBirth/__captainBirthState; SMOKE_TEST_24.md 6 scenarios A-F; bundle delta +3.79 KB gzip (cap +20 KB ✓; current main 199.88 KB gzip vs Phase 23 baseline 198.65 KB). Reuse patterns: ConfettiBurst.ts (particle texture-generation), WelcomeModal.tsx (modal centering + inline SVG + inline-block CTA + cliclability checklist), DiscoveryModal.tsx (radial-gradient backdrop drama), Phase 22 cosmos gate (toplevel flag + isolated localStorage key + server sync через cosmic blob), Phase 23 OnboardingController (install-once coordinator pattern). 17/17 ✓ REQ-IDs (PHASE24-*). |
+| 25 | Cosmic Hub restyle | **complete** (2026-05-18) — 4 plans, visual restyle CosmicHub под единый app design language (dark cosmic `#1a2e1a` + pink `#ec4899` accents); CosmicHubModal shell (header textShadow + pink-tinted close + dark bg) + tab strip (pink underline 3px + `cosmic-tab-bobble` keyframe 1.5s scaleY 1.0↔1.02 + dim inactive + 🔒 disabled) + lock screen (WelcomeModal-style dark card + gold `#fde047` title); 5 tabs content polish (ShipTab pink gradient pill CTAs `linear-gradient(180deg, #f9a8d4→#db2777)` + SerumInventoryTab rounded glass cards с gold box badge / pink serum badge + BestiaryTab pink `#ec4899` location tabs + CarriersTab + CarrierInfoCard WelcomeModal-style + CosmicShopTab rounded items с conditional pink border + gold/pink currency); 3 sub-modals (SerumModal dark + Rule 2 backdrop fix `rgba(0,0,0,0.6)` blur(2px), BulkOpenSummary NEW card container `#1a2e1a` + inset row pattern + pink count pills + Rule 1 i18n element-name fix backtick template literal, PityCounterDisplay pink dots rendered divs + NEW progress bar `linear-gradient(90deg, #f9a8d4→#ec4899)` 4px thin); shared `_styles.ts` design tokens module (9 exports — DRY across 6 файлов); CascadeRevealModal + bestiary/ subdir НЕ trogались (per CONTEXT.md scope); Tailwind layout utilities preserved (flex/grid/gap/px/py), color/text/border заменены inline (D-Tailwind-Cleanup); cliclability checklist соблюдён (type="button" + touchAction: manipulation + z-index hierarchy 50→99/100→200 + stopPropagation на inner modals); bundle delta cumulative gzip +0.98 KB (cap +5 KB ✓ per CONTEXT.md; CosmicHubModal chunk gzip 12.85→13.83 KB); i18n RU/EN/ES intact (337/337); SMOKE_TEST_25.md 6 scenarios A-F (lock screen / tab strip / Ship+Серумы / Бестиарий+Носители / Магазин / sub-modals+PityCounter); 4 atomic feat commits (Plans 01/02a/02b/03) + 3 docs commits (per-plan SUMMARY) + 1 final docs commit (this finalize). 14/14 ✓ REQ-IDs (PHASE25-SHELL, PHASE25-HEADER, PHASE25-TABSTRIP, PHASE25-LOCKSCREEN, PHASE25-TAB-SHIP, PHASE25-TAB-SERUMS, PHASE25-TAB-BESTIARY, PHASE25-TAB-CARRIERS, PHASE25-TAB-SHOP, PHASE25-SUB-SERUM-MODAL, PHASE25-SUB-BULKOPEN, PHASE25-SUB-PITY-COUNTER, PHASE25-SMOKE, PHASE25-FINALIZE). |
 
 ## v1.0 Achievement Summary (closed milestone)
 
@@ -258,3 +259,47 @@ progress:
 - SMOKE_TEST_24.md следует pattern SMOKE_TEST_23.md (numbered scenarios + [ ] checkboxes + dev helper callouts + i18n + build chain + regression sanity) — manual QA имеет одинаковый shape across phases.
 - Backdrop click ≡ CTA tap — backdrop dismiss path триггерит те же Beat 4 spawn + Beat 5 Star Map переходы (per CONTEXT.md design). Scenario E проверяет.
 - ROADMAP.md Phase 24 entry финализирован: 5 plans listed с [x] checkmark, 17 REQ-IDs заменили `TBD`, outcome paragraph с bundle delta + i18n + SMOKE refs.
+
+## Phase 25 (closed) — Performance Metrics
+
+| Wave | Plan | Commits | Files | Bundle Delta gzip |
+|------|------|---------|-------|-------------------|
+| 1 | 25-01 (shell + header + tab strip + lock screen) | 1 feat + 1 docs | 1 modified (`CosmicHubModal.tsx`) | +0.40 KB chunk |
+| 2 | 25-02 (5 tabs content polish + shared `_styles.ts`) | 2 feat + 1 docs | 1 created (`_styles.ts`) + 6 modified | +0.31 KB chunk cumulative |
+| 2 | 25-03 (sub-modals: SerumModal + BulkOpenSummary + PityCounterDisplay) | 1 feat + 1 docs | 3 modified | +0.27 KB chunk cumulative |
+| 3 | 25-04 (smoke test + ROADMAP/STATE finalize) | 1 docs | 1 created (`SMOKE_TEST_25.md`) + 2 modified (`ROADMAP.md` + `STATE.md`) + SUMMARY | no main delta (docs-only) |
+| **Total** | — | **4 feat + 4 docs commits** | **2 created + 9 modified (code) + 1 SMOKE + ROADMAP/STATE + 4 SUMMARY** | **+0.98 KB gzip cumulative** (cap +5 KB ✓ per CONTEXT.md; CosmicHubModal chunk gzip 12.85→13.83 KB) |
+
+**Phase 25 REQ coverage:** 14/14 ✓ (PHASE25-SHELL, PHASE25-HEADER, PHASE25-TABSTRIP, PHASE25-LOCKSCREEN, PHASE25-TAB-SHIP, PHASE25-TAB-SERUMS, PHASE25-TAB-BESTIARY, PHASE25-TAB-CARRIERS, PHASE25-TAB-SHOP, PHASE25-SUB-SERUM-MODAL, PHASE25-SUB-BULKOPEN, PHASE25-SUB-PITY-COUNTER, PHASE25-SMOKE, PHASE25-FINALIZE).
+
+**Phase 25 outcome:** CosmicHub теперь visually consistent с rest of app (WelcomeModal Phase 23 + CaptainBirthModal Phase 24 design language). Dark cosmic theme (`#1a2e1a`) + pink accents (`#ec4899`) + 3D inset-shadow buttons из LocationStack pattern + WelcomeModal-style cards. Tailwind layout utilities preserved (flex/grid/gap/padding) — заменены только color/text/border utilities inline (D-Tailwind-Cleanup). Никакой Lottie (CSS keyframes `cosmic-tab-bobble` + `bulkSummaryGlow` для эффектов + Phaser tweens где нужно — memory `feedback_animations`). Cliclability checklist соблюдён (`type="button"`, `touchAction: manipulation`, z-index hierarchy 50→99/100→200, `stopPropagation` на inner modals). CascadeRevealModal animations + `bestiary/` subdir (FilterPills, BestiaryCell, BestiaryGrid, BestiaryDetailModal — Phase 18 territory) НЕ trogались. Bundle delta cumulative gzip +0.98 KB (well within ±5 KB cap per CONTEXT.md; shared `_styles.ts` module минимизирует overhead inline-styles). i18n parity preserved (337/337 RU/EN/ES). SMOKE_TEST_25.md покрывает 6 scenarios A-F. Two auto-fixed bugs surfaced и зафиксированы по дороге: SerumModal без backdrop (Rule 2 critical) и BulkOpenSummary element-name i18n bug (single-quote literal вместо backtick template — Rule 1).
+
+### Plan 25-04 Decisions Logged
+
+- **Lock screen title цвет** (Plan 25-01): gold `#fde047` выбран т.к. matches CaptainBirthModal + WelcomeModal pattern; pink reserved для interactive (CTAs, active tab). Не pink т.к. lock screen — passive informational state, gold = «cosmic vibe» без подсказки на действие.
+- **Tab padding** (Plan 25-01): `12px 4px` вместо плановых `12px 16px` — 5 tabs × 32px = переполнение узкого viewport. `flex: 1` распределяет ширину, минимальный horizontal padding достаточен. Если визуально зажат — bump до `12px 8px` в Phase 26 polish.
+- **CosmicShopTab фон/тема** (Plan 25-02): dark cosmic (`#1a2e1a`) НЕ pastel-green variant — consistency со shell + другими tabs; pastel-green создал бы visual disconnect.
+- **SerumInventory box vs serum badge цвет** (Plan 25-02): gold (`#fde047`) для box count badge, pink (`#ec4899`) для serum count badge — дифференцирует loot (boxes) от currency (серумов) visually. Plus matches Plan 25-01 lock-title gold pattern.
+- **Shop currency values цвет** (Plan 25-02): inline gold для essence, pink для серума — quick visual scan балансов.
+- **BulkOpenSummary count badge** (Plan 25-03): pink pill (Phase 25 accent) на right, **element-tint kept** на left circle — сохраняем visual association с element планетой, при этом count выделяется pink accent.
+- **BulkOpenSummary legendary glow** (Plan 25-03): infrastructure готова через `hasLegendary` flag (`boxShadow` + radial overlay + `bulkSummaryGlow` keyframe), но gated `false` т.к. Phase 22 убрал rarity. Reactivatable если Phase 26+ rarity вернётся.
+- **PityCounterDisplay progress bar location** (Plan 25-03): только в `exact` state (opened≥5) — Phase 19 dots state остаётся textual indicator в opened∈[3,5). Hidden state pre-3 без изменений. Phase 19 progressive reveal logic preserved.
+- **PityCounterDisplay legendary text цвет** (Plan 25-03): pink `#ec4899` (raised from gold `#fde047`) — gold в Phase 25 reserved для passive titles; pink — interactive/progress accent.
+- **Shared `_styles.ts` design tokens module** (Plan 25-02): создан НЕ в Plan 25-01 (1 файл — не оправдывал DRY), а в Plan 25-02 когда 6 файлов нуждались в same tokens. 9 exports: PINK/PINK_LIGHT/PINK_DARK/GOLD colors + DARK_CARD_STYLE/PINK_CTA_STYLE/PINK_CTA_MINI_STYLE/DISABLED_CTA_OVERRIDES/PINK_BADGE_STYLE/SECTION_HEADER_STYLE patterns. Plan 25-03 не импортировал (parallel agent — untracked dependency); consolidate `_styles.ts` usage в Phase 26 polish если потребуется.
+- **Commit стратегия Phase 25**: per-plan atomic feat коммиты + per-plan docs SUMMARY коммиты + final docs finalize (этот plan). Pre-existing user changes (.DS_Store, map0.png, planetMap.json.bak.451) — НЕ stage'ились во всех 4 планах.
+- **Bundle delta source of truth**: per-plan CosmicHubModal chunk gzip estimates (Plan 25-01: 13.25 KB, Plan 25-02: 13.56 KB, Plan 25-03: 13.83 KB) vs Phase 24 baseline 12.85 KB → cumulative +0.98 KB. Vite build пишет точные gzip numbers в build log; для verification повторного build после finalize.
+
+### Phase 25 Known TODOs deferred для Phase 26 polish
+
+- `cosmic_hub.locked.title` + `cosmic_hub.locked.hint` i18n keys (hard-coded в Plan 25-01 per scope «i18n не trogается»).
+- `bestiary/FilterPills.tsx` restyle (pink-active pill state) — Phase 18 territory, не входило в Phase 25 scope.
+- `bestiary/BestiaryCell.tsx` review compat с dark cosmic shell (rarity-tints visual sync).
+- `bestiary/BestiaryDetailModal.tsx` restyle (Phase 18 territory).
+- Hover states на inactive shell + bestiary location tabs (desktop demo path — mobile-first scope в Phase 25).
+- Tab padding tweak (12px 4px → 12px 8px если визуально зажато).
+- CosmicShopTab `<select>` Safari native fallback (custom dropdown) — Safari игнорит inline `<option>` background styling.
+- CarrierInfoCard dispose visual destructive-warning variant (red-pink) если UX feedback укажет на пропавший warning affordance.
+- `@media (prefers-reduced-motion)` на bobble + progress bar transitions.
+- Bundle: split CosmicHubModal chunk dynamically если когда-нибудь >50 KB.
+- Consolidate Plan 25-03 inline tokens → `_styles.ts` imports (consistency).
+- Legendary glow reactivation в BulkOpenSummary (если Phase 26+ rarity вернётся).

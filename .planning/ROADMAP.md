@@ -670,13 +670,18 @@ Plans:
 **Goal:** Привести CosmicHub UI под единый design language приложения (pink `#ec4899` accents, rounded inset-shadow buttons, dark cosmic theme с pink active states). Restyle CosmicHubModal shell + lock screen + 5 tab content polishes + sub-modals. Только visual restyle — функциональность tab'ов не trogается. Демo-build качество.
 
 **Source design:** `frog_obsidian/Design Notes/2026-05-18-cosmic-hub-restyle.md`
-**Requirements**: TBD
+**Requirements:** PHASE25-SHELL, PHASE25-HEADER, PHASE25-TABSTRIP, PHASE25-LOCKSCREEN, PHASE25-TAB-SHIP, PHASE25-TAB-SERUMS, PHASE25-TAB-BESTIARY, PHASE25-TAB-CARRIERS, PHASE25-TAB-SHOP, PHASE25-SUB-SERUM-MODAL, PHASE25-SUB-BULKOPEN, PHASE25-SUB-PITY-COUNTER, PHASE25-SMOKE, PHASE25-FINALIZE
 **Depends on:** Phase 24
-**Plans:** 0 plans
+**Plans:** 4 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 25 --prd "<design-note>" to break down)
+- [x] 25-01-PLAN.md — Modal shell + header + tab strip + lock screen (dark cosmic `#1a2e1a` + pink `#ec4899` + gold `#fde047` lock title + bobble keyframe)
+- [x] 25-02-PLAN.md — 5 tab contents polish (Ship + SerumInventory + Bestiary top-level + Carriers + CosmicShop) + shared `_styles.ts` design tokens module
+- [x] 25-03-PLAN.md — Sub-modals + PityCounterDisplay (SerumModal dark + pink Apply, BulkOpenSummary inset cards + pink count pills + gold title, PityCounterDisplay pink dots/progress)
+- [x] 25-04-PLAN.md — SMOKE_TEST_25 (6 scenarios A-F) + ROADMAP/STATE finalize
+
+**Outcome:** Visual restyle CosmicHub под единый app design language (dark cosmic `#1a2e1a` + pink `#ec4899` accents + WelcomeModal-style cards + 3D inset-shadow CTAs из LocationStack pattern). 9 файлов restyled: CosmicHubModal shell (header textShadow + pink-tinted close + dark bg) + tab strip (pink underline 3px + `cosmic-tab-bobble` keyframe 1.5s + dim inactive + 🔒 disabled state) + lock screen (WelcomeModal-style dark card + gold title); 5 tabs content polish (ShipTab pink CTAs + SerumInventoryTab rounded cards с gold/pink badges + BestiaryTab pink location tabs + CarriersTab + CarrierInfoCard WelcomeModal-style + CosmicShopTab rounded items с conditional pink border); 3 sub-modals (SerumModal dark + Rule 2 backdrop fix, BulkOpenSummary inset cards + pink pills + Rule 1 i18n element-name fix, PityCounterDisplay pink dots/progress + dot-div rendering). Shared `_styles.ts` design tokens module (9 exports: PINK/PINK_LIGHT/PINK_DARK/GOLD colors + DARK_CARD_STYLE/PINK_CTA_STYLE/PINK_CTA_MINI_STYLE/DISABLED_CTA_OVERRIDES/PINK_BADGE_STYLE/SECTION_HEADER_STYLE patterns). CascadeRevealModal + bestiary/ subdir НЕ trogались (per CONTEXT.md scope). Tailwind layout utilities оставлены (flex/grid/gap/px/py), color/text/border заменены inline. Cliclability checklist соблюдён (`type="button"` + `touchAction: manipulation` + z-index hierarchy 50→99/100→200 + stopPropagation на inner modals). Bundle delta gzip cumulative +0.98 KB (cap +5 KB ✓ per CONTEXT.md). i18n RU/EN/ES intact (337/337). SMOKE_TEST_25.md 6 scenarios A-F (lock screen / tab strip / Ship+Серумы / Бестиарий+Носители / Магазин / sub-modals+PityCounter) + cliclability + build chain + i18n parity + regression sanity.
 
 ---
 
-**Last updated:** 2026-05-18 — Phase 24 complete (5 plans)
+**Last updated:** 2026-05-18 — Phase 25 complete (4 plans, visual restyle)
