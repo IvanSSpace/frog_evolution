@@ -176,6 +176,29 @@ type Events = {
   // Безопасно если scene отсутствует — emitter эмитит next-tick fallback чтобы
   // controller не залип в pending state.
   'cosmos:first-contact-effect-complete': void
+  // Phase 27 Plan 27-03 — relationship change broadcast.
+  // Emitted by slice actions resolveAccept / resolveRefuse and by triggerPendingPull
+  // when event ChainItem changes a relationship. Subscribers:
+  //   - RelationshipBar (Plan 27-04): pulse animation if tier changed.
+  //   - Phase 28/29 may add analytics.
+  // raceId: string (not RaceId) — mirror 'cosmos:first-contact' pattern to avoid the
+  // eventBus → slice → races → types → eventBus cycle.
+  'contacts:relationship-delta': {
+    raceId: string
+    oldValue: number
+    newValue: number
+    delta: number
+  }
+  // Phase 27 Plan 27-03 — event ChainItem auto-applied at pull time.
+  // Emitted by triggerPendingPull when pendingEngineTick returns eventToasts.
+  // Subscribers:
+  //   - EventToast (Plan 27-05): mount top-screen banner with auto-dismiss 3s.
+  'contacts:event-applied': {
+    raceId: string
+    targetRaceId: string
+    delta: number
+    textKey: string
+  }
 }
 
 export const eventBus = mitt<Events>()

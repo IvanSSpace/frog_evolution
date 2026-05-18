@@ -17,10 +17,9 @@ import type { RaceId } from '../config/races'
 // Re-export production constants so engine + tests reference the same numeric
 // values without diverging. ChainItem / PendingItem types remain identical.
 vi.mock('../config/raceChains', async () => {
-  const actual =
-    await vi.importActual<typeof import('../config/raceChains')>(
-      '../config/raceChains',
-    )
+  const actual = await vi.importActual<typeof import('../config/raceChains')>(
+    '../config/raceChains',
+  )
   const allRaceIds: RaceId[] = [
     'crystalloids',
     'gasouls',
@@ -37,7 +36,12 @@ vi.mock('../config/raceChains', async () => {
   const fixtureChain: readonly ChainItem[] = [
     { type: 'msg', text_key: 'fixture.msg.0' },
     { type: 'msg', text_key: 'fixture.msg.1' },
-    { type: 'dialog', text_key: 'fixture.dlg.2', accept_delta: 1, refuse_delta: -1 },
+    {
+      type: 'dialog',
+      text_key: 'fixture.dlg.2',
+      accept_delta: 1,
+      refuse_delta: -1,
+    },
     { type: 'msg', text_key: 'fixture.msg.3' },
     { type: 'msg', text_key: 'fixture.msg.4' },
     { type: 'msg', text_key: 'fixture.msg.5' },
