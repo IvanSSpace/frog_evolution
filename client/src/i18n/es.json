@@ -430,70 +430,190 @@
       "lore_short": "Vida basada en silicio. Sus cuerpos son drusas cristalinas en crecimiento. Fríos, sabios, lentos — un milenio es un latido para ellos.",
       "personality": "Fríos, sabios, lentos",
       "communication_style": "Patrones geométricos, palabras secas y precisas. Consideran que el habla es un exceso.",
-      "home_planet_name": "Silicasos"
+      "home_planet_name": "Silicasos",
+      "chain": {
+        "0": { "text": "Silicasos te saluda. Crecimos en este patrón durante dos eras." },
+        "1": { "text": "El cristal habla despacio. Escucha la forma, no el sonido." },
+        "2": { "text": "Sintoniza nuestra frecuencia con una de tus ranas L18. Un impulso — y recordaremos." },
+        "3": { "text": "Conocemos a tu ancestro. Cantó en nuestro coro hace mucho." },
+        "4": { "text": "Acepta este regalo: una faceta de nuestra mina. Si rechazas — lo entenderemos." },
+        "5": { "text": "Busca a nuestro explorador que enmudeció en el sistema Binar." },
+        "6": { "description": "nuestro patrón se ha agrietado" },
+        "7": { "text": "Acepta la simetría. De lo contrario, te mostraremos una arista." },
+        "8": { "text": "Entrega un fragmento resonante a Texum; tenemos una disputa con las Esferas Líquidas." },
+        "9": { "text": "Hemos registrado tu respuesta. El cristal no olvida." }
+      }
     },
     "gasouls": {
       "name": "Nubes de Gas",
       "lore_short": "Forma de vida gaseosa, hecha enteramente de mezclas respiratorias densas. Sin forma, cantan en resonancias del tamaño de pequeños planetas.",
       "personality": "Sin forma, poéticos",
       "communication_style": "Poéticos, metafóricos. Sus mensajes son canciones breves.",
-      "home_planet_name": "Sonoflotante"
+      "home_planet_name": "Sonoflotante",
+      "chain": {
+        "0": { "text": "Cantamos con Sonoflotante. ¿Oyes nuestro silencio?" },
+        "1": { "text": "Nuestro pueblo es una resonancia entre mundos." },
+        "2": { "text": "Regálanos un compás de silencio. Un impulso." },
+        "3": { "text": "La canción es más antigua que las palabras. Escucha." },
+        "4": { "text": "Acepta nuestra canción en tu bitácora de a bordo." },
+        "5": { "text": "Encuentra la nota perdida en la nube de asteroides." },
+        "6": { "description": "nuestro acorde se desafinó" },
+        "7": { "text": "Acepta armonizar. La disonancia hiere." },
+        "8": { "text": "Salva a nuestro coro — encuentra el resonador hundido en la colonia." },
+        "9": { "text": "Cantamos sobre ti. Más suave o más alto — depende de ti." }
+      }
     },
     "mechanidons": {
       "name": "Mecanidones",
       "lore_short": "Híbrido entre bio y máquina. Seres cyborg que se auto-mejoran, para quienes la tecnología es religión.",
       "personality": "Estructurados, racionales",
       "communication_style": "Protocolos claros, números, datos precisos.",
-      "home_planet_name": "Calibre-Neurona"
+      "home_planet_name": "Calibre-Neurona",
+      "chain": {
+        "0": { "text": "Calibre-Neurona. Conexión establecida. Identificador confirmado." },
+        "1": { "text": "Nuestra evolución es una actualización. La biología es un protocolo obsoleto." },
+        "2": { "text": "Transmite la especificación de tu activo L18. Utilitario." },
+        "3": { "text": "Protocolo 14.2: el intercambio de datos aumenta la supervivencia." },
+        "4": { "text": "Acepta los términos de desarrollo conjunto. Apuesta — 50/50." },
+        "5": { "text": "Entrega el módulo 7-alfa a nuestra colonia." },
+        "6": { "description": "el contrato falló, los KPI cayeron" },
+        "7": { "text": "Acepta el contrato estándar. Si no, gasto de recursos." },
+        "8": { "text": "Realiza un diagnóstico en el sistema Calcinante. Anomalía registrada." },
+        "9": { "text": "Registro guardado. Próxima iteración — tu jugada." }
+      }
     },
     "fireworms": {
       "name": "Gusanos de Fuego",
       "lore_short": "Cuerpos de plasma que viven dentro de estrellas y núcleos ardientes. Belicosos, agresivos, directos — los duelos son su cultura.",
       "personality": "Belicosos, directos",
       "communication_style": "Mensajes cortos e insolentes. Órdenes directas.",
-      "home_planet_name": "Calcinante"
+      "home_planet_name": "Calcinante",
+      "chain": {
+        "0": { "text": "Soy Gusano-fuego. Calcinante arde. Habla rápido." },
+        "1": { "text": "Nacimos en una estrella. El frío es un insulto." },
+        "2": { "text": "Danos combustible. Sabemos que lo tienes." },
+        "3": { "text": "Los débiles no comercian con nosotros. Solo guerreros." },
+        "4": { "text": "Acepta nuestro desafío — manda un L18 de patrulla. Si no, eres un cobarde." },
+        "5": { "text": "Encuentra en el sistema Calcinante a nuestro acólito fugitivo. Devuélvelo o quémalo." },
+        "6": { "description": "nuestra llama parpadeó — la ira hierve" },
+        "7": { "text": "Acepta el duelo. Si rechazas — lo recordaremos." },
+        "8": { "text": "Entrega un fragmento de fuego a Invisia. Los Tenebrianos lo necesitan. O nosotros un pretexto." },
+        "9": { "text": "Ardemos. Esperamos. Decide." }
+      }
     },
     "liquidoids": {
       "name": "Esferas Líquidas",
       "lore_short": "Vida líquida ameboidea. Toman cualquier forma, pueden dividirse y fusionarse. Comerciantes, viajeros curiosos.",
       "personality": "Comerciantes, flexibles",
       "communication_style": "Amistosos, aman regatear. Cada mensaje es una propuesta de trato.",
-      "home_planet_name": "Texum"
+      "home_planet_name": "Texum",
+      "chain": {
+        "0": { "text": "Texum te saluda. Tenemos una propuesta." },
+        "1": { "text": "Podemos tomar cualquier forma. Es cómodo para regatear." },
+        "2": { "text": "Intercambia 1 suero — obtendrás amistad." },
+        "3": { "text": "Nuestra economía son flujos. ¿Eres parte del flujo?" },
+        "4": { "text": "Acepta nuestra propuesta de una colonia en un planeta fronterizo." },
+        "5": { "text": "Escolta nuestra caravana a través de un sector en disputa." },
+        "6": { "description": "un contrato se rompió, la liquidez se escurrió" },
+        "7": { "text": "Firma el protocolo comercial. Condiciones estándar." },
+        "8": { "text": "Encuentra el cargamento robado. La apuesta es tu reputación." },
+        "9": { "text": "Recordamos a los socios generosos." }
+      }
     },
     "tenebrians": {
       "name": "Tenebrianos",
       "lore_short": "Vida sombra de antimateria. Existen entre dimensiones. Místicos, observadores silenciosos — ven el alma detrás de la forma.",
       "personality": "Místicos, observadores",
       "communication_style": "Crípticos, simbólicos. Semipredicciones, subentendidos.",
-      "home_planet_name": "Invisia"
+      "home_planet_name": "Invisia",
+      "chain": {
+        "0": { "text": "Invisia ve. Vienes de la luz. Es curioso." },
+        "1": { "text": "Estamos entre dimensiones. Aquí y no aquí." },
+        "2": { "text": "Muéstranos la sombra de tu estrella. Una mirada — y comprenderemos." },
+        "3": { "text": "El alma tiene forma. La tuya es una espiral." },
+        "4": { "text": "Acepta nuestra profecía. Si rechazas — se cumplirá de otra manera." },
+        "5": { "text": "Encuentra la puerta en el sistema Sonoflotante. Está oculta a los demás." },
+        "6": { "description": "el ritual de la sombra fue interrumpido por luz ajena" },
+        "7": { "text": "Acepta ser observador. No interfieras." },
+        "8": { "text": "Protege el último fragmento de la noche. De lo contrario, desapareceremos." },
+        "9": { "text": "La sombra recuerda. La luz olvida." }
+      }
     },
     "plasmaspirits": {
       "name": "Espíritus de Plasma",
       "lore_short": "Seres de plasma — eléctricos, con energía incontrolable. Aman la velocidad y la novedad, nómadas por naturaleza.",
       "personality": "Impulsivos, nómadas",
       "communication_style": "Mensajes cortos e impulsivos, a menudo emocionales y cambiantes.",
-      "home_planet_name": "Atrapa-Rayos"
+      "home_planet_name": "Atrapa-Rayos",
+      "chain": {
+        "0": { "text": "¡Atrapa-Rayos! ¡Velocidad! ¡Hola! Nos movemos." },
+        "1": { "text": "No estamos quietos. Somos un flujo de electrones." },
+        "2": { "text": "¡Déjanos acelerar tu nave! ¡Una sola carga!" },
+        "3": { "text": "La vejez, para nosotros, es una parada." },
+        "4": { "text": "Apoya nuestra migración. Si no, estallaremos sin ti." },
+        "5": { "text": "Alcanza a nuestro explorador cerca de Texum. Se quedó atrás." },
+        "6": { "description": "una llamarada desvió a nuestra bandada del rumbo" },
+        "7": { "text": "Acepta la aceleración. Vacilar es debilidad." },
+        "8": { "text": "Restablece el contacto con la bandada perdida. Están a la deriva." },
+        "9": { "text": "Volamos. Síguenos." }
+      }
     },
     "forestcores": {
       "name": "Raíces Forestales",
       "lore_short": "Vida fúngica-radicular. Vastas redes subterráneas cubren planetas enteros. Antiguos y tranquilos, sabiduría a través del silencio.",
       "personality": "Antiguos, tranquilos",
       "communication_style": "Mensajes raros pero profundos. Metáforas del bosque, del ciclo de la vida.",
-      "home_planet_name": "Mundo-Raíz"
+      "home_planet_name": "Mundo-Raíz",
+      "chain": {
+        "0": { "text": "Las raíces de Mundo-Raíz te saludan. Crecimos durante mucho tiempo." },
+        "1": { "text": "Nuestro micelio recuerda cada piedra de su planeta." },
+        "2": { "text": "Comparte con nosotros una semilla de tu mundo. Un impulso." },
+        "3": { "text": "El tiempo es crecimiento. La raíz no tiene prisa." },
+        "4": { "text": "Acepta nuestro brote en tu jardín. Cuídalo." },
+        "5": { "text": "Salva a nuestro bosque joven de la esterilidad orbital." },
+        "6": { "description": "un viejo pacto con la tierra no se ha sostenido" },
+        "7": { "text": "Acepta echar raíz. O nos volveremos." },
+        "8": { "text": "Ayuda a trasladar una espora a una nueva colonia." },
+        "9": { "text": "La raíz crece. Paciencia." }
+      }
     },
     "timeweavers": {
       "name": "Tejedores del Tiempo",
       "lore_short": "Existen en una dimensión fuera del tiempo, ven pasado y futuro a la vez. Esotéricos y filósofos — ayudan o advierten, nunca ordenan.",
       "personality": "Esotéricos, filósofos",
       "communication_style": "Paradójicos, insinuaciones temporales.",
-      "home_planet_name": "Paradoja"
+      "home_planet_name": "Paradoja",
+      "chain": {
+        "0": { "text": "Las espirales te saludan. Sabíamos de ti antes de tu nacimiento." },
+        "1": { "text": "Para nosotros, el tiempo es tejido. Lo cosemos." },
+        "2": { "text": "Muéstranos una de tus elecciones. La desplegaremos." },
+        "3": { "text": "Pasado y futuro son un solo punto. El ahora es ilusión." },
+        "4": { "text": "Acepta el hilo del destino. Si rechazas — el patrón cambia." },
+        "5": { "text": "Encuentra un nudo en la corriente del tiempo cerca del sistema Invisia." },
+        "6": { "description": "un ritual de tejido rompió el hilo del tiempo" },
+        "7": { "text": "Acepta ser un hilo. No un bucle." },
+        "8": { "text": "Une dos puntos en la espiral. Se necesita un portador." },
+        "9": { "text": "El patrón se cierra. Tú eres la puntada." }
+      }
     },
     "cometfolk": {
       "name": "Pueblo Cometa",
       "lore_short": "Viajeros cometa-nube sin forma permanente. Abiertos, amistosos, curiosos — regresan una vez por temporada.",
       "personality": "Amistosos, abiertos",
       "communication_style": "Entusiastas, comparten historias de viajes lejanos.",
-      "home_planet_name": "Errantia"
+      "home_planet_name": "Errantia",
+      "chain": {
+        "0": { "text": "¡Saludos desde la cresta del cometa! Nos alegra el encuentro." },
+        "1": { "text": "Vagamos entre las estrellas. Cada encuentro es una fiesta." },
+        "2": { "text": "Comparte con nosotros un trozo de hielo del núcleo. Por pura amistad." },
+        "3": { "text": "Nuestro hogar es el movimiento. La ruta es la familia." },
+        "4": { "text": "Acepta nuestra invitación a un vuelo alrededor del binario." },
+        "5": { "text": "Escolta a nuestro joven cometa a través del campo de asteroides." },
+        "6": { "description": "nuestro emisario está perdido más allá del cinturón de asteroides" },
+        "7": { "text": "Acepta el vuelo. Es aburrido rechazar a los amigos." },
+        "8": { "text": "Encuentra nuestra cresta perdida en el sistema Texum." },
+        "9": { "text": "Vuela con nosotros. Las estrellas están cerca." }
+      }
     }
   },
   "cosmos": {
@@ -505,7 +625,12 @@
     "role_home": "⭐ Mundo Capital",
     "role_colony": "· Colonia",
     "event": {
-      "notification": "{{raceName}} {{description}}: {{delta}} a relación"
+      "notification": "{{raceName}} {{description}}: {{delta}} a relación",
+      "solar_flare": "una llamarada solar dañó las estaciones orbitales",
+      "failed_pact": "un pacto con un viejo aliado ha fracasado",
+      "lost_envoy": "un emisario se ha perdido",
+      "ritual_disrupted": "un ritual fue interrumpido",
+      "crystal_resonance": "una resonancia cristalina tocó sus sueños"
     }
   },
   "tutorial": {
