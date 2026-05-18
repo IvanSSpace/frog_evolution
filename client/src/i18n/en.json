@@ -237,7 +237,8 @@
     "serums_empty": "Serums will appear after opening boxes",
     "serums": {
       "applied": "Serum applied",
-      "undo_label": "Undo"
+      "undo_label": "Undo",
+      "already_carrier": "Frog is already a carrier"
     },
     "carrier": {
       "empty_state": "No carriers",

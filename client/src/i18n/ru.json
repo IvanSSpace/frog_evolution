@@ -237,7 +237,8 @@
     "serums_empty": "Сыворотки появятся после открытия боксов",
     "serums": {
       "applied": "Сыворотка применена",
-      "undo_label": "Откатить"
+      "undo_label": "Откатить",
+      "already_carrier": "Лягушка уже carrier"
     },
     "carrier": {
       "empty_state": "Нет carrier'ов",

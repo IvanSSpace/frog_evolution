@@ -237,7 +237,8 @@
     "serums_empty": "Los sueros aparecerán después de abrir cajas",
     "serums": {
       "applied": "Suero aplicado",
-      "undo_label": "Deshacer"
+      "undo_label": "Deshacer",
+      "already_carrier": "La rana ya es carrier"
     },
     "carrier": {
       "empty_state": "Sin carriers",
