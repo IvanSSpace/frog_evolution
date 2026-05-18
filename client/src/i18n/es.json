@@ -244,6 +244,7 @@
       "empty_state": "Sin carriers",
       "empty_hint": "Aplica sueros para crear carriers",
       "count": "{{count}} carriers",
+      "no_active_bonuses": "Sin bonos activos",
       "dispose_button": "Util.",
       "merge_blocked_mismatch": "Carriers incompatibles",
       "merge_cross_location_warn": "Merge entre ubicaciones — restaurado",
