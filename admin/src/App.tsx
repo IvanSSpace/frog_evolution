@@ -6,17 +6,8 @@ import { AppShell } from '@/components/AppShell'
 import { LoginPage } from '@/pages/LoginPage'
 import { UsersPage } from '@/pages/UsersPage'
 import { UserDetailPage } from '@/pages/UserDetailPage'
+import { DashboardPage } from '@/pages/DashboardPage'
 import { Toaster } from '@/components/ui/toaster'
-
-// Placeholder — Wave 3 plan 29-06 will implement charts
-function DashboardPage() {
-  return (
-    <div className="text-foreground">
-      <h1 className="text-xl font-bold mb-4">Dashboard</h1>
-      <p className="text-muted-foreground">Analytics coming soon.</p>
-    </div>
-  )
-}
 
 export default function App() {
   return (
