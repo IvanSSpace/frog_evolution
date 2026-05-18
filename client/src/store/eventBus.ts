@@ -169,6 +169,13 @@ type Events = {
   // Consumer (Plan 26-05 FirstContactController) делает narrow cast.
   // Pattern consistent с LegacyRarity (локальный type в eventBus.ts).
   'cosmos:first-contact': { raceId: string; x: number; y: number }
+  // Phase 26 Plan 26-05 — first contact Phaser cinematic completion.
+  // Эмитит FirstContactEffect (Plan 26-05) после ~2s cinematic'а закончился.
+  // Subscribers:
+  //   - FirstContactController (mount'ит DOM FirstContactModal с race lore).
+  // Безопасно если scene отсутствует — emitter эмитит next-tick fallback чтобы
+  // controller не залип в pending state.
+  'cosmos:first-contact-effect-complete': void
 }
 
 export const eventBus = mitt<Events>()

@@ -463,6 +463,16 @@ export class StarMapScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.DESTROY, () =>
       this.shipController.teardown(),
     )
+
+    // Phase 26 Plan 26-05: expose scene для FirstContactController координат-лукапов
+    // и FirstContactEffect scene-resolution. Pattern mirror MainScene.create
+    // (window.__mainScene) — bridge React↔Phaser для cinematic/modal coordination.
+    // Cleanup в shutdown() — `if (... === this) delete` защита от ownership conflict
+    // если несколько scene instances существуют одновременно (T-26-05-05 mitigation).
+    {
+      const w = window as unknown as { __starMapScene?: StarMapScene }
+      w.__starMapScene = this
+    }
   }
 
   // setupShipSprite/teardownShipSprite/applyShipState — extracted в './starmap/shipController.ts' (Phase 20-04, Wave 4).
@@ -773,8 +783,29 @@ export class StarMapScene extends Phaser.Scene {
       eventBus.off('starmap:goto-ship', this.onEbGotoShip)
       this.onEbGotoShip = undefined
     }
+    // Phase 26 Plan 26-05: cleanup window.__starMapScene reference только если
+    // это всё ещё ours (T-26-05-05 — ownership conflict mitigation, mirror
+    // MainScene.shutdown pattern).
+    {
+      const w = window as unknown as { __starMapScene?: StarMapScene }
+      if (w.__starMapScene === this) delete w.__starMapScene
+    }
     this.time.removeAllEvents()
     this.tweens.killAll()
+  }
+
+  /**
+   * Phase 26 Plan 26-05: lookup planet world coordinates по planet ID.
+   * Используется FirstContactController для anchor'а Phaser cinematic'а
+   * в правильной точке (over tapped planet, not screen center).
+   *
+   * Returns null если planet не найдена в allSystems — controller использует
+   * fallback (camera center) если null.
+   */
+  getPlanetWorldCoords(planetId: string): { x: number; y: number } | null {
+    const found = this.allSystems.find((sys) => sys.id === planetId)
+    if (!found) return null
+    return { x: found.x, y: found.y }
   }
 
   // Лёгкая реакция на тап по второстепенному объекту (звезда, лягушка-спутник)
