@@ -35,6 +35,7 @@ import { installBestiaryDevHelpers } from './utils/devHelpers'
 import { installOnboardingDevHelpers } from './utils/onboardingDevHelpers'
 import { installCaptainBirthDevHelpers } from './utils/captainBirthDevHelpers'
 import { installRaceDevHelpers } from './utils/devRaces'
+import { installContactsDevHelpers } from './utils/devContacts'
 import { devLog } from './utils/devLog'
 import { pingHealth } from './api/client'
 import { ensureLogin } from './api/auth'
@@ -259,6 +260,9 @@ function App() {
     // (__listRaces / __markFirstContact / __resetFirstContacts / __firstContactsState).
     // Returns cleanup function для symmetric uninstall в useEffect return.
     const raceDevCleanup = installRaceDevHelpers()
+    // Phase 27 Plan 27-03: contacts / relationship / chain dev helpers
+    // (__addPending / __resetRelationships / __advanceChain / __dumpContacts).
+    const contactsDevCleanup = installContactsDevHelpers()
 
     return () => {
       delete w.__resetCrewToday
@@ -278,6 +282,8 @@ function App() {
       delete w.__captainBirthState
       // Phase 26 Plan 26-01: race dev helpers cleanup.
       raceDevCleanup()
+      // Phase 27 Plan 27-03: contacts dev helpers cleanup.
+      contactsDevCleanup()
     }
   }, [])
 
