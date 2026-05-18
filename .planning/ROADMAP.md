@@ -682,6 +682,18 @@ Plans:
 
 **Outcome:** Visual restyle CosmicHub под единый app design language (dark cosmic `#1a2e1a` + pink `#ec4899` accents + WelcomeModal-style cards + 3D inset-shadow CTAs из LocationStack pattern). 9 файлов restyled: CosmicHubModal shell (header textShadow + pink-tinted close + dark bg) + tab strip (pink underline 3px + `cosmic-tab-bobble` keyframe 1.5s + dim inactive + 🔒 disabled state) + lock screen (WelcomeModal-style dark card + gold title); 5 tabs content polish (ShipTab pink CTAs + SerumInventoryTab rounded cards с gold/pink badges + BestiaryTab pink location tabs + CarriersTab + CarrierInfoCard WelcomeModal-style + CosmicShopTab rounded items с conditional pink border); 3 sub-modals (SerumModal dark + Rule 2 backdrop fix, BulkOpenSummary inset cards + pink pills + Rule 1 i18n element-name fix, PityCounterDisplay pink dots/progress + dot-div rendering). Shared `_styles.ts` design tokens module (9 exports: PINK/PINK_LIGHT/PINK_DARK/GOLD colors + DARK_CARD_STYLE/PINK_CTA_STYLE/PINK_CTA_MINI_STYLE/DISABLED_CTA_OVERRIDES/PINK_BADGE_STYLE/SECTION_HEADER_STYLE patterns). CascadeRevealModal + bestiary/ subdir НЕ trogались (per CONTEXT.md scope). Tailwind layout utilities оставлены (flex/grid/gap/px/py), color/text/border заменены inline. Cliclability checklist соблюдён (`type="button"` + `touchAction: manipulation` + z-index hierarchy 50→99/100→200 + stopPropagation на inner modals). Bundle delta gzip cumulative +0.98 KB (cap +5 KB ✓ per CONTEXT.md). i18n RU/EN/ES intact (337/337). SMOKE_TEST_25.md 6 scenarios A-F (lock screen / tab strip / Ship+Серумы / Бестиарий+Носители / Магазин / sub-modals+PityCounter) + cliclability + build chain + i18n parity + regression sanity.
 
+### Phase 26: Cosmos races foundation
+
+**Goal:** Реализовать foundation для большой космической экспансии: 10 чуждых рас с уникальным лором (Кристаллозиды/Газо-облака/Механидоны/Огнечервы/Жидко-сферы/Тенебрисы/Плазма-духи/Лесо-кореня/Время-ткачи/Кометники), 30 обитаемых планет (1 home + 2 colonies per race), visual race indicators на Star Map, и новый «Инвентарь» tab в Cosmic Hub. Phase 27 — quests, Phase 28 — communications, Phase 29 — relationships.
+
+**Source design:** `frog_obsidian/Design Notes/2026-05-18-cosmos-races-foundation.md`
+**Requirements**: TBD
+**Depends on:** Phase 25
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 26 --prd "<design-note>" to break down)
+
 ---
 
 **Last updated:** 2026-05-18 — Phase 25 complete (4 plans, visual restyle)
