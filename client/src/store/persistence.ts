@@ -351,12 +351,20 @@ export function loadCosmicSlice(): CosmicPersist {
         return arr.slice(0, 192)
       })(),
       pityCounters: parsed.pityCounters ?? defaults.pityCounters,
+      // 2026-05-18 audit fix: whitelist was missing 'inventory' (Phase 26-04)
+      // и 'contacts' (Phase 27-04) — каждый save→load цикл silently сбрасывал
+      // tab на 'scouts'. Synced через gameSync.snapshotForSave, поэтому
+      // некорректный whitelist здесь делал server-sync поля бесполезным:
+      // server мог принести 'contacts', persistence на следующем boot его
+      // дропал → user всегда возвращался на 'scouts' tab.
       lastActiveTab:
         parsed.lastActiveTab === 'scouts' ||
         parsed.lastActiveTab === 'boxes' ||
         parsed.lastActiveTab === 'bestiary' ||
         parsed.lastActiveTab === 'carriers' ||
-        parsed.lastActiveTab === 'shop'
+        parsed.lastActiveTab === 'shop' ||
+        parsed.lastActiveTab === 'inventory' ||
+        parsed.lastActiveTab === 'contacts'
           ? parsed.lastActiveTab
           : 'scouts',
       crew: parsed.crew ?? defaults.crew,
