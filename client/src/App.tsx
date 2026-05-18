@@ -23,7 +23,7 @@ import type { Element } from './store/cosmic/types'
 import { GalleryModal } from './components/Gallery/GalleryModal'
 import { GalleryDetailModal } from './components/Gallery/GalleryDetailModal'
 import { MilestoneToast } from './components/CosmicHub/bestiary/MilestoneToast'
-import { TutorialOverlay } from './components/Tutorial/TutorialOverlay'
+// import { TutorialOverlay } from './components/Tutorial/TutorialOverlay'  // disabled 2026-05-18 — Phase 23 onboarding replaces
 import { OnboardingController } from './components/Onboarding/OnboardingController'
 import { SerumModal } from './components/CosmicHub/SerumModal'
 import { SerumBar } from './components/SerumBar'
@@ -319,8 +319,14 @@ function App() {
       {/* Phase 18 (REQ BESTIARY-07): milestone toast — listens cosmic:bestiary-milestone
           event from cosmicSlice.setBestiaryBit; visible regardless of Cosmic Hub state. */}
       <MilestoneToast />
-      {/* Phase 19-05 (UX-08): tutorial overlay — always mounted; conditional null-render. */}
-      <TutorialOverlay />
+      {/* Phase 19-05 (UX-08): tutorial overlay — DISABLED 2026-05-18.
+          Phase 23 onboarding (OnboardingController) полностью заменяет:
+          - first-box → Phase 23 Beat 2 (tap hint banner)
+          - first-serum → отдельная Phase 23 фича (TBD)
+          - first-feed → устарел (Phase 22 убрал feed механику)
+          - first-stabilize → устарел (Phase 22 убрал stabilize)
+          Дублирующиеся подсказки на разных позициях экрана = user complaint. */}
+      {/* <TutorialOverlay /> */}
       {/* Phase 23 Plan 23-01: onboarding coordinator (Wave 1 — empty shell;
           Plan 23-02..05 add Welcome / TapHint / MergeDemo / LocationCelebration overlays). */}
       <OnboardingController />
