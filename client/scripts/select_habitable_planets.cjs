@@ -9,7 +9,7 @@
 //   3. Race order — фиксирован: RACE_ORDER (canonical order из 26-CONTEXT.md table).
 //   4. Affinity mapping: each race → archetype Element (см. config/races.ts).
 //   5. Для each race in order:
-//        a. Find planets where planet.type === race.affinity (matching pool).
+//        a. Find planets where planetToElement(planet) === race.affinity (matching pool).
 //        b. Exclude planet.id === 'home' (player base) и already-assigned planets.
 //        c. Если matching pool >= 3 → shuffle PRNG'ом, take first 3.
 //        d. Если matching pool < 3 → take all matching as candidates; добрать random
@@ -25,6 +25,54 @@
 //     in-place patches `inhabitant` поле на 30 entries,
 //     записывает обратно (preserve formatting), prints summary.
 //   Repeat runs дают identical output (seed deterministic, race order fixed).
+//
+// === Affinity fix (deferred bug, 2026-05-18) ===
+// Initial Phase 26-02 implementation compared `planet.type === race.affinity` directly,
+// но `planet.type` literals (crystal/rocky/ancient/mystic/organic/forge/military/empty/
+// hostile/resource/...) НЕ совпадают с Element union (fire/water/crystal/shadow/gas/
+// plasma/forest/void/binary/mechanical/...). Результат: matching pool был 0-1 для всех
+// 10 рас → all races попадали в PRNG fallback branch (stats.affinityMatched=0).
+//
+// Fix: introduced `planetToElement(planet)` helper, который маппит planet → Element:
+//   1. Если planet имеет `archetype` field (только BG planets: bg_*) → use
+//      ARCHETYPE_TO_ELEMENT (reuses existing Phase 12 mapping from
+//      client/src/game/effects/elements/elementMapping.ts).
+//   2. Иначе — fallback на planet.type → PLANET_TYPE_TO_ELEMENT (covers 15 of 18
+//      observed type literals; empty/hostile/resource остаются unmapped — для них
+//      BG planets всегда имеют archetype, so they go through path #1).
+//
+// Mapping decisions (PLANET_TYPE_TO_ELEMENT, для named main-race planets):
+//   crystal      → crystal     (direct — кристаллозиды)
+//   crystal_bio  → crystal     (crystal substrate variant)
+//   mystic       → arcane      (per existing MAIN_RACE_TO_ELEMENT — мистические руины)
+//   ancient      → void        (древнее запределье времён — timeweavers fit; намеренно
+//                                отклоняется от elementMapping `ancient→arcane`,
+//                                т.к. ни одна раса не имеет affinity=arcane,
+//                                а timeweavers.affinity=void и им нужны планеты)
+//   mechano      → mechanical  (per existing MAIN_RACE_TO_ELEMENT — механидоны)
+//   rocky        → mechanical  (тектоника/конструкт — solid surface для механидонов)
+//   military     → fire        (warfare = огневая мощь — fireworms воинственные;
+//                                отклоняется от elementMapping `military→war`,
+//                                т.к. ни одна раса не имеет affinity=war,
+//                                а fireworms.affinity=fire)
+//   forge        → fire        (forge crucible = огненная кузня)
+//   shadow       → shadow      (direct — tenebrians)
+//   destroyed    → shadow      (entropic ruin / dark matter; отклоняется от
+//                                elementMapping `destroyed→void` для balance —
+//                                shadow already has named planet noctis, нужны ещё)
+//   organic      → forest      (bio/living matter — forestcores)
+//   aerial       → gas         (airborne atmosphere — gasouls)
+//   mist         → gas         (vapor form)
+//   aquatic      → water       (water creatures — liquidoids)
+//   energy       → plasma      (energy beings — plasmaspirits)
+//
+// Expected outcome after fix:
+//   8/10 races получат affinity-matched pool ≥3:
+//     crystal=32, gas=29, fire=33, water=29, shadow=40, plasma=33, forest=27, binary=27
+//   2/10 races останутся в fallback branch (acceptable):
+//     mechanical=2 (mechanidons — drave/drevus only), void=2 (timeweavers — cairn только;
+//                  destroyed→shadow, ancient→void; cairn — единственный ancient).
+//   → 8×3 = 24 affinity-matched habitable planets (было 0).
 
 'use strict'
 
@@ -57,6 +105,62 @@ const RACE_ORDER = [
   { id: 'timeweavers', affinity: 'void' },
   { id: 'cometfolk', affinity: 'binary' },
 ]
+
+// === Planet → Element mapping (see header block для rationale) ===
+//
+// ARCHETYPE_TO_ELEMENT mirror client/src/game/effects/elements/elementMapping.ts.
+// Should this list ever expand, оба места обновить вместе.
+const ARCHETYPE_TO_ELEMENT = {
+  lava: 'fire',
+  ice: 'ice',
+  ocean: 'water',
+  forest: 'forest',
+  toxic: 'toxic',
+  plasma: 'plasma',
+  dead: 'shadow',
+  mineral: 'crystal',
+  desert: 'desert',
+  gas_giant: 'gas',
+  gas_ringed: 'ring',
+  binary: 'binary',
+}
+
+// Planet.type → Element (covers 15 of 18 observed type literals; empty/hostile/
+// resource не маппятся напрямую — BG planets с этими types всегда имеют archetype,
+// который обрабатывается через ARCHETYPE_TO_ELEMENT path).
+const PLANET_TYPE_TO_ELEMENT = {
+  crystal: 'crystal',
+  crystal_bio: 'crystal',
+  mystic: 'arcane',
+  ancient: 'void',
+  mechano: 'mechanical',
+  rocky: 'mechanical',
+  military: 'fire',
+  forge: 'fire',
+  shadow: 'shadow',
+  destroyed: 'shadow',
+  organic: 'forest',
+  aerial: 'gas',
+  mist: 'gas',
+  aquatic: 'water',
+  energy: 'plasma',
+}
+
+/**
+ * Resolve Element для habitable-planet selection. Priority:
+ *   1. planet.archetype (BG planets) → ARCHETYPE_TO_ELEMENT.
+ *   2. planet.type (named main-race planets) → PLANET_TYPE_TO_ELEMENT.
+ *   3. Иначе null (empty/hostile/resource без archetype, не должно случиться, но защита).
+ */
+function planetToElement(planet) {
+  if (planet.archetype && ARCHETYPE_TO_ELEMENT[planet.archetype]) {
+    return ARCHETYPE_TO_ELEMENT[planet.archetype]
+  }
+  if (planet.type && PLANET_TYPE_TO_ELEMENT[planet.type]) {
+    return PLANET_TYPE_TO_ELEMENT[planet.type]
+  }
+  return null
+}
 
 // === PRNG (Mulberry32 — 32-bit seedable, well-known sequence) ===
 
@@ -91,9 +195,14 @@ function selectHabitable(planetMap) {
   const stats = { affinityMatched: 0, fallback: 0 }
 
   for (const race of RACE_ORDER) {
-    // Step a-b: matching pool (type === affinity, не 'home', не assigned)
+    // Step a-b: matching pool (planetToElement(p) === affinity, не 'home', не assigned).
+    // Использует mapping table (см. header block — affinity fix 2026-05-18),
+    // а не прямое сравнение p.type === race.affinity (literals не совпадают).
     const matching = planets.filter(
-      (p) => p.type === race.affinity && p.id !== 'home' && !assigned.has(p.id),
+      (p) =>
+        planetToElement(p) === race.affinity &&
+        p.id !== 'home' &&
+        !assigned.has(p.id),
     )
 
     let chosen = []
