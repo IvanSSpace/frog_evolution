@@ -54,6 +54,21 @@ function snapshotForSave() {
       boxes: s.boxes,
       ship: s.ship,
       carriers: s.carriers,
+      // Phase 22 Plan 22-03: ascension state — permanent pool + meta-currency.
+      // 2026-05-18 audit fix: WAS missing from snapshotForSave → cross-device
+      // login lost all ascended carriers + essence (irreversible save loss).
+      ascendedCarriers: s.ascendedCarriers,
+      essence: s.essence,
+      // Phase 22 Plan 22-05: cosmic shop perma upgrades + per-item purchase
+      // history (used for cost scaling).
+      // 2026-05-18 audit fix: WAS missing from snapshotForSave → cross-device
+      // login lost all shop progress (slot bonuses, ship speed, serum drop %)
+      // AND reset cost-scaling counters to 0 (next purchase priced at base —
+      // exploit + economy break).
+      permaSlotBonus: s.permaSlotBonus,
+      permaShipSpeedBonus: s.permaShipSpeedBonus,
+      permaSerumDropBonus: s.permaSerumDropBonus,
+      shopPurchaseCounts: s.shopPurchaseCounts,
       bestiaryBitset: s.bestiaryBitset,
       pityCounters: s.pityCounters,
       lastActiveTab: s.lastActiveTab,
@@ -71,6 +86,17 @@ function snapshotForSave() {
       raceRelationships: s.raceRelationships,
       chainProgress: s.chainProgress,
       pendingItems: s.pendingItems,
+      // 2026-05-18 audit fix: toplevel-but-meta state served через cosmic blob
+      // (consistent pattern с captainBirthSeen — server schema accepts opaque
+      // cosmic JSON, no schema change). All three — per-user permanent progress:
+      //   - hasCosmosUnlocked: gate flag (Phase 22 Plan 22-06).
+      //   - l18MergesCount: L18+L18 merge bonus multiplier counter.
+      //   - l18AbsoluteBonusPerSec: absolute permanent income bonus (2× L18 income).
+      // Без sync — cross-device login обнуляет multiplier + absolute bonus и
+      // ломает cosmos gate (повторный cinematic).
+      hasCosmosUnlocked: s.hasCosmosUnlocked,
+      l18MergesCount: s.l18MergesCount,
+      l18AbsoluteBonusPerSec: s.l18AbsoluteBonusPerSec,
       // Phase 22: user preferences (cross-device sync).
       preferences: {
         numberFormat: s.numberFormat,
@@ -127,6 +153,20 @@ export async function loadGameState(): Promise<boolean> {
       if ('boxes' in c) cosmicUpdate.boxes = c.boxes
       if ('ship' in c) cosmicUpdate.ship = c.ship
       if ('carriers' in c) cosmicUpdate.carriers = c.carriers
+      // Phase 22 Plan 22-03: hydrate ascension state from server (defensive
+      // validation runs в loadCosmicSlice на following persist cycle; здесь
+      // trust blob shape для immediate hydrate).
+      if ('ascendedCarriers' in c)
+        cosmicUpdate.ascendedCarriers = c.ascendedCarriers
+      if ('essence' in c) cosmicUpdate.essence = c.essence
+      // Phase 22 Plan 22-05: hydrate shop perma upgrades + purchase counters.
+      if ('permaSlotBonus' in c) cosmicUpdate.permaSlotBonus = c.permaSlotBonus
+      if ('permaShipSpeedBonus' in c)
+        cosmicUpdate.permaShipSpeedBonus = c.permaShipSpeedBonus
+      if ('permaSerumDropBonus' in c)
+        cosmicUpdate.permaSerumDropBonus = c.permaSerumDropBonus
+      if ('shopPurchaseCounts' in c)
+        cosmicUpdate.shopPurchaseCounts = c.shopPurchaseCounts
       if ('bestiaryBitset' in c) cosmicUpdate.bestiaryBitset = c.bestiaryBitset
       if ('pityCounters' in c) cosmicUpdate.pityCounters = c.pityCounters
       if ('lastActiveTab' in c) cosmicUpdate.lastActiveTab = c.lastActiveTab
@@ -139,6 +179,26 @@ export async function loadGameState(): Promise<boolean> {
       if ('frogExclusiveUnlocked' in c)
         cosmicUpdate.frogExclusiveUnlocked = c.frogExclusiveUnlocked
       if ('tutorialState' in c) cosmicUpdate.tutorialState = c.tutorialState
+      // 2026-05-18 audit fix: toplevel-but-server-synced fields. Same hydrate
+      // pattern as captainBirthSeen but applied to top-level state (вместо
+      // cosmic slice). Server blob keeps them under cosmic.* для opaque schema.
+      // Defensive — accept only correct primitive type.
+      if ('hasCosmosUnlocked' in c && c.hasCosmosUnlocked === true)
+        cosmicUpdate.hasCosmosUnlocked = true
+      if ('l18MergesCount' in c && typeof c.l18MergesCount === 'number')
+        cosmicUpdate.l18MergesCount = Math.max(
+          0,
+          Math.floor(c.l18MergesCount as number),
+        )
+      if (
+        'l18AbsoluteBonusPerSec' in c &&
+        typeof c.l18AbsoluteBonusPerSec === 'number' &&
+        Number.isFinite(c.l18AbsoluteBonusPerSec as number)
+      )
+        cosmicUpdate.l18AbsoluteBonusPerSec = Math.max(
+          0,
+          c.l18AbsoluteBonusPerSec as number,
+        )
       // Phase 24 Plan 24-01: hydrate captain-birth flag from server.
       if ('captainBirthSeen' in c)
         cosmicUpdate.captainBirthSeen = c.captainBirthSeen
@@ -166,9 +226,33 @@ export async function loadGameState(): Promise<boolean> {
       // server response. Dynamic import — gameSync уже async, persistence
       // подтянут через другие пути; dynamic безопасен и избегает потенциального
       // circular концерна.
-      if (cosmicUpdate.captainBirthSeen === true) {
-        const { saveCaptainBirthSeen } = await import('../store/persistence')
-        saveCaptainBirthSeen(true)
+      // 2026-05-18 audit: extended same pattern для hasCosmosUnlocked +
+      // l18MergesCount + l18AbsoluteBonusPerSec — каждый имеет свой localStorage
+      // key (см. persistence.ts), который читается при offline boot ДО server
+      // response. Без post-hydrate write — boot между sync'ами на новом
+      // устройстве рисует cosmos-locked UI / нулевой multiplier пока не
+      // приехал /game/state.
+      const needsPersistenceWrite =
+        cosmicUpdate.captainBirthSeen === true ||
+        cosmicUpdate.hasCosmosUnlocked === true ||
+        typeof cosmicUpdate.l18MergesCount === 'number' ||
+        typeof cosmicUpdate.l18AbsoluteBonusPerSec === 'number'
+      if (needsPersistenceWrite) {
+        const persistence = await import('../store/persistence')
+        if (cosmicUpdate.captainBirthSeen === true) {
+          persistence.saveCaptainBirthSeen(true)
+        }
+        if (cosmicUpdate.hasCosmosUnlocked === true) {
+          persistence.saveCosmosUnlocked(true)
+        }
+        if (typeof cosmicUpdate.l18MergesCount === 'number') {
+          persistence.saveL18MergesCount(cosmicUpdate.l18MergesCount as number)
+        }
+        if (typeof cosmicUpdate.l18AbsoluteBonusPerSec === 'number') {
+          persistence.saveL18AbsoluteBonusPerSec(
+            cosmicUpdate.l18AbsoluteBonusPerSec as number,
+          )
+        }
       }
 
       // Phase 22: восстанавливаем user preferences с сервера через те же setters
