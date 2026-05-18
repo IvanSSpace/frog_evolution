@@ -708,10 +708,15 @@ Plans:
 **Source design:** inline brainstorm 2026-05-18 (no spec file — memory `feedback_superpowers_workflow`)
 **Requirements**: TBD (resolved при /gsd-plan-phase 27)
 **Depends on:** Phase 26
-**Plans:** TBD plans
+**Plans:** 6 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 27 to break down)
+- [ ] 27-01-PLAN.md — Foundation types + state + persistence + i18n skeleton
+- [ ] 27-02-PLAN.md — Race chain data (10 races × 10 ChainItem) + i18n texts (RU/EN/ES parity)
+- [ ] 27-03-PLAN.md — Pure pendingEngine + slice actions + 2 eventBus contacts:* events + dev helpers
+- [ ] 27-04-PLAN.md — ContactsTab + RaceDetailView + RelationshipBar + 7th tab wiring
+- [ ] 27-05-PLAN.md — EventToast + EventToastController + App.tsx wiring
+- [ ] 27-06-PLAN.md — SMOKE_TEST_27 (6 scenarios) + ROADMAP/STATE finalize
 
 ---
 
