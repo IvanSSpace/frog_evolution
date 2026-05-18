@@ -782,13 +782,20 @@ JWT issued on `POST /admin/login`. JWT middleware на `/admin/*` (кроме lo
 **Deploy:** Separate build (`admin/` package.json + Vite config). Может deploy'иться на `admin.example.com` или `example.com/admin` (CORS handled by `@fastify/cors`).
 
 **Source design:** inline brainstorm 2026-05-19 (no spec file — memory `feedback_superpowers_workflow`)
-**Requirements**: TBD (resolved при /gsd-plan-phase 29)
+**Requirements**: PHASE29-ADMIN-APP-SCAFFOLD, PHASE29-VITE-CONFIG, PHASE29-TAILWIND-CONFIG, PHASE29-SHADCN-INIT, PHASE29-ROUTER-SETUP, PHASE29-AXIOS-INTERCEPTOR, PHASE29-REACT-QUERY-SETUP, PHASE29-PRISMA-BANNED-FIELD, PHASE29-FASTIFY-JWT-PLUGIN, PHASE29-FASTIFY-CORS-PLUGIN, PHASE29-BCRYPT-DEP, PHASE29-ADMIN-LOGIN-ROUTE, PHASE29-JWT-MIDDLEWARE, PHASE29-ADMIN-USERS-LIST-ROUTE, PHASE29-ADMIN-USER-DETAIL-ROUTE, PHASE29-ADMIN-GRANT-ROUTE, PHASE29-ADMIN-BAN-ROUTE, PHASE29-LOGIN-SCREEN, PHASE29-DASHBOARD-PLACEHOLDER, PHASE29-USERS-LIST-TABLE, PHASE29-USER-DETAIL-VIEW, PHASE29-GRANT-FORMS, PHASE29-BAN-TOGGLE, PHASE29-APP-SHELL, PHASE29-PROTECTED-ROUTE, PHASE29-ENV-CONFIG, PHASE29-BUILD-CHAIN, PHASE29-SMOKE, PHASE29-FINALIZE
 **Depends on:** Phase 28
-**Plans:** TBD plans
+**Plans:** 6 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 29 to break down)
+- [x] 29-01-PLAN.md — Admin app scaffold (Vite + React + TS + Tailwind + shadcn/ui init)
+- [x] 29-02-PLAN.md — Backend prep (bcryptjs + Prisma User.banned migration + config extension)
+- [x] 29-03-PLAN.md — Backend admin routes (login + requireAdmin + users list/detail + grant + ban)
+- [x] 29-04-PLAN.md — Frontend shell (Axios + ReactQuery + auth store + AppShell + ProtectedRoute + Login screen)
+- [x] 29-05-PLAN.md — Users list table (TanStack Table) + User detail view with grant/ban forms
+- [x] 29-06-PLAN.md — Dashboard placeholder (Recharts) + smoke test + ROADMAP/STATE finalize
+
+**Outcome:** Admin panel MVP shipped. Separate Vite 5 + React 19 + TypeScript standalone app in `admin/` (own package.json, port 5174) with Tailwind CSS v3 dark mode + shadcn/ui CSS variable tokens. Frontend: React Router v6 routes (/login + / + /users + /users/:id), ProtectedRoute + AppShell (top nav + sidebar), Zustand-free auth via sessionStorage helpers (getToken/setToken/clearToken/isAuthenticated), Axios with Bearer auth interceptor + 401→logout, TanStack Query v5 (staleTime 30s, refetchOnWindowFocus=false), TanStack Table v8 with server-side pagination + search on UsersPage, React Hook Form + Zod validation on grant forms, shadcn/ui components (Button/Input/Label/Card/Badge/Table/Toast). Backend: bcryptjs installed, User.banned Boolean @default(false) Prisma migration (non-breaking), @fastify/jwt + @fastify/cors plugins, requireAdmin JWT middleware, 6 admin routes (POST /admin/login bcrypt compare + JWT 24h; GET /admin/users paginated search; GET /admin/users/:id full game state; POST .../grant gold/essence/serum; POST .../ban). DashboardPage with Recharts LineChart (mock data 7-day signups — real analytics deferred Phase 30). SMOKE_TEST_29.md 9 scenarios A-I. 29/29 REQ-IDs covered (PHASE29-ADMIN-APP-SCAFFOLD, PHASE29-VITE-CONFIG, PHASE29-TAILWIND-CONFIG, PHASE29-SHADCN-INIT, PHASE29-ROUTER-SETUP, PHASE29-AXIOS-INTERCEPTOR, PHASE29-REACT-QUERY-SETUP, PHASE29-PRISMA-BANNED-FIELD, PHASE29-FASTIFY-JWT-PLUGIN, PHASE29-FASTIFY-CORS-PLUGIN, PHASE29-BCRYPT-DEP, PHASE29-ADMIN-LOGIN-ROUTE, PHASE29-JWT-MIDDLEWARE, PHASE29-ADMIN-USERS-LIST-ROUTE, PHASE29-ADMIN-USER-DETAIL-ROUTE, PHASE29-ADMIN-GRANT-ROUTE, PHASE29-ADMIN-BAN-ROUTE, PHASE29-LOGIN-SCREEN, PHASE29-DASHBOARD-PLACEHOLDER, PHASE29-USERS-LIST-TABLE, PHASE29-USER-DETAIL-VIEW, PHASE29-GRANT-FORMS, PHASE29-BAN-TOGGLE, PHASE29-APP-SHELL, PHASE29-PROTECTED-ROUTE, PHASE29-ENV-CONFIG, PHASE29-BUILD-CHAIN, PHASE29-SMOKE, PHASE29-FINALIZE).
 
 ---
 
-**Last updated:** 2026-05-19 — Phase 28 complete (6 plans, quest mechanic, +21.73 KB gzip delta)
+**Last updated:** 2026-05-19 — Phase 29 complete (6 plans; separate admin/ app in monorepo)
