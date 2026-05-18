@@ -11,7 +11,6 @@ import type { CosmicTab } from '../../store/cosmic/types'
 import { useGameStore } from '../../store/gameStore'
 import { ShipTab } from './ShipTab'
 import { SerumInventoryTab } from './SerumInventoryTab'
-import { BestiaryTab } from './BestiaryTab'
 import { CarriersTab } from './CarriersTab'
 import { CosmicShopTab } from './CosmicShopTab'
 import { InventoryTab } from './InventoryTab'
@@ -30,7 +29,6 @@ function getInitialTab(): CosmicTab {
     if (
       saved === 'scouts' ||
       saved === 'boxes' ||
-      saved === 'bestiary' ||
       saved === 'carriers' ||
       saved === 'shop' ||
       saved === 'inventory' ||
@@ -86,13 +84,6 @@ export default function CosmicHubModal({ onClose }: Props) {
       icon: '🏭',
       enabled: isDev || hasFirstMission,
       lockReason: 'cosmic_hub.lock_first_mission',
-    },
-    {
-      id: 'bestiary',
-      label: t('cosmic_hub.tab_bestiary'),
-      icon: '📖',
-      // Bestiary tab всегда видим в Phase 16 — empty state. Phase 18 polish может gate.
-      enabled: true,
     },
     {
       id: 'carriers',
@@ -164,8 +155,6 @@ export default function CosmicHubModal({ onClose }: Props) {
       // CascadeRevealModal / BulkOpenSummary показывались на full screen.
       case 'boxes':
         return <SerumInventoryTab onClose={onClose} />
-      case 'bestiary':
-        return <BestiaryTab />
       case 'carriers':
         return <CarriersTab />
       case 'shop':

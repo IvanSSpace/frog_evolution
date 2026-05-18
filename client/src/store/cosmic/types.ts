@@ -134,7 +134,6 @@ export interface PityCounters {
 export type CosmicTab =
   | 'scouts'
   | 'boxes'
-  | 'bestiary'
   | 'carriers'
   | 'shop'
   | 'inventory'
