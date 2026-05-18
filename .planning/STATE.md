@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: cosmic-frogs-system
-current_phase: 23 (complete); Phase 20 (Pre-release safety net) deferred до prod-релиза
+current_phase: 24 (complete); Phase 20 (Pre-release safety net) deferred до prod-релиза
 status: completed
-last_updated: "2026-05-18T22:00:00.000Z"
+last_updated: "2026-05-18T23:30:00.000Z"
 progress:
   total_phases: 14
-  completed_phases: 2
-  total_plans: 31
-  completed_plans: 19
-  percent: 61
+  completed_phases: 3
+  total_plans: 36
+  completed_plans: 24
+  percent: 67
 ---
 
 # Project State
@@ -38,6 +38,7 @@ progress:
 | 19 | Balance + tutorial + toggles + i18n polish | **complete** (2026-05-08) — 7 plans, 4 waves, 9 atomic commits; openBox wired to rollRarity+updatePity (BALANCE-01..07); 9 unit tests for pity guarantees; Monte Carlo simulate_balance.cjs (mirror of rarityRoll.ts; 100K iterations baseline avgLeg=6.073 effective, pityHard25Breaches=0, gap.max=25); progressive PityCounterDisplay footer (hidden/dots/exact reveal at 0/3/5 opened boxes); calmFarmMode + reducedEffects toggles via cosmicSettings.ts (default OFF Locked); StabilizationModal unified reducedEffects key fix (Rule 1 deviation); TutorialOverlay + 4 steps (first-box/serum/feed/stabilize) + tutorialState persist + single-active-step priority; check-translations.cjs (286 keys × 3 locales RU/EN/ES PARITY CLEAN); elementTints mechanical hex collision fix (0xfde68a→0xfdd87a vs desert) + Phase 19-06 audit comment; check-bundle-delta.cjs + .bundle-baseline-v1.json (delta 32.43 KB / 50 KB cap PASS; current main 229.24 KB vs v1.0 baseline 196 KB; CosmicHubModal lazy chunk 14.22 KB verified PERF-07); SMOKE_TEST.md visual+i18n+settings consumer audit. Settings consumer status: openBoxesInstantly WIRED (Phase 15), reducedEffects PARTIALLY WIRED (StabilizationModal), calmFarmMode TODO (Phase 20). 17/17 ✓ REQ-IDs (BALANCE-01..05/07/08, UX-01/02/03/04/05/06/08, PERF-01/05/07, I18N-02/03). |
 | 22 | Carrier merge redesign | **complete** (2026-05-17) — 7 plans, ~23h scope, all atomic commits + per-plan SUMMARY; Rarity dimension removed (carrier shape = {frogId, element, level}); flat serum inventory Record<Element, number>; carrier merge rules (carrier+normal element-inherit, carrier+carrier target-wins); L18 ascension instant + pulse tween + ascendedCarriers pool + essence reward; HUD ActiveBonusesBar with mini/full breakdown + tooltip + i18n; Cosmic Shop (6 items, 2 currencies: essence + серум; perma slot/ship-speed/serum-drop + consumables cosmic_box/skip/trade-up); Cosmos gate via useCosmosUnlocked hook + persisted hasCosmosUnlocked flag (top-level, separate key) — pre-cosmos SerumBar/Hub/Star Map/HUD bonuses hidden + data-layer guards in box/ship slices; legacy migration migratePhase22() (idempotent, 10/10 vitest PASS — strip Phase 21 fields, flatten nested serums, infer hasCosmosUnlocked from discovered[19]); SMOKE_TEST_22.md (9 scenarios A-I); deferred: balance phase для precise essence/bonus/cost magnitudes + glossary refresh checklist (GLOSSARY_UPDATES.md). 10 REQ-IDs (PHASE22-CLEANUP, PHASE22-MERGE-RULES, PHASE22-ASCENSION, PHASE22-ARCHETYPE-POOL, PHASE22-HUD-BONUSES, PHASE22-COSMIC-SHOP, PHASE22-CURRENCIES, PHASE22-COSMOS-GATE, PHASE22-MIGRATION, PHASE22-SMOKE). |
 | 23 | Onboarding flow (soft 4-beat) | **complete** (2026-05-18) — 6 plans, ~22h scope, 13 atomic commits + per-plan SUMMARY; soft 4-beat tutorial (Welcome modal Beat 1, Phaser tap-hint ring Beat 2, ghost-frog merge demo Beat 3, location unlock celebration с confetti burst + LocationStack pulse + DOM toast Beat 4); per-device localStorage state без server sync; reusable TutorialPulseRing/GhostFrogTrail/ConfettiBurst Phaser effects; dev helpers (__resetOnboarding/__skipOnboarding/__triggerBeat2/__triggerBeat4/__onboardingState); SMOKE_TEST_23.md (8 scenarios A-H); i18n RU/EN/ES parity verified (334 keys × 3 PASS); 8/8 vitest для onboardingSlice. 8 REQ-IDs (PHASE23-STATE/CONTROLLER/BEAT1-WELCOME/BEAT2-TAPHINT/BEAT3-MERGE/BEAT4-LOCATION/I18N/SMOKE). |
+| 24 | Captain creation cinematic | **complete** (2026-05-18) — 5 plans, ~18h scope, atomic commits + per-plan SUMMARY; captainBirthSeen flag (gameStore toplevel + server-sync via cosmic JSON blob + legacy migration from discovered[19]); CaptainBirthEffect.ts Phaser-native (~70 particles golden/white/cyan + 3 concentric rings + camera zoom 1.0→1.08→1.0 ~3s); CaptainBirthModal.tsx DOM (L1 frog SVG + gold drop-shadow + CSS pulse 1.5s + pink #ec4899 CTA «В космос →»); MergeController L18+L18 hook (idempotent, повторные merges no-op); captainBirthController coordinator (Beat 4 addFrogToLocation на currentLocation + Beat 5 eventBus.emit('starmap:open')); i18n RU/EN/ES (captain.birth.{title,subtitle,cta}, parity verified 337 keys × 3 PASS); dev helpers __triggerCaptainBirth/__resetCaptainBirth/__captainBirthState; SMOKE_TEST_24.md 6 scenarios A-F; bundle delta +3.79 KB gzip (cap +20 KB ✓; current main 199.88 KB gzip vs Phase 23 baseline 198.65 KB). Reuse patterns: ConfettiBurst.ts (particle texture-generation), WelcomeModal.tsx (modal centering + inline SVG + inline-block CTA + cliclability checklist), DiscoveryModal.tsx (radial-gradient backdrop drama), Phase 22 cosmos gate (toplevel flag + isolated localStorage key + server sync через cosmic blob), Phase 23 OnboardingController (install-once coordinator pattern). 17/17 ✓ REQ-IDs (PHASE24-*). |
 
 ## v1.0 Achievement Summary (closed milestone)
 
@@ -231,3 +232,29 @@ progress:
 - `__triggerBeat4(locationId)` whitelist'ит `[2, 3, 6]` — те же ids что в `__skipOnboarding`. Если future Phase 25+ добавит location id 4 (Континент) в Beat 4 trigger set, расширить обе функции одновременно.
 - `__onboardingState()` использует `console.table` для flat fields + отдельный `console.info` для nested `locationsCelebrated` — `console.table` плохо рендерит nested objects, splitting улучшает читаемость в DevTools.
 - SMOKE_TEST_23.md следует pattern SMOKE_TEST_22.md (8 scenarios A-H, [ ] checkboxes, dev helper callouts) — ensure manual QA имеет одинаковый shape across phases.
+
+## Phase 24 (closed) — Performance Metrics
+
+| Wave | Plan | Commits | Files | Bundle Delta gzip |
+|------|------|---------|-------|-------------------|
+| 1 | 24-01 (state + persistence + gameSync + eventBus) | 1 | 4 modified | (cumulative) |
+| 2 | 24-02 (Phaser cosmic effect — CaptainBirthEffect + MainScene wire) | 2 | 1 created + 1 modified | (cumulative) |
+| 2 | 24-03 (DOM modal + i18n + eventBus event) | 2 | 2 created + 4 modified | (cumulative) |
+| 3 | 24-04 (MergeController hook + captainBirthController + App.tsx mount) | 4 | 1 created + 2 modified | (cumulative) |
+| 4 | 24-05 (dev helpers + SMOKE_TEST_24.md + ROADMAP/STATE finalize) | 2 | 2 created + 4 modified | +3.79 KB final main |
+| **Total** | — | **11 commits** | **6 created + 14 modified** | **+3.79 KB gzip** (cap +20 KB ✓; index.js gzip 199.88 KB vs Phase 23 baseline ≈198.65 KB) |
+
+**Phase 24 REQ coverage:** 17/17 ✓ (PHASE24-STATE, PHASE24-PERSISTENCE, PHASE24-SERVER-SYNC, PHASE24-MIGRATION, PHASE24-EVENTBUS, PHASE24-COSMIC-EFFECT, PHASE24-EFFECT-AUTO-MOUNT, PHASE24-CAPTAIN-MODAL, PHASE24-I18N, PHASE24-CTA-EXIT, PHASE24-MERGE-HOOK, PHASE24-BEAT4-SPAWN, PHASE24-BEAT5-STARMAP, PHASE24-MODAL-MOUNT, PHASE24-DEV-HELPERS, PHASE24-SMOKE, PHASE24-FINALIZE).
+
+**Phase 24 outcome:** 5-beat cinematic при первом L18+L18 normal merge — flash → cosmic growing effect (particles + 3 rings + camera zoom ~3s) → Captain Birth modal (L1 frog SVG + gold glow + pink CTA) → Beat 4 spawn L1 frog на current location → Beat 5 Star Map auto-open. Idempotent через `captainBirthSeen` флаг (server-syncable via cosmic JSON blob, legacy-migrated из `discovered[19]`). Никакого Lottie (CSS keyframes + Phaser tweens только, memory feedback_animations). frog.container.alpha не trogается (memory feedback_frog_container_alpha; particles/rings — отдельные GameObjects поверх frog layer на depth 9000). Cliclability checklist соблюдён (`type="button"`, z-index 200 поверх HUD, backdrop click ≡ CTA exit, stopPropagation, `touchAction: manipulation`). i18n RU/EN/ES parity (3 ключа `captain.birth.{title,subtitle,cta}` × 3 locales = 9 entries; check-translations.cjs 337/337 PASS). Dev helpers покрывают force trigger (без state change — replay-safe), full reset с reload, snapshot inspection. SMOKE_TEST_24.md содержит 6 scenarios A-F (fresh save, replay protection, legacy migration, server sync, backdrop dismiss, timing+cliclability) + i18n + build chain + regression sanity.
+
+### Plan 24-05 Decisions Logged
+
+- `installCaptainBirthDevHelpers()` идёт в DEV bootstrap useEffect (рядом с installBestiaryDevHelpers/installOnboardingDevHelpers), отдельно от production-critical `installCaptainBirthController()` (Plan 24-04, без DEV gate). Cleanup в return ветке useEffect.
+- `__triggerCaptainBirth` НЕ модифицирует state — следующий реальный L18+L18 НЕ сыграет cinematic если `captainBirthSeen=true`. Replay-safe testing: для full re-test нужен `__resetCaptainBirth()` + reload. Документировано в JSDoc.
+- `__triggerCaptainBirth` читает `window.__mainScene.cameras.main.{centerX,centerY}` для emit'а в центре camera; fallback `(200, 300)` если scene не активна. Cast через `window as unknown as { __mainScene?: ... }` (НЕ глобальный `declare`) — иначе конфликт с более узкими типами в devCarriers/OnboardingController/MainScene.
+- `__captainBirthState()` возвращает snapshot `{captainBirthSeen, hasCosmosUnlocked, currentLocation, discoveredLevels}` — `console.table` для flat fields + отдельный `console.info` для discovered массива (как `__onboardingState` Plan 23-06).
+- i18n parity verification = no-op (Task 2 A): `npm run check-translations` показал 337/337 уже после Plans 24-01..04 bootstrap. `i18n/index.ts` НЕ модифицирован. Документировано в SUMMARY.
+- SMOKE_TEST_24.md следует pattern SMOKE_TEST_23.md (numbered scenarios + [ ] checkboxes + dev helper callouts + i18n + build chain + regression sanity) — manual QA имеет одинаковый shape across phases.
+- Backdrop click ≡ CTA tap — backdrop dismiss path триггерит те же Beat 4 spawn + Beat 5 Star Map переходы (per CONTEXT.md design). Scenario E проверяет.
+- ROADMAP.md Phase 24 entry финализирован: 5 plans listed с [x] checkmark, 17 REQ-IDs заменили `TBD`, outcome paragraph с bundle delta + i18n + SMOKE refs.

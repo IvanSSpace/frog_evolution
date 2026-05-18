@@ -652,13 +652,19 @@ Plans:
 (1) merge flash → (2) Phaser cosmic growing effect (particles + rings + camera zoom, ~3s) → (3) DOM "Captain Birth" modal с L1 frog SVG + glow + CTA «В космос» → (4) спавн L1 frog → (5) автоматический переход в Star Map. Только первый раз через `captainBirthSeen` flag в gameStore (server-syncable).
 
 **Source design:** `frog_obsidian/Design Notes/2026-05-18-captain-creation-cinematic.md`
-**Requirements**: TBD
+**Requirements:** PHASE24-STATE, PHASE24-PERSISTENCE, PHASE24-SERVER-SYNC, PHASE24-MIGRATION, PHASE24-EVENTBUS, PHASE24-COSMIC-EFFECT, PHASE24-EFFECT-AUTO-MOUNT, PHASE24-CAPTAIN-MODAL, PHASE24-I18N, PHASE24-CTA-EXIT, PHASE24-MERGE-HOOK, PHASE24-BEAT4-SPAWN, PHASE24-BEAT5-STARMAP, PHASE24-MODAL-MOUNT, PHASE24-DEV-HELPERS, PHASE24-SMOKE, PHASE24-FINALIZE
 **Depends on:** Phase 23
-**Plans:** 0 plans
+**Plans:** 5 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 24 --prd "<design-note>" to break down)
+- [x] 24-01-PLAN.md — state + persistence + server sync + legacy migration + 2 eventBus events
+- [x] 24-02-PLAN.md — Phaser cosmic growing effect (particles + 3 rings + camera zoom)
+- [x] 24-03-PLAN.md — DOM Captain Birth modal + i18n RU/EN/ES + eventBus captain:birth-cta
+- [x] 24-04-PLAN.md — MergeController L18+L18 hook + Beat 4 spawn + Beat 5 starmap transition + App.tsx mount
+- [x] 24-05-PLAN.md — dev helpers + SMOKE_TEST_24.md + ROADMAP/STATE finalize
+
+**Outcome:** 5-beat cinematic при первом L18+L18 normal merge (flash → cosmic effect → modal → spawn L1 → Star Map). Idempotent via captainBirthSeen (server-syncable, legacy-migrated). Bundle delta +3.79 KB gzip (cap +20 KB). i18n RU/EN/ES parity. Dev helpers: `__triggerCaptainBirth`/`__resetCaptainBirth`/`__captainBirthState`. SMOKE_TEST_24.md покрывает 6 scenarios A–F.
 
 ---
 
-**Last updated:** 2026-05-18 — Phase 23 complete
+**Last updated:** 2026-05-18 — Phase 24 complete (5 plans)
