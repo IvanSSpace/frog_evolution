@@ -29,10 +29,15 @@ const FALLBACK = {
   // Telegram fullscreen header buttons (top-right corner)
   closeButton: { top: 12, right: 8, width: 36, height: 36 },
   moreMenu: { top: 12, right: 52, width: 36, height: 36 },
+  // Back button — top-left ←, shows when WebApp.BackButton.isVisible
+  backButton: { top: 12, left: 8, width: 36, height: 36 },
   // iOS notch / Android status bar typical
   statusBar: { top: 0, left: 0, right: 0, height: 44 },
   // iOS home indicator
   homeIndicator: { bottom: 0, left: 0, right: 0, height: 34 },
+  // Telegram MainButton — bottom action button (showProgress / setText API)
+  // Fullwidth, ~60px high когда WebApp.MainButton.isVisible.
+  mainButton: { bottom: 0, left: 0, right: 0, height: 60 },
 } as const
 
 // Глобальный mutable state — toggleable через window helper. Делим между
@@ -198,6 +203,15 @@ export function TelegramSafeAreaDebugOverlay() {
         }}
       />
       <DebugBox
+        label="TG BACK"
+        style={{
+          top: closeTop,
+          left: FALLBACK.backButton.left,
+          width: FALLBACK.backButton.width,
+          height: FALLBACK.backButton.height,
+        }}
+      />
+      <DebugBox
         label="TG MORE"
         style={{
           top: closeTop,
@@ -213,6 +227,20 @@ export function TelegramSafeAreaDebugOverlay() {
           right: FALLBACK.closeButton.right,
           width: FALLBACK.closeButton.width,
           height: FALLBACK.closeButton.height,
+        }}
+      />
+      <DebugBox
+        label="TG MAIN BUTTON"
+        style={{
+          bottom: homeIndicatorHeight,
+          left: 0,
+          right: 0,
+          height: FALLBACK.mainButton.height,
+          // Subtle blue tint вместо красного — main button опционален (показывается
+          // только если WebApp.MainButton.show() был вызван). Игроку видно что зона
+          // отличается по семантике.
+          background: 'rgba(59, 130, 246, 0.5)',
+          border: '2px dashed rgba(30, 58, 138, 0.95)',
         }}
       />
       <DebugBox
