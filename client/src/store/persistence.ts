@@ -27,6 +27,9 @@ const BOX_OPEN_COUNT_KEY = 'frog_evolution_box_open_count'
 // Phase 22 Plan 22-06: cosmos gate — persisted unlock flag, отдельно от cosmic slice
 // (toplevel state.hasCosmosUnlocked). Включается при первом L18+L18 normal sentinel.
 const COSMOS_UNLOCKED_KEY = 'frog_evolution_cosmos_unlocked'
+// Phase 24 Plan 24-01: captain creation cinematic — per-user milestone flag,
+// server-sync через cosmic JSON blob (не per-device как onboarding).
+const CAPTAIN_BIRTH_SEEN_KEY = 'frog_evolution_captain_birth_seen'
 // Phase 23 Plan 23-01: onboarding flow per-device state.
 // Хранится отдельным ключом (не sync'ится с сервером) — это локальная UX-фича.
 const ONBOARDING_KEY = 'frog_evolution_onboarding'
@@ -474,6 +477,69 @@ export function saveCosmosUnlocked(v: boolean): void {
   if (typeof localStorage === 'undefined') return
   try {
     localStorage.setItem(COSMOS_UNLOCKED_KEY, v ? 'true' : 'false')
+  } catch {
+    /* ignore */
+  }
+}
+
+// ─── captain birth seen flag (Phase 24 Plan 24-01) ──────────────────────────
+//
+// Toplevel per-user flag, аналогично COSMOS_UNLOCKED_KEY:
+//   - false до первого L18+L18 normal merge → cinematic играется один раз
+//   - true → cinematic skipped (idempotent)
+//
+// Server-sync через cosmic JSON blob (см. gameSync.ts) — флаг переезжает между
+// устройствами игрока. localStorage здесь — only emergency fallback / offline boot.
+//
+// Legacy migration (single-shot): если игрок уже имел discoveredLevels[19] до
+// cinematic'а (uplifted save) — mark seen чтобы НЕ играть cinematic для
+// существующих cosmos-unlocked игроков. То же inference из cosmic blob если
+// server-sync уже принёс флаг.
+
+export function loadCaptainBirthSeen(): boolean {
+  if (typeof localStorage === 'undefined') return false
+  try {
+    const raw = localStorage.getItem(CAPTAIN_BIRTH_SEEN_KEY)
+    if (raw === 'true') return true
+    if (raw === 'false') return false
+
+    // Legacy inference: uplifted save с discovered[19] → mark seen.
+    const discRaw = localStorage.getItem(DISCOVERED_KEY)
+    if (discRaw) {
+      try {
+        const arr = JSON.parse(discRaw)
+        if (Array.isArray(arr) && arr.includes(19)) {
+          saveCaptainBirthSeen(true)
+          return true
+        }
+      } catch {
+        /* ignore parse error */
+      }
+    }
+    // Также проверяем cosmic blob — если server-sync уже принёс captainBirthSeen
+    // (gameSync.ts loadGameState пишет туда), читаем оттуда.
+    const cosmicRaw = localStorage.getItem(COSMIC_KEY)
+    if (cosmicRaw) {
+      try {
+        const parsed = JSON.parse(cosmicRaw) as { captainBirthSeen?: boolean }
+        if (parsed?.captainBirthSeen === true) {
+          saveCaptainBirthSeen(true)
+          return true
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    return false
+  } catch {
+    return false
+  }
+}
+
+export function saveCaptainBirthSeen(v: boolean): void {
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(CAPTAIN_BIRTH_SEEN_KEY, v ? 'true' : 'false')
   } catch {
     /* ignore */
   }

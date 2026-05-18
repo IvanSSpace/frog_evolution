@@ -63,6 +63,8 @@ function snapshotForSave() {
       hasOpenedAnyBox: s.hasOpenedAnyBox,
       frogExclusiveUnlocked: s.frogExclusiveUnlocked,
       tutorialState: s.tutorialState,
+      // Phase 24 Plan 24-01: cross-device sync captain birth milestone.
+      captainBirthSeen: s.captainBirthSeen,
       // Phase 22: user preferences (cross-device sync).
       preferences: {
         numberFormat: s.numberFormat,
@@ -131,8 +133,20 @@ export async function loadGameState(): Promise<boolean> {
       if ('frogExclusiveUnlocked' in c)
         cosmicUpdate.frogExclusiveUnlocked = c.frogExclusiveUnlocked
       if ('tutorialState' in c) cosmicUpdate.tutorialState = c.tutorialState
+      // Phase 24 Plan 24-01: hydrate captain-birth flag from server.
+      if ('captainBirthSeen' in c) cosmicUpdate.captainBirthSeen = c.captainBirthSeen
       if (Object.keys(cosmicUpdate).length > 0) {
         useGameStore.setState(cosmicUpdate as Partial<typeof store>)
+      }
+
+      // Phase 24 Plan 24-01: если server принёс captainBirthSeen=true,
+      // синхронизируй localStorage чтобы next boot не показал cinematic до
+      // server response. Dynamic import — gameSync уже async, persistence
+      // подтянут через другие пути; dynamic безопасен и избегает потенциального
+      // circular концерна.
+      if (cosmicUpdate.captainBirthSeen === true) {
+        const { saveCaptainBirthSeen } = await import('../store/persistence')
+        saveCaptainBirthSeen(true)
       }
 
       // Phase 22: восстанавливаем user preferences с сервера через те же setters

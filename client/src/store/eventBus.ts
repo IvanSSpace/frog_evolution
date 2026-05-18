@@ -142,6 +142,17 @@ type Events = {
   //   - MergeHintOverlay (hide label, показывает one-time success toast).
   // Idempotent — повторные merges после mark — no-op для подписчиков.
   'tutorial:firstMerge': void
+  // Phase 24 Plan 24-01 — Captain creation cinematic coordination.
+  // 'captain:birth-start' эмитит MergeController (Plan 24-04) после первого
+  // L18+L18 normal merge. Subscribers:
+  //   - CaptainBirthEffect (Plan 24-02, Phaser): plays cosmic growing effect
+  //     (particles + 3 rings + camera zoom) в данной точке.
+  // Coords — Phaser game-pixels (cx, cy из merge midpoint).
+  'captain:birth-start': { x: number; y: number }
+  // 'captain:birth-effect-complete' эмитит CaptainBirthEffect когда Phaser-эффект
+  // отыграл (~3 сек). Subscribers:
+  //   - CaptainBirthModal (Plan 24-03, DOM): mount modal с frog + glow + CTA.
+  'captain:birth-effect-complete': void
 }
 
 export const eventBus = mitt<Events>()

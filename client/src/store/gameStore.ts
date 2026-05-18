@@ -44,6 +44,8 @@ import {
   saveBoxOpenCount,
   loadCosmosUnlocked,
   saveCosmosUnlocked,
+  loadCaptainBirthSeen,
+  saveCaptainBirthSeen,
 } from './persistence'
 
 // Re-exports for backward compat — many consumers import these from gameStore.
@@ -141,6 +143,13 @@ interface GameStateBase {
   // отсутствует, выставить true (legacy migration).
   hasCosmosUnlocked: boolean
   markCosmosUnlocked: () => void
+
+  // Phase 24 Plan 24-01: captain creation cinematic gate.
+  // false до первого L18+L18 normal merge. Set'ится в MergeController
+  // (Plan 24-04) перед emit'ом 'captain:birth-start'. Idempotent.
+  // Server-sync через cosmic JSON blob (см. gameSync.ts).
+  captainBirthSeen: boolean
+  markCaptainBirthSeen: () => void
 }
 
 // Полный GameState = базовые поля + Cosmic Frogs System (Phase 11+)
@@ -349,6 +358,18 @@ export const useGameStore = create<GameState>((set, get) => ({
       msg: 'Космос открыт!',
       duration: 3000,
     })
+  },
+
+  // Phase 24 Plan 24-01: captain birth gate (cinematic single-play).
+  // Persisted под отдельным ключом (CAPTAIN_BIRTH_SEEN_KEY), плюс server-sync
+  // через cosmic.captainBirthSeen (см. gameSync.ts). Не эмитит cosmic:toast —
+  // сам cinematic и есть «toast».
+  captainBirthSeen: loadCaptainBirthSeen(),
+  markCaptainBirthSeen: () => {
+    const s = get()
+    if (s.captainBirthSeen) return // idempotent
+    saveCaptainBirthSeen(true)
+    set({ captainBirthSeen: true })
   },
 
   // ============== COSMIC FROGS SYSTEM (Phase 11+) ==============
