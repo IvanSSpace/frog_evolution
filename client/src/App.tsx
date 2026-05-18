@@ -25,6 +25,8 @@ import { GalleryDetailModal } from './components/Gallery/GalleryDetailModal'
 import { MilestoneToast } from './components/CosmicHub/bestiary/MilestoneToast'
 // import { TutorialOverlay } from './components/Tutorial/TutorialOverlay'  // disabled 2026-05-18 — Phase 23 onboarding replaces
 import { OnboardingController } from './components/Onboarding/OnboardingController'
+import { CaptainBirthModal } from './components/Captain/CaptainBirthModal'
+import { installCaptainBirthController } from './components/Captain/captainBirthController'
 import { SerumModal } from './components/CosmicHub/SerumModal'
 import { SerumBar } from './components/SerumBar'
 import { ActiveBonusesBar } from './components/HUD/ActiveBonusesBar'
@@ -173,6 +175,13 @@ function App() {
     if (bootState === 'loading') return
     startGame()
   }, [bootState])
+
+  // Phase 24 Plan 24-04: install Captain birth Beat 4 + Beat 5 coordinator.
+  // Production-critical (НЕ DEV-only). Idempotent — повторный mount/StrictMode
+  // не задублирует handler (см. captainBirthController.ts internal guard).
+  useEffect(() => {
+    installCaptainBirthController()
+  }, [])
 
   // Phase 16 (REQ UX-09): DEV-mode unlocks all sentinel flags + window dev helpers.
   // Production: флаги управляются gameplay (hasFirstMission через investigatePlanet,
@@ -330,6 +339,10 @@ function App() {
       {/* Phase 23 Plan 23-01: onboarding coordinator (Wave 1 — empty shell;
           Plan 23-02..05 add Welcome / TapHint / MergeDemo / LocationCelebration overlays). */}
       <OnboardingController />
+      {/* Phase 24 Plan 24-04: Captain birth modal — self-subscribes к
+          eventBus 'captain:birth-effect-complete' (Plan 24-02), null-render'ит
+          когда invisible. Cinematic trigger — MergeController L18+L18 branch. */}
+      <CaptainBirthModal />
       {discovered !== null && (
         <DiscoveryModal
           level={discovered}
