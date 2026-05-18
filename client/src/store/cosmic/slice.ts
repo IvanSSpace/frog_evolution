@@ -30,10 +30,7 @@ import { createBoxSlice } from './slices/boxSlice'
 import { createCarrierSlice } from './slices/carrierSlice'
 import { createShipSlice } from './slices/shipSlice'
 import { createAscensionSlice } from './slices/ascensionSlice'
-import {
-  createShopSlice,
-  type PurchaseShopItemOpts,
-} from './slices/shopSlice'
+import { createShopSlice, type PurchaseShopItemOpts } from './slices/shopSlice'
 import type { ShopItemId } from '../../config/cosmicShop'
 
 // Phase 22: Rarity type removed from serum/carrier system.
@@ -55,11 +52,7 @@ export interface CosmicSliceActions {
   ) => void
 
   // Phase 22: applySerum без rarity (любая frog принимает серум)
-  applySerum: (
-    frogId: string,
-    element: Element,
-    level: number,
-  ) => Promise<void>
+  applySerum: (frogId: string, element: Element, level: number) => Promise<void>
 
   // Box actions (Phase 15)
   addBox: (params: {
@@ -136,7 +129,11 @@ export interface CosmicSliceActions {
    * Phase 18: проверяет milestonesCrossed (10/24/96/576) и эмитит
    * 'cosmic:bestiary-milestone' event + grants reward (coins/serum/flag).
    */
-  setBestiaryBit: (element: Element, rarity: LegacyRarity, level: number) => void
+  setBestiaryBit: (
+    element: Element,
+    rarity: LegacyRarity,
+    level: number,
+  ) => void
 
   /** Phase 18 (REQ BESTIARY-07): toggle 576-cells milestone visual flag. */
   setFrogExclusiveUnlocked: (v: boolean) => void
@@ -176,10 +173,7 @@ export interface CosmicSliceActions {
    * Returns true on success, false on guard failure (insufficient currency / invalid opts).
    * Idempotent — повторный успешный call увеличивает counter (scaling cost).
    */
-  purchaseShopItem: (
-    itemId: ShopItemId,
-    opts?: PurchaseShopItemOpts,
-  ) => boolean
+  purchaseShopItem: (itemId: ShopItemId, opts?: PurchaseShopItemOpts) => boolean
 
   /**
    * Phase 26 Plan 26-01: mark per-race first contact seen.

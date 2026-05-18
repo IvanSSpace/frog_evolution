@@ -69,8 +69,8 @@ export interface CarrierData {
 // слот освобождается, в global pool добавляется AscendedCarrier (permanent).
 // Persisted в localStorage (loadCosmicSlice whitelist).
 export interface AscendedCarrier {
-  id: string         // unique ascension id (asc-<ts>-<rnd>)
-  element: Element   // unchanged, инкапсулирует категорию для archetype pool
+  id: string // unique ascension id (asc-<ts>-<rnd>)
+  element: Element // unchanged, инкапсулирует категорию для archetype pool
   ascendedAt: number // unix ms — для UI sorting / age display
 }
 

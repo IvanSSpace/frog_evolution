@@ -191,8 +191,8 @@ type GameState = GameStateBase & CosmicState
 function l18GoldMultiplier(count: number): number {
   if (count <= 1) return 1
   if (count === 2) return 1.05
-  if (count === 3) return 1.10
-  return 1.10 + (count - 3) * 0.025
+  if (count === 3) return 1.1
+  return 1.1 + (count - 3) * 0.025
 }
 
 export const useGameStore = create<GameState>((set, get) => ({

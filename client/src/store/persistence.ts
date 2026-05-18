@@ -303,14 +303,14 @@ export function loadCosmicSlice(): CosmicPersist {
       // Phase 22 Plan 22-03: ascendedCarriers + essence persisted whitelist.
       // Shape: { id: string, element: Element, ascendedAt: number }.
       ascendedCarriers: Array.isArray(parsed.ascendedCarriers)
-        ? (parsed.ascendedCarriers as unknown[]).filter(
+        ? ((parsed.ascendedCarriers as unknown[]).filter(
             (a): a is { id: string; element: string; ascendedAt: number } =>
               typeof a === 'object' &&
               a !== null &&
               typeof (a as Record<string, unknown>).id === 'string' &&
               typeof (a as Record<string, unknown>).element === 'string' &&
               typeof (a as Record<string, unknown>).ascendedAt === 'number',
-          ) as CosmicPersist['ascendedCarriers']
+          ) as CosmicPersist['ascendedCarriers'])
         : defaults.ascendedCarriers,
       essence:
         typeof parsed.essence === 'number' && parsed.essence >= 0
@@ -332,7 +332,8 @@ export function loadCosmicSlice(): CosmicPersist {
           ? parsed.permaSerumDropBonus
           : defaults.permaSerumDropBonus,
       shopPurchaseCounts:
-        parsed.shopPurchaseCounts && typeof parsed.shopPurchaseCounts === 'object'
+        parsed.shopPurchaseCounts &&
+        typeof parsed.shopPurchaseCounts === 'object'
           ? (parsed.shopPurchaseCounts as Record<string, number>)
           : defaults.shopPurchaseCounts,
       // Phase 17: bitset extended 24 → 192 bytes (1536 bits). Pad-only migration.
@@ -586,7 +587,10 @@ export function loadL18MergesCount(): number {
 export function saveL18MergesCount(n: number): void {
   if (typeof localStorage === 'undefined') return
   try {
-    localStorage.setItem(L18_MERGES_COUNT_KEY, String(Math.max(0, Math.floor(n))))
+    localStorage.setItem(
+      L18_MERGES_COUNT_KEY,
+      String(Math.max(0, Math.floor(n))),
+    )
   } catch {
     /* ignore */
   }
@@ -670,9 +674,7 @@ export function loadOnboarding(): OnboardingState {
         !Array.isArray(parsed.locationsCelebrated)
           ? Object.fromEntries(
               Object.entries(parsed.locationsCelebrated)
-                .filter(
-                  ([k, v]) => !isNaN(Number(k)) && typeof v === 'boolean',
-                )
+                .filter(([k, v]) => !isNaN(Number(k)) && typeof v === 'boolean')
                 .map(([k, v]) => [Number(k), v as boolean]),
             )
           : {},
