@@ -32,6 +32,11 @@ import { createShipSlice } from './slices/shipSlice'
 import { createAscensionSlice } from './slices/ascensionSlice'
 import { createShopSlice, type PurchaseShopItemOpts } from './slices/shopSlice'
 import type { ShopItemId } from '../../config/cosmicShop'
+// Phase 27 Plan 27-03: pending engine + clamp helper.
+import {
+  pendingEngineTick,
+  applyDeltaClamp,
+} from '../../game/contacts/pendingEngine'
 
 // Phase 22: Rarity type removed from serum/carrier system.
 // LegacyRarity kept only for bestiary bitset dimension (Plan 22-07 will shrink).
@@ -184,6 +189,34 @@ export interface CosmicSliceActions {
    *   resolve'нуться в UI до того как state-change ре-рендерит.
    */
   markFirstContactSeen: (raceId: RaceId) => void
+
+  /**
+   * Phase 27 Plan 27-03: resolve a pending dialog/quest_hook with «Поддержать» (accept).
+   * Looks up pendingItems[i] by pendingId. No-op (idempotent) if not found.
+   * Applies item.accept_delta to raceRelationships[raceId] (clamped [1,10]).
+   * Advances chainProgress[raceId]++. Pops the item from pendingItems.
+   * Emits 'contacts:relationship-delta' if relationship value changed.
+   * Calls triggerPendingPull internally to refill queue + apply any pending events.
+   */
+  resolveAccept: (pendingId: string) => void
+
+  /** Phase 27 Plan 27-03: mirror of resolveAccept with item.refuse_delta. */
+  resolveRefuse: (pendingId: string) => void
+
+  /**
+   * Phase 27 Plan 27-03: resolve a pending msg ChainItem with «Понятно».
+   * No delta change — pops item, advances chainProgress, triggers next pull.
+   * No-op if pendingId not found.
+   */
+  resolveAcknowledge: (pendingId: string) => void
+
+  /**
+   * Phase 27 Plan 27-03: trigger an engine tick — pulls next ChainItems until queue full
+   * OR no pullable race. Auto-applies any 'event' items encountered. Called automatically
+   * by resolve actions; can be invoked externally after firstContactsSeen / cosmosUnlocked
+   * transitions (UI components subscribe to those flags and call this).
+   */
+  triggerPendingPull: () => void
 }
 
 export type CosmicState = CosmicSlice & CosmicSliceActions
@@ -196,6 +229,64 @@ export type GetFn = () => CosmicState
 
 export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
   const initial = makeInitialCosmicSlice()
+
+  // Phase 27 Plan 27-03: shared resolve handler. `mode` chooses delta source.
+  // - 'accept' / 'refuse' use item.accept_delta / item.refuse_delta (dialog + quest_hook).
+  // - 'acknowledge' is delta=0 (msg). No relationship change → no delta event emitted.
+  // Idempotency: unknown pendingId is a no-op (handles double-tap, stale UI snapshots).
+  // Atomic: ONE set() call mutates raceRelationships + chainProgress + pendingItems.
+  // Trailing triggerPendingPull() refills queue + applies any 'event' items now eligible.
+  const _resolveInternal = (
+    pendingId: string,
+    mode: 'accept' | 'refuse' | 'acknowledge',
+  ) => {
+    const s = get()
+    const idx = s.pendingItems.findIndex((p) => p.id === pendingId)
+    if (idx < 0) return // idempotent — unknown id is no-op
+
+    const pending = s.pendingItems[idx]
+    const item = pending.item
+    let delta = 0
+    if (mode === 'acknowledge') {
+      delta = 0 // msg ack — no delta
+    } else if (item.type === 'dialog' || item.type === 'quest_hook') {
+      delta = mode === 'accept' ? item.accept_delta : item.refuse_delta
+    } else {
+      delta = 0 // defensive: msg/event reached resolve with accept/refuse mode — treat as 0
+    }
+
+    const oldValue = s.raceRelationships[pending.raceId] ?? 1
+    const newValue = applyDeltaClamp(oldValue, delta)
+    const newRelationships = {
+      ...s.raceRelationships,
+      [pending.raceId]: newValue,
+    }
+    const newProgress = {
+      ...s.chainProgress,
+      [pending.raceId]: (s.chainProgress[pending.raceId] ?? 0) + 1,
+    }
+    const newPending = [
+      ...s.pendingItems.slice(0, idx),
+      ...s.pendingItems.slice(idx + 1),
+    ]
+
+    set({
+      raceRelationships: newRelationships,
+      chainProgress: newProgress,
+      pendingItems: newPending,
+    })
+
+    if (oldValue !== newValue) {
+      eventBus.emit('contacts:relationship-delta', {
+        raceId: pending.raceId,
+        oldValue,
+        newValue,
+        delta,
+      })
+    }
+
+    get().triggerPendingPull()
+  }
 
   return {
     ...initial,
@@ -310,6 +401,82 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
       // Server-sync: gameSync.ts pickup'ит изменение в standard cosmic JSON.
       // НЕ эмитим event здесь — cinematic trigger живёт в Plan 26-05 controller'е
       // (там event'ит ДО mark, чтобы UI получил pre-mark snapshot для display).
+    },
+
+    // Phase 27 Plan 27-03: pending resolution + engine entry points.
+    resolveAccept: (pendingId: string) => _resolveInternal(pendingId, 'accept'),
+    resolveRefuse: (pendingId: string) => _resolveInternal(pendingId, 'refuse'),
+    resolveAcknowledge: (pendingId: string) =>
+      _resolveInternal(pendingId, 'acknowledge'),
+
+    // Engine tick. Reads cosmosUnlocked from the root gameStore (composit slice —
+    // narrow cast through get() chain). Computes engine output, applies delta atomically
+    // via single set(), then emits contacts:event-applied for any auto-applied events
+    // and contacts:relationship-delta for changed relationships.
+    triggerPendingPull: () => {
+      const s = get()
+      // cosmosUnlocked lives top-level on gameStore (composit). Narrow cast.
+      const root = get() as unknown as { hasCosmosUnlocked?: boolean }
+      const cosmosUnlocked = root.hasCosmosUnlocked === true
+
+      const result = pendingEngineTick({
+        raceRelationships: s.raceRelationships,
+        chainProgress: s.chainProgress,
+        pendingItems: s.pendingItems,
+        firstContactsSeen: s.firstContactsSeen,
+        cosmosUnlocked,
+        now: Date.now(),
+      })
+
+      // Compute relationship deltas for event emission (one event per changed race).
+      const relationshipDeltas: Array<{
+        raceId: string
+        oldValue: number
+        newValue: number
+        delta: number
+      }> = []
+      for (const raceId of Object.keys(result.nextRelationships) as RaceId[]) {
+        const oldV = s.raceRelationships[raceId] ?? 1
+        const newV = result.nextRelationships[raceId]
+        if (oldV !== newV) {
+          relationshipDeltas.push({
+            raceId,
+            oldValue: oldV,
+            newValue: newV,
+            delta: newV - oldV,
+          })
+        }
+      }
+
+      const hasNewItems =
+        result.nextPendingItems.length !== s.pendingItems.length
+      const hasNewProgress = Object.keys(result.nextChainProgress).some(
+        (k) =>
+          result.nextChainProgress[k as RaceId] !==
+          s.chainProgress[k as RaceId],
+      )
+
+      // Skip set() if engine produced no observable change (e.g. cosmosUnlocked=false,
+      // or no race pullable). Avoid spurious re-renders / persistence writes.
+      if (relationshipDeltas.length > 0 || hasNewItems || hasNewProgress) {
+        set({
+          raceRelationships: result.nextRelationships,
+          chainProgress: result.nextChainProgress,
+          pendingItems: result.nextPendingItems,
+        })
+      }
+
+      for (const toast of result.eventToasts) {
+        eventBus.emit('contacts:event-applied', {
+          raceId: toast.raceId,
+          targetRaceId: toast.targetRaceId,
+          delta: toast.delta,
+          textKey: toast.textKey,
+        })
+      }
+      for (const rd of relationshipDeltas) {
+        eventBus.emit('contacts:relationship-delta', rd)
+      }
     },
   }
 }
