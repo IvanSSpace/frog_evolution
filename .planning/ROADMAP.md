@@ -749,6 +749,46 @@ Plans:
 
 **Outcome:** Quest mechanic foundation shipped. 8-я tab «Квесты» 📜 (cosmos-gated, modal-level lock inherited Phase 22-06) с активной очередью (cap 5) + collapsible completed history. 40 QuestConfig entries (config/quests.ts) — covers 100% raceChains.ts quest_hook stubs (actual = 40 vs phase-outline estimate 60; documented в 28-02 SUMMARY). 4 quest types (📦 Доставка / 🔍 Разведка / ⚡ Мерж / 🤝 Дипломатия). 4 reward kinds (essence + serum + gold + relationship_and_bonus с placeholder bonus_id). Auto-activation от Phase 27 «Поддержать» на quest_hook ChainItem (slice resolveAccept extended). Auto-complete при progress reaches target → reward popup (z-index 199/200 peer FirstContactModal, CSS keyframe slide-in 250ms, no Lottie). Manual cancel → -1 relationship penalty к race-owner'у (applyDeltaClamp shared с pendingEngine). Progress hooks subscribed: merge:happened (merge_count + merge_to_level через discoveredLevels), cosmic:box-opened (serum_count by element), starmap:planet-select (planets_visited), cosmic:ship-arrived (missions_complete), contacts:relationship-delta (raise_relationship). Polling-driven targets (gold_amount, raise_relationship) reconcile через triggerPendingPull-style mount effect в QuestsTab + boot-time call в questController. Pure questEngineTick deterministic side-effect-free + 24 vitest unit tests с vi.mock'd QUESTS fixture (independent от Plan 28-02 data fill — mirror Phase 27-03 pendingEngine pattern). Persistence + server sync через cosmic blob (snapshotForSave + loadGameState hydrate + defensive load strip unknown questId + FIFO trim completedQuests at 100 newest; gameSync.test.ts coverage REQUIRED_COSMIC_SYNC_FIELDS extended). 4 new typed eventBus events (quests:activated / cap-reached / completed / cancelled). DEV helpers __activateQuest / __progressQuest / __completeQuest / __resetQuests / __dumpQuests (Vite tree-shake confirmed — production bundle grep returns 0 для all 5). RelationshipBar pulse inherited Phase 27 cancel penalty path. Cliclability checklist (type=button + touchAction:manipulation + stopPropagation + z-index hierarchy: QuestRewardPopup 199/200 / Cosmic Hub 100). Inline confirm panel на QuestCard вместо отдельного modal (simpler overlay stack). CompletedQuestsList MAX_VISIBLE=20 separate от persistence cap 100 (FIFO trim). Tab strip fit на 320px viewport — Plan 28-04 deferred к Plan 28-06 SMOKE (fallback options enumerated: reduce padding `12px 4px → 12px 2px` / icon-only labels via @media / scroll-strip). i18n RU/EN/ES parity 522 → **633 keys × 3 locales = 1899 entries** (+111 per locale: 14 cosmic_hub.quests.* + 80 quests.<id>.{description,short} + 17 misc placeholder/reward/cancel keys). Bundle delta gzip main **+21.73 KB** (Phase 27 baseline 220.94 KB → **242.67 KB**; target ~+15 KB exceeded — substantive feature surface justifies overshoot: quest engine + 40 configs + UI + reward popup + 111 i18n leaves bundled), CosmicHubModal chunk +1.23 KB (15.61 → **16.84 KB**). vitest baseline 117 → **198 PASS** (+81 tests: 24 questEngine + 57 misc covered across plans 28-01..28-05). SMOKE_TEST_28.md 120 строк, 6 scenarios A-F + i18n + build chain + regression sanity. 28/28 ✓ REQ-IDs (PHASE28-*).
 
+### Phase 29: Admin Panel
+
+**Goal:** Separate Vite admin app в `frog_evolution_code/admin/` для super-admin'а — управление игроками, ресурсы, ban/unban. Foundation для future analytics dashboard.
+
+**Frontend stack:** Vite + React + TypeScript + Tailwind CSS + shadcn/ui + TanStack Table (data grids) + TanStack Query (API) + Recharts (charts) + React Router + Axios + Zod (validation) + React Hook Form.
+
+**Backend extensions** (add to existing Fastify server):
+- `@fastify/jwt` — JWT issuance + verification
+- `@fastify/cors` — CORS для cross-origin admin app
+- `bcrypt` — password hashing
+
+**Auth model:** Single super-admin (no Admin Prisma table). Credentials в `.env`:
+- `ADMIN_EMAIL` — email login
+- `ADMIN_PASSWORD_HASH` — bcrypt hash password
+JWT issued on `POST /admin/login`. JWT middleware на `/admin/*` (кроме login).
+
+**Backend routes:**
+- `POST /admin/login` → `{token}`
+- `GET /admin/users?page=N&filter=X&sort=Y` (paginated table)
+- `GET /admin/users/:id` (full game state — level/gold/essence/cosmic blob)
+- `POST /admin/users/:id/grant` `{kind, amount}` — gold/essence/серум (kind: 'gold'|'essence'|'serum:fire'|'serum:water'|…)
+- `POST /admin/users/:id/ban` `{banned: boolean}`
+
+**MVP UI:**
+1. **Login screen** — email + password form (Zod validation + React Hook Form)
+2. **Dashboard** — placeholder с Recharts stub (для future analytics)
+3. **Users list** — TanStack Table с search/filter/sort/pagination (columns: id / email / level / gold / essence / lastSeen / banned)
+4. **User detail** — full game state view (read-only display Card view of cosmic blob)
+5. **Actions** на User detail: grant gold/essence/серум forms + ban/unban toggle
+
+**Deploy:** Separate build (`admin/` package.json + Vite config). Может deploy'иться на `admin.example.com` или `example.com/admin` (CORS handled by `@fastify/cors`).
+
+**Source design:** inline brainstorm 2026-05-19 (no spec file — memory `feedback_superpowers_workflow`)
+**Requirements**: TBD (resolved при /gsd-plan-phase 29)
+**Depends on:** Phase 28
+**Plans:** TBD plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 29 to break down)
+
 ---
 
 **Last updated:** 2026-05-19 — Phase 28 complete (6 plans, quest mechanic, +21.73 KB gzip delta)
