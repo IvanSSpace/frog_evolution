@@ -665,6 +665,18 @@ Plans:
 
 **Outcome:** 5-beat cinematic при первом L18+L18 normal merge (flash → cosmic effect → modal → spawn L1 → Star Map). Idempotent via captainBirthSeen (server-syncable, legacy-migrated). Bundle delta +3.79 KB gzip (cap +20 KB). i18n RU/EN/ES parity. Dev helpers: `__triggerCaptainBirth`/`__resetCaptainBirth`/`__captainBirthState`. SMOKE_TEST_24.md покрывает 6 scenarios A–F.
 
+### Phase 25: Cosmic Hub restyle
+
+**Goal:** Привести CosmicHub UI под единый design language приложения (pink `#ec4899` accents, rounded inset-shadow buttons, dark cosmic theme с pink active states). Restyle CosmicHubModal shell + lock screen + 5 tab content polishes + sub-modals. Только visual restyle — функциональность tab'ов не trogается. Демo-build качество.
+
+**Source design:** `frog_obsidian/Design Notes/2026-05-18-cosmic-hub-restyle.md`
+**Requirements**: TBD
+**Depends on:** Phase 24
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 25 --prd "<design-note>" to break down)
+
 ---
 
 **Last updated:** 2026-05-18 — Phase 24 complete (5 plans)
