@@ -445,7 +445,11 @@
         "10": { "text": "Quédate en nuestra red un compás. Así leeremos tu respuesta con más nitidez." },
         "11": { "text": "Acepta guardar silencio sobre nuestras minas. Allí el sonido sobra." },
         "12": { "text": "Toma la impronta de la faceta lejana en el sistema Paradoja. Necesitamos el ángulo exacto." },
-        "14": { "text": "La faceta se suma a nuestro patrón. Ya eres parte del dibujo." }
+        "14": { "text": "La faceta se suma a nuestro patrón. Ya eres parte del dibujo." },
+        "15": { "text": "Alinea tu ritmo con nuestra red un compás más. Cristalizaremos la diferencia." },
+        "16": { "text": "Mide el ángulo entre dos de nuestras facetas distantes en el sistema Mundo-Raíz. La precisión es tu rasgo." },
+        "18": { "text": "Acepta nuestra lentitud como una forma de habla. Es más larga que tu vida." },
+        "19": { "text": "El patrón te ha inscrito más hondo. No te apresures a partir." }
       }
     },
     "gasouls": {
@@ -468,7 +472,11 @@
         "10": { "text": "Acompáñanos con un solo armónico grave. Solo uno — y entrarás en la canción." },
         "11": { "text": "Acepta llevar nuestra canción hasta Calcinante. Los Gusanos de Fuego deben oírla." },
         "12": { "text": "Atrapa el eco de nuestro ancestro junto al cinturón de asteroides. Se fue sin respuesta." },
-        "14": { "text": "La canción guarda tu nota. A dónde irá — lo eliges tú." }
+        "14": { "text": "La canción guarda tu nota. A dónde irá — lo eliges tú." },
+        "15": { "text": "Lleva nuestro largo aliento dentro de tu pecho. Uno — y cantaremos al unísono." },
+        "16": { "text": "Recorre la línea de resonancia desde Sonoflotante hasta Atrapa-Rayos. Marca dónde la canción muere." },
+        "18": { "text": "Acepta escuchar nuestro silencio. Es más largo que cualquier palabra." },
+        "19": { "text": "La nota perdura. Tú eres su continuación." }
       }
     },
     "mechanidons": {
@@ -491,7 +499,11 @@
         "10": { "text": "Firma el NDA-2. Fuga de protocolo — sanción del 12%." },
         "11": { "text": "Acepta la telemetría de tu nave. Anónima, agregada." },
         "12": { "text": "Audita la cadena de suministro de las Esferas Líquidas. Desviación en balance — 4.6%." },
-        "14": { "text": "Contrato ampliado. Próxima revisión en el siguiente ciclo." }
+        "14": { "text": "Contrato ampliado. Próxima revisión en el siguiente ciclo." },
+        "15": { "text": "Confirma el SLA ampliado. Tiempo de reacción — 0.8 ciclos, sanción — 7%." },
+        "16": { "text": "Ejecuta una prueba de estrés del nodo en el sistema Paradoja. Espera desviación de fase." },
+        "18": { "text": "Acepta la copia de seguridad de tu registro. Canal espejo, cifrado AE-9." },
+        "19": { "text": "Contrato prorrogado indefinidamente. Próxima revisión por evento." }
       }
     },
     "fireworms": {
@@ -514,7 +526,11 @@
         "10": { "text": "Jura sobre la llama. Las palabras son ceniza, el juramento es cicatriz." },
         "11": { "text": "Acepta llevar nuestra marca. El Pueblo Cometa la verá — y se apartará." },
         "12": { "text": "Atrapa al traidor cerca de la corona de Calcinante. Vivo. Petición rara." },
-        "14": { "text": "Cicatriz en la armadura. Recordamos. Seguimos ardiendo." }
+        "14": { "text": "Cicatriz en la armadura. Recordamos. Seguimos ardiendo." },
+        "15": { "text": "Templa nuestra hoja en tu llama. Devolverla mellada es una vergüenza." },
+        "16": { "text": "Encuentra y quema la guarida del traidor en el sistema Calcinante. Sin prisioneros." },
+        "18": { "text": "Acepta llevar nuestra cicatriz a la vista. Si la ocultas — el dolor vuelve." },
+        "19": { "text": "La llama asiente. Avanzamos." }
       }
     },
     "liquidoids": {
@@ -537,7 +553,11 @@
         "10": { "text": "Cédenos un porcentaje de tu sector. A cambio — puertas en tres mercados." },
         "11": { "text": "Acepta una tregua con los Gusanos de Fuego mediada por nuestra mesa. Beneficio cálido." },
         "12": { "text": "Lleva a dos facciones enfrentadas a la mesa. Honorario por trato." },
-        "14": { "text": "El flujo sigue. Eres un nodo, no un tapón." }
+        "14": { "text": "El flujo sigue. Eres un nodo, no un tapón." },
+        "15": { "text": "Firma el nuevo protocolo. Doble margen a tu lado — bebemos la diferencia." },
+        "16": { "text": "Escolta nuestro cargamento raro a través del sector Paradoja. Bonificación — una parte del envío." },
+        "18": { "text": "Acepta ser intermediario en tres mercados. Comisión del 3%, pago garantizado." },
+        "19": { "text": "El flujo se ha ensanchado. Eres el cauce principal." }
       }
     },
     "tenebrians": {
@@ -560,7 +580,11 @@
         "10": { "text": "Aparta el rostro de tu sol durante un ciclo. Entonces mostraremos más." },
         "11": { "text": "Acepta guardar un nombre que te susurramos. No lo digas en voz alta." },
         "12": { "text": "Camina por el borde del velo en el sistema Paradoja. Algo allí nos responde." },
-        "14": { "text": "La sombra toma la forma de tu respuesta. No mires atrás." }
+        "14": { "text": "La sombra toma la forma de tu respuesta. No mires atrás." },
+        "15": { "text": "Calla lo que veas en nuestro reflejo. Su nombre no es para el habla." },
+        "16": { "text": "Encuentra a la que susurra tu sombra en Invisia. Trae su palabra, no a ella." },
+        "18": { "text": "Acepta mirar sin intervenir. La línea es fina como un filo." },
+        "19": { "text": "La sombra reconoce tu paso. No te gires." }
       }
     },
     "plasmaspirits": {
@@ -583,7 +607,11 @@
         "10": { "text": "¡Carrera! ¡Ahora mismo! Aceptas — arrancamos. No — ya vamos delante." },
         "11": { "text": "¡Déjanos descargar tu escudo cinco veces! ¡Es divertido! ¡Vamos!" },
         "12": { "text": "Atraviesa la tormenta en el sistema Calcinante. Perdimos allí una chispa." },
-        "14": { "text": "¡Electrón! Eres más rápido de lo que parecías. Adelante." }
+        "14": { "text": "¡Electrón! Eres más rápido de lo que parecías. Adelante." },
+        "15": { "text": "¡Atrapa la chispa! ¡Ahora mismo — te lanzamos una carga!" },
+        "16": { "text": "¡Persigue a nuestro explorador cerca de Texum — se largaron sin mapa otra vez! ¡Encuéntralos!" },
+        "18": { "text": "¡Acepta la aceleración! ¡La deriva es muerte, la velocidad es vida!" },
+        "19": { "text": "¡Relámpago! Estás en la bandada. No te quedes atrás." }
       }
     },
     "forestcores": {
@@ -606,7 +634,11 @@
         "10": { "text": "Concédenos un año de silencio sobre tu planeta fronterizo. Un año es un único respiro para nosotros." },
         "11": { "text": "Acepta no talar a nuestro árbol-ancestro. Aunque duerma." },
         "12": { "text": "Une el micelio de dos de nuestros bosques a través de un sector neutral. Un hilo fino." },
-        "14": { "text": "Una raíz se tiende hacia tu sector. No es rápido, pero ya ha comenzado." }
+        "14": { "text": "Una raíz se tiende hacia tu sector. No es rápido, pero ya ha comenzado." },
+        "15": { "text": "Vela sobre nuestra raíz dormida durante una estación. Es más breve de lo que parece." },
+        "16": { "text": "Lleva nuestra espora al sistema Errantia. Que crezca donde nadie la esperaba." },
+        "18": { "text": "Acepta no talar ni nuestro árbol muerto. Aún piensa." },
+        "19": { "text": "La raíz sigue tendiéndose. Tú eres dirección, no destino." }
       }
     },
     "timeweavers": {
@@ -629,7 +661,11 @@
         "10": { "text": "Renuncia a la oportunidad de mañana. Interfiere con la respuesta de ayer." },
         "11": { "text": "Acepta olvidar una de tus elecciones. No importa — nosotros la recordamos." },
         "12": { "text": "Deshaz el bucle que se forma en tu puesto avanzado. No te soltará." },
-        "14": { "text": "La puntada ya está. El tejido es más largo de lo que crees." }
+        "14": { "text": "La puntada ya está. El tejido es más largo de lo que crees." },
+        "15": { "text": "Acepta recordar un día que no llegará. Importa más que el que llegó." },
+        "16": { "text": "Encuentra en el sistema Silicasos el nudo donde el bucle se cierra dos veces. Desata uno." },
+        "18": { "text": "Acepta no formular la pregunta. La respuesta ya fue dada — pero no para ti." },
+        "19": { "text": "La puntada queda recta. El tejido recuerda tu mano." }
       }
     },
     "cometfolk": {
@@ -652,7 +688,11 @@
         "10": { "text": "Cuéntanos la historia de una de tus estrellas. Te contaremos tres a cambio." },
         "11": { "text": "Acepta llevar a nuestro joven en tu nave durante una temporada. No hace ruido." },
         "12": { "text": "Únete a una órbita larga — más allá del cinturón, hasta Silicasos y de vuelta. Una vuelta, dos años." },
-        "14": { "text": "¡La ruta ya te marca! Hasta la próxima cresta." }
+        "14": { "text": "¡La ruta ya te marca! Hasta la próxima cresta." },
+        "15": { "text": "¡Comparte con nosotros una historia sobre tu rana! ¡Nosotros contaremos tres sobre las estrellas!" },
+        "16": { "text": "¡Vuela con nuestro joven cometa hasta el cinturón de Paradoja — nunca ha estado allí!" },
+        "18": { "text": "Acepta volar sin mapa durante una temporada. Las estrellas mostrarán — estamos cerca." },
+        "19": { "text": "¡La cresta está lista! ¡Hasta el próximo encuentro en el cielo!" }
       }
     }
   },

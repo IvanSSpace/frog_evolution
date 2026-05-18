@@ -445,7 +445,11 @@
         "10": { "text": "Stand inside our lattice for one beat. We will read your answer more cleanly." },
         "11": { "text": "Agree to hold silence about our mines. Sound is excess there." },
         "12": { "text": "Take an imprint of the far facet in the Paradox system. We need the exact angle." },
-        "14": { "text": "The facet is added to our pattern. You are now part of the drawing." }
+        "14": { "text": "The facet is added to our pattern. You are now part of the drawing." },
+        "15": { "text": "Align your rhythm with our lattice for one more beat. We will crystallize the difference." },
+        "16": { "text": "Measure the angle between two of our remote facets in the Rootworld system. Precision is your trait." },
+        "18": { "text": "Accept our slowness as a form of speech. It is longer than your life." },
+        "19": { "text": "The pattern has inscribed you deeper. Do not hurry to leave." }
       }
     },
     "gasouls": {
@@ -468,7 +472,11 @@
         "10": { "text": "Hum a single low overtone with us. Only one — and you enter the song." },
         "11": { "text": "Agree to carry our song to Scorch. The Fireworms should hear it." },
         "12": { "text": "Catch the echo of our ancestor near the asteroid belt. It went out unanswered." },
-        "14": { "text": "The song holds your note. Where it travels — you choose." }
+        "14": { "text": "The song holds your note. Where it travels — you choose." },
+        "15": { "text": "Take our long breath into your chest. One — and we will sing in unison." },
+        "16": { "text": "Walk the line of resonance from Soundfloat to Lightning-Catch. Mark where the song dies." },
+        "18": { "text": "Agree to hear our silence. It is longer than any word." },
+        "19": { "text": "The note holds. You are its continuation." }
       }
     },
     "mechanidons": {
@@ -491,7 +499,11 @@
         "10": { "text": "Sign NDA-2. Protocol leak — 12% penalty." },
         "11": { "text": "Agree to ship telemetry. Anonymous, aggregated." },
         "12": { "text": "Audit the Liquidsphere supply chain. Variance on balance — 4.6%." },
-        "14": { "text": "Contract extended. Next revision next cycle." }
+        "14": { "text": "Contract extended. Next revision next cycle." },
+        "15": { "text": "Confirm the extended SLA. Reaction time — 0.8 cycle, penalty — 7%." },
+        "16": { "text": "Run a stress test on the node in the Paradox system. Expect phase deviation." },
+        "18": { "text": "Agree to backup of your log. Mirror channel, AE-9 encryption." },
+        "19": { "text": "Contract extended indefinitely. Next revision is event-driven." }
       }
     },
     "fireworms": {
@@ -514,7 +526,11 @@
         "10": { "text": "Swear an oath in flame. Words are ash. An oath is a scar." },
         "11": { "text": "Agree to wear our mark. Cometfolk will see — and turn away." },
         "12": { "text": "Catch the traitor near the Scorch corona. Alive. Rare request." },
-        "14": { "text": "Scar on the armor. We remember. We burn on." }
+        "14": { "text": "Scar on the armor. We remember. We burn on." },
+        "15": { "text": "Temper our blade on your flame. A dull blade returned is a shame." },
+        "16": { "text": "Find and burn the traitor's lair in the Scorch system. No prisoners." },
+        "18": { "text": "Agree to wear our scar openly. Hide it — and the pain returns." },
+        "19": { "text": "The flame nods. We march on." }
       }
     },
     "liquidoids": {
@@ -537,7 +553,11 @@
         "10": { "text": "Cede a percentage of your sector. In return — doors on three markets." },
         "11": { "text": "Agree to a truce with the Fireworms brokered by our table. Warm profit." },
         "12": { "text": "Bring two feuding factions to the table. Fee per deal." },
-        "14": { "text": "The flow continues. You are a node, not a clog." }
+        "14": { "text": "The flow continues. You are a node, not a clog." },
+        "15": { "text": "Sign the new protocol. Double margin on your side — we drink the spread." },
+        "16": { "text": "Escort our rare cargo through the Paradox sector. Bonus — a share of the shipment." },
+        "18": { "text": "Agree to be a broker on three markets. 3% commission, guaranteed payout." },
+        "19": { "text": "The flow has widened. You are the main channel." }
       }
     },
     "tenebrians": {
@@ -560,7 +580,11 @@
         "10": { "text": "Turn from your sun for one cycle. Then we will show more." },
         "11": { "text": "Agree to hold a name we whisper to you. Do not say it aloud." },
         "12": { "text": "Walk the edge of the veil in the Paradox system. Something there answers us." },
-        "14": { "text": "Shadow takes the shape of your reply. Do not look back." }
+        "14": { "text": "Shadow takes the shape of your reply. Do not look back." },
+        "15": { "text": "Stay silent about what you see in our reflection. Its name is not for speech." },
+        "16": { "text": "Find the one who whispers your shadow on Unseen. Bring back her word, not her." },
+        "18": { "text": "Agree to watch without interfering. The line is thin as a blade." },
+        "19": { "text": "Shadow knows your step. Do not look back." }
       }
     },
     "plasmaspirits": {
@@ -583,7 +607,11 @@
         "10": { "text": "Race! Right now! Accept — we launch. No — we are already ahead." },
         "11": { "text": "Let us discharge your shield for five hits. Fun! Come on!" },
         "12": { "text": "Break through the storm in the Scorch system. We lost a spark in there." },
-        "14": { "text": "Electron! You are faster than you looked. Onward." }
+        "14": { "text": "Electron! You are faster than you looked. Onward." },
+        "15": { "text": "Catch the spark! Right now — we tossed a charge your way!" },
+        "16": { "text": "Chase our scout near Texum — they raced off without a map again! Find them!" },
+        "18": { "text": "Agree to the boost! Drift is death, speed is life!" },
+        "19": { "text": "Lightning! You are in the flock. Keep up." }
       }
     },
     "forestcores": {
@@ -606,7 +634,11 @@
         "10": { "text": "Grant us one year of silence over your border planet. A year is a single breath for us." },
         "11": { "text": "Agree not to fell our ancestor-tree. Even while it sleeps." },
         "12": { "text": "Tie the mycelium of two of our forests through a neutral sector. A thin thread." },
-        "14": { "text": "A root reaches toward your sector. Not fast, but already begun." }
+        "14": { "text": "A root reaches toward your sector. Not fast, but already begun." },
+        "15": { "text": "Stand above our sleeping root for one season. It is shorter than it seems." },
+        "16": { "text": "Carry our spore to the Wanderling system. Let it grow where no one expected." },
+        "18": { "text": "Agree not to fell even our dead tree. It is still thinking." },
+        "19": { "text": "The root reaches on. You are a direction, not a destination." }
       }
     },
     "timeweavers": {
@@ -629,7 +661,11 @@
         "10": { "text": "Refuse tomorrow's chance. It interferes with yesterday's answer." },
         "11": { "text": "Agree to forget one of your choices. No matter — we remember it." },
         "12": { "text": "Unravel the loop forming at your outpost. It will not release you." },
-        "14": { "text": "The stitch lies. The fabric is longer than you think." }
+        "14": { "text": "The stitch lies. The fabric is longer than you think." },
+        "15": { "text": "Agree to remember a day that will not come. It matters more than the one that did." },
+        "16": { "text": "Find a knot in the Silicassos system where the loop closes twice. Untie one." },
+        "18": { "text": "Agree not to ask the question. The answer was already given — just not for you." },
+        "19": { "text": "The stitch lies even. The fabric remembers your hand." }
       }
     },
     "cometfolk": {
@@ -652,7 +688,11 @@
         "10": { "text": "Tell us a story of one of your stars. We will tell three in return." },
         "11": { "text": "Agree to give our youngster a ride for one season. They do not chatter." },
         "12": { "text": "Take a long orbit with us — past the belt, to Silicassos and back. One swing, two years." },
-        "14": { "text": "The route already marks you. Until the next crest!" }
+        "14": { "text": "The route already marks you. Until the next crest!" },
+        "15": { "text": "Share one story about your frog with us! We will share three about the stars!" },
+        "16": { "text": "Fly with our young comet to the Paradox belt — it has never been there!" },
+        "18": { "text": "Agree to travel without a map for one season. The stars will show — we are near." },
+        "19": { "text": "The crest is ready. Until the next meeting in the sky!" }
       }
     }
   },
