@@ -65,6 +65,8 @@ function snapshotForSave() {
       tutorialState: s.tutorialState,
       // Phase 24 Plan 24-01: cross-device sync captain birth milestone.
       captainBirthSeen: s.captainBirthSeen,
+      // Phase 26 Plan 26-01: cross-device sync per-race first contact tracker.
+      firstContactsSeen: s.firstContactsSeen,
       // Phase 22: user preferences (cross-device sync).
       preferences: {
         numberFormat: s.numberFormat,
@@ -135,6 +137,12 @@ export async function loadGameState(): Promise<boolean> {
       if ('tutorialState' in c) cosmicUpdate.tutorialState = c.tutorialState
       // Phase 24 Plan 24-01: hydrate captain-birth flag from server.
       if ('captainBirthSeen' in c) cosmicUpdate.captainBirthSeen = c.captainBirthSeen
+      // Phase 26 Plan 26-01: hydrate per-race first contact tracker from server.
+      // Same defensive pattern как в loadCosmicSlice — `firstContactsSeen` blob
+      // прокладывается через `set` напрямую; defensive filtering сделан на load
+      // (loadCosmicSlice валидирует known raceIds; server-side validation
+      // не блокирует unknown extra raceIds — forward-compat).
+      if ('firstContactsSeen' in c) cosmicUpdate.firstContactsSeen = c.firstContactsSeen
       if (Object.keys(cosmicUpdate).length > 0) {
         useGameStore.setState(cosmicUpdate as Partial<typeof store>)
       }

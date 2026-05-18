@@ -15,6 +15,7 @@ import {
   ELEMENTS,
   makeInitialCosmicSlice,
 } from './types'
+import type { RaceId } from '../../game/config/races'
 import { eventBus } from '../eventBus'
 import type { MissionResult } from '../../game/data/missionConfig'
 import {
@@ -179,6 +180,16 @@ export interface CosmicSliceActions {
     itemId: ShopItemId,
     opts?: PurchaseShopItemOpts,
   ) => boolean
+
+  /**
+   * Phase 26 Plan 26-01: mark per-race first contact seen.
+   * - Idempotent: re-call с already-seen race → no state change, no event.
+   * - Persisted automatically через cosmic blob (subscribe → saveCosmicSlice).
+   * - Subscriber pattern (Plan 26-05 FirstContactController): эмитит cinematic
+   *   через eventBus 'cosmos:first-contact' ДО mark, чтобы race-name'ы успели
+   *   resolve'нуться в UI до того как state-change ре-рендерит.
+   */
+  markFirstContactSeen: (raceId: RaceId) => void
 }
 
 export type CosmicState = CosmicSlice & CosmicSliceActions
@@ -290,6 +301,21 @@ export function createCosmicSlice(set: SetFn, get: GetFn): CosmicState {
       else if (step === 'first-feed') next.seenFirstFeed = true
       else if (step === 'first-stabilize') next.seenFirstStabilize = true
       set({ tutorialState: next })
+    },
+
+    // Phase 26 Plan 26-01: idempotent per-race first contact mark.
+    // Idempotency guard ДО set() — no extra render / no extra persist write
+    // если флаг уже true (replay-safe, повторные visit'ы no-op).
+    markFirstContactSeen: (raceId: RaceId) => {
+      const s = get()
+      if (s.firstContactsSeen[raceId] === true) return
+      set({
+        firstContactsSeen: { ...s.firstContactsSeen, [raceId]: true },
+      })
+      // Persistence: cosmic blob auto-saves через subscribe в gameStore.ts.
+      // Server-sync: gameSync.ts pickup'ит изменение в standard cosmic JSON.
+      // НЕ эмитим event здесь — cinematic trigger живёт в Plan 26-05 controller'е
+      // (там event'ит ДО mark, чтобы UI получил pre-mark snapshot для display).
     },
   }
 }

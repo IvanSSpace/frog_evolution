@@ -1,6 +1,9 @@
 // Cosmic Frogs System — типы для Phase 11+
 // Pure types + constants. Не импортирует из gameStore (избегаем циклов).
 // Phase 22: Rarity removed. Carrier развивается через стандартный merge до L18 → ascension.
+// Phase 26: добавлен firstContactsSeen для per-race first contact gating (Plan 26-01).
+
+import type { RaceId } from '../../game/config/races'
 
 export type Element =
   | 'fire'
@@ -200,7 +203,31 @@ export interface CosmicSlice {
   // Phase 16: transient cached ship world position для redirect calc.
   // НЕ persisted в localStorage (init на null после load → re-derived из planetCoords).
   latestShipPos: { x: number; y: number } | null
+
+  // Phase 26 Plan 26-01: per-race first contact tracker.
+  // Server-syncable (cosmic JSON blob via gameSync.ts).
+  // Default: все 10 false. markFirstContactSeen(raceId) idempotent.
+  firstContactsSeen: Record<RaceId, boolean>
 }
+
+// Phase 26 Plan 26-01: canonical race-id array для init `firstContactsSeen` и
+// defensive `loadCosmicSlice` iteration. Hardcoded здесь (НЕ import RACES из
+// config/races.ts) для:
+//   1. Избежать циклической deps types.ts → races.ts → types.ts (race uses Element).
+//   2. Slice init остаётся lightweight (no config-file pull в bootstrap path).
+// Compile-time check через `RaceId[]` ловит drift если RaceId union расширится.
+export const ALL_RACE_IDS: readonly RaceId[] = [
+  'crystalloids',
+  'gasouls',
+  'mechanidons',
+  'fireworms',
+  'liquidoids',
+  'tenebrians',
+  'plasmaspirits',
+  'forestcores',
+  'timeweavers',
+  'cometfolk',
+] as const
 
 export interface CosmicToastPayload {
   type:
@@ -226,6 +253,11 @@ export function makeInitialCosmicSlice(): CosmicSlice {
   const serums = {} as Record<Element, number>
   for (const el of ELEMENTS) {
     serums[el] = 0
+  }
+  // Phase 26 Plan 26-01: per-race first contact tracker — все 10 false at init.
+  const firstContactsSeen = {} as Record<RaceId, boolean>
+  for (const id of ALL_RACE_IDS) {
+    firstContactsSeen[id] = false
   }
   return {
     serums,
@@ -262,5 +294,7 @@ export function makeInitialCosmicSlice(): CosmicSlice {
     },
     // Phase 16: transient ship position cache (used for redirect calc)
     latestShipPos: null,
+    // Phase 26 Plan 26-01: per-race first contact (все 10 false initial).
+    firstContactsSeen,
   }
 }

@@ -12,6 +12,8 @@ import { makeInitialCosmicSlice, type BoxData } from './cosmic/types'
 import { migratePhase22 } from './migrations/phase22'
 // Phase 23 Plan 23-01: onboarding flow per-device state.
 import type { OnboardingState } from './onboarding/types'
+// Phase 26 Plan 26-01: per-race first contact tracker (defensive load).
+import type { RaceId } from '../game/config/races'
 
 // ─── storage keys ────────────────────────────────────────────────────────────
 
@@ -393,6 +395,24 @@ export function loadCosmicSlice(): CosmicPersist {
       },
       // latestShipPos НЕ persisted — всегда null на load.
       latestShipPos: null,
+      // Phase 26 Plan 26-01: defensive load firstContactsSeen.
+      // T-26-01-01 / T-26-01-02 mitigation:
+      //   - iterate over known raceIds (defaults.firstContactsSeen keys) — unknown
+      //     server-side raceIds игнорируются (forward-compat: future Phase 27+ races
+      //     не сломают current client).
+      //   - accept ONLY v === true (any other shape/value → дефолт false).
+      //   - Поломанный/missing parsed.firstContactsSeen → defaults all-false.
+      firstContactsSeen: (() => {
+        const fcs = { ...defaults.firstContactsSeen }
+        const raw = parsed.firstContactsSeen
+        if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+          const rawRec = raw as Record<string, unknown>
+          for (const id of Object.keys(fcs) as RaceId[]) {
+            if (rawRec[id] === true) fcs[id] = true
+          }
+        }
+        return fcs
+      })(),
     }
   } catch {
     return defaults
