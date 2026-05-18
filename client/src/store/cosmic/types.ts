@@ -127,6 +127,7 @@ export interface PityCounters {
 // Phase 17: добавлен carriers tab.
 // Phase 22 Plan 22-05: добавлен shop tab (cosmic shop с двумя валютами).
 // Phase 26 Plan 26-04: добавлен inventory tab (read-only single-view все ресурсы).
+// Phase 27 Plan 27-04: добавлен contacts tab (relationship + chain UI).
 export type CosmicTab =
   | 'scouts'
   | 'boxes'
@@ -134,6 +135,7 @@ export type CosmicTab =
   | 'carriers'
   | 'shop'
   | 'inventory'
+  | 'contacts'
 
 // Phase 22 Plan 22-05: ShopItemId mirror (импорт из config/cosmicShop вызвал бы
 // циклическую зависимость types <-> config). Источник истины — config/cosmicShop.ts.
