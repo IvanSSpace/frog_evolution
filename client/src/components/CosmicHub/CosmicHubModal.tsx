@@ -141,72 +141,178 @@ export default function CosmicHubModal({ onClose }: Props) {
   }
 
   return createPortal(
-    <div
-      className="fixed z-50 flex flex-col bg-gray-950"
-      style={{
-        top: '12%',
-        bottom: '13%',
-        left: 0,
-        right: 0,
-        touchAction: 'manipulation',
-        pointerEvents: 'auto',
-      }}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-2 flex-shrink-0">
-        <span className="text-white font-bold text-lg">
-          🧬 {t('cosmic_hub.title')}
-        </span>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-white/60 text-2xl leading-none px-2"
-          aria-label="Close"
-        >
-          ×
-        </button>
-      </div>
+    <>
+      {/* Phase 25-01: CSS keyframe bobble для активного таба (mount один раз). */}
+      <style>{`
+        @keyframes cosmic-tab-bobble {
+          0%, 100% { transform: scaleY(1.0); }
+          50% { transform: scaleY(1.02); }
+        }
+      `}</style>
+      {/* Phase 25-01: dark cosmic shell + pink-tinted close button. */}
+      <div
+        className="fixed z-50 flex flex-col"
+        style={{
+          top: '12%',
+          bottom: '13%',
+          left: 0,
+          right: 0,
+          background: '#1a2e1a',
+          color: '#fff',
+          touchAction: 'manipulation',
+          pointerEvents: 'auto',
+        }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 pt-4 pb-2 flex-shrink-0">
+          <span
+            style={{
+              fontSize: 18,
+              fontWeight: 800,
+              color: '#fff',
+              textShadow: '0 1px 0 rgba(0,0,0,0.4)',
+            }}
+          >
+            🧬 {t('cosmic_hub.title')}
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              color: 'rgba(236,72,153,0.7)',
+              fontSize: 24,
+              lineHeight: 1,
+              padding: '0 8px',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              touchAction: 'manipulation',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = '#ec4899'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'rgba(236,72,153,0.7)'
+            }}
+          >
+            ×
+          </button>
+        </div>
 
       {/* Phase 22 Plan 22-06: defensive cosmos gate — если флаг false (legacy
-          state или dev), показать lock screen вместо табов. */}
+          state или dev), показать lock screen вместо табов.
+          Phase 25-01: WelcomeModal-style dark card + gold title. Текст
+          оставлен hard-coded (i18n ключей cosmic_hub.locked.* нет в ru.json —
+          не trogаем i18n per scope). */}
       {!cosmosUnlocked ? (
-        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-          <div className="text-6xl mb-4">🔒</div>
-          <div className="text-white text-lg font-bold mb-2">
-            Космос закрыт
-          </div>
-          <div className="text-white/60 text-sm">
-            Соедините две L18 лягушки чтобы открыть космическую механику.
+        <div className="flex-1 flex flex-col items-center justify-center px-6">
+          <div
+            style={{
+              borderRadius: 16,
+              background: '#1a2e1a',
+              border: '2px solid rgba(255,255,255,0.15)',
+              padding: 24,
+              maxWidth: 320,
+              width: '100%',
+              textAlign: 'center',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+              boxSizing: 'border-box',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 64,
+                marginBottom: 16,
+                lineHeight: 1,
+              }}
+            >
+              🔒
+            </div>
+            <div
+              style={{
+                fontSize: 22,
+                fontWeight: 800,
+                color: '#fde047',
+                marginBottom: 8,
+                textShadow: '0 1px 0 rgba(0,0,0,0.4)',
+              }}
+            >
+              Космос закрыт
+            </div>
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 500,
+                color: '#d4d4d8',
+                lineHeight: 1.4,
+              }}
+            >
+              Соедините две L18 лягушки чтобы открыть космическую механику.
+            </div>
           </div>
         </div>
       ) : (
         <>
 
-      {/* Tab strip — Phase 16: progressive disclosure (UX-09) с lock indicator */}
-      <div className="flex border-b border-white/10 flex-shrink-0">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => tab.enabled && setActiveTab(tab.id)}
-            disabled={!tab.enabled}
-            title={
-              !tab.enabled && tab.lockReason ? t(tab.lockReason) : undefined
-            }
-            className={[
-              'flex-1 py-2 text-xs font-medium transition-colors',
-              !tab.enabled
-                ? 'text-white/20 cursor-not-allowed'
-                : activeTab === tab.id
-                  ? 'text-white border-b-2 border-emerald-400'
-                  : 'text-white/40',
-            ].join(' ')}
-          >
-            <span className="block text-base">
-              {tab.enabled ? tab.icon : '🔒'}
-            </span>
-            <span>{tab.label}</span>
-          </button>
-        ))}
+      {/* Phase 25-01: tab strip pink-active underline + bobble + dim inactive/disabled.
+          Hover state опускаем (mobile-first demo) — pink-tint появится в Plan 25-04 polish. */}
+      <div
+        className="flex flex-shrink-0"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}
+      >
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.id
+          const isDisabled = !tab.enabled
+          const baseStyle = {
+            flex: 1,
+            padding: '12px 4px',
+            background: 'transparent',
+            border: 'none',
+            fontSize: 12,
+            transition: 'color 150ms ease',
+            touchAction: 'manipulation' as const,
+          }
+          const stateStyle = isDisabled
+            ? {
+                color: 'rgba(255,255,255,0.2)',
+                fontWeight: 500,
+                opacity: 0.6,
+                cursor: 'not-allowed' as const,
+              }
+            : isActive
+              ? {
+                  color: '#fff',
+                  fontWeight: 700,
+                  borderBottom: '3px solid #ec4899',
+                  marginBottom: -1, // overlap parent 1px border, чтобы pink underline был «поверх»
+                  cursor: 'pointer' as const,
+                  animation: 'cosmic-tab-bobble 1.5s ease-in-out infinite',
+                  transformOrigin: 'bottom center' as const,
+                }
+              : {
+                  color: 'rgba(255,255,255,0.4)',
+                  fontWeight: 500,
+                  cursor: 'pointer' as const,
+                }
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => tab.enabled && setActiveTab(tab.id)}
+              disabled={isDisabled}
+              title={
+                isDisabled && tab.lockReason ? t(tab.lockReason) : undefined
+              }
+              style={{ ...baseStyle, ...stateStyle }}
+            >
+              <span style={{ display: 'block', fontSize: 16 }}>
+                {tab.enabled ? tab.icon : '🔒'}
+              </span>
+              <span>{tab.label}</span>
+            </button>
+          )
+        })}
       </div>
 
       {/* Tab content */}
@@ -216,7 +322,8 @@ export default function CosmicHubModal({ onClose }: Props) {
       <PityCounterDisplay />
         </>
       )}
-    </div>,
+      </div>
+    </>,
     document.body,
   )
 }
