@@ -2,8 +2,31 @@
 // Pure types + constants. Не импортирует из gameStore (избегаем циклов).
 // Phase 22: Rarity removed. Carrier развивается через стандартный merge до L18 → ascension.
 // Phase 26: добавлен firstContactsSeen для per-race first contact gating (Plan 26-01).
+// Phase 26 Plan 26-02: добавлен PlanetInhabitant type — race ownership of planet.
 
 import type { RaceId } from '../../game/config/races'
+
+/**
+ * Phase 26 Plan 26-02: race ownership of a habitable planet.
+ *
+ * Attached к подмножеству planets in `client/src/game/data/planetMap.json`
+ * (30 of 350 → 1 home + 2 colonies × 10 races). Read-only — planets с inhabitant
+ * визуализируются glow/icon в Star Map (Plan 26-03).
+ *
+ * Roles:
+ *   - 'home'   : communicative leader planet of the race (Phase 28 communications root).
+ *   - 'colony' : silent representation, race visible but no chat.
+ *
+ * **NB:** planetMap.json shape живёт only as JSON-loaded structure (нет общего
+ * `Planet` TS типа в репо). Optional поле `inhabitant?: PlanetInhabitant` присутствует
+ * на 30 of 350 entries; uninhabited planets просто не имеют этого поля. Closest
+ * existing TS shape — `PlanetMapEntry` in `src/game/scenes/starmap/types.ts`;
+ * там тоже добавлен optional `inhabitant?: PlanetInhabitant`.
+ */
+export interface PlanetInhabitant {
+  raceId: RaceId
+  role: 'home' | 'colony'
+}
 
 export type Element =
   | 'fire'
