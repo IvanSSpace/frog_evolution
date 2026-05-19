@@ -169,7 +169,7 @@ export async function loadGameState(): Promise<boolean> {
       magnetEnabled: data.magnetEnabled ?? true,
       currentLocation: data.currentLocation ?? 1,
       locationFrogs:
-        Array.isArray(data.locationFrogs) && data.locationFrogs.length === 4
+        Array.isArray(data.locationFrogs) && data.locationFrogs.length === 3
           ? data.locationFrogs
           : store.locationFrogs,
       boxOpenCount:
