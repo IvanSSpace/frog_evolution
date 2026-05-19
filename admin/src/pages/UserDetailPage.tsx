@@ -75,6 +75,7 @@ export function UserDetailPage() {
   const { id } = useParams<{ id: string }>()
   const queryClient = useQueryClient()
   const [cosmicExpanded, setCosmicExpanded] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const { data: user, isLoading, isError } = useQuery<AdminUserDetail>({
     queryKey: ['user', id],
@@ -110,6 +111,18 @@ export function UserDetailPage() {
     },
     onError: () => {
       toast({ title: 'Ban action failed', variant: 'destructive' })
+    },
+  })
+
+  const resetProgressMutation = useMutation({
+    mutationFn: () => api.post(`/admin/users/${id}/reset-progress`, {}),
+    onSuccess: () => {
+      toast({ title: 'Progress reset successfully' })
+      void queryClient.invalidateQueries({ queryKey: ['user', id] })
+      void queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+    onError: () => {
+      toast({ title: 'Reset failed', variant: 'destructive' })
     },
   })
 
@@ -352,8 +365,79 @@ export function UserDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Reset progress */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Reset Progress</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-3">
+                <p className="text-sm text-muted-foreground">
+                  Wipes all game progress: gold, upgrades, frogs, discovered
+                  locations, serums, cosmic state, and pity counters. Preserves
+                  the Telegram link, username, ban status, and account creation
+                  date.
+                </p>
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setConfirmOpen(true)}
+                  >
+                    Reset Progress
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      {confirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-card border border-border rounded-lg p-6 max-w-md w-full mx-4 shadow-lg">
+            <h2 className="text-lg font-bold text-foreground mb-2">
+              Reset account progress?
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              This will wipe all game progress for{' '}
+              <strong>{user.username ?? user.telegramId}</strong>: gold,
+              upgrades, frogs, discovered locations, cosmic state
+              (serums/essence), and pity counters. Telegram link, username, ban
+              status, and account history are preserved.
+              <br />
+              <br />
+              <strong className="text-destructive">
+                This action cannot be undone.
+              </strong>
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setConfirmOpen(false)}
+                disabled={resetProgressMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={resetProgressMutation.isPending}
+                onClick={() => {
+                  resetProgressMutation.mutate(undefined, {
+                    onSettled: () => setConfirmOpen(false),
+                  })
+                }}
+              >
+                {resetProgressMutation.isPending ? 'Resetting...' : 'Yes, reset'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

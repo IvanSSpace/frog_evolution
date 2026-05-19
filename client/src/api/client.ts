@@ -64,14 +64,29 @@ export async function apiFetch(
   return res
 }
 
+export class ApiError extends Error {
+  status: number
+  body: string
+  constructor(status: number, body: string, message: string) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.body = body
+  }
+}
+
 export async function apiJson<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
   const res = await apiFetch(path, options)
   if (!res.ok) {
-    const err = await res.text().catch(() => '')
-    throw new Error(`API ${res.status}: ${err || res.statusText}`)
+    const body = await res.text().catch(() => '')
+    throw new ApiError(
+      res.status,
+      body,
+      `API ${res.status}: ${body || res.statusText}`,
+    )
   }
   return (await res.json()) as T
 }

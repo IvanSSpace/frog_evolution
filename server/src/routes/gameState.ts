@@ -62,6 +62,38 @@ export async function gameStateRoutes(app: FastifyInstance) {
     { preHandler: [app.authenticate] },
     async (request, reply) => {
       const body = request.body as Record<string, unknown>
+
+      // Optimistic concurrency: client must echo the version it last saw.
+      const clientVersion = body.version
+      if (
+        typeof clientVersion !== 'number' ||
+        !Number.isInteger(clientVersion) ||
+        clientVersion < 0
+      ) {
+        return reply.code(400).send({ error: 'version required (non-negative integer)' })
+      }
+
+      // Always fetch current — needed both for version check and idle-income clamp.
+      const current = await prisma.gameState.findUnique({
+        where: { userId: request.user.id },
+      })
+
+      if (!current) {
+        // No row yet — allow create-on-PUT only if client expected version 0.
+        if (clientVersion !== 0) {
+          return reply.code(409).send({ error: 'version mismatch' })
+        }
+      } else if (current.version !== clientVersion) {
+        return reply.code(409).send({
+          error: 'version mismatch',
+          currentState: {
+            ...current,
+            gold: current.gold.toString(),
+            version: current.version,
+          },
+        })
+      }
+
       const allowed = [
         'gold',
         'upgrades',
@@ -94,38 +126,34 @@ export async function gameStateRoutes(app: FastifyInstance) {
 
       // Idle income clamp: если новый gold превышает разумный максимум
       // (старый + max_rate * elapsed) — clamp'им к этому максимуму.
-      // Существующая state нужна для вычисления — fetch если ещё не получали.
-      if ('gold' in data && typeof data.gold === 'bigint') {
-        const current = await prisma.gameState.findUnique({
-          where: { userId: request.user.id },
-        })
-        if (current) {
-          const elapsedMs = Date.now() - current.lastSessionAt.getTime()
-          const elapsedSec = BigInt(Math.max(0, Math.floor(elapsedMs / 1000)))
-          const maxGain = MAX_GOLD_PER_SEC * elapsedSec
-          const maxAllowed = current.gold + maxGain
-          if (data.gold > maxAllowed) {
-            app.log.warn({
-              userId: request.user.id,
-              oldGold: current.gold.toString(),
-              attempted: data.gold.toString(),
-              clamped: maxAllowed.toString(),
-              elapsedSec: elapsedSec.toString(),
-            }, 'gold clamp: idle income exceeded')
-            data.gold = maxAllowed
-          }
+      // Reuse `current` fetched above for the version check.
+      if ('gold' in data && typeof data.gold === 'bigint' && current) {
+        const elapsedMs = Date.now() - current.lastSessionAt.getTime()
+        const elapsedSec = BigInt(Math.max(0, Math.floor(elapsedMs / 1000)))
+        const maxGain = MAX_GOLD_PER_SEC * elapsedSec
+        const maxAllowed = current.gold + maxGain
+        if (data.gold > maxAllowed) {
+          app.log.warn({
+            userId: request.user.id,
+            oldGold: current.gold.toString(),
+            attempted: data.gold.toString(),
+            clamped: maxAllowed.toString(),
+            elapsedSec: elapsedSec.toString(),
+          }, 'gold clamp: idle income exceeded')
+          data.gold = maxAllowed
         }
       }
 
       const state = await prisma.gameState.upsert({
         where: { userId: request.user.id },
-        update: data,
+        update: { ...data, version: { increment: 1 } },
         create: { userId: request.user.id, ...data },
       })
 
       return {
         ...state,
         gold: state.gold.toString(),
+        version: state.version,
       }
     },
   )

@@ -17,6 +17,7 @@ export interface ServerGameState {
   boxOpenCount: number
   cosmic: unknown | null
   incomePerSec: number
+  version: number
   // Server-computed offline income при boot (только в GET response):
   offlineIncome?: string // BigInt-string
   offlineMs?: number
