@@ -417,9 +417,11 @@ async function heartbeatCheck(): Promise<void> {
   try {
     const data = await getServerGameState()
     const serverVersion = typeof data.version === 'number' ? data.version : 0
-    if (serverVersion > lastKnownVersion) {
+    // ANY mismatch triggers reload — covers admin reset (version+1), multi-device
+    // PUT (version+1), AND DELETE+recreate (version regress к 0).
+    if (serverVersion !== lastKnownVersion) {
       devWarn(
-        `[gameSync] heartbeat detected server version bump (${lastKnownVersion} → ${serverVersion}) — hard-reloading client`,
+        `[gameSync] heartbeat detected version mismatch (local=${lastKnownVersion}, server=${serverVersion}) — hard-reloading client`,
       )
       syncEnabled = false
       pendingSave = false

@@ -317,13 +317,16 @@ export async function adminRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { id } = request.params as { id: string }
       const userId = parseInt(id, 10)
+      app.log.info({ userId }, '[admin] reset-progress: start')
 
       if (isNaN(userId)) {
+        app.log.warn({ id }, '[admin] reset-progress: invalid id')
         return reply.code(400).send({ error: 'invalid id' })
       }
 
       const user = await prisma.user.findUnique({ where: { id: userId } })
       if (!user) {
+        app.log.warn({ userId }, '[admin] reset-progress: user not found')
         return reply.code(404).send({ error: 'user not found' })
       }
 
@@ -395,7 +398,25 @@ export async function adminRoutes(app: FastifyInstance) {
         create: { userId },
       })
 
-      return reply.send({ success: true })
+      const after = await prisma.gameState.findUnique({
+        where: { userId },
+        select: { gold: true, version: true, incomePerSec: true },
+      })
+      app.log.info(
+        {
+          userId,
+          gold: after?.gold.toString(),
+          version: after?.version,
+          incomePerSec: after?.incomePerSec,
+        },
+        '[admin] reset-progress: done',
+      )
+      return reply.send({
+        success: true,
+        userId,
+        version: after?.version,
+        gold: after?.gold.toString(),
+      })
     },
   )
 }
