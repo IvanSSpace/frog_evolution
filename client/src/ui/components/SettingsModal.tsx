@@ -268,8 +268,25 @@ function SettingsTab() {
     }
   }
 
+  const username = useGameStore((s) => s.username)
+  const telegramId = useGameStore((s) => s.telegramId)
+
   return (
     <div className="flex flex-col gap-3">
+      {/* Account info — useful for testing/identifying current user. */}
+      <SettingsRow label="Аккаунт">
+        <div
+          style={{
+            fontSize: 13,
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+            color: '#fde047',
+            userSelect: 'text',
+          }}
+        >
+          {username ?? telegramId ?? '(loading…)'}
+        </div>
+      </SettingsRow>
+
       {/* Language */}
       <SettingsRow label={t('settings.language')}>
         <div className="flex gap-1.5">

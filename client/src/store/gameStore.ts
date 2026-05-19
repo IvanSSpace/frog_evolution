@@ -98,6 +98,11 @@ interface GameStateBase {
   devResetUpgrades: () => void
   devClearAllFrogs: () => void
 
+  // Current logged-in user info (set on boot after auth) — useful for debug/testing.
+  username: string | null
+  telegramId: string | null
+  setCurrentUser: (info: { username: string | null; telegramId: string | null }) => void
+
   // Лягушки на поле + коробки (real-time, обновляется из MainScene)
   entityCount: number
   setEntityCount: (n: number) => void
@@ -262,6 +267,12 @@ export const useGameStore = create<GameState>((set, get) => ({
       return false
     }
   },
+
+  // Current user info — populated после auth в App.tsx boot().
+  username: null,
+  telegramId: null,
+  setCurrentUser: (info) =>
+    set({ username: info.username, telegramId: info.telegramId }),
 
   entityCount: 0,
   setEntityCount: (n) => set({ entityCount: n }),
