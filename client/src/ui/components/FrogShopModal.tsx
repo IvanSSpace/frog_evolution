@@ -34,7 +34,10 @@ export function FrogShopModal({ onClose }: Props) {
       className="ff-backdrop ff-fade"
       style={{
         position: 'fixed',
-        inset: 0,
+        top: 54,
+        right: 0,
+        bottom: 0,
+        left: 0,
         zIndex: 100,
         display: 'flex',
         alignItems: 'center',
