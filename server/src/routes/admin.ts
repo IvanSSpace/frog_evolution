@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../prisma'
+import { Prisma } from '@prisma/client'
 import { config } from '../config'
 import { CHAINS_RESPONSE } from '../data/chains'
 
@@ -232,7 +233,10 @@ export async function adminRoutes(app: FastifyInstance) {
       if (kind === 'gold') {
         const updated = await prisma.gameState.update({
           where: { userId },
-          data: { gold: gs.gold + BigInt(amount) },
+          data: {
+            gold: gs.gold + BigInt(amount),
+            version: { increment: 1 },
+          },
         })
         newValue = updated.gold.toString()
       } else if (kind === 'essence') {
@@ -241,7 +245,10 @@ export async function adminRoutes(app: FastifyInstance) {
         const newEssence = currentEssence + amount
         await prisma.gameState.update({
           where: { userId },
-          data: { cosmic: { ...cosmic, essence: newEssence } },
+          data: {
+            cosmic: { ...cosmic, essence: newEssence },
+            version: { increment: 1 },
+          },
         })
         newValue = newEssence
       } else {
@@ -258,6 +265,7 @@ export async function adminRoutes(app: FastifyInstance) {
           where: { userId },
           data: {
             cosmic: { ...cosmic, serums: { ...serums, [element!]: newAmount } },
+            version: { increment: 1 },
           },
         })
         newValue = newAmount
@@ -299,6 +307,95 @@ export async function adminRoutes(app: FastifyInstance) {
       })
 
       return reply.send({ success: true, banned: user.banned })
+    },
+  )
+
+  // POST /admin/users/:id/reset-progress
+  app.post(
+    '/admin/users/:id/reset-progress',
+    { preHandler: [requireAdmin] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string }
+      const userId = parseInt(id, 10)
+
+      if (isNaN(userId)) {
+        return reply.code(400).send({ error: 'invalid id' })
+      }
+
+      const user = await prisma.user.findUnique({ where: { id: userId } })
+      if (!user) {
+        return reply.code(404).send({ error: 'user not found' })
+      }
+
+      // Reset GameState to schema defaults (matches prisma/schema.prisma).
+      // Cosmic blob = explicit zero object (NOT null) — клиентский hydrate
+      // в gameSync.ts использует `'field' in c` checks; при null поля не
+      // переписываются → старые значения из localStorage persist'ятся.
+      // С explicit zeros hydrate перезаписывает client store значениями reset'а.
+      const emptyCosmic = {
+        // Phase 22+ cosmic shop / ascension
+        essence: 0,
+        ascendedCarriers: [],
+        permaSlotBonus: 0,
+        permaShipSpeedBonus: 0,
+        permaSerumDropBonus: 0,
+        shopPurchaseCounts: {},
+        // Phase 22+ serum inventory + carriers
+        serums: {},
+        carriers: [],
+        // Phase 24 / L18 bonus accumulators
+        hasCosmosUnlocked: false,
+        captainBirthSeen: false,
+        l18MergesCount: 0,
+        l18AbsoluteBonusPerSec: 0,
+        // Phase 26 races
+        firstContactsSeen: {},
+        // Phase 27 contacts
+        raceRelationships: {},
+        chainProgress: {},
+        pendingItems: [],
+        // Phase 28 quests
+        activeQuests: [],
+        completedQuests: [],
+        // Cosmic-housed misc
+        hasFirstFeed: false,
+        hasFirstMission: false,
+        hasOpenedAnyBox: false,
+        frogExclusiveUnlocked: false,
+        tutorialState: {},
+        bestiaryBitset: '',
+        pityCounters: {},
+        lastActiveTab: 'scouts',
+        crew: {},
+      }
+
+      await prisma.gameState.upsert({
+        where: { userId },
+        update: {
+          gold: 0n,
+          upgrades: { dropSpeed: 0, tractor: 0, magnet: 0, crateQuality: 0, rareBoxSpeed: 0 },
+          frogPurchases: [],
+          discoveredLevels: [1],
+          magnetEnabled: false,
+          currentLocation: 1,
+          locationFrogs: [[1], [], []],
+          cosmic: emptyCosmic as Prisma.InputJsonValue,
+          boxOpenCount: 0,
+          incomePerSec: 0,
+          lastSessionAt: new Date(),
+          version: { increment: 1 },
+        },
+        create: { userId },
+      })
+
+      // Reset PityState (server-authoritative rarity rolls)
+      await prisma.pityState.upsert({
+        where: { userId },
+        update: { rare: 0, epic: 0, legendary: 0 },
+        create: { userId },
+      })
+
+      return reply.send({ success: true })
     },
   )
 }
