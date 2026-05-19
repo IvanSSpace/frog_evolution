@@ -13,6 +13,7 @@
 
 import { useGameStore } from '../store/gameStore'
 import { getServerGameState, putServerGameState } from './gameState'
+import { ApiError } from './client'
 import { devLog, devWarn } from '../utils/devLog'
 import { eventBus } from '../store/eventBus'
 import { getDropIntervalMs } from '../game/config/upgrades'
@@ -29,11 +30,37 @@ import i18next from 'i18next'
 import { setLang, type Lang } from '../i18n/index'
 import type { NumberFormat } from '../utils/formatting'
 
+// On 409 (version mismatch — usually admin reset) we cannot trust local state
+// or localStorage; persist may have stale values that pre-date the reset.
+// Wipe known game-related keys (preserving JWT) and force a clean boot —
+// server is authoritative.
+const GAME_STATE_KEY_PREFIX = 'frog_evolution_'
+const JWT_KEY = 'frog_evolution_jwt'
+function hardResetClient(): void {
+  try {
+    const keys: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i)
+      if (k && k.startsWith(GAME_STATE_KEY_PREFIX) && k !== JWT_KEY) {
+        keys.push(k)
+      }
+    }
+    for (const k of keys) localStorage.removeItem(k)
+  } catch {
+    // localStorage may be unavailable — proceed to reload anyway
+  }
+}
+
 const SAVE_THROTTLE_MS = 5000 // максимум один PUT раз в 5 секунд при идле
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 let pendingSave = false
 let syncEnabled = false
 let unsubscribeStore: (() => void) | null = null
+let lastKnownVersion: number | null = null
+
+export function getLastKnownVersion(): number | null {
+  return lastKnownVersion
+}
 
 function snapshotForSave() {
   const s = useGameStore.getState()
@@ -110,12 +137,14 @@ function snapshotForSave() {
         reducedEffects: getReducedEffects(),
       },
     },
+    version: lastKnownVersion ?? 0,
   }
 }
 
 export async function loadGameState(): Promise<boolean> {
   try {
     const data = await getServerGameState()
+    lastKnownVersion = typeof data.version === 'number' ? data.version : 0
     const store = useGameStore.getState()
 
     // Мержим — приоритет сервера, но с защитой от undefined.
@@ -338,10 +367,30 @@ export async function saveGameState(force = false): Promise<boolean> {
   if (!syncEnabled && !force) return false
   try {
     const payload = snapshotForSave()
-    await putServerGameState(payload)
+    const result = await putServerGameState(payload)
+    // Server has incremented version — capture it for next save.
+    if (typeof result.version === 'number') {
+      lastKnownVersion = result.version
+    }
     pendingSave = false
     return true
   } catch (err) {
+    if (err instanceof ApiError && err.status === 409) {
+      devWarn(
+        '[gameSync] PUT rejected with 409 (version mismatch) — hard-reloading client',
+      )
+      // Stop all further saves before reload to avoid a last-gasp PUT racing the
+      // unload.
+      syncEnabled = false
+      pendingSave = false
+      hardResetClient()
+      // Defer reload one tick so devWarn flushes and any in-flight async cleanup
+      // resolves.
+      setTimeout(() => {
+        window.location.reload()
+      }, 0)
+      return false
+    }
     devWarn('[gameSync] failed to save state', err)
     return false
   }
@@ -354,6 +403,32 @@ function scheduleSave() {
     saveTimer = null
     if (pendingSave) void saveGameState()
   }, SAVE_THROTTLE_MS)
+}
+
+// Heartbeat — каждые 15s проверяет server version. Если server bumped (admin reset
+// или другой device merge'нул) → hard reset + reload. Решает кейс admin Reset
+// когда player сидит idle и не делает mutations → PUT не fires → 409 не triggered.
+const HEARTBEAT_INTERVAL_MS = 15000
+let heartbeatTimer: ReturnType<typeof setInterval> | null = null
+
+async function heartbeatCheck(): Promise<void> {
+  if (!syncEnabled) return
+  if (lastKnownVersion === null) return
+  try {
+    const data = await getServerGameState()
+    const serverVersion = typeof data.version === 'number' ? data.version : 0
+    if (serverVersion > lastKnownVersion) {
+      devWarn(
+        `[gameSync] heartbeat detected server version bump (${lastKnownVersion} → ${serverVersion}) — hard-reloading client`,
+      )
+      syncEnabled = false
+      pendingSave = false
+      hardResetClient()
+      setTimeout(() => window.location.reload(), 0)
+    }
+  } catch {
+    // network error — silent skip; next tick retries
+  }
 }
 
 export function startSync() {
@@ -374,6 +449,11 @@ export function startSync() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && pendingSave) void saveGameState(true)
   })
+
+  // Periodic heartbeat — detects server-side reset (admin) for idle clients.
+  heartbeatTimer = setInterval(() => {
+    void heartbeatCheck()
+  }, HEARTBEAT_INTERVAL_MS)
 }
 
 export function stopSync() {
@@ -386,4 +466,9 @@ export function stopSync() {
     clearTimeout(saveTimer)
     saveTimer = null
   }
+  if (heartbeatTimer) {
+    clearInterval(heartbeatTimer)
+    heartbeatTimer = null
+  }
+  lastKnownVersion = null
 }
