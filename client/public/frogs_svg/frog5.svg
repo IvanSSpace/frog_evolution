@@ -11,7 +11,7 @@
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
+   xmlns:svg="http://www.w3.org/2000/svg"><g transform="scale(-1,1) translate(-1200,0)">
   <defs
      id="defs6" />
   <sodipodi:namedview
@@ -85,4 +85,4 @@ Created by potrace 1.16, written by Peter Selinger 2001-2019
      d="m 227.77696,114.76505 c -1.93138,-0.46922 -3.89363,-1.91183 -5.04853,-3.71159 -1.21794,-1.89798 -1.90362,-5.01557 -1.54763,-7.03657 0.5638,-3.20073 3.29525,-6.290105 6.5858,-7.448788 1.63213,-0.574713 3.82823,-0.589597 5.28744,-0.03583 1.25192,0.475097 2.88255,1.966374 4.03627,3.691328 1.51982,2.27233 2.08605,4.42404 1.72596,6.55886 -0.86123,5.10598 -6.39854,9.11003 -11.03931,7.9826 z"
      id="path11"
      transform="translate(137,218)" />
-</svg>
+</g></svg>

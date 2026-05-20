@@ -183,6 +183,7 @@ function BoxProgress({
           width: '100%',
           height: '100%',
           clipPath: `inset(${reveal}% 0 0 0)`,
+          transition: 'clip-path 250ms linear',
         }}
       />
     </div>

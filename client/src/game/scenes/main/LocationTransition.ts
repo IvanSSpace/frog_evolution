@@ -28,7 +28,7 @@ import { eventBus } from '../../../store/eventBus'
 import { FrogOverlayManager } from '../../effects/FrogOverlayManager'
 import { SerumSelectionLayer } from '../../effects/SerumSelectionLayer'
 import { elementOverlayPool } from '../../effects/elementOverlayPool'
-import { mapKeyForLocation, MAX_PENDING_BOXES } from './types'
+import { mapKeyForLocation } from './types'
 import type { MainScene } from '../MainScene'
 import type { FrogSpawner } from './FrogSpawner'
 import type { MagnetController } from './MagnetController'
@@ -102,10 +102,6 @@ export class LocationTransition {
     }
     scene.poops = []
 
-    scene.boxProgressMs = 0
-    const storeForReset = useGameStore.getState()
-    storeForReset.setBoxOpenCount(0)
-    storeForReset.setRareBoxProgress(0)
     this.magnet.resetSpawnTimer()
     scene.syncEntityCount()
   }
@@ -174,10 +170,7 @@ export class LocationTransition {
     // Сами img коробок улетают вместе с oldContainer (см. ниже), так что юзер видит
     // их анимирующимися с локацией, а не пропадающими внезапно.
     if (oldLoc === 1 && scene.boxes.length > 0) {
-      scene.pendingBoxCount = Math.min(
-        scene.pendingBoxCount + scene.boxes.length,
-        MAX_PENDING_BOXES,
-      )
+      scene.pendingBoxCount = scene.pendingBoxCount + scene.boxes.length
     }
 
     // Phase 22-fix: detach overlay manager БЕЗ release/drain. Overlay containers
@@ -402,10 +395,6 @@ export class LocationTransition {
 
         scene.input.enabled = true
         scene.isLocationTransitioning = false
-        scene.boxProgressMs = 0
-        const storeForTransitionEnd = useGameStore.getState()
-        storeForTransitionEnd.setBoxOpenCount(0)
-        storeForTransitionEnd.setRareBoxProgress(0)
         this.magnet.resetSpawnTimer()
         scene.syncEntityCount()
 
@@ -448,10 +437,7 @@ export class LocationTransition {
 
       // Если уходим с болота — фиксируем коробки в pending, чтобы при возврате восстановились
       if (scene.prevLocation === 1 && scene.boxes.length > 0) {
-        scene.pendingBoxCount = Math.min(
-          scene.pendingBoxCount + scene.boxes.length,
-          MAX_PENDING_BOXES,
-        )
+        scene.pendingBoxCount = scene.pendingBoxCount + scene.boxes.length
       }
 
       // Detach overlay manager БЕЗ release (тинт сыворотки сохраняется до destroy)
@@ -714,10 +700,6 @@ export class LocationTransition {
 
           scene.input.enabled = true
           scene.isLocationTransitioning = false
-          scene.boxProgressMs = 0
-          const storeForTransitionEnd = useGameStore.getState()
-          storeForTransitionEnd.setBoxOpenCount(0)
-          storeForTransitionEnd.setRareBoxProgress(0)
           this.magnet.resetSpawnTimer()
           scene.syncEntityCount()
 

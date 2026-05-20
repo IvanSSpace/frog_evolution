@@ -41,7 +41,6 @@ import {
   FIELD_PAD_X,
   FIELD_PAD_Y,
   FIELD_PAD_Y_BOTTOM,
-  MAX_PENDING_BOXES,
   TEXTURE_QUALITY,
   mapKeyForLocation,
   type BoxData,
@@ -598,6 +597,18 @@ export class MainScene extends Phaser.Scene {
   // ============== UPDATE ==============
 
   override update(_time: number, delta: number) {
+    const storeForTimer = useGameStore.getState()
+    // Таймер бокса тикает даже во время перехода локаций — UI-иконка не должна
+    // замирать на переключении. Спавн/pending логику пропускаем (см. ниже).
+    {
+      const intervalMs = getDropIntervalMs(storeForTimer.upgrades.dropSpeed)
+      this.boxProgressMs = Math.min(this.boxProgressMs + delta, intervalMs)
+      const cappedProgress = Math.min(1, this.boxProgressMs / intervalMs)
+      if (storeForTimer.boxProgress !== cappedProgress) {
+        storeForTimer.setBoxProgress(cappedProgress)
+      }
+    }
+
     // Во время перехода между локациями замораживаем всю логику —
     // лягушки в wrapper-контейнере с локальными координатами, любые расчёты
     // позиций выдадут неправильные значения.
@@ -639,13 +650,11 @@ export class MainScene extends Phaser.Scene {
       }
     }
 
-    // Заполнен ли «выходной канал»: на болоте — лимит entity, иначе — cap pending
-    const outputBlocked = isBoloto
-      ? !this.canSpawnBox()
-      : this.pendingBoxCount >= MAX_PENDING_BOXES
+    // Заполнен ли «выходной канал»: только на болоте при лимите entity.
+    // На других локациях pending растёт без cap'а → анимация всегда циклит.
+    const outputBlocked = isBoloto && !this.canSpawnBox()
 
-    // Таймер боксов тикает всегда, спавн только на локации 1
-    this.boxProgressMs = Math.min(this.boxProgressMs + delta, intervalMs)
+    // Спавн/pending логика. Таймер уже инкрементирован выше (до transition gate).
     if (this.boxProgressMs >= intervalMs) {
       let produced = false
       if (isBoloto) {
@@ -653,7 +662,7 @@ export class MainScene extends Phaser.Scene {
           this.spawnBox()
           produced = true
         }
-      } else if (this.pendingBoxCount < MAX_PENDING_BOXES) {
+      } else {
         this.pendingBoxCount++
         produced = true
       }
