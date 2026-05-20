@@ -107,7 +107,7 @@ export function SerumInventoryTab({ onClose }: Props) {
                     key={element}
                     type="button"
                     onClick={() => handleBoxTap(element)}
-                    className="relative aspect-square flex flex-col items-center justify-center gap-1 active:scale-95 transition"
+                    className="relative aspect-square flex flex-col items-center justify-center gap-1"
                     style={{
                       borderRadius: 12,
                       border: `2px solid ${tint}`,
@@ -162,7 +162,7 @@ export function SerumInventoryTab({ onClose }: Props) {
                     key={element}
                     type="button"
                     onClick={() => handleSerumTap(element)}
-                    className="relative aspect-square flex flex-col items-center justify-center gap-1 active:scale-95 transition"
+                    className="relative aspect-square flex flex-col items-center justify-center gap-1"
                     style={{
                       borderRadius: 12,
                       border: `2px solid ${tint}`,

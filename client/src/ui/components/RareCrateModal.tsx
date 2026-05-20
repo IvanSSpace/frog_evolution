@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TintedFrog } from './TintedFrog'
 import { FROG_LEVELS } from '../../game/config/frogs'
+import { useGameStore } from '../../store/gameStore'
+import { useModalLock } from '../../utils/modalLock'
 
 type Props = {
   minLevel: number
@@ -12,12 +14,30 @@ type Props = {
 const SPIN_DURATION = 2200
 const REEL_ITEMS = 20
 const ITEM_HEIGHT = 88
+const INTRO_DURATION = 1600
 
 export function RareCrateModal({ minLevel, maxLevel, onClose }: Props) {
+  useModalLock()
   const { t } = useTranslation()
-  const [phase, setPhase] = useState<'spinning' | 'result'>('spinning')
+  const [phase, setPhase] = useState<'intro' | 'spinning' | 'result'>('intro')
+
+  // Eligible levels: только те, что юзер открыл, в пределах [minLevel..maxLevel].
+  // Admin флаг `unlock_all_frogs` снимает ограничение (используется в FrogShopModal).
+  // Fallback на [minLevel] если пересечение пустое (graceful — не падаем).
+  const discoveredLevels = useGameStore((s) => s.discoveredLevels)
+  const hasUnlockAll = useGameStore((s) =>
+    s.devFlags.includes('unlock_all_frogs'),
+  )
+  const eligibleLevels = (() => {
+    const range: number[] = []
+    for (let l = minLevel; l <= maxLevel; l++) range.push(l)
+    if (hasUnlockAll) return range
+    const filtered = range.filter((l) => discoveredLevels.includes(l))
+    return filtered.length > 0 ? filtered : [minLevel]
+  })()
+
   const wonLevelRef = useRef<number>(
-    Math.floor(Math.random() * (maxLevel - minLevel + 1)) + minLevel,
+    eligibleLevels[Math.floor(Math.random() * eligibleLevels.length)],
   )
   const wonLevel = wonLevelRef.current
 
@@ -27,7 +47,21 @@ export function RareCrateModal({ minLevel, maxLevel, onClose }: Props) {
 
   const reelRef = useRef<HTMLDivElement>(null)
 
+  const [introStage, setIntroStage] = useState<'in' | 'shake' | 'burst'>('in')
+
   useEffect(() => {
+    const t1 = setTimeout(() => setIntroStage('shake'), 400)
+    const t2 = setTimeout(() => setIntroStage('burst'), 1200)
+    const t3 = setTimeout(() => setPhase('spinning'), INTRO_DURATION)
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+      clearTimeout(t3)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (phase !== 'spinning') return
     if (reelRef.current) {
       reelRef.current.style.transition = 'none'
       reelRef.current.style.transform = 'translateY(0px)'
@@ -42,11 +76,11 @@ export function RareCrateModal({ minLevel, maxLevel, onClose }: Props) {
     }, SPIN_DURATION + 100)
 
     return () => clearTimeout(timer)
-  }, [])
+  }, [phase])
 
   const reelLevels: number[] = Array.from({ length: REEL_ITEMS }, (_, i) => {
     if (i === REEL_ITEMS - 2 || i === REEL_ITEMS - 1) return wonLevel
-    return Math.floor(Math.random() * FROG_LEVELS.length) + 1
+    return eligibleLevels[Math.floor(Math.random() * eligibleLevels.length)]
   })
 
   const wonName = t(`frogs.${wonLevel}`)
@@ -103,15 +137,49 @@ export function RareCrateModal({ minLevel, maxLevel, onClose }: Props) {
           style={{
             width: 100,
             height: ITEM_HEIGHT * 2 + 4,
-            overflow: 'hidden',
-            border: '4px solid #b8860b',
+            overflow: 'visible',
+            border: phase === 'intro' ? '4px solid transparent' : '4px solid #b8860b',
             borderRadius: 16,
-            background: 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)',
-            boxShadow:
-              '0 0 24px rgba(255,215,0,0.4), inset 0 0 12px rgba(0,0,0,0.5)',
+            background: phase === 'intro' ? 'transparent' : 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)',
+            boxShadow: phase === 'intro' ? 'none' : '0 0 24px rgba(255,215,0,0.4), inset 0 0 12px rgba(0,0,0,0.5)',
             position: 'relative',
+            transition: 'background 300ms ease, border-color 300ms ease, box-shadow 300ms ease',
           }}
         >
+          {phase === 'intro' && (
+            <div
+              className={`ff-box-${introStage}`}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                pointerEvents: 'none',
+                zIndex: 5,
+              }}
+            >
+              <img
+                src="/box.webp"
+                alt=""
+                style={{
+                  width: 180,
+                  height: 'auto',
+                  filter: 'drop-shadow(0 0 18px rgba(255,215,0,0.65))',
+                }}
+              />
+            </div>
+          )}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              opacity: phase === 'intro' ? 0 : 1,
+              transition: 'opacity 250ms ease-in',
+              overflow: 'hidden',
+              borderRadius: 12,
+            }}
+          >
           <div
             style={{
               position: 'absolute',
@@ -161,6 +229,7 @@ export function RareCrateModal({ minLevel, maxLevel, onClose }: Props) {
                 </div>
               )
             })}
+          </div>
           </div>
         </div>
 
@@ -215,6 +284,31 @@ export function RareCrateModal({ minLevel, maxLevel, onClose }: Props) {
           0%, 100% { box-shadow: 0 0 24px rgba(255,215,0,0.4), inset 0 0 12px rgba(0,0,0,0.5); }
           50% { box-shadow: 0 0 40px rgba(255,215,0,0.7), inset 0 0 12px rgba(0,0,0,0.5); }
         }
+        @keyframes ffBoxIn {
+          0% { transform: scale(0) rotate(-25deg); opacity: 0; }
+          60% { transform: scale(1.2) rotate(10deg); opacity: 1; }
+          100% { transform: scale(1) rotate(0); opacity: 1; }
+        }
+        @keyframes ffBoxShake {
+          0%, 100% { transform: translateX(0) rotate(0); }
+          10% { transform: translateX(-6px) rotate(-4deg); }
+          20% { transform: translateX(6px) rotate(4deg); }
+          30% { transform: translateX(-6px) rotate(-4deg); }
+          40% { transform: translateX(6px) rotate(4deg); }
+          50% { transform: translateX(-4px) rotate(-3deg); }
+          60% { transform: translateX(4px) rotate(3deg); }
+          70% { transform: translateX(-3px) rotate(-2deg); }
+          80% { transform: translateX(3px) rotate(2deg); }
+          90% { transform: translateX(-1px) rotate(-1deg); }
+        }
+        @keyframes ffBoxBurst {
+          0% { transform: scale(1); opacity: 1; filter: drop-shadow(0 0 18px rgba(255,215,0,0.65)) brightness(1); }
+          40% { transform: scale(1.5); opacity: 1; filter: drop-shadow(0 0 36px rgba(255,215,0,1)) brightness(2.2); }
+          100% { transform: scale(2.6); opacity: 0; filter: drop-shadow(0 0 50px rgba(255,255,255,1)) brightness(3); }
+        }
+        .ff-box-in img { animation: ffBoxIn 400ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+        .ff-box-shake img { animation: ffBoxShake 800ms ease-in-out both; }
+        .ff-box-burst img { animation: ffBoxBurst 400ms ease-out both; }
       `}</style>
     </div>
   )

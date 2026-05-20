@@ -2,7 +2,12 @@ import { apiJson, setToken, getToken } from './client'
 
 interface AuthResponse {
   token: string
-  user: { id: number; telegramId: string; username?: string | null }
+  user: {
+    id: number
+    telegramId: string
+    username?: string | null
+    devFlags?: string[]
+  }
 }
 
 // Window.Telegram уже типизирован в vite-env.d.ts (TelegramWebApp shape).

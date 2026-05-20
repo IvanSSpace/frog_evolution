@@ -115,6 +115,7 @@ function App() {
       useGameStore.getState().setCurrentUser({
         username: auth.user.username ?? null,
         telegramId: auth.user.telegramId,
+        devFlags: auth.user.devFlags ?? [],
       })
 
       // 3. Load state from server with timeout

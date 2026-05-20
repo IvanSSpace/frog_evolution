@@ -10,12 +10,14 @@ import {
   RARITY_LABEL,
 } from './types'
 import { GalleryDetailPreview } from './GalleryDetailPreview'
+import { useModalLock } from '../../utils/modalLock'
 
 export function GalleryDetailModal() {
   const [open, setOpen] = useState<{
     archetype: Element
     rarity: LegacyRarity
   } | null>(null)
+  useModalLock(open !== null)
 
   useEffect(() => {
     const onOpen = ({

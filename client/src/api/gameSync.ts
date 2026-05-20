@@ -16,7 +16,6 @@ import { getServerGameState, putServerGameState } from './gameState'
 import { ApiError } from './client'
 import { devLog, devWarn } from '../utils/devLog'
 import { eventBus } from '../store/eventBus'
-import { getDropIntervalMs } from '../game/config/upgrades'
 import {
   getInstantBoxes,
   setInstantBoxes,
@@ -344,15 +343,11 @@ export async function loadGameState(): Promise<boolean> {
     }
 
     // Offline box drops — server возвращает raw elapsedMs.
-    // Считаем сколько боксов «должно было» упасть, эмитим event для MainScene.
+    // Эмитим event как сигнал «юзер вернулся, заполни поле боксами».
+    // MainScene.drainOfflineBoxBuffer fillит поле до cap (effectiveSlotCap),
+    // count теперь служит только маркером «buffer > 0», точное значение не важно.
     if (typeof data.elapsedMs === 'number' && data.elapsedMs > 0) {
-      const store = useGameStore.getState()
-      const dropSpeedLvl = store.upgrades.dropSpeed ?? 0
-      const dropIntervalMs = getDropIntervalMs(dropSpeedLvl)
-      const droppedCount = Math.floor(data.elapsedMs / dropIntervalMs)
-      if (droppedCount > 0) {
-        eventBus.emit('box:offline-pending', { count: droppedCount })
-      }
+      eventBus.emit('box:offline-pending', { count: 1 })
     }
 
     devLog('[gameSync] loaded state from server')

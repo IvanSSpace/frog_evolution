@@ -17,6 +17,7 @@ model User {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
   banned     Boolean  @default(false)
+  devFlags  String[] @default([]) @map("dev_flags")
 
   gameState GameState?
   pityState PityState?

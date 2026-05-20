@@ -3,7 +3,6 @@ import {
   useGameStore,
   getDropIntervalMs,
   getLocationById,
-  ENTITY_CAP,
 } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
 import {
@@ -205,14 +204,16 @@ export class MainScene extends Phaser.Scene {
     this.bg.setDisplaySize(width, height)
     this.bg.setDepth(-1) // фон всегда под лягушками
 
-    // Временная рамка игрового поля
-    const fieldW = width - FIELD_PAD_X * 2
-    const fieldH = height - FIELD_PAD_Y - FIELD_PAD_Y_BOTTOM
-    const fieldCenterY = (FIELD_PAD_Y + (height - FIELD_PAD_Y_BOTTOM)) / 2
-    this.add
-      .rectangle(width / 2, fieldCenterY, fieldW, fieldH)
-      .setStrokeStyle(2, 0xffffff, 0.35)
-      .setFillStyle(0x000000, 0)
+    // DEV-only: визуализация границ игрового поля; production билд не показывает.
+    if (import.meta.env.DEV) {
+      const fieldW = width - FIELD_PAD_X * 2
+      const fieldH = height - FIELD_PAD_Y - FIELD_PAD_Y_BOTTOM
+      const fieldCenterY = (FIELD_PAD_Y + (height - FIELD_PAD_Y_BOTTOM)) / 2
+      this.add
+        .rectangle(width / 2, fieldCenterY, fieldW, fieldH)
+        .setStrokeStyle(2, 0xffffff, 0.35)
+        .setFillStyle(0x000000, 0)
+    }
 
     // Подписка на покупку лягушки из магазина
     eventBus.on('frog:purchased', this.onFrogPurchased)
@@ -564,18 +565,13 @@ export class MainScene extends Phaser.Scene {
   }
 
   private drainOfflineBoxBuffer() {
+    // При возврате после offline period (buffer > 0) — заполняем поле боксами
+    // до cap (canSpawnBox учитывает frogs + boxes + effectiveSlotCap с perma bonus).
+    // Юзер видит «полное» поле, а не пара штук = floor(elapsedMs / dropInterval).
     if (_offlineBoxBuffer <= 0) return
-    const store = useGameStore.getState()
-    const bolotoFrogs = store.locationFrogs[0]?.length ?? 0
-    const slots = Math.max(0, ENTITY_CAP - bolotoFrogs)
-    const toSpawn = Math.min(_offlineBoxBuffer, slots)
     _offlineBoxBuffer = 0
-    for (let i = 0; i < toSpawn; i++) {
-      if (this.canSpawnBox()) {
-        this.spawnBox(false, true) // preLanded — без анимации падения
-      } else {
-        break
-      }
+    while (this.canSpawnBox()) {
+      this.spawnBox(false, true) // preLanded — без анимации падения
     }
   }
 

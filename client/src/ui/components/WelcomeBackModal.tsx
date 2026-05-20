@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { fmt } from '../../utils/formatting'
+import { useModalLock } from '../../utils/modalLock'
 
 type Props = {
   earned: number
@@ -8,6 +9,7 @@ type Props = {
 }
 
 export function WelcomeBackModal({ earned, hours, onClose }: Props) {
+  useModalLock()
   const { t } = useTranslation()
 
   return (

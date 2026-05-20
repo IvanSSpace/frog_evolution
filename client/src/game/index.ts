@@ -6,6 +6,27 @@ import { useGameStore } from '../store/gameStore'
 
 let game: Phaser.Game | null = null
 
+/** Включает/выключает весь Phaser input. Используется useModalLock — пока открыта
+ *  любая модалка, тапы не доходят до сцены даже если DOM events каким-то путём
+ *  просочились через overlay. */
+export function setPhaserInputEnabled(enabled: boolean): void {
+  if (!game) return
+  if (game.input) {
+    game.input.enabled = enabled
+  }
+  // Также отключаем input на каждой сцене (per-scene InputPlugin),
+  // иначе scene.input.on('pointerdown') слушатели могут продолжать срабатывать.
+  game.scene.scenes.forEach((sc) => {
+    if (sc.input) sc.input.enabled = enabled
+  })
+  // Hard kill: pointer-events на canvas DOM element напрямую. CSS body.modal-open
+  // может не успеть применится в фрейме открытия модалки.
+  const canvas = game.canvas
+  if (canvas) {
+    canvas.style.pointerEvents = enabled ? '' : 'none'
+  }
+}
+
 // Экспорт для React-HUD overlay
 export function getStarMapHUD(): {
   x: number

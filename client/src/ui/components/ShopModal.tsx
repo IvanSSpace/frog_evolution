@@ -11,10 +11,12 @@ import {
 } from '../../store/gameStore'
 import { hapticNotification } from '../../utils/telegram'
 import { fmt } from '../../utils/formatting'
+import { useModalLock } from '../../utils/modalLock'
 
 type Props = { onClose: () => void }
 
 export function ShopModal({ onClose }: Props) {
+  useModalLock()
   const { t } = useTranslation()
   return (
     <div
@@ -22,16 +24,13 @@ export function ShopModal({ onClose }: Props) {
       className="ff-backdrop ff-fade"
       style={{
         position: 'fixed',
-        top: 54,
-        right: 0,
-        bottom: 0,
-        left: 0,
+        inset: 0,
         zIndex: 100,
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-end',
         justifyContent: 'center',
         pointerEvents: 'auto',
-        padding: 16,
+        padding: '0 16px 4px',
       }}
     >
       <div
@@ -40,7 +39,7 @@ export function ShopModal({ onClose }: Props) {
         style={{
           width: '100%',
           maxWidth: 380,
-          maxHeight: '88vh',
+          height: '75vh',
           display: 'flex',
           flexDirection: 'column',
         }}

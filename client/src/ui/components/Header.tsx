@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useGameStore } from '../../store/gameStore'
 import { fmt, fmtRate } from '../../utils/formatting'
 import { useCosmosUnlocked } from '../../utils/cosmosGate'
+import { getRareBoxThreshold } from '../../game/config/upgrades'
 
 // L18+L18 merge bonus multiplier — same formula как в gameStore.addGold.
 // Diminishing returns: merge1=+10%, merge2/3=+5%, merge4+=+2.5%.
@@ -19,7 +20,12 @@ export function Header() {
   const l18MergesCount = useGameStore((s) => s.l18MergesCount)
   const boxProgress = useGameStore((s) => s.boxProgress)
   const boxWaiting = useGameStore((s) => s.boxWaiting)
-  const rareBoxProgress = useGameStore((s) => s.rareBoxProgress)
+  const boxOpenCount = useGameStore((s) => s.boxOpenCount)
+  const rareBoxSpeed = useGameStore((s) => s.upgrades.rareBoxSpeed)
+  const rareBoxProgress = Math.min(
+    boxOpenCount / getRareBoxThreshold(rareBoxSpeed),
+    1,
+  )
   const essence = useGameStore((s) => s.essence)
   const serums = useGameStore((s) => s.serums)
   useGameStore((s) => s.numberFormat) // subscribe to format changes
@@ -36,15 +42,19 @@ export function Header() {
 
   return (
     <div
-      className="ff-bar grid items-center w-full h-full px-3"
+      className="ff-bar flex flex-col w-full h-full px-3"
       style={{
-        gridTemplateColumns: '1fr auto 1fr',
         pointerEvents: 'auto',
         // 54px gap сверху чтобы content не залезал под Telegram header кнопки
         // (close + ⋮) когда WebApp в fullscreen mode.
         paddingTop: 54,
+        paddingBottom: 12,
       }}
     >
+      <div
+        className="grid items-center w-full flex-1"
+        style={{ gridTemplateColumns: '1fr auto 1fr' }}
+      >
       <div className="flex flex-col items-start gap-0.5">
         {cosmosUnlocked && (
           <>
@@ -76,7 +86,7 @@ export function Header() {
         )}
       </div>
 
-      <div className="flex flex-col items-center gap-1">
+      <div className="flex flex-col items-center" style={{ marginTop: 24, gap: 2 }}>
         <div className="ff-balance">
           <img
             src="/goo.svg"
@@ -97,6 +107,7 @@ export function Header() {
             color: '#fde047',
             textShadow: '0 1px 0 rgba(0,0,0,0.45)',
             letterSpacing: '0.3px',
+            marginTop: 0,
           }}
         >
           +{fmtRate(incomePerSec * multiplier)}{' '}
@@ -128,10 +139,12 @@ export function Header() {
         </div>
       </div>
 
-      <div className="justify-self-end flex flex-col items-end gap-2">
+      <div className="justify-self-end flex flex-col items-end gap-2" style={{ marginTop: 34, marginRight: 16 }}>
         <BoxProgress progress={boxProgress} waiting={boxWaiting} />
-        <RareBoxProgress progress={rareBoxProgress} />
       </div>
+      </div>
+
+      <RareBoxProgress progress={rareBoxProgress} />
     </div>
   )
 }
@@ -143,20 +156,35 @@ function BoxProgress({
   progress: number
   waiting: boolean
 }) {
-  const pct = Math.round(progress * 100)
+  const pct = Math.max(0, Math.min(100, Math.round(progress * 100)))
+  const reveal = 100 - pct
   return (
-    <div className="flex flex-row items-center gap-1.5">
-      <div className="ff-progress-track w-14 h-2.5">
-        <div
-          className={`ff-progress-fill ${waiting ? 'waiting' : ''}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <div
-        className={`text-xl leading-none ${waiting ? 'animate-pulse' : ''}`}
-      >
-        📦
-      </div>
+    <div
+      className={`relative inline-block leading-none ${waiting ? 'animate-pulse' : ''}`}
+      style={{ width: 32, height: 32 }}
+    >
+      <img
+        src="/box.webp"
+        alt=""
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          filter: 'brightness(0.3) saturate(0.4)',
+        }}
+      />
+      <img
+        src="/box.webp"
+        alt=""
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          clipPath: `inset(${reveal}% 0 0 0)`,
+        }}
+      />
     </div>
   )
 }
@@ -165,22 +193,30 @@ function RareBoxProgress({ progress }: { progress: number }) {
   const pct = Math.round(progress * 100)
   const isReady = pct >= 100
   return (
-    <div className="flex flex-row items-center gap-1.5">
-      <div className="ff-progress-track w-14 h-2.5">
+    <div className="relative" style={{ marginLeft: 0, marginRight: 4, width: 'calc(100% - 4px)' }}>
+      <div className="ff-progress-track w-full h-1.5" style={{ borderRadius: 0 }}>
         <div
-          className="ff-progress-fill"
+          className={`ff-progress-fill ${isReady ? 'animate-pulse' : ''}`}
           style={{
             width: `${pct}%`,
+            borderRadius: 0,
             background: isReady
               ? 'linear-gradient(90deg, #fcd34d, #f59e0b)'
-              : 'linear-gradient(90deg, #c4b5fd, #8b5cf6)',
+              : 'linear-gradient(90deg, #60a5fa, #2563eb)',
           }}
         />
       </div>
       <div
-        className={`text-xl leading-none ${isReady ? 'animate-pulse' : ''}`}
+        className={`absolute leading-none ${isReady ? 'animate-pulse' : ''}`}
+        style={{
+          right: 0,
+          top: '50%',
+          transform: 'translate(50%, -50%)',
+          fontSize: 18,
+          pointerEvents: 'none',
+        }}
       >
-        ✨
+        🎁
       </div>
     </div>
   )

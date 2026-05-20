@@ -346,8 +346,7 @@ export class BoxController {
       })
     }
 
-    // Camera shake + flash
-    scene.cameras.main.shake(120, 0.005)
+    // Flash only (shake disabled per user request)
     this.merge.flashAt(x, y)
 
     if (box.isRare) {

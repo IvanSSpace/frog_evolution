@@ -144,14 +144,14 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     poopChances: { regular: 0.05, big: 0.1, huge: 0.85 },
   },
 
-  // ─── Болото (L7-12) — натуральные зелёные, светлее предыдущей версии ───
+  // ─── Болото (L7-12) — продолжение жёлто-оливковой палитры локации 1 ───
   {
     path: '/frogs_svg/frog7.svg',
     name: 'Глазастик',
     size: 2.0,
     basePrice: 269_859,  /* formula: 560 × 2.8^6 */
     growthRate: 1.15,
-    tint: 0xb3db71,
+    tint: 0xc6e87e,
     location: 2,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
@@ -162,7 +162,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     size: 2.0,
     basePrice: 755_604,  /* formula: 560 × 2.8^7 */
     growthRate: 1.15,
-    tint: 0x8bcf6f,
+    tint: 0xb3d56b,
     location: 2,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
@@ -173,7 +173,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     size: 2.0,
     basePrice: 2_115_691,  /* formula: 560 × 2.8^8 */
     growthRate: 1.15,
-    tint: 0x7dbf61,
+    tint: 0xc0d870,
     location: 2,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
@@ -184,7 +184,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     size: 2.0,
     basePrice: 5_923_935,  /* formula: 560 × 2.8^9 */
     growthRate: 1.15,
-    tint: 0x71af57,
+    tint: 0xa8c862,
     location: 2,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
@@ -195,7 +195,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     size: 2.0,
     basePrice: 16_587_019,  /* formula: 560 × 2.8^10 */
     growthRate: 1.15,
-    tint: 0x659f4f,
+    tint: 0xbad96b,
     location: 2,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
@@ -206,7 +206,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     size: 2.0,
     basePrice: 46_443_653,  /* formula: 560 × 2.8^11 */
     growthRate: 1.15,
-    tint: 0x5b8f47,
+    tint: 0x9ebb56,
     location: 2,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
@@ -215,13 +215,14 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
   // ─── Лес (L13-18) — natural ×2.8 prices progression от L12=46.4M ───
   // 2026-05-18 fix: prices были billions (legacy от L19+ когда была 4-я
   // локация Континент). После удаления Континента — natural progression.
+  // Палитра — продолжение жёлто-оливковой гаммы локации 1, тёмные оттенки.
   {
     path: '/frogs_svg/frog13.svg',
     name: 'Квакатлас',
     size: 2.0,
     basePrice: 130_000_000,  /* original 3-этап (rounded), formula approx 560 × 2.8^12 */
     growthRate: 1.15,
-    tint: 0x99db6b,
+    tint: 0xb5cf68,
     location: 3,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
@@ -232,7 +233,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     size: 2.0,
     basePrice: 364_100_000,  /* original 3-этап */
     growthRate: 1.15,
-    tint: 0x89cb5f,
+    tint: 0xa4c45e,
     location: 3,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
@@ -243,7 +244,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     size: 2.0,
     basePrice: 1_000_000_000,  /* original 3-этап */
     growthRate: 1.15,
-    tint: 0x7bbd55,
+    tint: 0x94b54f,
     location: 3,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
@@ -254,7 +255,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     size: 2.0,
     basePrice: 2_900_000_000,  /* original 3-этап */
     growthRate: 1.15,
-    tint: 0x6fad4b,
+    tint: 0xacc965,
     location: 3,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
@@ -265,7 +266,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     size: 2.0,
     basePrice: 8_000_000_000,  /* original 3-этап */
     growthRate: 1.15,
-    tint: 0x639d43,
+    tint: 0x9fbe58,
     location: 3,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
@@ -276,7 +277,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     size: 2.0,
     basePrice: 22_400_000_000,  /* original 3-этап */
     growthRate: 1.15,
-    tint: 0x578d3b,
+    tint: 0x8eaf48,
     location: 3,
     availableInShop: true,
     poopChances: HUGE_CHANCES,

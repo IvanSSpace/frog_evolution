@@ -10,6 +10,7 @@ import {
   travelTimeMs,
 } from '../../game/data/missionConfig'
 import { useGameStore } from '../../store/gameStore'
+import { useModalLock } from '../../utils/modalLock'
 
 interface Props {
   toPlanetId: string
@@ -22,6 +23,7 @@ export function FlightConfirmDialog({
   onConfirm,
   onCancel,
 }: Props) {
+  useModalLock()
   const { t } = useTranslation()
   const ship = useGameStore((s) => s.ship)
   const latestPos = useGameStore((s) => s.latestShipPos)

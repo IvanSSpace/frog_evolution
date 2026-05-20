@@ -9,24 +9,32 @@ import {
 } from '../../game/config/frogs'
 import { hapticNotification } from '../../utils/telegram'
 import { fmt } from '../../utils/formatting'
+import { useModalLock } from '../../utils/modalLock'
 
 type Props = { onClose: () => void }
 
 export function FrogShopModal({ onClose }: Props) {
+  useModalLock()
   const { t } = useTranslation()
   const [toast, setToast] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
-  }, [])
 
   const showToast = (msg: string) => {
     setToast(msg)
     setTimeout(() => setToast(null), 1800)
   }
+
+  const discoveredLevels = useGameStore((s) => s.discoveredLevels)
+  const hasUnlockAll = useGameStore((s) =>
+    s.devFlags.includes('unlock_all_frogs'),
+  )
+
+  // Mark все текущие discoveredLevels как «виденные» в shop → badge на 🐸 пропадёт.
+  // Empty deps = одиночный вызов на mount; повторное открытие модалки сбросит свежие drops.
+  const markFrogShopSeen = useGameStore((s) => s.markFrogShopSeen)
+  useEffect(() => {
+    markFrogShopSeen()
+  }, [markFrogShopSeen])
 
   return (
     <div
@@ -34,16 +42,13 @@ export function FrogShopModal({ onClose }: Props) {
       className="ff-backdrop ff-fade"
       style={{
         position: 'fixed',
-        top: 54,
-        right: 0,
-        bottom: 0,
-        left: 0,
+        inset: 0,
         zIndex: 100,
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-end',
         justifyContent: 'center',
         pointerEvents: 'auto',
-        padding: 16,
+        padding: '0 16px 4px',
       }}
     >
       <div
@@ -52,7 +57,7 @@ export function FrogShopModal({ onClose }: Props) {
         style={{
           width: '100%',
           maxWidth: 380,
-          maxHeight: '88vh',
+          height: '75vh',
           display: 'flex',
           flexDirection: 'column',
         }}
@@ -84,11 +89,12 @@ export function FrogShopModal({ onClose }: Props) {
 
         <div
           ref={scrollRef}
-          className="flex flex-col gap-1.5 p-3 overflow-y-auto"
+          className="flex flex-col gap-3 p-3 overflow-y-auto"
         >
           {[...FROG_LEVELS].reverse().map((cfg, idx) => {
             const level = FROG_LEVELS.length - idx
-            return cfg.availableInShop ? (
+            const unlocked = hasUnlockAll || discoveredLevels.includes(level)
+            return cfg.availableInShop && unlocked ? (
               <FrogCard key={level} level={level} onResult={showToast} />
             ) : null
           })}

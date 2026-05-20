@@ -20,6 +20,7 @@ import { PityCounterDisplay } from './PityCounterDisplay'
 // Phase 22 Plan 22-06: defensive cosmos gate — даже если каким-то путём modal
 // открыт без unlock (legacy state, dev tool), показать lock screen.
 import { useCosmosUnlocked } from '../../utils/cosmosGate'
+import { useModalLock } from '../../utils/modalLock'
 
 const SESSION_KEY = 'cosmic_last_tab'
 
@@ -57,6 +58,7 @@ interface Props {
 }
 
 export default function CosmicHubModal({ onClose }: Props) {
+  useModalLock()
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<CosmicTab>(getInitialTab)
 

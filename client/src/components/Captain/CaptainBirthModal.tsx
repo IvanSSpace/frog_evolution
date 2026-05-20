@@ -25,6 +25,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { eventBus } from '../../store/eventBus'
+import { useModalLock } from '../../utils/modalLock'
 import './captainBirthModal.css'
 
 const FADE_OUT_MS = 400
@@ -33,6 +34,7 @@ export function CaptainBirthModal() {
   const { t } = useTranslation()
   const [visible, setVisible] = useState(false)
   const [exiting, setExiting] = useState(false)
+  useModalLock(visible)
 
   useEffect(() => {
     const onComplete = () => {

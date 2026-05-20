@@ -9,6 +9,7 @@
 import { useTranslation } from 'react-i18next'
 import type { Element } from '../../store/cosmic/types'
 import { ELEMENT_TINT } from './ElementGrid'
+import { useModalLock } from '../../utils/modalLock'
 
 export interface BulkOpenResult {
   element: Element
@@ -37,6 +38,7 @@ function groupResults(results: BulkOpenResult[]): GroupedRow[] {
 }
 
 export default function BulkOpenSummary({ results, onClose }: Props) {
+  useModalLock()
   const { t } = useTranslation()
   const grouped = groupResults(results)
   const hasLegendary = false // Phase 22: rarity removed

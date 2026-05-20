@@ -8,11 +8,13 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { useOnboardingStore } from '../../store/onboarding/onboardingSlice'
+import { useModalLock } from '../../utils/modalLock'
 import './welcomeModal.css'
 
 const FADE_OUT_MS = 400
 
 export function WelcomeModal() {
+  useModalLock()
   const { t } = useTranslation()
   const markSeen = useOnboardingStore((s) => s.markWelcomeSeen)
   const [exiting, setExiting] = useState(false)

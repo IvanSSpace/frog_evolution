@@ -4,6 +4,7 @@
 import { useTranslation } from 'react-i18next'
 import { ELEMENT_TINTS } from '../../game/effects/elements/elementTints'
 import type { CarrierData } from '../../store/cosmic/types'
+import { useModalLock } from '../../utils/modalLock'
 
 interface Props {
   carrier: CarrierData
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function DisposeConfirmModal({ carrier, onConfirm, onCancel }: Props) {
+  useModalLock()
   const { t } = useTranslation()
   const tintHex = ELEMENT_TINTS[carrier.element]
   const tintCss = `#${tintHex.toString(16).padStart(6, '0')}`

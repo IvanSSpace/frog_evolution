@@ -877,6 +877,54 @@ export function saveOnboarding(state: OnboardingState): void {
   }
 }
 
+// ─── seen levels: для badge «новый контент» в FrogShop / Bestiary ────────────
+// Хранятся per-device localStorage; не синкятся с сервером (badge — UX-локально).
+// Default = пустой массив; компонент при mount'е делает seen := discoveredLevels,
+// поэтому новый юзер не увидит false-positive badge.
+
+const FROG_SHOP_SEEN_KEY = 'frog_evolution_frogshop_seen_v1'
+const BESTIARY_SEEN_KEY = 'frog_evolution_bestiary_seen_v1'
+
+export function loadFrogShopSeenLevels(): number[] {
+  try {
+    const raw = localStorage.getItem(FROG_SHOP_SEEN_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((n): n is number => typeof n === 'number')
+  } catch {
+    return []
+  }
+}
+
+export function saveFrogShopSeenLevels(arr: number[]): void {
+  try {
+    localStorage.setItem(FROG_SHOP_SEEN_KEY, JSON.stringify(arr))
+  } catch {
+    /* ignore */
+  }
+}
+
+export function loadBestiarySeenLevels(): number[] {
+  try {
+    const raw = localStorage.getItem(BESTIARY_SEEN_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((n): n is number => typeof n === 'number')
+  } catch {
+    return []
+  }
+}
+
+export function saveBestiarySeenLevels(arr: number[]): void {
+  try {
+    localStorage.setItem(BESTIARY_SEEN_KEY, JSON.stringify(arr))
+  } catch {
+    /* ignore */
+  }
+}
+
 // Side effect on import: apply persisted format globally so first render
 // uses the user's preferred number format (1.5K vs 1,500).
 const _initialFormat = loadNumberFormat()

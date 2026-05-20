@@ -90,7 +90,7 @@ export function ElementGrid({
             className={`relative aspect-square rounded-lg border-2 flex items-center justify-center
                ${
                  active
-                   ? 'bg-white/5 hover:bg-white/10 active:scale-95 transition'
+                   ? 'bg-white/5 hover:bg-white/10'
                    : 'border-white/10 bg-white/5 opacity-30 cursor-default'
                }`}
             style={{ borderColor: active ? ELEMENT_TINT[el] : undefined }}

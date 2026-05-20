@@ -1,4 +1,12 @@
-import { useState, useSyncExternalStore, type ReactNode } from 'react'
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { TintedFrog } from './TintedFrog'
 import { setLang, type Lang } from '../../i18n/index'
@@ -21,94 +29,330 @@ import {
   setReducedEffects,
   subscribeReducedEffects,
 } from '../../utils/cosmicSettings'
+import { useModalLock } from '../../utils/modalLock'
 
 type Tab = 'bestiary' | 'settings' | 'player'
 type Props = { onClose: () => void }
 
 export function SettingsModal({ onClose }: Props) {
+  useModalLock()
   const { t } = useTranslation()
   const [tab, setTab] = useState<Tab>('settings')
+  const [closing, setClosing] = useState(false)
 
-  return (
+  const handleClose = useCallback(() => {
+    if (closing) return
+    setClosing(true)
+    window.setTimeout(onClose, 280)
+  }, [closing, onClose])
+
+  const markBestiarySeen = useGameStore((s) => s.markBestiarySeen)
+
+  // Mark discoveredLevels как «виденные» в бестиарии когда юзер переключается
+  // на bestiary tab. Реагирует на смену tab — multi-open / tab-switch покрыты.
+  useEffect(() => {
+    if (tab === 'bestiary') {
+      markBestiarySeen()
+    }
+  }, [tab, markBestiarySeen])
+
+  return createPortal(
     <div
-      className="ff-fade"
       style={{
         position: 'fixed',
-        top: 54,
-        right: 0,
-        bottom: 0,
-        left: 0,
+        inset: 0,
         zIndex: 150,
-        display: 'flex',
-        flexDirection: 'column',
-        background: '#1a2e1a',
         pointerEvents: 'auto',
+        background: 'transparent',
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleClose()
       }}
     >
-      {/* Tab header */}
       <div
-        className="ff-bar flex items-center gap-1.5 px-2 w-full"
-        style={{ height: '13%', flexShrink: 0 }}
+        style={{
+          position: 'absolute',
+          top: 'calc(12% + 54px)',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 151,
+          pointerEvents: 'none',
+          overflow: 'hidden',
+        }}
       >
-        <button
-          onClick={() => setTab('bestiary')}
-          className={`ff-btn flex-1 text-xs py-2 ${tab === 'bestiary' ? 'ff-btn-green' : 'ff-btn-grey'}`}
-        >
-          {t('settings_modal.tab_bestiary')}
-        </button>
-        <button
-          onClick={() => setTab('player')}
-          className={`ff-btn flex-1 text-xs py-2 ${tab === 'player' ? 'ff-btn-green' : 'ff-btn-grey'}`}
-        >
-          {t('settings_modal.tab_player')}
-        </button>
-        <button
-          onClick={() => setTab('settings')}
-          className={`ff-btn flex-1 text-xs py-2 ${tab === 'settings' ? 'ff-btn-green' : 'ff-btn-grey'}`}
-        >
-          {t('settings_modal.tab_settings')}
-        </button>
-        <button
-          onClick={onClose}
-          className="ff-tile w-12 h-12 text-xl flex-shrink-0"
+        <div
+          className={closing ? 'ff-slide-up' : 'ff-slide-down'}
           style={{
-            ['--ff-tile-from' as never]: '#fca5a5',
-            ['--ff-tile-to' as never]: '#dc2626',
-            ['--ff-tile-border' as never]: '#7f1d1d',
-            color: '#fff',
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            background: 'linear-gradient(180deg, #f5fbe9 0%, #d9eeb6 100%)',
+            border: '4px solid #4d6b1f',
+            borderRadius: 0,
+            boxShadow: '0 0 0 3px #f7ffe0 inset',
           }}
         >
-          {t('settings_modal.close')}
-        </button>
-      </div>
+          {/* Header */}
+          <div
+            className="flex items-center gap-1.5 px-3 pt-4 pb-3 flex-shrink-0"
+            style={{ borderBottom: '3px dashed rgba(77,107,31,0.4)' }}
+          >
+            <button
+              onClick={() => setTab('bestiary')}
+              className={`ff-btn flex-1 text-xs py-2 ${tab === 'bestiary' ? 'ff-btn-green' : 'ff-btn-grey'}`}
+            >
+              {t('settings_modal.tab_bestiary')}
+            </button>
+            <button
+              onClick={() => setTab('player')}
+              className={`ff-btn flex-1 text-xs py-2 ${tab === 'player' ? 'ff-btn-green' : 'ff-btn-grey'}`}
+            >
+              {t('settings_modal.tab_player')}
+            </button>
+            <button
+              onClick={() => setTab('settings')}
+              className={`ff-btn flex-1 text-xs py-2 ${tab === 'settings' ? 'ff-btn-green' : 'ff-btn-grey'}`}
+            >
+              {t('settings_modal.tab_settings')}
+            </button>
+            <button
+              type="button"
+              onClick={handleClose}
+              aria-label={t('settings_modal.close')}
+              className="ff-tile w-10 h-10 text-xl flex-shrink-0"
+              style={{
+                ['--ff-tile-from' as never]: '#fca5a5',
+                ['--ff-tile-to' as never]: '#dc2626',
+                ['--ff-tile-border' as never]: '#7f1d1d',
+                color: '#fff',
+              }}
+            >
+              ✕
+            </button>
+          </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-3">
-        {tab === 'bestiary' && <BestiaryTab />}
-        {tab === 'player' && <PlayerPanel />}
-        {tab === 'settings' && <SettingsTab />}
+          {/* Content */}
+          <div
+            className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden ff-no-scrollbar px-4 py-3"
+            style={{
+              paddingBottom:
+                'calc(env(safe-area-inset-bottom, 0px) + 32px)',
+              WebkitOverflowScrolling: 'touch',
+              overscrollBehavior: 'contain',
+            }}
+          >
+            {tab === 'bestiary' && <BestiaryTab />}
+            {tab === 'player' && <PlayerPanel />}
+            {tab === 'settings' && <SettingsTab />}
+          </div>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
 // ────────────────────────── BESTIARY TAB ──────────────────────────
 
+
 function BestiaryTab() {
   const discoveredLevels = useGameStore((s) => s.discoveredLevels)
+  const total = FROG_LEVELS.length
+  const [idx, setIdx] = useState(0)
+  const [dragDx, setDragDx] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
+  const startX = useRef<number | null>(null)
+  const startY = useRef<number | null>(null)
+  const lockedAxis = useRef<'x' | 'y' | null>(null)
+  const viewportRef = useRef<HTMLDivElement>(null)
+
+  const prev = () => setIdx((i) => Math.max(0, i - 1))
+  const next = () => setIdx((i) => Math.min(total - 1, i + 1))
+
+  const beginDrag = (x: number, y: number) => {
+    startX.current = x
+    startY.current = y
+    lockedAxis.current = null
+    setDragDx(0)
+    setIsDragging(true)
+  }
+
+  const updateDrag = (x: number, y: number): boolean => {
+    if (startX.current === null || startY.current === null) return false
+    const dx = x - startX.current
+    const dy = y - startY.current
+    if (lockedAxis.current === null) {
+      // Lock axis only после небольшого movement, чтобы случайно не сразу
+      // зафиксировать вертикаль на быстром свайпе по диагонали.
+      const totalMove = Math.abs(dx) + Math.abs(dy)
+      if (totalMove < 6) return false
+      lockedAxis.current = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'
+    }
+    if (lockedAxis.current === 'y') return false
+    setDragDx(dx)
+    return true
+  }
+
+  const endDrag = () => {
+    const dx = dragDx
+    setIsDragging(false)
+    setDragDx(0)
+    startX.current = null
+    startY.current = null
+    const wasHorizontal = lockedAxis.current === 'x'
+    lockedAxis.current = null
+    if (!wasHorizontal) return
+    const w = viewportRef.current?.clientWidth ?? 0
+    const threshold = Math.max(40, w * 0.18)
+    if (dx > threshold) prev()
+    else if (dx < -threshold) next()
+  }
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    const tch = e.touches[0]
+    if (!tch) return
+    beginDrag(tch.clientX, tch.clientY)
+  }
+  const onTouchMove = (e: React.TouchEvent) => {
+    const tch = e.touches[0]
+    if (!tch) return
+    updateDrag(tch.clientX, tch.clientY)
+  }
+  const onTouchEnd = () => {
+    endDrag()
+  }
+
+  const arrowStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    zIndex: 2,
+    width: 40,
+    height: 40,
+    ['--ff-tile-from' as never]: '#a7f3d0',
+    ['--ff-tile-to' as never]: '#34d399',
+    ['--ff-tile-border' as never]: '#065f46',
+    color: '#fff',
+    fontSize: 22,
+    lineHeight: 1,
+  }
 
   return (
-    <div className="grid grid-cols-2 gap-2">
-      {FROG_LEVELS.map((_, idx) => {
-        const level = idx + 1
-        const isUnlocked = discoveredLevels.includes(level)
-        return (
-          <BestiaryCard key={level} level={level} isUnlocked={isUnlocked} />
-        )
-      })}
+    <div
+      className="flex flex-col items-stretch gap-3"
+      style={{
+        minHeight: '100%',
+        justifyContent: 'center',
+        // Уходим за пределы px-4 модального content scroll, чтобы карусель
+        // была шириной во весь модальный панель — слайды выезжают из самых
+        // краёв при свайпе.
+        marginLeft: -16,
+        marginRight: -16,
+      }}
+    >
+      <div
+        ref={viewportRef}
+        className="relative"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onTouchCancel={onTouchEnd}
+        onPointerDown={(e) => {
+          if (e.pointerType === 'mouse') return
+          ;(e.target as Element).setPointerCapture?.(e.pointerId)
+          beginDrag(e.clientX, e.clientY)
+        }}
+        onPointerMove={(e) => {
+          if (e.pointerType === 'mouse') return
+          if (!isDragging) return
+          updateDrag(e.clientX, e.clientY)
+        }}
+        onPointerUp={(e) => {
+          if (e.pointerType === 'mouse') return
+          endDrag()
+        }}
+        onPointerCancel={(e) => {
+          if (e.pointerType === 'mouse') return
+          endDrag()
+        }}
+        style={{ overflow: 'hidden', touchAction: 'pan-y' }}
+      >
+        {/* Slide track — все карточки в ряд, translateX переключает текущую.
+            При drag (isDragging=true) добавляется dragDx и отключается transition,
+            чтобы трек шёл за пальцем 1:1. */}
+        <div
+          style={{
+            display: 'flex',
+            transform: `translate3d(calc(-${idx * 100}% + ${dragDx}px), 0, 0)`,
+            transition: isDragging
+              ? 'none'
+              : 'transform 320ms cubic-bezier(0.22, 0.61, 0.36, 1)',
+            willChange: 'transform',
+            touchAction: 'pan-y',
+          }}
+        >
+          {FROG_LEVELS.map((_, i) => {
+            const level = i + 1
+            const isUnlocked = discoveredLevels.includes(level)
+            return (
+              <div
+                key={level}
+                style={{
+                  flex: '0 0 100%',
+                  minWidth: 0,
+                  paddingLeft: 16,
+                  paddingRight: 16,
+                  paddingBottom: 12,
+                  boxSizing: 'border-box',
+                }}
+              >
+                <BestiaryCard level={level} isUnlocked={isUnlocked} />
+              </div>
+            )
+          })}
+        </div>
+
+        <button
+          type="button"
+          onClick={prev}
+          aria-label="prev"
+          disabled={idx === 0}
+          className="ff-tile"
+          style={{
+            ...arrowStyle,
+            left: 24,
+            opacity: idx === 0 ? 0.4 : 1,
+            pointerEvents: idx === 0 ? 'none' : 'auto',
+          }}
+        >
+          ‹
+        </button>
+        <button
+          type="button"
+          onClick={next}
+          aria-label="next"
+          disabled={idx === total - 1}
+          className="ff-tile"
+          style={{
+            ...arrowStyle,
+            right: 24,
+            opacity: idx === total - 1 ? 0.4 : 1,
+            pointerEvents: idx === total - 1 ? 'none' : 'auto',
+          }}
+        >
+          ›
+        </button>
+      </div>
     </div>
   )
 }
+
+// Высота карточки должна совпадать unlocked/locked — фиксируем через minHeight.
+// Подобрано так чтобы помещаться в viewport модалки без скролла на mobile.
+const BESTIARY_CARD_MIN_HEIGHT = 560
 
 function BestiaryCard({
   level,
@@ -119,100 +363,122 @@ function BestiaryCard({
 }) {
   const { t } = useTranslation()
   const cfg = FROG_LEVELS[level - 1]
-  const frogName = isUnlocked ? t(`frogs.${level}`) : t('bestiary.locked')
+  const frogName = t(`frogs.${level}`)
   const locName = t(`locations.${cfg.location}`)
   const income = fmtRate(getTargetIncomePerSec(level))
 
+  if (!isUnlocked) {
+    return (
+      <div
+        className="ff-card p-5 flex items-center justify-center"
+        style={{ minHeight: BESTIARY_CARD_MIN_HEIGHT }}
+      >
+        <span
+          className="ff-display"
+          style={{
+            fontSize: 130,
+            lineHeight: 1,
+            color: '#9ca3af',
+            textShadow: '0 4px 0 rgba(0,0,0,0.2)',
+            userSelect: 'none',
+          }}
+        >
+          ?
+        </span>
+      </div>
+    )
+  }
+
   return (
-    <div className="ff-card p-2.5 flex flex-col items-center gap-1.5">
+    <div
+      className="ff-card p-5 flex flex-col items-center gap-2"
+      style={{ minHeight: BESTIARY_CARD_MIN_HEIGHT }}
+    >
       {/* Image container */}
       <div
-        className="relative flex items-center justify-center rounded-xl"
+        className="relative flex items-center justify-center rounded-2xl"
         style={{
-          width: 64,
-          height: 64,
+          width: 130,
+          height: 130,
           flexShrink: 0,
           background: 'linear-gradient(180deg, #ecfccb 0%, #bef264 100%)',
-          border: '2px solid #4d7c0f',
+          border: '3px solid #4d7c0f',
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)',
         }}
       >
-        {isUnlocked ? (
-          <TintedFrog
-            path={cfg.path}
-            tint={cfg.tint}
-            alt={frogName}
-            className="object-contain"
-            style={{ width: 52, height: 52 }}
-          />
-        ) : (
-          <img
-            src={cfg.path}
-            alt={frogName}
-            className="object-contain"
-            style={{ width: 52, height: 52, filter: 'grayscale(1) blur(2px)' }}
-          />
-        )}
-        {!isUnlocked && (
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 18,
-              fontWeight: 900,
-              color: '#444',
-              textShadow: '0 1px 0 rgba(255,255,255,0.3)',
-            }}
-          >
-            {t('bestiary.locked')}
-          </div>
-        )}
+        <TintedFrog
+          path={cfg.path}
+          tint={cfg.tint}
+          alt={frogName}
+          className="object-contain"
+          style={{ width: 104, height: 104 }}
+        />
       </div>
 
       {/* Name */}
       <div
         className="ff-display text-center leading-tight"
         style={{
-          fontSize: 11,
+          fontSize: 26,
           color: '#15803d',
           maxWidth: '100%',
           wordBreak: 'break-word',
+          marginTop: -4,
         }}
       >
         {frogName}
       </div>
 
-      {/* Stats (unlocked only) */}
-      {isUnlocked && (
-        <div
-          className="w-full ff-body font-bold leading-snug"
-          style={{ fontSize: 9, color: '#166534' }}
-        >
-          <div className="flex justify-between">
-            <span>{t('bestiary.income_label')}</span>
-            <span className="tabular-nums">{income}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>{t('bestiary.size_label')}</span>
-            <span>{cfg.size}×</span>
-          </div>
-          <div className="flex justify-between">
-            <span>{t('bestiary.location_label')}</span>
-            <span>{locName}</span>
-          </div>
-          {!cfg.availableInShop && (
-            <div
-              className="text-center mt-0.5"
-              style={{ color: '#7e22ce', fontSize: 8 }}
-            >
-              {t('bestiary.merge_only')}
-            </div>
-          )}
+      {/* Stats */}
+      <div
+        className="w-full ff-body font-bold leading-relaxed"
+        style={{
+          fontSize: 18,
+          color: '#166534',
+          marginTop: -8,
+          paddingLeft: 36,
+          paddingRight: 36,
+        }}
+      >
+        <div className="flex justify-between">
+          <span>{t('bestiary.income_label')}</span>
+          <span className="tabular-nums">{income}</span>
         </div>
-      )}
+        <div className="flex justify-between">
+          <span>{t('bestiary.size_label')}</span>
+          <span>{cfg.size}×</span>
+        </div>
+        <div className="flex justify-between">
+          <span>{t('bestiary.location_label')}</span>
+          <span>{locName}</span>
+        </div>
+        {!cfg.availableInShop && (
+          <div
+            className="text-center mt-2"
+            style={{ color: '#7e22ce', fontSize: 15 }}
+          >
+            {t('bestiary.merge_only')}
+          </div>
+        )}
+      </div>
+
+      {/* Description (placeholder lorem ipsum пока нет реального текста). */}
+      <div
+        className="w-full ff-body leading-relaxed"
+        style={{
+          fontSize: 15,
+          color: '#365314',
+          marginTop: 32,
+          paddingBottom: 8,
+          minHeight: 150,
+        }}
+      >
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
+        tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+        veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+        commodo consequat. Duis aute irure dolor in reprehenderit in voluptate
+        velit esse cillum dolore eu fugiat nulla pariatur.
+      </div>
     </div>
   )
 }
@@ -224,8 +490,7 @@ const getSfxMuted = (): boolean => sfx.isMuted()
 
 function SettingsTab() {
   const { t, i18n } = useTranslation()
-  const numberFormat = useGameStore((s) => s.numberFormat)
-  const setNumberFormat = useGameStore((s) => s.setNumberFormat)
+  const devFlags = useGameStore((s) => s.devFlags)
   const addGold = useGameStore((s) => s.addGold)
   const devResetUpgrades = useGameStore((s) => s.devResetUpgrades)
   const devClearAllFrogs = useGameStore((s) => s.devClearAllFrogs)
@@ -305,26 +570,6 @@ function SettingsTab() {
         </div>
       </SettingsRow>
 
-      {/* Number format */}
-      <SettingsRow label={t('settings.number_format')}>
-        <div className="flex gap-1.5">
-          <button
-            onClick={() => setNumberFormat('full')}
-            className={`ff-btn text-xs py-1.5 ${numberFormat === 'full' ? 'ff-btn-green' : 'ff-btn-grey'}`}
-            style={{ paddingLeft: 8, paddingRight: 8 }}
-          >
-            {t('settings.format_full')}
-          </button>
-          <button
-            onClick={() => setNumberFormat('short')}
-            className={`ff-btn text-xs py-1.5 ${numberFormat === 'short' ? 'ff-btn-green' : 'ff-btn-grey'}`}
-            style={{ paddingLeft: 8, paddingRight: 8 }}
-          >
-            {t('settings.format_short')}
-          </button>
-        </div>
-      </SettingsRow>
-
       {/* Sound effects */}
       <SettingsRow label={t('settings.sounds')}>
         <button
@@ -388,8 +633,8 @@ function SettingsTab() {
         {t('settings.bug_report')}
       </button>
 
-      {/* DEV TOOLS */}
-      {isDevMode() && (
+      {/* DEV TOOLS (visible: local dev OR user has 'dev_settings_tools' flag from admin) */}
+      {(isDevMode() || devFlags.includes('dev_settings_tools')) && (
         <div className="flex flex-col gap-2 mt-2">
           <div
             className="ff-body text-xs font-bold text-center py-1 rounded"
@@ -449,11 +694,11 @@ function SettingsRow({
   children: ReactNode
 }) {
   return (
-    <div className="ff-card p-3 flex items-center justify-between gap-3">
-      <span className="ff-body font-bold text-emerald-900 text-sm flex-shrink-0">
+    <div className="ff-card p-3 flex items-center justify-between gap-3 min-w-0">
+      <span className="ff-body font-bold text-emerald-900 text-sm min-w-0 break-words">
         {label}
       </span>
-      {children}
+      <div className="flex-shrink-0">{children}</div>
     </div>
   )
 }

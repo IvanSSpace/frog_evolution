@@ -20,7 +20,7 @@ export function GalleryCard({ archetype, rarity, unlocked }: GalleryCardProps) {
     <button
       onClick={handleClick}
       disabled={!unlocked}
-      className="relative flex flex-col items-center justify-center rounded-lg p-2 transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+      className="relative flex flex-col items-center justify-center rounded-lg p-2 disabled:cursor-not-allowed disabled:opacity-50"
       style={{
         width: 80,
         height: 100,

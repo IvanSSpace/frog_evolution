@@ -132,8 +132,7 @@ function BoxCard({ box, onTap }: BoxCardProps) {
   return (
     <button
       onClick={onTap}
-      className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10
-                 active:scale-[0.98] transition border-2"
+      className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 border-2"
       style={{ borderColor: tint }}
     >
       {/* Element tint dot */}

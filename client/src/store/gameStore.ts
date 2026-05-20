@@ -30,6 +30,10 @@ import {
   saveFrogPurchases,
   loadDiscovered,
   saveDiscovered,
+  loadFrogShopSeenLevels,
+  saveFrogShopSeenLevels,
+  loadBestiarySeenLevels,
+  saveBestiarySeenLevels,
   loadLocationFrogs,
   saveLocationFrogsArr,
   loadCurrentLocation,
@@ -101,7 +105,12 @@ interface GameStateBase {
   // Current logged-in user info (set on boot after auth) — useful for debug/testing.
   username: string | null
   telegramId: string | null
-  setCurrentUser: (info: { username: string | null; telegramId: string | null }) => void
+  devFlags: string[]
+  setCurrentUser: (info: {
+    username: string | null
+    telegramId: string | null
+    devFlags?: string[]
+  }) => void
 
   // Лягушки на поле + коробки (real-time, обновляется из MainScene)
   entityCount: number
@@ -117,6 +126,10 @@ interface GameStateBase {
 
   // Открытые уровни — для модалки "Открыта новая лягушка"
   discoveredLevels: number[]
+  frogShopSeenLevels: number[]
+  bestiarySeenLevels: number[]
+  markFrogShopSeen: () => void
+  markBestiarySeen: () => void
   markDiscovered: (level: number) => boolean
 
   // Включён ли магнит (юзер может выключить кнопкой)
@@ -271,8 +284,13 @@ export const useGameStore = create<GameState>((set, get) => ({
   // Current user info — populated после auth в App.tsx boot().
   username: null,
   telegramId: null,
+  devFlags: [],
   setCurrentUser: (info) =>
-    set({ username: info.username, telegramId: info.telegramId }),
+    set({
+      username: info.username,
+      telegramId: info.telegramId,
+      devFlags: info.devFlags ?? [],
+    }),
 
   entityCount: 0,
   setEntityCount: (n) => set({ entityCount: n }),
@@ -281,6 +299,20 @@ export const useGameStore = create<GameState>((set, get) => ({
   setIncomePerSec: (n) => set({ incomePerSec: n }),
 
   discoveredLevels: loadDiscovered(),
+  frogShopSeenLevels: loadFrogShopSeenLevels(),
+  bestiarySeenLevels: loadBestiarySeenLevels(),
+  markFrogShopSeen: () => {
+    const state = get()
+    const next = [...state.discoveredLevels].sort((a, b) => a - b)
+    saveFrogShopSeenLevels(next)
+    set({ frogShopSeenLevels: next })
+  },
+  markBestiarySeen: () => {
+    const state = get()
+    const next = [...state.discoveredLevels].sort((a, b) => a - b)
+    saveBestiarySeenLevels(next)
+    set({ bestiarySeenLevels: next })
+  },
   markDiscovered: (level) => {
     const state = get()
     if (state.discoveredLevels.includes(level)) return false

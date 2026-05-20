@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useGameStore } from '../../store/gameStore'
 import {
@@ -8,6 +8,7 @@ import {
 import { bestiaryIndex, readBit, LEGACY_RARITIES, type LegacyRarity } from '../../store/cosmic/bestiary'
 import { GalleryCard } from './GalleryCard'
 import { ARCHETYPE_EMOJI, ARCHETYPE_NAME_RU } from './types'
+import { useModalLock } from '../../utils/modalLock'
 
 interface GalleryModalProps {
   onClose: () => void
@@ -26,7 +27,14 @@ function isArchetypeRarityUnlocked(
 }
 
 export function GalleryModal({ onClose }: GalleryModalProps) {
+  useModalLock()
   const bitset = useGameStore((s) => s.bestiaryBitset)
+  const [closing, setClosing] = useState(false)
+  const handleClose = useCallback(() => {
+    if (closing) return
+    setClosing(true)
+    window.setTimeout(onClose, 280)
+  }, [closing, onClose])
 
   const sections = useMemo(
     () =>
@@ -53,17 +61,25 @@ export function GalleryModal({ onClose }: GalleryModalProps) {
       onTouchStartCapture={(e) => e.stopPropagation()}
       onMouseDownCapture={(e) => e.stopPropagation()}
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
+        if (e.target === e.currentTarget) handleClose()
       }}
     >
       <div
         style={{
           position: 'absolute',
           top: 'calc(12% + 54px)',
-          bottom: '13%',
+          bottom: 0,
           left: 0,
           right: 0,
           zIndex: 100,
+          pointerEvents: 'none',
+          overflow: 'hidden',
+        }}
+      >
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
           pointerEvents: 'auto',
           display: 'flex',
           flexDirection: 'column',
@@ -72,7 +88,7 @@ export function GalleryModal({ onClose }: GalleryModalProps) {
           borderRadius: 0,
           boxShadow: '0 0 0 3px #f7ffe0 inset',
         }}
-        className="ff-fade"
+        className={closing ? 'ff-slide-up' : 'ff-slide-down'}
       >
         {/* Header */}
         <div
@@ -87,7 +103,7 @@ export function GalleryModal({ onClose }: GalleryModalProps) {
           </h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="Закрыть"
             className="ff-tile w-10 h-10 text-xl flex-shrink-0"
             style={{
@@ -101,7 +117,7 @@ export function GalleryModal({ onClose }: GalleryModalProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-5">
+        <div className="flex-1 overflow-y-auto ff-no-scrollbar px-4 py-3 space-y-5">
           {sections.map((section) => (
             <div key={section.archetype}>
               <div
@@ -128,6 +144,7 @@ export function GalleryModal({ onClose }: GalleryModalProps) {
             </div>
           ))}
         </div>
+      </div>
       </div>
     </div>,
     document.body,

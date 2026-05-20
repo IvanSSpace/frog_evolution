@@ -142,6 +142,7 @@ export async function adminRoutes(app: FastifyInstance) {
         essence: extractEssence(u.gameState?.cosmic),
         lastSeen: (u.gameState?.lastSessionAt ?? u.updatedAt).toISOString(),
         banned: u.banned,
+        devFlags: u.devFlags,
         createdAt: u.createdAt.toISOString(),
       }))
 
@@ -184,6 +185,7 @@ export async function adminRoutes(app: FastifyInstance) {
         essence: extractEssence(gs?.cosmic),
         lastSeen: (gs?.lastSessionAt ?? user.updatedAt).toISOString(),
         banned: user.banned,
+        devFlags: user.devFlags,
         createdAt: user.createdAt.toISOString(),
         // Full GameState fields
         upgrades: gs?.upgrades ?? {},
@@ -307,6 +309,38 @@ export async function adminRoutes(app: FastifyInstance) {
       })
 
       return reply.send({ success: true, banned: user.banned })
+    },
+  )
+
+  // POST /admin/users/:id/dev-flags
+  app.post(
+    '/admin/users/:id/dev-flags',
+    { preHandler: [requireAdmin] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string }
+      const userId = parseInt(id, 10)
+
+      if (isNaN(userId)) {
+        return reply.code(400).send({ error: 'invalid id' })
+      }
+
+      const body = request.body as { flags?: unknown }
+      if (!Array.isArray(body.flags) || body.flags.some((f) => typeof f !== 'string')) {
+        return reply.code(400).send({ error: 'flags must be string[]' })
+      }
+
+      // Dedupe + trim. Cap length to prevent abuse (защита от случайного wipe).
+      const flags = Array.from(new Set((body.flags as string[]).map((f) => f.trim()).filter(Boolean)))
+      if (flags.length > 64) {
+        return reply.code(400).send({ error: 'too many flags (max 64)' })
+      }
+
+      const user = await prisma.user.update({
+        where: { id: userId },
+        data: { devFlags: flags },
+      })
+
+      return reply.send({ success: true, devFlags: user.devFlags })
     },
   )
 

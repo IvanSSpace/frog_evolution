@@ -93,7 +93,7 @@ function Tile({
         cursor: disabled ? 'not-allowed' : undefined,
         filter: disabled ? 'grayscale(0.7)' : undefined,
       }}
-      className={`ff-tile flex-shrink-0 ${dim} active:scale-100`}
+      className={`ff-tile flex-shrink-0 ${dim}`}
     >
       <span style={{ filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))' }}>
         {disabled ? '🔒' : emoji}
@@ -128,13 +128,29 @@ export function BottomBar({
   // Phase 22 Plan 22-06: cosmos gate — 🧬 button disabled до L18+L18 sentinel.
   const cosmosUnlocked = useCosmosUnlocked()
 
+  // Badge «новый контент» на 🐸 и 📖. true когда есть discoveredLevel,
+  // которого ещё нет в соответствующем seenLevels массиве. Модалки
+  // markFrogShopSeen / markBestiarySeen на mount/tab-открытии.
+  const hasNewFrogShop = useGameStore((s) =>
+    s.discoveredLevels.some((l) => !s.frogShopSeenLevels.includes(l)),
+  )
+  const hasNewBestiary = useGameStore((s) =>
+    s.discoveredLevels.some((l) => !s.bestiarySeenLevels.includes(l)),
+  )
+
   return (
     <div
       className="ff-bar bottom w-full h-full flex items-center justify-between px-3 py-2"
       style={{ pointerEvents: 'auto' }}
     >
-      {/* Слева — лавка лягушек */}
-      <Tile emoji="🐸" skin="mint" size="lg" onClick={onOpenFrogShop} />
+      {/* Слева — лавка лягушек. Badge = есть новый discoveredLevel, ещё не открытый в shop. */}
+      <Tile
+        emoji="🐸"
+        skin="mint"
+        size="lg"
+        badge={hasNewFrogShop}
+        onClick={onOpenFrogShop}
+      />
 
       {/* Центр — действия */}
       <div className="flex gap-2 items-center">
@@ -155,8 +171,14 @@ export function BottomBar({
         />
       </div>
 
-      {/* Справа — журнал */}
-      <Tile emoji="📖" skin="cream" size="lg" badge onClick={onOpenSettings} />
+      {/* Справа — журнал. Badge = есть новый discoveredLevel, ещё не показанный в Bestiary tab. */}
+      <Tile
+        emoji="📖"
+        skin="cream"
+        size="lg"
+        badge={hasNewBestiary}
+        onClick={onOpenSettings}
+      />
     </div>
   )
 }

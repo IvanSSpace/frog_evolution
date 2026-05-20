@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom'
 import { useGameStore } from '../../store/gameStore'
 import { findPlanetById, DAILY_CAP } from '../../game/data/missionConfig'
+import { useModalLock } from '../../utils/modalLock'
 
 interface Props {
   planetId: string
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function InvestigateDialog({ planetId, onConfirm, onCancel }: Props) {
+  useModalLock()
   const crew = useGameStore((s) => s.crew)
   const planet = findPlanetById(planetId)
 

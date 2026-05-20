@@ -28,6 +28,7 @@ import { useTranslation } from 'react-i18next'
 import { useGameStore } from '../../store/gameStore'
 import { RACES_BY_ID, type RaceId } from '../../game/config/races'
 import { PINK, GOLD } from '../CosmicHub/_styles'
+import { useModalLock } from '../../utils/modalLock'
 
 const FADE_OUT_MS = 300
 
@@ -37,6 +38,7 @@ export interface FirstContactModalProps {
 }
 
 export function FirstContactModal({ raceId, onClose }: FirstContactModalProps) {
+  useModalLock()
   const { t } = useTranslation()
   const markSeen = useGameStore((s) => s.markFirstContactSeen)
   const [exiting, setExiting] = useState(false)

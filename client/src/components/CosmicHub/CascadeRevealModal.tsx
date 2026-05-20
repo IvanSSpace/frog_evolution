@@ -10,6 +10,7 @@ import { useGameStore } from '../../store/gameStore'
 import { ELEMENT_TINT } from './ElementGrid'
 import { getInstantBoxes } from '../../utils/cosmicSettings'
 import { sfx } from '../../audio/sfx'
+import { useModalLock } from '../../utils/modalLock'
 
 // Lazy chunk — SerumSlotMachine (Plan 15-04). Отдельный файл в bundle.
 const SerumSlotMachine = lazy(() => import('./SerumSlotMachine'))
@@ -38,6 +39,7 @@ export default function CascadeRevealModal({
   box,
   onComplete,
 }: CascadeRevealModalProps) {
+  useModalLock()
   const { t } = useTranslation()
 
   // Phase 22: rollBoxRarity returns { element } only (no rarity)

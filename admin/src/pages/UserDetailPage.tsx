@@ -45,6 +45,7 @@ type AdminUserDetail = {
   essence: number
   lastSeen: string
   banned: boolean
+  devFlags: string[]
   createdAt: string
   upgrades: Record<string, number>
   discoveredLevels: number[]
@@ -125,6 +126,27 @@ export function UserDetailPage() {
       toast({ title: 'Reset failed', variant: 'destructive' })
     },
   })
+
+  const devFlagsMutation = useMutation({
+    mutationFn: (flags: string[]) =>
+      api.post(`/admin/users/${id}/dev-flags`, { flags }),
+    onSuccess: () => {
+      toast({ title: 'Dev flags updated' })
+      void queryClient.invalidateQueries({ queryKey: ['user', id] })
+    },
+    onError: () => {
+      toast({ title: 'Dev flags update failed', variant: 'destructive' })
+    },
+  })
+
+  const toggleDevFlag = (flag: string) => {
+    if (!user) return
+    const current = user.devFlags ?? []
+    const next = current.includes(flag)
+      ? current.filter((f) => f !== flag)
+      : [...current, flag]
+    devFlagsMutation.mutate(next)
+  }
 
   const goldForm = useForm<GrantGoldForm>({ resolver: zodResolver(grantGoldSchema) })
   const essenceForm = useForm<GrantEssenceForm>({ resolver: zodResolver(grantEssenceSchema) })
@@ -362,6 +384,52 @@ export function UserDetailPage() {
                 >
                   {user.banned ? 'Unban' : 'Ban'}
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Dev Flags */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Dev Flags</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-muted-foreground">
+                  Grant access to hidden dev/cheat blocks in the client. Visible
+                  only to users with the matching flag.
+                </p>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={(user.devFlags ?? []).includes('dev_settings_tools')}
+                    disabled={devFlagsMutation.isPending}
+                    onChange={() => toggleDevFlag('dev_settings_tools')}
+                    className="h-4 w-4 cursor-pointer"
+                  />
+                  <span className="text-foreground">dev_settings_tools</span>
+                  <span className="text-muted-foreground text-xs">
+                    — opens DEV TOOLS panel in Settings modal
+                  </span>
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={(user.devFlags ?? []).includes('unlock_all_frogs')}
+                    disabled={devFlagsMutation.isPending}
+                    onChange={() => toggleDevFlag('unlock_all_frogs')}
+                    className="h-4 w-4 cursor-pointer"
+                  />
+                  <span className="text-foreground">unlock_all_frogs</span>
+                  <span className="text-muted-foreground text-xs">
+                    — unlocks all frogs in shop regardless of progress
+                  </span>
+                </label>
+                {(user.devFlags ?? []).length > 0 && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Active: {(user.devFlags ?? []).join(', ')}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

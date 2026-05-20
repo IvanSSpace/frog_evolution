@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { configForLevel } from '../../game/config/frogs'
 import { TintedFrog } from './TintedFrog'
 import { devLog } from '../../utils/devLog'
+import { useModalLock } from '../../utils/modalLock'
 
 type Props = {
   level: number
@@ -9,6 +10,7 @@ type Props = {
 }
 
 export function DiscoveryModal({ level, onClose }: Props) {
+  useModalLock()
   devLog('[DiscoveryModal] render level=', level)
   const { t } = useTranslation()
   const cfg = configForLevel(level)
