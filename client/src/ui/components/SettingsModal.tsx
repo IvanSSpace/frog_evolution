@@ -73,7 +73,7 @@ export function SettingsModal({ onClose }: Props) {
         style={{
           position: 'absolute',
           top: 'calc(12% + 54px)',
-          bottom: 0,
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)',
           left: 0,
           right: 0,
           zIndex: 151,
@@ -138,8 +138,7 @@ export function SettingsModal({ onClose }: Props) {
           <div
             className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden ff-no-scrollbar px-4 py-3"
             style={{
-              paddingBottom:
-                'max(64px, calc(env(safe-area-inset-bottom, 24px) + 48px))',
+              paddingBottom: 16,
               WebkitOverflowScrolling: 'touch',
               overscrollBehavior: 'contain',
             }}
