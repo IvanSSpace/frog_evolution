@@ -195,7 +195,7 @@ export async function loadGameState(): Promise<boolean> {
           : store.boxOpenCount,
     })
     // Hydrate onboarding from server (merge — ANY true wins).
-    const d = data as Record<string, unknown>
+    const d = data as unknown as Record<string, unknown>
     if (d.onboarding && typeof d.onboarding === 'object') {
       ;(
         useOnboardingStore.getState() as unknown as {
@@ -373,7 +373,13 @@ export async function loadGameState(): Promise<boolean> {
     // Эмитим event как сигнал «юзер вернулся, заполни поле боксами».
     // MainScene.drainOfflineBoxBuffer fillит поле до cap (effectiveSlotCap),
     // count теперь служит только маркером «buffer > 0», точное значение не важно.
-    if (typeof data.elapsedMs === 'number' && data.elapsedMs > 0) {
+    // Threshold 60s: quick reload / first login не триггерит fill (юзер пришёл
+    // в чистое поле, а не в забитое боксами после реального offline period).
+    const OFFLINE_FILL_THRESHOLD_MS = 60_000
+    if (
+      typeof data.elapsedMs === 'number' &&
+      data.elapsedMs > OFFLINE_FILL_THRESHOLD_MS
+    ) {
       eventBus.emit('box:offline-pending', { count: 1 })
     }
 

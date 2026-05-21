@@ -4,13 +4,14 @@ import { fmt, fmtRate } from '../../utils/formatting'
 import { useCosmosUnlocked } from '../../utils/cosmosGate'
 import { getRareBoxThreshold } from '../../game/config/upgrades'
 
-// L18+L18 merge bonus multiplier — same formula как в gameStore.addGold.
-// Diminishing returns: merge1=+10%, merge2/3=+5%, merge4+=+2.5%.
+// L18+L18 merge bonus multiplier — mirrors gameStore.l18GoldMultiplier.
+// First merge gives no multiplier (только absolute bonus = 2× L18 income).
+// Subsequent merges: +5% / +5% / +2.5%...
 function l18GoldMultiplier(count: number): number {
-  if (count <= 0) return 1
-  if (count === 1) return 1.10
-  if (count === 2) return 1.15
-  return 1.20 + (count - 3) * 0.025
+  if (count <= 1) return 1
+  if (count === 2) return 1.05
+  if (count === 3) return 1.1
+  return 1.1 + (count - 3) * 0.025
 }
 
 export function Header() {
@@ -123,7 +124,7 @@ export function Header() {
             alt=""
           />
           {t('header.per_sec')}
-          {l18MergesCount > 0 && (
+          {bonusPct > 0 && (
             <span
               style={{
                 marginLeft: 4,
