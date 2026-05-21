@@ -127,6 +127,21 @@ export function UserDetailPage() {
     },
   })
 
+  const grantCosmosMutation = useMutation({
+    mutationFn: () => api.post(`/admin/users/${id}/grant-cosmos`, {}),
+    onSuccess: (res) => {
+      const data = res.data as { l18MergesCount: number; bonusGranted: number }
+      toast({
+        title: `Cosmos granted (L18 merges: ${data.l18MergesCount}, +${data.bonusGranted.toFixed(0)} income/s)`,
+      })
+      void queryClient.invalidateQueries({ queryKey: ['user', id] })
+      void queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+    onError: () => {
+      toast({ title: 'Grant cosmos failed', variant: 'destructive' })
+    },
+  })
+
   const devFlagsMutation = useMutation({
     mutationFn: (flags: string[]) =>
       api.post(`/admin/users/${id}/dev-flags`, { flags }),
@@ -430,6 +445,36 @@ export function UserDetailPage() {
                     Active: {(user.devFlags ?? []).join(', ')}
                   </div>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Grant Cosmos — выдать «Stage 2» */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Grant Cosmos (Stage 2)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-3">
+                <p className="text-sm text-muted-foreground">
+                  Programmatic L18+L18 merge: opens Star Map, marks captain birth as
+                  seen, increments l18MergesCount, grants +393,197/s permanent
+                  income on first call, +1 essence. Subsequent calls only increment
+                  merge count + essence (mirror real L18+L18 economics).
+                </p>
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={grantCosmosMutation.isPending}
+                    onClick={() => grantCosmosMutation.mutate()}
+                  >
+                    {grantCosmosMutation.isPending
+                      ? 'Granting...'
+                      : 'Grant Cosmos'}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

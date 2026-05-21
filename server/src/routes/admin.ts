@@ -344,6 +344,84 @@ export async function adminRoutes(app: FastifyInstance) {
     },
   )
 
+  // POST /admin/users/:id/grant-cosmos — выдать «Stage 2» (открыть космос):
+  // mirror L18+L18 merge без анимаций. Все mutations атомарны через cosmic blob.
+  app.post(
+    '/admin/users/:id/grant-cosmos',
+    { preHandler: [requireAdmin] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string }
+      const userId = parseInt(id, 10)
+      app.log.info({ userId }, '[admin] grant-cosmos: start')
+
+      if (isNaN(userId)) {
+        return reply.code(400).send({ error: 'invalid id' })
+      }
+
+      const gs = await prisma.gameState.findUnique({ where: { userId } })
+      if (!gs) {
+        return reply.code(404).send({ error: 'user or game state not found' })
+      }
+
+      // discoveredLevels: dedupe + add 19
+      const dlRaw = gs.discoveredLevels
+      const dlArr = Array.isArray(dlRaw) ? (dlRaw as unknown[]) : []
+      const dlNums = dlArr.filter((n): n is number => typeof n === 'number')
+      const discoveredLevels = Array.from(new Set([...dlNums, 19])).sort(
+        (a, b) => a - b,
+      )
+
+      // cosmic blob mutations
+      const cosmic = (gs.cosmic ?? {}) as Record<string, unknown>
+      const L18_INCOME_PER_SEC = 196598.5 // FROG_LEVELS[17].targetIncome
+      const L18_ABSOLUTE_BONUS_DELTA = L18_INCOME_PER_SEC * 2
+
+      const currentL18Merges =
+        typeof cosmic.l18MergesCount === 'number' ? cosmic.l18MergesCount : 0
+      const currentBonus =
+        typeof cosmic.l18AbsoluteBonusPerSec === 'number'
+          ? cosmic.l18AbsoluteBonusPerSec
+          : 0
+      const currentEssence =
+        typeof cosmic.essence === 'number' ? cosmic.essence : 0
+
+      // На первом merge — добавляем абсолютный bonus (2× L18). На повторных — нет.
+      const isFirstMerge = currentL18Merges === 0
+      const newBonus = isFirstMerge
+        ? currentBonus + L18_ABSOLUTE_BONUS_DELTA
+        : currentBonus
+
+      const nextCosmic = {
+        ...cosmic,
+        hasCosmosUnlocked: true,
+        captainBirthSeen: true,
+        l18MergesCount: currentL18Merges + 1,
+        l18AbsoluteBonusPerSec: newBonus,
+        essence: currentEssence + 1,
+      }
+
+      await prisma.gameState.update({
+        where: { userId },
+        data: {
+          discoveredLevels: discoveredLevels as unknown as Prisma.InputJsonValue,
+          cosmic: nextCosmic as unknown as Prisma.InputJsonValue,
+          version: { increment: 1 },
+        },
+      })
+
+      app.log.info(
+        { userId, isFirstMerge, l18MergesCount: currentL18Merges + 1 },
+        '[admin] grant-cosmos: done',
+      )
+
+      return reply.send({
+        success: true,
+        l18MergesCount: currentL18Merges + 1,
+        bonusGranted: isFirstMerge ? L18_ABSOLUTE_BONUS_DELTA : 0,
+      })
+    },
+  )
+
   // POST /admin/users/:id/reset-progress
   app.post(
     '/admin/users/:id/reset-progress',
