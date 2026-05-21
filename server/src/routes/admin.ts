@@ -363,13 +363,19 @@ export async function adminRoutes(app: FastifyInstance) {
         return reply.code(404).send({ error: 'user or game state not found' })
       }
 
-      // discoveredLevels: dedupe + add 19
+      // discoveredLevels: dedupe + add 1..19. L7/L13/L19 — trigger thresholds
+      // для unlock'а локаций Болото/Лес/Континент+ЗвёзднаяКарта (см.
+      // client/src/game/config/locationUnlocks.ts LOCATION_UNLOCK_THRESHOLD).
+      // Просто L19 недостаточно — promotion на «Stage 2» подразумевает что
+      // юзер прошёл всю прогрессию (или admin её симулирует).
       const dlRaw = gs.discoveredLevels
       const dlArr = Array.isArray(dlRaw) ? (dlRaw as unknown[]) : []
       const dlNums = dlArr.filter((n): n is number => typeof n === 'number')
-      const discoveredLevels = Array.from(new Set([...dlNums, 19])).sort(
-        (a, b) => a - b,
-      )
+      const fullProgression: number[] = []
+      for (let l = 1; l <= 19; l++) fullProgression.push(l)
+      const discoveredLevels = Array.from(
+        new Set([...dlNums, ...fullProgression]),
+      ).sort((a, b) => a - b)
 
       // cosmic blob mutations
       const cosmic = (gs.cosmic ?? {}) as Record<string, unknown>
