@@ -1,5 +1,4 @@
-import { useMemo, useState, useCallback } from 'react'
-import { createPortal } from 'react-dom'
+import { useMemo } from 'react'
 import { useGameStore } from '../../store/gameStore'
 import {
   ELEMENTS,
@@ -29,12 +28,6 @@ function isArchetypeRarityUnlocked(
 export function GalleryModal({ onClose }: GalleryModalProps) {
   useModalLock()
   const bitset = useGameStore((s) => s.bestiaryBitset)
-  const [closing, setClosing] = useState(false)
-  const handleClose = useCallback(() => {
-    if (closing) return
-    setClosing(true)
-    window.setTimeout(onClose, 280)
-  }, [closing, onClose])
 
   const sections = useMemo(
     () =>
@@ -48,51 +41,34 @@ export function GalleryModal({ onClose }: GalleryModalProps) {
     [bitset],
   )
 
-  return createPortal(
+  return (
     <div
+      onClick={onClose}
+      className="ff-backdrop ff-fade"
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 99,
+        zIndex: 100,
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
         pointerEvents: 'auto',
-        background: 'transparent',
-      }}
-      onPointerDownCapture={(e) => e.stopPropagation()}
-      onTouchStartCapture={(e) => e.stopPropagation()}
-      onMouseDownCapture={(e) => e.stopPropagation()}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) handleClose()
+        padding: '0 16px 4px',
       }}
     >
       <div
+        onClick={(e) => e.stopPropagation()}
+        className="ff-panel ff-pop relative"
         style={{
-          position: 'absolute',
-          top: 'calc(12% + 54px)',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 100,
-          pointerEvents: 'none',
-          overflow: 'hidden',
-        }}
-      >
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'auto',
+          width: '100%',
+          maxWidth: 380,
+          height: '75vh',
           display: 'flex',
           flexDirection: 'column',
-          background: 'linear-gradient(180deg, #f5fbe9 0%, #d9eeb6 100%)',
-          border: '4px solid #4d6b1f',
-          borderRadius: 0,
-          boxShadow: '0 0 0 3px #f7ffe0 inset',
         }}
-        className={closing ? 'ff-slide-up' : 'ff-slide-down'}
       >
-        {/* Header */}
         <div
-          className="flex items-center justify-between px-5 pt-4 pb-3 flex-shrink-0"
+          className="flex items-center justify-between px-5 pt-4 pb-3"
           style={{ borderBottom: '3px dashed rgba(77,107,31,0.4)' }}
         >
           <h2
@@ -103,20 +79,20 @@ export function GalleryModal({ onClose }: GalleryModalProps) {
           </h2>
           <button
             type="button"
-            onClick={handleClose}
+            onClick={onClose}
             aria-label="Закрыть"
-            className="ff-tile w-10 h-10 text-xl flex-shrink-0"
+            className="ff-tile w-9 h-9 text-lg flex-shrink-0"
             style={{
               ['--ff-tile-from' as never]: '#fca5a5',
               ['--ff-tile-to' as never]: '#dc2626',
               ['--ff-tile-border' as never]: '#7f1d1d',
+              color: '#fff',
             }}
           >
             ✕
           </button>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto ff-no-scrollbar px-4 py-3 space-y-5">
           {sections.map((section) => (
             <div key={section.archetype}>
@@ -145,8 +121,6 @@ export function GalleryModal({ onClose }: GalleryModalProps) {
           ))}
         </div>
       </div>
-      </div>
-    </div>,
-    document.body,
+    </div>
   )
 }

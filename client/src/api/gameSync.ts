@@ -12,6 +12,7 @@
 // dev-юзера. Если /game/state недоступен — синк просто молча выключается.
 
 import { useGameStore } from '../store/gameStore'
+import { useOnboardingStore } from '../store/onboarding/onboardingSlice'
 import { getServerGameState, putServerGameState } from './gameState'
 import { ApiError } from './client'
 import { devLog, devWarn } from '../utils/devLog'
@@ -35,12 +36,23 @@ import type { NumberFormat } from '../utils/formatting'
 // server is authoritative.
 const GAME_STATE_KEY_PREFIX = 'frog_evolution_'
 const JWT_KEY = 'frog_evolution_jwt'
+
+// UX-local keys которые НЕ wipe'аются при server-version mismatch / admin reset.
+// Это per-device состояние UI (onboarding marks, badge seen-trackers) — не должно
+// сбрасываться когда server state regresses. Иначе юзер видит онбординг повторно.
+const PRESERVE_KEYS = new Set<string>([
+  JWT_KEY,
+  'frog_evolution_onboarding',
+  'frog_evolution_frogshop_seen_v1',
+  'frog_evolution_bestiary_seen_v1',
+])
+
 function hardResetClient(): void {
   try {
     const keys: string[] = []
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i)
-      if (k && k.startsWith(GAME_STATE_KEY_PREFIX) && k !== JWT_KEY) {
+      if (k && k.startsWith(GAME_STATE_KEY_PREFIX) && !PRESERVE_KEYS.has(k)) {
         keys.push(k)
       }
     }
@@ -136,6 +148,12 @@ function snapshotForSave() {
         reducedEffects: getReducedEffects(),
       },
     },
+    // Onboarding state — per-user, cross-device. Sync через server так чтобы
+    // beats не повторялись при cache wipe в TG WebView.
+    onboarding: useOnboardingStore.getState() as unknown as Record<
+      string,
+      unknown
+    >,
     version: lastKnownVersion ?? 0,
   }
 }
@@ -176,6 +194,15 @@ export async function loadGameState(): Promise<boolean> {
           ? data.boxOpenCount
           : store.boxOpenCount,
     })
+    // Hydrate onboarding from server (merge — ANY true wins).
+    const d = data as Record<string, unknown>
+    if (d.onboarding && typeof d.onboarding === 'object') {
+      ;(
+        useOnboardingStore.getState() as unknown as {
+          hydrateFromServer: (incoming: Record<string, unknown>) => void
+        }
+      ).hydrateFromServer(d.onboarding as Record<string, unknown>)
+    }
     // Hydrate cosmic state if server returned it
     if (data.cosmic && typeof data.cosmic === 'object') {
       const c = data.cosmic as Record<string, unknown>
@@ -436,6 +463,18 @@ export function startSync() {
   unsubscribeStore = useGameStore.subscribe(() => {
     if (syncEnabled) scheduleSave()
   })
+
+  // Подписываемся на onboarding store — каждый markX trigger schedules save.
+  // Отдельная подписка т.к. onboarding — изолированный store от gameStore.
+  const unsubOnboarding = useOnboardingStore.subscribe(() => {
+    if (syncEnabled) scheduleSave()
+  })
+  // Cleanup в stopSync — chain через выполнение обоих unsubscribers.
+  const prevUnsub = unsubscribeStore
+  unsubscribeStore = () => {
+    prevUnsub?.()
+    unsubOnboarding()
+  }
 
   // Финальный сейв при уходе со страницы
   window.addEventListener('beforeunload', () => {

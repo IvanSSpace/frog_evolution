@@ -103,6 +103,7 @@ export async function gameStateRoutes(app: FastifyInstance) {
         'currentLocation',
         'locationFrogs',
         'cosmic',
+        'onboarding',
         'boxOpenCount',
       ]
       const data: Record<string, unknown> = {}

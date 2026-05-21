@@ -22,7 +22,15 @@ type Store = OnboardingState & OnboardingActions
 
 const initial = loadOnboarding()
 
-export const useOnboardingStore = create<Store>()(
+// Inline-extended action type: `hydrateFromServer` not yet added to
+// OnboardingActions in types.ts (scope limit). Cast keeps the public store
+// типизированным, server-sync usage в gameSync.ts достаёт action через
+// getState() so внешний consumer doesn't trip on missing prop in OnboardingActions.
+type StoreExt = Store & {
+  hydrateFromServer: (incoming: Partial<OnboardingState>) => void
+}
+
+export const useOnboardingStore = create<StoreExt>()(
   subscribeWithSelector((set, get) => ({
     ...initial,
 
@@ -63,6 +71,33 @@ export const useOnboardingStore = create<Store>()(
         firstMergeSeen: false,
         locationsCelebrated: {},
       })
+      saveOnboarding(snapshot(get()))
+    },
+
+    hydrateFromServer: (incoming: Partial<OnboardingState>) => {
+      // Merge: ANY true wins (monotonic seen flags). Прохождение онбординга
+      // нельзя отменить — если хоть один источник (local или server) сказал
+      // что юзер прошёл beat, не показываем повторно.
+      const cur = get()
+      const next: OnboardingState = {
+        welcomeSeen: cur.welcomeSeen || incoming.welcomeSeen === true,
+        firstBoxTapSeen:
+          cur.firstBoxTapSeen || incoming.firstBoxTapSeen === true,
+        firstMergeSeen: cur.firstMergeSeen || incoming.firstMergeSeen === true,
+        locationsCelebrated: { ...cur.locationsCelebrated },
+      }
+      if (
+        incoming.locationsCelebrated &&
+        typeof incoming.locationsCelebrated === 'object'
+      ) {
+        for (const [k, v] of Object.entries(incoming.locationsCelebrated)) {
+          const id = Number(k)
+          if (!isNaN(id) && v === true) {
+            next.locationsCelebrated[id] = true
+          }
+        }
+      }
+      set(next)
       saveOnboarding(snapshot(get()))
     },
   })),

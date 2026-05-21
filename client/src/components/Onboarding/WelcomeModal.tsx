@@ -29,7 +29,7 @@ export function WelcomeModal() {
 
   const node = (
     <div
-      className={`onb-welcome-backdrop${exiting ? ' is-exiting' : ''}`}
+      className={`onb-welcome-backdrop ff-backdrop${exiting ? ' is-exiting' : ''}`}
       role="dialog"
       aria-modal="true"
       aria-labelledby="onb-welcome-title"
@@ -37,37 +37,33 @@ export function WelcomeModal() {
         position: 'fixed',
         inset: 0,
         zIndex: 100,
-        background: 'rgba(0,0,0,0.6)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: 16,
         touchAction: 'manipulation',
+        pointerEvents: 'auto',
       }}
     >
-      {/* Modal card — hard width/height caps + no flex stretch */}
       <div
         onClick={(e) => e.stopPropagation()}
+        className="ff-panel ff-pop relative"
         style={{
           width: '100%',
-          maxWidth: 320,
+          maxWidth: 340,
           maxHeight: 'calc(100vh - 64px)',
-          padding: '28px 20px 22px',
-          borderRadius: 16,
-          background: '#1a2e1a',
-          border: '2px solid rgba(255,255,255,0.15)',
+          padding: '24px 20px 20px',
           textAlign: 'center',
           boxSizing: 'border-box',
-          overflow: 'hidden',
         }}
       >
         <h1
           id="onb-welcome-title"
+          className="ff-display ff-stroke-white text-3xl"
           style={{
             margin: 0,
-            fontSize: 26,
-            fontWeight: 800,
-            color: '#fde68a',
+            color: '#15803d',
+            letterSpacing: 1.5,
             lineHeight: 1.15,
           }}
         >
@@ -75,28 +71,32 @@ export function WelcomeModal() {
         </h1>
 
         <p
+          className="ff-body font-bold"
           style={{
-            marginTop: 10,
-            marginBottom: 16,
+            marginTop: 12,
+            marginBottom: 14,
             fontSize: 14,
-            fontWeight: 500,
-            color: '#d4d4d8',
+            color: '#166534',
             lineHeight: 1.4,
           }}
         >
           {t('onboarding.welcome.subtitle')}
         </p>
 
+        {/* Frog tile — cream ff-card pattern с bob-анимацией */}
         <div
-          className="onb-welcome-frog"
+          className="ff-card onb-welcome-frog"
           style={{
-            margin: '4px auto 16px',
-            width: 72,
-            height: 72,
-            display: 'block',
+            margin: '6px auto 16px',
+            width: 96,
+            height: 96,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 6,
           }}
         >
-          <svg viewBox="0 0 100 100" width="72" height="72">
+          <svg viewBox="0 0 100 100" width="76" height="76">
             <ellipse cx="50" cy="60" rx="34" ry="28" fill="#65a30d" />
             <ellipse cx="50" cy="58" rx="28" ry="20" fill="#a3e635" />
             <circle cx="36" cy="36" r="12" fill="#65a30d" />
@@ -115,30 +115,19 @@ export function WelcomeModal() {
           </svg>
         </div>
 
-        {/* CTA wrapper — flex centers button без stretching */}
+        {/* CTA — chunky 3D green button */}
         <div style={{ display: 'flex', justifyContent: 'center' }}>
           <button
             type="button"
-            className="onb-welcome-cta"
+            className="ff-btn ff-btn-green ff-display"
             onClick={handleCta}
             style={{
-              // ВАЖНО: width: auto + display: inline-block чтобы button НЕ
-              // растягивался на 100% родителя. Раньше user видел pink fullscreen
-              // когда CTA как-то стретчился — теперь width derived from content.
-              display: 'inline-block',
-              width: 'auto',
-              minWidth: 160,
+              minWidth: 180,
               maxWidth: '100%',
-              background: '#ec4899',
-              borderRadius: 12,
-              padding: '12px 28px',
-              color: '#fff',
-              fontWeight: 700,
-              fontSize: 16,
-              border: 'none',
-              cursor: 'pointer',
+              padding: '12px 32px',
+              fontSize: 18,
+              letterSpacing: 0.5,
               touchAction: 'manipulation',
-              boxSizing: 'border-box',
             }}
           >
             {t('onboarding.welcome.cta')}
