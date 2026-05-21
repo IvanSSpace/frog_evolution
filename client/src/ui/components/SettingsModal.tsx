@@ -139,7 +139,7 @@ export function SettingsModal({ onClose }: Props) {
             className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden ff-no-scrollbar px-4 py-3"
             style={{
               paddingBottom:
-                'calc(env(safe-area-inset-bottom, 0px) + 32px)',
+                'max(64px, calc(env(safe-area-inset-bottom, 24px) + 48px))',
               WebkitOverflowScrolling: 'touch',
               overscrollBehavior: 'contain',
             }}
