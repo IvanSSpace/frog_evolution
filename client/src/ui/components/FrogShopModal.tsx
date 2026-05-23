@@ -423,7 +423,7 @@ function EvolveCard({
       hapticNotification('success')
     } else {
       hapticNotification('error')
-      if (r.reason === 'noGold') onResult('Недостаточно золота')
+      if (r.reason === 'noGold') onResult('Недостаточно слизи')
       else if (r.reason === 'noEssence') onResult('Недостаточно 💠')
       else if (r.reason === 'maxTier') onResult('Максимальный уровень')
       else if (r.reason === 'cooldown') onResult('Кулдаун ещё активен')
