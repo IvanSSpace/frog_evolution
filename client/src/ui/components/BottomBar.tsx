@@ -155,8 +155,8 @@ export function BottomBar({
       {/* Центр — действия */}
       <div className="flex gap-2 items-center">
         <Tile emoji="⬆️" skin="green" onClick={onOpenShop} />
-        <Tile emoji="🎨" skin="purple" onClick={onOpenGallery} />
-        <Tile emoji="🎁" skin="red" badge onClick={onOpenSerumModal} />
+        <Tile emoji="📊" skin="purple" onClick={onOpenGallery} />
+        <Tile emoji="🧪" skin="red" badge onClick={onOpenSerumModal} />
         {/* 🧬 — Cosmic Hub (Phase 11). Badge = число неоткрытых боксов.
             Phase 22 Plan 22-06: disabled до L18+L18 sentinel (cosmos gate). */}
         <Tile
