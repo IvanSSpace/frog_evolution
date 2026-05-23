@@ -182,6 +182,54 @@ export class MainScene extends Phaser.Scene {
     this.load.image('box', '/box.webp')
   }
 
+  /**
+   * On-demand загрузка SVG для t1/t2 эволюционных тиров.
+   * Базовый t0 уже загружен в preload(). Для t1/t2 — pull SVG как text,
+   * перекрашиваем (replace #ffffff → cfg.tint) и регистрируем под tier-key.
+   * Если уже зарегистрирован — мгновенный callback.
+   */
+  ensureFrogTextureLoaded(
+    level: number,
+    tier: number,
+    onReady: () => void,
+  ): void {
+    const t = Math.max(0, Math.min(2, Math.floor(tier)))
+    const key = textureKeyForLevel(level, t)
+    if (this.textures.exists(key)) {
+      onReady()
+      return
+    }
+    const cfg = FROG_LEVELS[level - 1]
+    if (!cfg) {
+      onReady()
+      return
+    }
+    const path = `/frogs_svg/frog${level}_t${t}.svg`
+    // Через fetch — обходим Phaser loader queue (он завершён к этому моменту,
+    // на новые .load.* нужен .start() и т.д., проще fetch напрямую).
+    fetch(path)
+      .then((r) => (r.ok ? r.text() : Promise.reject(new Error(`404 ${path}`))))
+      .then((svg) => {
+        const tintHex = '#' + cfg.tint.toString(16).padStart(6, '0')
+        const recolored = svg
+          .replace(/fill:\s*#ffffff/gi, `fill:${tintHex}`)
+          .replace(/fill="#ffffff"/gi, `fill="${tintHex}"`)
+          .replace(/fill="#fff"/gi, `fill="${tintHex}"`)
+        const blob = new Blob([recolored], { type: 'image/svg+xml' })
+        const url = URL.createObjectURL(blob)
+        this.load.svg(key, url, {
+          width: 50 * TEXTURE_QUALITY * cfg.size,
+          height: 47 * TEXTURE_QUALITY * cfg.size,
+        })
+        this.load.once(Phaser.Loader.Events.COMPLETE, () => onReady())
+        this.load.start()
+      })
+      .catch(() => {
+        // SVG ещё не существует — продолжаем с t0 (текущей текстурой).
+        onReady()
+      })
+  }
+
   create() {
     const { width, height } = this.scale
 
@@ -229,6 +277,28 @@ export class MainScene extends Phaser.Scene {
 
     // Подписка на покупку лягушки из магазина
     eventBus.on('frog:purchased', this.onFrogPurchased)
+
+    // Reactive update визуала лягушек на поле при апгрейде tier'а в магазине.
+    // Слушаем frogTiers diff — если для уровня tier вырос, перегружаем sprite
+    // у всех live-frogs этого level через ensureFrogTextureLoaded.
+    const prevTiers = [...useGameStore.getState().frogTiers]
+    const unsubTiers = useGameStore.subscribe((state) => {
+      const next = state.frogTiers
+      for (let i = 0; i < next.length; i++) {
+        const prev = prevTiers[i] ?? 0
+        const cur = next[i] ?? 0
+        if (cur === prev) continue
+        prevTiers[i] = cur
+        const level = i + 1
+        this.ensureFrogTextureLoaded(level, cur, () => {
+          const key = textureKeyForLevel(level, cur)
+          for (const f of this.frogs) {
+            if (f.level === level) f.body.setTexture(key)
+          }
+        })
+      }
+    })
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => unsubTiers())
     // Offline box drops: модульный listener (выше класса) пишет в _offlineBoxBuffer
     // с момента загрузки модуля — ловит emit даже если он пришёл до create().
     // Инстанс-handler дренирует буфер при каждом новом emit (маловероятен,

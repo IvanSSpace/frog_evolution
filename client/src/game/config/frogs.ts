@@ -219,7 +219,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
   {
     path: '/frogs_svg/frog13_t0.svg',
     name: 'Квакатлас',
-    size: 2.3,
+    size: 0.8,
     basePrice: 130_000_000,  /* original 3-этап (rounded), formula approx 560 × 2.8^12 */
     growthRate: 1.15,
     tint: 0xcbeb83,
@@ -230,7 +230,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
   {
     path: '/frogs_svg/frog14_t0.svg',
     name: 'Лягобог',
-    size: 2.6,
+    size: 0.95,
     basePrice: 364_100_000,  /* original 3-этап */
     growthRate: 1.15,
     tint: 0xcfeb87,
@@ -241,7 +241,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
   {
     path: '/frogs_svg/frog15_t0.svg',
     name: 'Вселенжаб',
-    size: 2.9,
+    size: 1.1,
     basePrice: 1_000_000_000,  /* original 3-этап */
     growthRate: 1.15,
     tint: 0xbddb73,
@@ -252,7 +252,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
   {
     path: '/frogs_svg/frog16_t0.svg',
     name: 'Уроборосква',
-    size: 3.2,
+    size: 1.25,
     basePrice: 2_900_000_000,  /* original 3-этап */
     growthRate: 1.15,
     tint: 0xd2ef88,
@@ -263,7 +263,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
   {
     path: '/frogs_svg/frog17_t0.svg',
     name: 'Призмоляг',
-    size: 3.5,
+    size: 1.4,
     basePrice: 8_000_000_000,  /* original 3-этап */
     growthRate: 1.15,
     tint: 0xc1df79,
@@ -274,7 +274,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
   {
     path: '/frogs_svg/frog18_t0.svg',
     name: 'Жаб-Провидец',
-    size: 4,
+    size: 1.6,
     basePrice: 22_400_000_000,  /* original 3-этап */
     growthRate: 1.15,
     tint: 0xafcf6b,
@@ -285,6 +285,37 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
 ]
 
 export const MAX_LEVEL = FROG_LEVELS.length
+
+// 2026-05-23: лорный размер лягушки для бестиария.
+// L1 (Болото) — реалистичные см, L2 (Лес) — гигантские метры,
+// L3 (Континент) — мифические км. Чисто display-only (canvas scale = `size`).
+const DISPLAY_SIZE_BY_LEVEL: Readonly<Record<number, string>> = {
+  // L1 (Болото): см → 1.5 м (~×1.5-2 ступень)
+  1: '10 см',
+  2: '25 см',
+  3: '30 см',
+  4: '55 см',
+  5: '1 м',
+  6: '1.5 м',
+  // L2 (Лес): метры, продолжение ramp
+  7: '2.5 м',
+  8: '4 м',
+  9: '6 м',
+  10: '9 м',
+  11: '15 м',
+  12: '25 м',
+  // L3 (Континент): большие метры → 1 км
+  13: '40 м',
+  14: '70 м',
+  15: '120 м',
+  16: '250 м',
+  17: '500 м',
+  18: '1 км',
+}
+
+export function getDisplaySize(level: number): string {
+  return DISPLAY_SIZE_BY_LEVEL[level] ?? '—'
+}
 
 // Tier-aware texture key. `tier=0` совместим с прежним форматом ключа для t0,
 // но добавляет суффикс для t1/t2. PLACEHOLDER-fallback применяется только к t0.

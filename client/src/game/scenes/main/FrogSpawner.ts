@@ -116,12 +116,30 @@ export class FrogSpawner {
     this.scene.overlayManager?.markDirty()
   }
 
-  spawnFrog(x: number, y: number, level: number = 1): FrogData {
+  spawnFrog(
+    x: number,
+    y: number,
+    level: number = 1,
+    tierOverride?: number,
+  ): FrogData {
     const scene = this.scene
     const container = scene.add.container(x, y)
     container.setScale(BASE_SCALE)
 
-    const body = scene.add.image(0, 0, textureKeyForLevel(level))
+    // Tier текущей эволюции лягушки этого уровня (0/1/2). Используем t0 как
+    // стартовую текстуру (она преcaches'ится в preload), потом подгружаем t1/t2
+    // через ensureFrogTextureLoaded и swap'аем setTexture.
+    // tierOverride — для dev helpers (__spawnTierRow), bypass'ит store lookup.
+    const tier =
+      typeof tierOverride === 'number'
+        ? Math.max(0, Math.min(2, Math.floor(tierOverride)))
+        : (useGameStore.getState().frogTiers[level - 1] ?? 0)
+    const body = scene.add.image(0, 0, textureKeyForLevel(level, 0))
+    if (tier > 0) {
+      scene.ensureFrogTextureLoaded(level, tier, () => {
+        body.setTexture(textureKeyForLevel(level, tier))
+      })
+    }
     body.scaleY = 1.0
     // Tint уже запечён в SVG при preload (replace #ffffff → cfg.tint hex).
     // Цветные элементы (короны, узоры) сохраняют собственные цвета.

@@ -156,7 +156,19 @@ export function BottomBar({
       <div className="flex gap-2 items-center">
         <Tile emoji="⬆️" skin="green" onClick={onOpenShop} />
         <Tile emoji="📊" skin="purple" onClick={onOpenGallery} />
-        <Tile emoji="🧪" skin="red" badge onClick={onOpenSerumModal} />
+        {/* 🧪 — Серум. 2026-05-24: gated by cosmos unlock как Cosmic Hub
+            (серум-дроп тоже cosmos-gated, без unlock'а инвентарь всё равно
+            пустой). */}
+        <Tile
+          emoji="🧪"
+          skin="red"
+          badge
+          onClick={onOpenSerumModal}
+          disabled={!cosmosUnlocked}
+          title={
+            !cosmosUnlocked ? 'Откройте космос — соедините L18 + L18' : undefined
+          }
+        />
         {/* 🧬 — Cosmic Hub (Phase 11). Badge = число неоткрытых боксов.
             Phase 22 Plan 22-06: disabled до L18+L18 sentinel (cosmos gate). */}
         <Tile

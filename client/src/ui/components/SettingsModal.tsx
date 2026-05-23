@@ -11,7 +11,12 @@ import { useTranslation } from 'react-i18next'
 import { TintedFrog } from './TintedFrog'
 import { setLang, type Lang } from '../../i18n/index'
 import { useGameStore } from '../../store/gameStore'
-import { FROG_LEVELS, getFrogPath, getTargetIncomePerSec } from '../../game/config/frogs'
+import {
+  FROG_LEVELS,
+  getFrogPath,
+  getTargetIncomePerSec,
+  getDisplaySize,
+} from '../../game/config/frogs'
 import { getTelegramWebApp, isDevMode } from '../../utils/telegram'
 import { ELEMENTS } from '../../store/cosmic/types'
 import { fmtRate } from '../../utils/formatting'
@@ -468,7 +473,7 @@ function BestiaryCard({
         </div>
         <div className="flex justify-between">
           <span>{t('bestiary.size_label')}</span>
-          <span>{cfg.size}×</span>
+          <span>{getDisplaySize(level)}</span>
         </div>
         <div className="flex justify-between">
           <span>{t('bestiary.location_label')}</span>

@@ -37,6 +37,7 @@ import { QuestRewardController } from './components/Quests/questRewardController
 import { SerumModal } from './components/CosmicHub/SerumModal'
 import { SerumBar } from './components/SerumBar'
 import { installBestiaryDevHelpers } from './utils/devHelpers'
+import { installFrogTierDevHelpers } from './utils/devFrogTiers'
 import { installOnboardingDevHelpers } from './utils/onboardingDevHelpers'
 import { installCaptainBirthDevHelpers } from './utils/captainBirthDevHelpers'
 import { installRaceDevHelpers } from './utils/devRaces'
@@ -271,6 +272,8 @@ function App() {
 
     // Phase 18: bestiary dev helpers (window.__unlockBestiaryCells / __bestiaryCount / __resetBestiary).
     installBestiaryDevHelpers()
+    // 2026-05-24: frog tier visual comparison (window.__spawnTierRow(level)).
+    installFrogTierDevHelpers()
     // Phase 23 Plan 23-01: onboarding dev helpers (__resetOnboarding / __skipOnboarding).
     installOnboardingDevHelpers()
     // Phase 24 Plan 24-05: captain birth dev helpers

@@ -32,7 +32,6 @@ import {
   BOX_DISPLAY_SIZE,
   BOX_FALL_DURATION,
   BOX_IDLE_INTERVAL,
-  BOX_OPEN_RADIUS,
   DPR,
   FIELD_PAD_X,
   FIELD_PAD_Y,
@@ -128,16 +127,11 @@ export class BoxController {
       // и destroy'ит ring (вне зависимости от какого бокса тап — даже не того,
       // вокруг которого был ring).
       this.dismissTutorialTapHint(box.id ?? '')
-      // Открываем тапнутую коробку + все приземлившиеся в радиусе
-      const cx = box.img.x
-      const cy = box.img.y
-      const targets: BoxData[] = []
-      for (const b of scene.boxes) {
-        if (b.isLanding) continue
-        const d = Phaser.Math.Distance.Between(cx, cy, b.img.x, b.img.y)
-        if (d <= BOX_OPEN_RADIUS) targets.push(b)
-      }
-      for (const t of targets) this.onBoxTapped(t)
+      // 2026-05-23: убран radius-открытие — теперь 1 tap = 1 box. Раньше
+      // открывались все боксы в BOX_OPEN_RADIUS, что приводило к мгновенному
+      // авто-merge'у (магнит ловил соседних свежеспавненных лягушек). Игрок
+      // должен явно тапнуть каждый бокс.
+      this.onBoxTapped(box)
     })
 
     if (preLanded) {
