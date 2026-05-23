@@ -341,7 +341,7 @@ function App() {
         </div>
       )}
       <div className="w-full h-full flex flex-col">
-        <div style={{ height: 'calc(12% + 54px)' }}>
+        <div style={{ height: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad))' }}>
           <Header />
         </div>
         <div className="flex-1" />

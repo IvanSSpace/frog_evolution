@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { ELEMENTS, type Element } from '../../store/cosmic/types'
 import { hapticImpact } from '../../utils/telegram'
 
-/** TINT TABLE из REQUIREMENTS.md (locked palette, colorblind-safe). */
+/** TINT TABLE — 11 элементов (после 2026-05-23 редукции). */
 export const ELEMENT_TINT: Record<Element, string> = {
   fire: '#fb923c',
   ice: '#a5f3fc',
@@ -15,16 +15,11 @@ export const ELEMENT_TINT: Record<Element, string> = {
   forest: '#4ade80',
   toxic: '#86efac',
   plasma: '#fde047',
-  shadow: '#6b7280',
   crystal: '#ddd6fe',
   desert: '#fde68a',
   gas: '#fdba74',
   ring: '#c4b5fd',
   binary: '#fca5a5',
-  arcane: '#a78bfa',
-  mechanical: '#fde68a',
-  war: '#dc2626',
-  void: '#1f2937',
 }
 
 // SVG бутылочка genBottle.svg изначально зелёная (~hue 130°).
@@ -36,16 +31,11 @@ export const ELEMENT_BOTTLE_FILTER: Record<Element, string> = {
   forest: 'hue-rotate(12deg)',
   toxic: 'hue-rotate(15deg) brightness(1.1)',
   plasma: 'hue-rotate(-82deg) saturate(1.8)',
-  shadow: 'saturate(0) brightness(0.8)',
   crystal: 'hue-rotate(120deg) saturate(0.5) brightness(1.3)',
   desert: 'hue-rotate(-82deg) brightness(1.2)',
   gas: 'hue-rotate(-100deg) saturate(1.1) brightness(1.15)',
   ring: 'hue-rotate(122deg) saturate(0.7) brightness(1.2)',
   binary: 'hue-rotate(-130deg) saturate(0.8) brightness(1.25)',
-  arcane: 'hue-rotate(130deg) saturate(1.2)',
-  mechanical: 'hue-rotate(-82deg) saturate(0.9) brightness(1.2)',
-  war: 'hue-rotate(-130deg) saturate(2) brightness(0.9)',
-  void: 'saturate(0) brightness(0.25)',
 }
 
 interface Props {

@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 
 type Props = {
   path: string
@@ -8,37 +8,56 @@ type Props = {
   style?: CSSProperties
 }
 
-export function TintedFrog({ path, tint, alt, className, style }: Props) {
-  const hex = tint.toString(16).padStart(6, '0')
-  const id = `tf-${hex}`
-  const r = ((tint >> 16) & 0xff) / 255
-  const g = ((tint >> 8) & 0xff) / 255
-  const b = (tint & 0xff) / 255
-  const matrix = `${r} 0 0 0 0  0 ${g} 0 0 0  0 0 ${b} 0 0  0 0 0 1 0`
+// Cache на уровне модуля. Fetch'аем SVG-текст один раз на path; tinted blob URL
+// — один раз на (path, tintHex). Это сохраняет цветные элементы (короны, узоры,
+// любые non-white fills) — заменяется только `#ffffff` на tint.
+const svgTextCache = new Map<string, Promise<string>>()
+const tintedUrlCache = new Map<string, string>()
 
-  // Prepend the tint filter; extra filter functions from style are appended after
-  const extraFilter = style?.filter as string | undefined
-  const filterValue = extraFilter ? `url(#${id}) ${extraFilter}` : `url(#${id})`
+function recolorSvg(svg: string, tintHex: string): string {
+  return svg
+    .replace(/fill:\s*#ffffff/gi, `fill:${tintHex}`)
+    .replace(/fill="#ffffff"/gi, `fill="${tintHex}"`)
+    .replace(/fill="#fff"/gi, `fill="${tintHex}"`)
+}
+
+async function getTintedUrl(path: string, tintHex: string): Promise<string> {
+  const cacheKey = `${path}|${tintHex}`
+  const cached = tintedUrlCache.get(cacheKey)
+  if (cached) return cached
+  if (!svgTextCache.has(path)) {
+    svgTextCache.set(path, fetch(path).then((r) => r.text()))
+  }
+  const text = await svgTextCache.get(path)!
+  const recolored = recolorSvg(text, tintHex)
+  const blob = new Blob([recolored], { type: 'image/svg+xml' })
+  const url = URL.createObjectURL(blob)
+  tintedUrlCache.set(cacheKey, url)
+  return url
+}
+
+export function TintedFrog({ path, tint, alt, className, style }: Props) {
+  const tintHex = '#' + tint.toString(16).padStart(6, '0')
+  const [src, setSrc] = useState<string | null>(() =>
+    tintedUrlCache.get(`${path}|${tintHex}`) ?? null,
+  )
+
+  useEffect(() => {
+    let cancelled = false
+    getTintedUrl(path, tintHex).then((url) => {
+      if (!cancelled) setSrc(url)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [path, tintHex])
 
   return (
-    <>
-      <svg
-        width={0}
-        height={0}
-        style={{ position: 'absolute', overflow: 'hidden' }}
-      >
-        <defs>
-          <filter id={id} colorInterpolationFilters="sRGB">
-            <feColorMatrix type="matrix" values={matrix} />
-          </filter>
-        </defs>
-      </svg>
-      <img
-        src={path}
-        alt={alt}
-        className={className}
-        style={{ ...style, filter: filterValue }}
-      />
-    </>
+    <img
+      src={src ?? path}
+      alt={alt}
+      className={className}
+      style={{ ...style, visibility: src ? 'visible' : 'hidden' }}
+    />
   )
 }

@@ -32,7 +32,7 @@ import {
 const AUTO_DISMISS_MS = 5000
 
 const REWARD_ICON: Record<QuestReward['kind'], string> = {
-  essence: '✨',
+  essence: '💠',
   serum: '💉',
   gold: '🪙',
   relationship_and_bonus: '🤝',

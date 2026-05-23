@@ -24,10 +24,23 @@ import {
 import { setGlobalFormat, type NumberFormat } from '../utils/formatting'
 import { createCosmicSlice, type CosmicState } from './cosmic/slice'
 import {
+  EVOLUTION_COOLDOWN_MS,
+  getEvolutionBonusFraction,
+  getEvolutionCost,
+  isEvolutionUnlockedForLocation,
+  locationGroupForLevel,
+} from '../game/config/evolution'
+import {
   loadUpgrades,
   saveUpgrades,
   loadFrogPurchases,
   saveFrogPurchases,
+  loadFrogTiers,
+  saveFrogTiers,
+  loadFrogTierCooldowns,
+  saveFrogTierCooldowns,
+  loadTemporaryIncomeBuff,
+  saveTemporaryIncomeBuff,
   loadDiscovered,
   saveDiscovered,
   loadFrogShopSeenLevels,
@@ -124,6 +137,23 @@ interface GameStateBase {
   frogPurchases: number[]
   buyFrog: (level: number) => Promise<BuyFrogResult>
 
+  // Тиры эволюции на каждый уровень (0=base, 1, 2).
+  frogTiers: number[]
+  // Per-level cooldown timestamps (Date.now()-based, ms). 0 = нет cooldown'а.
+  // Тикает в real-time (offline тоже).
+  frogTierCooldowns: number[]
+  upgradeFrogTier: (level: number) => {
+    ok: boolean
+    reason?:
+      | 'maxTier'
+      | 'noGold'
+      | 'noEssence'
+      | 'cooldown'
+      | 'locked'
+      | 'invalid'
+      | 'cosmosLocked'
+  }
+
   // Открытые уровни — для модалки "Открыта новая лягушка"
   discoveredLevels: number[]
   frogShopSeenLevels: number[]
@@ -186,31 +216,42 @@ interface GameStateBase {
   // Тикает в MainScene update loop как ghost-frog income.
   l18AbsoluteBonusPerSec: number
   addL18AbsoluteBonus: (amount: number) => void
+
+  // 2026-05-23: временный % buff к доходу. Активируется L18+L18 merge'ем на 6h.
+  // null = нет активного buff'а. Несколько мерджей подряд накапливают `percent`
+  // и продлевают `until` (см. activateTemporaryIncomeBuff).
+  temporaryIncomeBuff: { until: number; percent: number } | null
+  activateTemporaryIncomeBuff: (percent: number, durationMs: number) => void
 }
 
 // Полный GameState = базовые поля + Cosmic Frogs System (Phase 11+)
 // CosmicState = CosmicSlice + CosmicSliceActions (см. cosmic/slice.ts)
 type GameState = GameStateBase & CosmicState
 
-// L18+L18 merge bonus: hybrid schedule.
-//   Merge 1: ABSOLUTE bonus = 2× L18 income/sec permanent (handled separately
-//           через l18AbsoluteBonusPerSec). Multiplier = 1.0.
-//   Merge 2-3: +5% multiplier each.
-//   Merge 4..∞: +2.5% multiplier each.
+// 2026-05-23: permanent % bonus от L18+L18 merge удалён — теперь permanent %
+// даёт только эволюция. Каждый L18+L18 merge даёт +1 essence + 6h temp buff
+// (см. l18MergeIncrementFraction). 1-й merge также даёт permanent absolute
+// bonus (+2× L18 income/sec).
 //
-// Cumulative multiplier (применяется к ВСЕМ gold-источникам через addGold,
-// в т.ч. к absolute bonus tick'у — игрок видит как если бы 2 ghost-frogs всё
-// ещё лагали income, и они тоже получают multiplier):
-//   count=0 → 1.0
-//   count=1 → 1.0   (только absolute bonus)
-//   count=2 → 1.05
-//   count=3 → 1.10
-//   count=N (N≥3) → 1.10 + (N - 3) * 0.025
-function l18GoldMultiplier(count: number): number {
-  if (count <= 1) return 1
-  if (count === 2) return 1.05
-  if (count === 3) return 1.1
-  return 1.1 + (count - 3) * 0.025
+// l18MergeIncrementFraction(count) — какой % buff активируется при следующем
+// merge'е (count = текущее число merges'ей ДО этого). Использует ту же лестницу
+// что раньше использовалась для permanent multiplier:
+//   count=0 → +5% (первый merge тоже даёт +5% buff помимо absolute bonus)
+//   count=1 → +5%, count=2 → +2.5%, count≥3 → +2.5%
+export function l18MergeIncrementFraction(count: number): number {
+  if (count <= 1) return 0.05
+  return 0.025
+}
+
+// Активна ли временная прибавка к доходу. Возвращает fraction (0.05 = +5%),
+// или 0 если buff не активен / истёк.
+export function activeTemporaryBuffFraction(
+  buff: { until: number; percent: number } | null,
+  now: number = Date.now(),
+): number {
+  if (!buff) return 0
+  if (buff.until <= now) return 0
+  return buff.percent / 100
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -218,7 +259,12 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   addGold: (amount) =>
     set((s) => ({
-      gold: s.gold + amount * l18GoldMultiplier(s.l18MergesCount),
+      gold:
+        s.gold +
+        amount *
+          (1 +
+            getEvolutionBonusFraction(s.frogTiers) +
+            activeTemporaryBuffFraction(s.temporaryIncomeBuff)),
     })),
 
   spendGold: (amount) => {
@@ -233,6 +279,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       dropSpeed: 0,
       tractor: 0,
       magnet: 0,
+      magnet2: 0,
+      magnet3: 0,
       crateQuality: 0,
       rareBoxSpeed: 0,
     }
@@ -408,6 +456,47 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
   },
 
+  frogTiers: loadFrogTiers(),
+  frogTierCooldowns: loadFrogTierCooldowns(),
+  upgradeFrogTier: (level) => {
+    if (level < 1 || level > MAX_LEVEL) return { ok: false, reason: 'invalid' }
+    const state = get()
+    if (!state.hasCosmosUnlocked) {
+      return { ok: false, reason: 'cosmosLocked' }
+    }
+    const groupIdx = locationGroupForLevel(level)
+    if (!isEvolutionUnlockedForLocation(state.frogTiers, groupIdx)) {
+      return { ok: false, reason: 'locked' }
+    }
+    const cdEnd = state.frogTierCooldowns[level - 1] ?? 0
+    if (cdEnd > Date.now()) {
+      return { ok: false, reason: 'cooldown' }
+    }
+    const current = state.frogTiers[level - 1] ?? 0
+    if (current >= 2) return { ok: false, reason: 'maxTier' }
+    const { gold: goldCost, essence: essenceCost } = getEvolutionCost(
+      level,
+      current,
+    )
+    if (state.gold < goldCost) return { ok: false, reason: 'noGold' }
+    if (state.essence < essenceCost) {
+      return { ok: false, reason: 'noEssence' }
+    }
+    const nextTiers = [...state.frogTiers]
+    nextTiers[level - 1] = current + 1
+    const nextCooldowns = [...state.frogTierCooldowns]
+    nextCooldowns[level - 1] = Date.now() + EVOLUTION_COOLDOWN_MS
+    saveFrogTiers(nextTiers)
+    saveFrogTierCooldowns(nextCooldowns)
+    set({
+      gold: state.gold - goldCost,
+      essence: state.essence - essenceCost,
+      frogTiers: nextTiers,
+      frogTierCooldowns: nextCooldowns,
+    })
+    return { ok: true }
+  },
+
   numberFormat: loadNumberFormat(),
   setNumberFormat: (f) => {
     saveNumberFormat(f)
@@ -474,6 +563,22 @@ export const useGameStore = create<GameState>((set, get) => ({
     const next = s.l18AbsoluteBonusPerSec + amount
     saveL18AbsoluteBonusPerSec(next)
     set({ l18AbsoluteBonusPerSec: next })
+  },
+
+  // 2026-05-23: 6h temp buff после L18+L18 merge. Stacking strategy:
+  // - Если buff активен — накапливаем percent (+ суммируется) и продлеваем
+  //   `until` на полные durationMs от текущего момента.
+  // - Если истёк/null — новый buff.
+  temporaryIncomeBuff: loadTemporaryIncomeBuff(),
+  activateTemporaryIncomeBuff: (percent, durationMs) => {
+    const now = Date.now()
+    const s = get()
+    const prev = s.temporaryIncomeBuff
+    const stillActive = prev && prev.until > now
+    const nextPercent = (stillActive ? prev.percent : 0) + percent
+    const next = { until: now + durationMs, percent: nextPercent }
+    saveTemporaryIncomeBuff(next)
+    set({ temporaryIncomeBuff: next })
   },
 
   // ============== COSMIC FROGS SYSTEM (Phase 11+) ==============

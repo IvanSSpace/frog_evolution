@@ -1,28 +1,28 @@
-// Phase 25-02: shared design tokens для CosmicHub tab content restyle.
-// Centralized чтобы DRY между ShipTab/SerumInventoryTab/BestiaryTab/CarriersTab/
-// CarrierInfoCard/CosmicShopTab. Использует те же токены что Plan 25-01 shell
-// (#1a2e1a фон + #ec4899 pink + #fde047 gold) — Phase 23 WelcomeModal pattern.
+// Shared design tokens для CosmicHub tab content.
+// Светлая тема под общий ff-panel стиль приложения (зелёный/жёлтый, тёмный текст).
 
 import type { CSSProperties } from 'react'
 
 // ---- Color tokens ----
-export const PINK = '#ec4899'
+export const PINK = '#db2777'
 export const PINK_LIGHT = '#f9a8d4'
-export const PINK_DARK = '#db2777'
-export const GOLD = '#fde047'
-export const TEXT_DIM = '#d4d4d8'
-export const TEXT_VERY_DIM = 'rgba(255,255,255,0.4)'
+export const PINK_DARK = '#9d174d'
+export const GOLD = '#a16207'
+export const TEXT_PRIMARY = '#15803d'
+export const TEXT_DIM = '#365314'
+export const TEXT_VERY_DIM = 'rgba(54, 83, 20, 0.55)'
 
-// ---- Card patterns (per WelcomeModal) ----
+// ---- Card patterns ----
 export const DARK_CARD_STYLE: CSSProperties = {
-  borderRadius: 12,
-  background: 'rgba(255,255,255,0.06)',
-  border: '1px solid rgba(255,255,255,0.1)',
+  borderRadius: 18,
+  background: 'linear-gradient(180deg, #fefdf3 0%, #f5e9b8 100%)',
+  border: '3px solid #7c5c2a',
   padding: 12,
-  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+  boxShadow: '0 0 0 2px #fef9d7 inset, 0 4px 0 #5d4421',
+  color: TEXT_DIM,
 }
 
-// ---- Pink gradient pill CTA (per LocationStack) ----
+// ---- Pink gradient pill CTA ----
 export const PINK_CTA_STYLE: CSSProperties = {
   background: 'linear-gradient(180deg, #f9a8d4 0%, #db2777 100%)',
   borderRadius: 999,
@@ -37,21 +37,19 @@ export const PINK_CTA_STYLE: CSSProperties = {
   touchAction: 'manipulation',
 }
 
-// Mini variant — для inline carrier/shop action buttons.
 export const PINK_CTA_MINI_STYLE: CSSProperties = {
   ...PINK_CTA_STYLE,
   padding: '6px 12px',
   fontSize: 12,
 }
 
-// Disabled overlay overrides (apply via spread).
 export const DISABLED_CTA_OVERRIDES: CSSProperties = {
   opacity: 0.5,
   cursor: 'not-allowed',
   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)',
 }
 
-// ---- Pink count badge (для serum/shop count pills) ----
+// ---- Pink count badge ----
 export const PINK_BADGE_STYLE: CSSProperties = {
   background: PINK,
   color: '#fff',
@@ -59,16 +57,14 @@ export const PINK_BADGE_STYLE: CSSProperties = {
   padding: '2px 8px',
   fontSize: 12,
   fontWeight: 700,
-  boxShadow:
-    'inset 0 1px 0 rgba(255,255,255,0.3), 0 1px 0 rgba(0,0,0,0.2)',
+  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)',
 }
 
-// ---- Section header (bold + textShadow) ----
+// ---- Section header ----
 export const SECTION_HEADER_STYLE: CSSProperties = {
   fontWeight: 800,
   fontSize: 14,
-  color: '#fff',
-  textShadow: '0 1px 0 rgba(0,0,0,0.4)',
+  color: TEXT_PRIMARY,
   marginBottom: 8,
 }
 
@@ -84,12 +80,12 @@ export const EMPTY_STATE_TEXT_STYLE: CSSProperties = {
   textAlign: 'center',
 }
 
-// ---- Mini badge (neutral, для carrier element/level tags) ----
+// ---- Mini badge ----
 export const MINI_BADGE_STYLE: CSSProperties = {
   borderRadius: 999,
   padding: '2px 8px',
   fontSize: 11,
   fontWeight: 700,
-  background: 'rgba(255,255,255,0.1)',
-  color: '#fff',
+  background: 'rgba(54,83,20,0.12)',
+  color: TEXT_DIM,
 }

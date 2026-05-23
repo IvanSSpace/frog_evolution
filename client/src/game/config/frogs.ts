@@ -66,7 +66,7 @@ export function stochasticRound(x: number): number {
 
 // L1-L18 имеют свои SVG. PLACEHOLDER оставлен на случай возврата к подмене
 // (например, для будущих L19+ из мерджей).
-const PLACEHOLDER = '/frogs_svg/frog1.svg'
+const PLACEHOLDER = '/frogs_svg/frog1_t0.svg'
 
 // Ставки в общих poopChances для L7+ — много "огромных", redfер ярче
 const HUGE_CHANCES: PoopChances = { regular: 0.05, big: 0.1, huge: 0.85 }
@@ -78,7 +78,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
   // Тёплые жёлто-оливковые зелёные. Светлее к L1, темнее к L6.
   // Намеренно НЕ похожи на элементы: forest=0x4ade80 (яркий лайм) и toxic=0x86efac (бледная мята).
   {
-    path: '/frogs_svg/frog1.svg',
+    path: '/frogs_svg/frog1_t0.svg',
     name: 'Фрогги',
     size: 0.8,
     basePrice: 560,  /* formula: 560 × 2.8^0 */
@@ -89,7 +89,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     poopChances: { regular: 1.0, big: 0.0, huge: 0.0 },
   },
   {
-    path: '/frogs_svg/frog2.svg',
+    path: '/frogs_svg/frog2_t0.svg',
     name: 'Фрог',
     size: 1.1,
     basePrice: 1_568,  /* formula: 560 × 2.8^1 */
@@ -100,7 +100,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     poopChances: { regular: 0.83, big: 0.17, huge: 0.0 },
   },
   {
-    path: '/frogs_svg/frog3.svg',
+    path: '/frogs_svg/frog3_t0.svg',
     name: 'Кваключка',
     size: 1.4,
     basePrice: 4_390,  /* formula: 560 × 2.8^2 */
@@ -111,34 +111,34 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     poopChances: { regular: 0.36, big: 0.64, huge: 0.0 },
   },
   {
-    path: '/frogs_svg/frog4.svg',
+    path: '/frogs_svg/frog4_t0.svg',
     name: 'Квакус',
     size: 1.6,
     basePrice: 12_293,  /* formula: 560 × 2.8^3 */
     growthRate: 1.15,
-    tint: 0xabcb61,
+    tint: 0xd2ef88,
     location: 1,
     availableInShop: true,
     poopChances: { regular: 0.05, big: 0.66, huge: 0.29 },
   },
   {
-    path: '/frogs_svg/frog5.svg',
+    path: '/frogs_svg/frog5_t0.svg',
     name: 'Квакер',
     size: 1.6,
     basePrice: 34_421,  /* formula: 560 × 2.8^4 */
     growthRate: 1.15,
-    tint: 0x99b951,
+    tint: 0xc1df79,
     location: 1,
     availableInShop: true,
     poopChances: { regular: 0.05, big: 0.215, huge: 0.735 },
   },
   {
-    path: '/frogs_svg/frog6.svg',
+    path: '/frogs_svg/frog6_t0.svg',
     name: 'Квакозавр',
     size: 1.9,
     basePrice: 96_378,  /* formula: 560 × 2.8^5 */
     growthRate: 1.15,
-    tint: 0x87a743,
+    tint: 0xafcf6b,
     location: 1,
     availableInShop: true,
     poopChances: { regular: 0.05, big: 0.1, huge: 0.85 },
@@ -146,67 +146,67 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
 
   // ─── Болото (L7-12) — продолжение жёлто-оливковой палитры локации 1 ───
   {
-    path: '/frogs_svg/frog7.svg',
+    path: '/frogs_svg/frog7_t0.svg',
     name: 'Глазастик',
     size: 2.0,
     basePrice: 269_859,  /* formula: 560 × 2.8^6 */
     growthRate: 1.15,
-    tint: 0xc6e87e,
+    tint: 0xcbeb83,
     location: 2,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
   },
   {
-    path: '/frogs_svg/frog8.svg',
+    path: '/frogs_svg/frog8_t0.svg',
     name: 'Громозека',
     size: 2.0,
     basePrice: 755_604,  /* formula: 560 × 2.8^7 */
     growthRate: 1.15,
-    tint: 0xb3d56b,
+    tint: 0xcfeb87,
     location: 2,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
   },
   {
-    path: '/frogs_svg/frog9.svg',
+    path: '/frogs_svg/frog9_t0.svg',
     name: 'Лягозилла',
     size: 2.0,
     basePrice: 2_115_691,  /* formula: 560 × 2.8^8 */
     growthRate: 1.15,
-    tint: 0xc0d870,
+    tint: 0xbddb73,
     location: 2,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
   },
   {
-    path: '/frogs_svg/frog10.svg',
+    path: '/frogs_svg/frog10_t0.svg',
     name: 'Кваколось',
     size: 2.0,
     basePrice: 5_923_935,  /* formula: 560 × 2.8^9 */
     growthRate: 1.15,
-    tint: 0xa8c862,
+    tint: 0xd2ef88,
     location: 2,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
   },
   {
-    path: '/frogs_svg/frog11.svg',
+    path: '/frogs_svg/frog11_t0.svg',
     name: 'Длиннолап',
     size: 2.0,
     basePrice: 16_587_019,  /* formula: 560 × 2.8^10 */
     growthRate: 1.15,
-    tint: 0xbad96b,
+    tint: 0xc1df79,
     location: 2,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
   },
   {
-    path: '/frogs_svg/frog12.svg',
+    path: '/frogs_svg/frog12_t0.svg',
     name: 'Кикиморка',
     size: 2.0,
     basePrice: 46_443_653,  /* formula: 560 × 2.8^11 */
     growthRate: 1.15,
-    tint: 0x9ebb56,
+    tint: 0xafcf6b,
     location: 2,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
@@ -217,67 +217,67 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
   // локация Континент). После удаления Континента — natural progression.
   // Палитра — продолжение жёлто-оливковой гаммы локации 1, тёмные оттенки.
   {
-    path: '/frogs_svg/frog13.svg',
+    path: '/frogs_svg/frog13_t0.svg',
     name: 'Квакатлас',
     size: 2.0,
     basePrice: 130_000_000,  /* original 3-этап (rounded), formula approx 560 × 2.8^12 */
     growthRate: 1.15,
-    tint: 0xb5cf68,
+    tint: 0xcbeb83,
     location: 3,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
   },
   {
-    path: '/frogs_svg/frog14.svg',
+    path: '/frogs_svg/frog14_t0.svg',
     name: 'Лягобог',
     size: 2.0,
     basePrice: 364_100_000,  /* original 3-этап */
     growthRate: 1.15,
-    tint: 0xa4c45e,
+    tint: 0xcfeb87,
     location: 3,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
   },
   {
-    path: '/frogs_svg/frog15.svg',
+    path: '/frogs_svg/frog15_t0.svg',
     name: 'Вселенжаб',
     size: 2.0,
     basePrice: 1_000_000_000,  /* original 3-этап */
     growthRate: 1.15,
-    tint: 0x94b54f,
+    tint: 0xbddb73,
     location: 3,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
   },
   {
-    path: '/frogs_svg/frog16.svg',
+    path: '/frogs_svg/frog16_t0.svg',
     name: 'Уроборосква',
     size: 2.0,
     basePrice: 2_900_000_000,  /* original 3-этап */
     growthRate: 1.15,
-    tint: 0xacc965,
+    tint: 0xd2ef88,
     location: 3,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
   },
   {
-    path: '/frogs_svg/frog17.svg',
+    path: '/frogs_svg/frog17_t0.svg',
     name: 'Призмоляг',
     size: 2.0,
     basePrice: 8_000_000_000,  /* original 3-этап */
     growthRate: 1.15,
-    tint: 0x9fbe58,
+    tint: 0xc1df79,
     location: 3,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
   },
   {
-    path: '/frogs_svg/frog18.svg',
+    path: '/frogs_svg/frog18_t0.svg',
     name: 'Жаб-Провидец',
     size: 2.0,
     basePrice: 22_400_000_000,  /* original 3-этап */
     growthRate: 1.15,
-    tint: 0x8eaf48,
+    tint: 0xafcf6b,
     location: 3,
     availableInShop: true,
     poopChances: HUGE_CHANCES,
@@ -286,15 +286,26 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
 
 export const MAX_LEVEL = FROG_LEVELS.length
 
-// Если у уровня placeholder-путь и это не L1 — переиспользуем текстуру L1 (не дублируем).
-export const textureKeyForLevel = (level: number): string => {
+// Tier-aware texture key. `tier=0` совместим с прежним форматом ключа для t0,
+// но добавляет суффикс для t1/t2. PLACEHOLDER-fallback применяется только к t0.
+export const textureKeyForLevel = (level: number, tier: number = 0): string => {
+  const t = Math.max(0, Math.min(2, Math.floor(tier)))
   const cfg = FROG_LEVELS[Math.min(level - 1, FROG_LEVELS.length - 1)]
-  if (level !== 1 && cfg && cfg.path === PLACEHOLDER) return 'frog_lvl_1'
-  return `frog_lvl_${level}`
+  if (t === 0 && level !== 1 && cfg && cfg.path === PLACEHOLDER) return 'frog_lvl_1_t0'
+  return `frog_lvl_${level}_t${t}`
 }
 
 export const configForLevel = (level: number): FrogLevelConfig =>
   FROG_LEVELS[Math.min(level - 1, FROG_LEVELS.length - 1)]
+
+// Путь к SVG для конкретного тира эволюции. Файлы лежат в public/frogs_svg/
+// по конвенции `frog{N}_t{0|1|2}.svg`. Tier 0 — базовый, t1/t2 — evolved.
+// До появления файла превью просто 404'нется, fallback не делаем.
+export function getFrogPath(level: number, tier: number): string {
+  const t = Math.max(0, Math.min(2, Math.floor(tier)))
+  const lvl = Math.max(1, Math.min(MAX_LEVEL, Math.floor(level)))
+  return `/frogs_svg/frog${lvl}_t${t}.svg`
+}
 
 export function getFrogPrice(level: number, purchases: number): number {
   const cfg = configForLevel(level)

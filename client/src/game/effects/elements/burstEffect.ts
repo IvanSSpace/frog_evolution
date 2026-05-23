@@ -14,12 +14,8 @@ import { archetypeForElement } from './elementMapping'
 import { devWarn } from '../../../utils/devLog'
 
 // Elements которые получают дополнительный compStarBurst — "magical" feel.
-const STAR_BURST_ELEMENTS: ReadonlySet<Element> = new Set<Element>([
-  'arcane',
-  'war',
-  'void',
-  'plasma',
-])
+// 2026-05-23: arcane/war/void удалены, остался только plasma.
+const STAR_BURST_ELEMENTS: ReadonlySet<Element> = new Set<Element>(['plasma'])
 
 const BURST_SIZE = 14
 const BURST_BRIGHTNESS = 1.0

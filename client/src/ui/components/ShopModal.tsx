@@ -12,6 +12,8 @@ import {
 import { hapticNotification } from '../../utils/telegram'
 import { fmt } from '../../utils/formatting'
 import { useModalLock } from '../../utils/modalLock'
+import { useCosmosUnlocked } from '../../utils/cosmosGate'
+import { CosmicShopTab } from '../../components/CosmicHub/CosmicShopTab'
 
 type Props = { onClose: () => void }
 
@@ -76,15 +78,23 @@ export function ShopModal({ onClose }: Props) {
 }
 
 function ShopCards() {
-  const currentLocation = useGameStore((s) => s.currentLocation)
-  const isBoloto = currentLocation === 1
+  // 2026-05-23: магазин один для всех локаций. Карточки видны независимо от
+  // currentLocation. Магниты L2/L3 — gated by cosmosUnlocked.
+  const cosmosUnlocked = useCosmosUnlocked()
   return (
     <div className="flex flex-col gap-3 p-4 overflow-y-auto">
-      {isBoloto && <DropSpeedCard />}
-      {isBoloto && <CrateQualityCard />}
-      {isBoloto && <MagnetCard />}
-      {isBoloto && <RareBoxSpeedCard />}
+      <DropSpeedCard />
+      <CrateQualityCard />
+      <MagnetCard />
+      <RareBoxSpeedCard />
       <TractorCard />
+      {cosmosUnlocked && (
+        <MagnetCard upgradeKey="magnet2" titleSuffix="Лес" />
+      )}
+      {cosmosUnlocked && (
+        <MagnetCard upgradeKey="magnet3" titleSuffix="Континент" />
+      )}
+      {cosmosUnlocked && <CosmicShopTab />}
     </div>
   )
 }
@@ -235,14 +245,20 @@ function TractorCard() {
   )
 }
 
-function MagnetCard() {
+function MagnetCard({
+  upgradeKey = 'magnet',
+  titleSuffix = '',
+}: {
+  upgradeKey?: 'magnet' | 'magnet2' | 'magnet3'
+  titleSuffix?: string
+} = {}) {
   const { t } = useTranslation()
-  const level = useGameStore((s) => s.upgrades.magnet)
+  const level = useGameStore((s) => s.upgrades[upgradeKey])
   const gold = useGameStore((s) => s.gold)
   const buyUpgrade = useGameStore((s) => s.buyUpgrade)
-  const cfg = UPGRADE_CONFIG.magnet
+  const cfg = UPGRADE_CONFIG[upgradeKey]
   const isMax = level >= cfg.maxLevel
-  const cost = isMax ? 0 : getUpgradeCost('magnet', level)
+  const cost = isMax ? 0 : getUpgradeCost(upgradeKey, level)
   const canAfford = gold >= cost
   const interval = (getMagnetSpawnInterval(level) / 1000).toFixed(0)
   const duration = (getMagnetDuration(level) / 1000).toFixed(0)
@@ -262,10 +278,11 @@ function MagnetCard() {
         interval: nextInterval,
         duration: nextDuration,
       })
+  const baseTitle = t('shop.magnet.name')
   return (
     <UpgradeCard
       icon="🧲"
-      title={t('shop.magnet.name')}
+      title={titleSuffix ? `${baseTitle} (${titleSuffix})` : baseTitle}
       effect={isMax ? cur : `${cur} → ${next}`}
       level={level}
       maxLevel={cfg.maxLevel}
@@ -273,7 +290,7 @@ function MagnetCard() {
       isMax={isMax}
       canAfford={canAfford}
       onBuy={() =>
-        void buyUpgrade('magnet').then((ok) =>
+        void buyUpgrade(upgradeKey).then((ok) =>
           hapticNotification(ok ? 'success' : 'error'),
         )
       }

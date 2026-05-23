@@ -29,6 +29,14 @@ import { QUESTS, COMPLETED_QUEST_HISTORY_CAP } from '../game/config/quests'
 
 const UPGRADES_KEY = 'frog_evolution_upgrades'
 const PURCHASES_KEY = 'frog_evolution_frog_purchases'
+const FROG_TIERS_KEY = 'frog_evolution_frog_tiers'
+// 2026-05-23: cooldown timestamps per frog level (когда лочится снова можно эволвить).
+// Хранится массив длиной 18, значение 0 = нет кулдауна, иначе Date.now()-таймстамп
+// окончания cooldown'а. Тикает в real-time (offline тоже).
+const FROG_TIER_COOLDOWNS_KEY = 'frog_evolution_frog_tier_cooldowns'
+// 2026-05-23: временный 6h buff к доходу от L18+L18 merge'а.
+// { until: ms timestamp, percent: 5/2.5/etc } | null
+const TEMP_INCOME_BUFF_KEY = 'frog_evolution_temp_income_buff'
 const DISCOVERED_KEY = 'frog_evolution_discovered'
 const MAGNET_ENABLED_KEY = 'frog_evolution_magnet_enabled'
 const FORMAT_KEY = 'frog_format'
@@ -57,6 +65,8 @@ export function loadUpgrades(): Upgrades {
     dropSpeed: 0,
     tractor: 0,
     magnet: 0,
+    magnet2: 0,
+    magnet3: 0,
     crateQuality: 0,
     rareBoxSpeed: 0,
   }
@@ -71,6 +81,14 @@ export function loadUpgrades(): Upgrades {
         ),
         tractor: Math.min(parsed.tractor ?? 0, UPGRADE_CONFIG.tractor.maxLevel),
         magnet: Math.min(parsed.magnet ?? 0, UPGRADE_CONFIG.magnet.maxLevel),
+        magnet2: Math.min(
+          parsed.magnet2 ?? 0,
+          UPGRADE_CONFIG.magnet2.maxLevel,
+        ),
+        magnet3: Math.min(
+          parsed.magnet3 ?? 0,
+          UPGRADE_CONFIG.magnet3.maxLevel,
+        ),
         crateQuality: Math.min(
           parsed.crateQuality ?? 0,
           UPGRADE_CONFIG.crateQuality.maxLevel,
@@ -119,6 +137,107 @@ export function loadFrogPurchases(): number[] {
 export function saveFrogPurchases(arr: number[]) {
   try {
     localStorage.setItem(PURCHASES_KEY, JSON.stringify(arr))
+  } catch {
+    /* ignore */
+  }
+}
+
+// ─── frog tiers (evolution) ──────────────────────────────────────────────────
+
+export function loadFrogTiers(): number[] {
+  try {
+    const raw = localStorage.getItem(FROG_TIERS_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as number[]
+      if (Array.isArray(parsed)) {
+        const arr = new Array(MAX_LEVEL).fill(0)
+        for (let i = 0; i < Math.min(parsed.length, MAX_LEVEL); i++) {
+          const v = Math.max(0, Math.min(2, Math.floor(parsed[i] ?? 0)))
+          arr[i] = v
+        }
+        return arr
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return new Array(MAX_LEVEL).fill(0)
+}
+
+export function saveFrogTiers(arr: number[]) {
+  try {
+    localStorage.setItem(FROG_TIERS_KEY, JSON.stringify(arr))
+  } catch {
+    /* ignore */
+  }
+}
+
+// ─── frog tier cooldowns (per-level evolution cooldowns) ─────────────────────
+
+export function loadFrogTierCooldowns(): number[] {
+  try {
+    const raw = localStorage.getItem(FROG_TIER_COOLDOWNS_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as number[]
+      if (Array.isArray(parsed)) {
+        const arr = new Array(MAX_LEVEL).fill(0)
+        for (let i = 0; i < Math.min(parsed.length, MAX_LEVEL); i++) {
+          const v = Number(parsed[i] ?? 0)
+          arr[i] = Number.isFinite(v) && v > 0 ? Math.floor(v) : 0
+        }
+        return arr
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return new Array(MAX_LEVEL).fill(0)
+}
+
+export function saveFrogTierCooldowns(arr: number[]) {
+  try {
+    localStorage.setItem(FROG_TIER_COOLDOWNS_KEY, JSON.stringify(arr))
+  } catch {
+    /* ignore */
+  }
+}
+
+// ─── temporary income buff (6h after L18+L18 merge) ──────────────────────────
+
+export function loadTemporaryIncomeBuff(): {
+  until: number
+  percent: number
+} | null {
+  try {
+    const raw = localStorage.getItem(TEMP_INCOME_BUFF_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<{
+      until: number
+      percent: number
+    }>
+    if (
+      typeof parsed.until === 'number' &&
+      typeof parsed.percent === 'number' &&
+      parsed.percent > 0 &&
+      parsed.until > Date.now()
+    ) {
+      return { until: parsed.until, percent: parsed.percent }
+    }
+  } catch {
+    /* ignore */
+  }
+  return null
+}
+
+export function saveTemporaryIncomeBuff(
+  buff: { until: number; percent: number } | null,
+) {
+  try {
+    if (!buff) {
+      localStorage.removeItem(TEMP_INCOME_BUFF_KEY)
+    } else {
+      localStorage.setItem(TEMP_INCOME_BUFF_KEY, JSON.stringify(buff))
+    }
   } catch {
     /* ignore */
   }
@@ -305,11 +424,35 @@ export function loadCosmicSlice(): CosmicPersist {
             : undefined,
       })) as CosmicPersist['boxes']
 
+    // 2026-05-23: filter legacy serums (shadow/arcane/mechanical/war/void удалены).
+    // Сохраняем только valid Elements; неизвестные ключи silent drop.
+    const cleanSerums = { ...defaults.serums }
+    if (parsed.serums && typeof parsed.serums === 'object') {
+      for (const key of Object.keys(cleanSerums)) {
+        const v = (parsed.serums as Record<string, unknown>)[key]
+        if (typeof v === 'number' && v >= 0) {
+          cleanSerums[key as keyof typeof cleanSerums] = Math.floor(v)
+        }
+      }
+    }
+
+    // 2026-05-23: фильтр legacy элементов в carriers/ascendedCarriers.
+    const validElements = new Set(Object.keys(defaults.serums))
+    const carriersFiltered = (
+      Array.isArray(parsed.carriers) ? parsed.carriers : []
+    ).filter(
+      (c: unknown): c is { frogId: string; element: string; level: number } =>
+        typeof c === 'object' &&
+        c !== null &&
+        typeof (c as Record<string, unknown>).element === 'string' &&
+        validElements.has((c as Record<string, unknown>).element as string),
+    )
+
     return {
-      serums: parsed.serums ?? defaults.serums,
+      serums: cleanSerums,
       boxes,
       ship,
-      carriers: Array.isArray(parsed.carriers) ? parsed.carriers : [],
+      carriers: carriersFiltered as CosmicPersist['carriers'],
       // Phase 22 Plan 22-03: ascendedCarriers + essence persisted whitelist.
       // Shape: { id: string, element: Element, ascendedAt: number }.
       ascendedCarriers: Array.isArray(parsed.ascendedCarriers)
@@ -319,6 +462,9 @@ export function loadCosmicSlice(): CosmicPersist {
               a !== null &&
               typeof (a as Record<string, unknown>).id === 'string' &&
               typeof (a as Record<string, unknown>).element === 'string' &&
+              validElements.has(
+                (a as Record<string, unknown>).element as string,
+              ) &&
               typeof (a as Record<string, unknown>).ascendedAt === 'number',
           ) as CosmicPersist['ascendedCarriers'])
         : defaults.ascendedCarriers,

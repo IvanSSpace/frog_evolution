@@ -1,24 +1,26 @@
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useGameStore } from '../../store/gameStore'
+import {
+  useGameStore,
+  activeTemporaryBuffFraction,
+} from '../../store/gameStore'
 import { fmt, fmtRate } from '../../utils/formatting'
 import { useCosmosUnlocked } from '../../utils/cosmosGate'
 import { getRareBoxThreshold } from '../../game/config/upgrades'
+import { getEvolutionBonusFraction } from '../../game/config/evolution'
 
-// L18+L18 merge bonus multiplier — mirrors gameStore.l18GoldMultiplier.
-// First merge gives no multiplier (только absolute bonus = 2× L18 income).
-// Subsequent merges: +5% / +5% / +2.5%...
-function l18GoldMultiplier(count: number): number {
-  if (count <= 1) return 1
-  if (count === 2) return 1.05
-  if (count === 3) return 1.1
-  return 1.1 + (count - 3) * 0.025
+function formatCountdown(remainingMs: number): string {
+  const totalSec = Math.max(0, Math.floor(remainingMs / 1000))
+  const h = Math.floor(totalSec / 3600)
+  const m = Math.floor((totalSec % 3600) / 60)
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return `${pad(h)}:${pad(m)}`
 }
 
 export function Header() {
   const { t } = useTranslation()
   const gold = useGameStore((s) => s.gold)
   const incomePerSec = useGameStore((s) => s.incomePerSec)
-  const l18MergesCount = useGameStore((s) => s.l18MergesCount)
   const boxProgress = useGameStore((s) => s.boxProgress)
   const boxWaiting = useGameStore((s) => s.boxWaiting)
   const boxOpenCount = useGameStore((s) => s.boxOpenCount)
@@ -28,17 +30,28 @@ export function Header() {
     1,
   )
   const essence = useGameStore((s) => s.essence)
-  const serums = useGameStore((s) => s.serums)
+  const frogTiers = useGameStore((s) => s.frogTiers)
+  const temporaryIncomeBuff = useGameStore((s) => s.temporaryIncomeBuff)
   useGameStore((s) => s.numberFormat) // subscribe to format changes
-  // Cosmos gate — отображаем essence + серум только после unlock'а космоса.
   const cosmosUnlocked = useCosmosUnlocked()
 
-  const multiplier = l18GoldMultiplier(l18MergesCount)
-  const bonusPct = Math.round((multiplier - 1) * 1000) / 10 // 1 decimal: 12.5
+  // Tick раз в секунду пока buff активен — для countdown'а.
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    if (!temporaryIncomeBuff || temporaryIncomeBuff.until <= now) return
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [temporaryIncomeBuff, now])
 
-  // Total серум across all elements (single counter, не per-element).
-  const totalSerum = cosmosUnlocked
-    ? Object.values(serums).reduce((sum, n) => sum + (n || 0), 0)
+  // 2026-05-23: permanent % теперь только эволюция; временный — buff после
+  // L18+L18 merge'а. Мирор формулы `addGold`.
+  const evolutionFraction = getEvolutionBonusFraction(frogTiers)
+  const tempFraction = activeTemporaryBuffFraction(temporaryIncomeBuff, now)
+  const multiplier = 1 + evolutionFraction + tempFraction
+  const bonusPct = Math.round((multiplier - 1) * 1000) / 10
+  const tempActive = tempFraction > 0
+  const tempRemaining = tempActive
+    ? Math.max(0, (temporaryIncomeBuff?.until ?? 0) - now)
     : 0
 
   return (
@@ -46,9 +59,8 @@ export function Header() {
       className="ff-bar flex flex-col w-full h-full px-3"
       style={{
         pointerEvents: 'auto',
-        // 54px gap сверху чтобы content не залезал под Telegram header кнопки
-        // (close + ⋮) когда WebApp в fullscreen mode.
-        paddingTop: 54,
+        // var(--tg-chrome-pad) — 54px на mobile (TG fullscreen header), 0 на desktop.
+        paddingTop: 'var(--tg-chrome-pad)',
         paddingBottom: 12,
       }}
     >
@@ -69,19 +81,7 @@ export function Header() {
               }}
               title="Эссенция"
             >
-              💎 {fmt(essence)}
-            </div>
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 700,
-                color: '#a78bfa',
-                textShadow: '0 1px 0 rgba(0,0,0,0.4)',
-                lineHeight: 1.2,
-              }}
-              title="Серум (все элементы)"
-            >
-              🧪 {fmt(totalSerum)}
+              💠 {fmt(essence)}
             </div>
           </>
         )}
@@ -135,6 +135,19 @@ export function Header() {
             >
               ×{multiplier.toFixed(3).replace(/0+$/, '').replace(/\.$/, '')}{' '}
               (+{bonusPct}%)
+            </span>
+          )}
+          {tempActive && (
+            <span
+              style={{
+                marginLeft: 4,
+                fontSize: 10,
+                color: '#a855f7',
+                fontWeight: 700,
+              }}
+              title="Временный бафф к доходу"
+            >
+              ⏱ {formatCountdown(tempRemaining)}
             </span>
           )}
         </div>

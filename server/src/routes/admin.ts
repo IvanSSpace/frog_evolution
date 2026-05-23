@@ -428,6 +428,57 @@ export async function adminRoutes(app: FastifyInstance) {
     },
   )
 
+  // POST /admin/users/:id/grant-frog — добавить лягушку уровня L на её родную
+  // локацию (cfg.location). Уровни 1..6 → loc 1, 7..12 → loc 2, 13..18 → loc 3.
+  // Cap проверяется на родной локации (как в client buyFrog).
+  app.post(
+    '/admin/users/:id/grant-frog',
+    { preHandler: [requireAdmin] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string }
+      const userId = parseInt(id, 10)
+      if (isNaN(userId)) return reply.code(400).send({ error: 'invalid id' })
+
+      const body = request.body as { level?: number }
+      const level = Number(body?.level)
+      if (!Number.isInteger(level) || level < 1 || level > 18) {
+        return reply.code(400).send({ error: 'level must be 1..18' })
+      }
+
+      const gs = await prisma.gameState.findUnique({ where: { userId } })
+      if (!gs) return reply.code(404).send({ error: 'user or game state not found' })
+
+      const locationId = level <= 6 ? 1 : level <= 12 ? 2 : 3
+      const ENTITY_CAP = 30
+
+      const lfRaw = gs.locationFrogs
+      const lfArr: number[][] = Array.isArray(lfRaw)
+        ? (lfRaw as unknown[]).map((a) =>
+            Array.isArray(a)
+              ? (a as number[]).filter((n) => typeof n === 'number')
+              : [],
+          )
+        : []
+      while (lfArr.length < 3) lfArr.push([])
+
+      if (lfArr[locationId - 1].length >= ENTITY_CAP) {
+        return reply.code(409).send({ error: `location ${locationId} cap full` })
+      }
+      lfArr[locationId - 1] = [...lfArr[locationId - 1], level]
+
+      await prisma.gameState.update({
+        where: { userId },
+        data: {
+          locationFrogs: lfArr as unknown as Prisma.InputJsonValue,
+          version: { increment: 1 },
+        },
+      })
+
+      app.log.info({ userId, level, locationId }, '[admin] grant-frog: done')
+      return reply.send({ success: true, level, locationId })
+    },
+  )
+
   // POST /admin/users/:id/reset-progress
   app.post(
     '/admin/users/:id/reset-progress',
@@ -494,7 +545,7 @@ export async function adminRoutes(app: FastifyInstance) {
         where: { userId },
         update: {
           gold: 0n,
-          upgrades: { dropSpeed: 0, tractor: 0, magnet: 0, crateQuality: 0, rareBoxSpeed: 0 },
+          upgrades: { dropSpeed: 0, tractor: 0, magnet: 0, magnet2: 0, magnet3: 0, crateQuality: 0, rareBoxSpeed: 0 },
           frogPurchases: [],
           discoveredLevels: [1],
           magnetEnabled: false,

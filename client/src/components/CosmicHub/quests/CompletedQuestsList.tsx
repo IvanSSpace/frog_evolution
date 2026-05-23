@@ -26,7 +26,7 @@ import { SECTION_HEADER_STYLE, TEXT_DIM, TEXT_VERY_DIM, GOLD } from '../_styles'
 const MAX_VISIBLE = 20
 
 const REWARD_ICON: Record<QuestReward['kind'], string> = {
-  essence: '✨',
+  essence: '💠',
   serum: '💉',
   gold: '🪙',
   relationship_and_bonus: '🤝',
@@ -83,7 +83,7 @@ export function CompletedQuestsList() {
           padding: '8px 0',
           cursor: 'pointer',
           touchAction: 'manipulation',
-          color: '#fff',
+          color: '#365314',
           textAlign: 'left',
         }}
       >

@@ -51,10 +51,13 @@ export function getFrogPrice(level: number, purchases: number): number {
 }
 
 // === Upgrades ===
+// 2026-05-23: добавлены magnet2/magnet3 — магниты для L2/L3 (gate в UI после cosmos).
 export type UpgradeKey =
   | 'dropSpeed'
   | 'tractor'
   | 'magnet'
+  | 'magnet2'
+  | 'magnet3'
   | 'crateQuality'
   | 'rareBoxSpeed'
 
@@ -75,6 +78,14 @@ export const UPGRADE_CONFIG: Readonly<Record<UpgradeKey, UpgradeCfg>> = {
     costs: [550, 3_500, 23_000, 250_000, 2_500_000, 25_000_000, 250_000_000, 2_500_000_000],
   },
   magnet: {
+    maxLevel: 6,
+    costs: [300_000, 1_000_000, 5_000_000, 50_000_000, 500_000_000, 5_000_000_000],
+  },
+  magnet2: {
+    maxLevel: 6,
+    costs: [300_000, 1_000_000, 5_000_000, 50_000_000, 500_000_000, 5_000_000_000],
+  },
+  magnet3: {
     maxLevel: 6,
     costs: [300_000, 1_000_000, 5_000_000, 50_000_000, 500_000_000, 5_000_000_000],
   },

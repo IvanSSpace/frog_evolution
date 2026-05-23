@@ -4,9 +4,8 @@
 
 import type { Element } from '../../../store/cosmic/types'
 
-// BG planet archetype → element. 12 entries.
-// Mapping rationale: каждый BG archetype в THEME_PALETTES имеет one-to-one соответствие
-// с одним из 12 базовых elements (остальные 4 — exclusive через main race миссии).
+// 2026-05-23: серум типов 11 (1:1 с archetypes планет).
+// dead → shadow убран (shadow удалён). Main-race exclusive elements удалены целиком.
 export const ARCHETYPE_TO_ELEMENT: Record<string, Element> = {
   lava: 'fire',
   ice: 'ice',
@@ -14,7 +13,6 @@ export const ARCHETYPE_TO_ELEMENT: Record<string, Element> = {
   forest: 'forest',
   toxic: 'toxic',
   plasma: 'plasma',
-  dead: 'shadow',
   mineral: 'crystal',
   desert: 'desert',
   gas_giant: 'gas',
@@ -22,20 +20,10 @@ export const ARCHETYPE_TO_ELEMENT: Record<string, Element> = {
   binary: 'binary',
 }
 
-// Main race type → element. ELEMENT-12: 4 exclusive elements,
-// доступны только через миссии с main-race планет (миссии — Phase 16,
-// Phase 12 хранит только маппинг для будущего использования).
-// 6 ключей → 4 уникальных elements (mystic+ancient → arcane; military+forge → war;
-//                                     shadow+destroyed → void; mechano → mechanical).
-export const MAIN_RACE_TO_ELEMENT: Record<string, Element> = {
-  mystic: 'arcane',
-  ancient: 'arcane',
-  mechano: 'mechanical',
-  military: 'war',
-  forge: 'war',
-  shadow: 'void',
-  destroyed: 'void',
-}
+// Legacy: ранее main-race архетипы давали exclusive elements (arcane/mechanical/war/void).
+// После сокращения серум-типов 1:1 с planet archetypes — main-race заходит через
+// обычный archetype резолв; этот mapping больше не нужен.
+export const MAIN_RACE_TO_ELEMENT: Record<string, Element> = {}
 
 /**
  * Resolve element from planet metadata.
@@ -55,8 +43,6 @@ export function elementFromPlanet(
 
 /**
  * Reverse lookup: element → archetype string (для сборки fake AnimSys в dormant presets).
- * 4 exclusive elements (arcane/mechanical/war/void) маппятся на main-race themes
- * (mystic/mechano/military/shadow), которые тоже есть в THEME_PALETTES.
  */
 export function archetypeForElement(element: Element): string {
   switch (element) {
@@ -72,8 +58,6 @@ export function archetypeForElement(element: Element): string {
       return 'toxic'
     case 'plasma':
       return 'plasma'
-    case 'shadow':
-      return 'dead'
     case 'crystal':
       return 'mineral'
     case 'desert':
@@ -84,13 +68,5 @@ export function archetypeForElement(element: Element): string {
       return 'gas_ringed'
     case 'binary':
       return 'binary'
-    case 'arcane':
-      return 'mystic'
-    case 'mechanical':
-      return 'mechano'
-    case 'war':
-      return 'military'
-    case 'void':
-      return 'shadow'
   }
 }

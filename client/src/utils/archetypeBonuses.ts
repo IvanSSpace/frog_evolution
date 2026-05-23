@@ -16,33 +16,29 @@ import type { Element } from '../store/cosmic/types'
 export type ArchetypeCategory = 'fire' | 'water' | 'stone' | 'shadow' | 'other'
 
 /**
- * 16 elements → 5 categories.
+ * 2026-05-23: Element union сокращён до 11 (см. cosmic/types.ts).
+ * Категории сохранены — теперь:
  *
- *   Огонь (fire):   fire, plasma, war              (3)
- *   Вода  (water):  water, forest, gas             (3)
- *   Камень(stone):  crystal, mechanical, ring      (3)
- *   Тень  (shadow): shadow, void, arcane, binary   (4)
- *   Прочее(other):  ice, toxic, desert             (3)
+ *   Огонь (fire):   fire, plasma         (2)
+ *   Вода  (water):  water, forest, gas   (3)
+ *   Камень(stone):  crystal, ring        (2)
+ *   Тень  (shadow): binary               (1)  ← теперь только binary
+ *   Прочее(other): ice, toxic, desert    (3)
  *
- *   Total: 3+3+3+4+3 = 16 ✓
+ *   Total: 2+3+2+1+3 = 11 ✓
  */
 export const ELEMENT_TO_CATEGORY: Record<Element, ArchetypeCategory> = {
   // fire-category
   fire: 'fire',
   plasma: 'fire',
-  war: 'fire',
   // water-category
   water: 'water',
   forest: 'water',
   gas: 'water',
   // stone-category
   crystal: 'stone',
-  mechanical: 'stone',
   ring: 'stone',
   // shadow-category
-  shadow: 'shadow',
-  void: 'shadow',
-  arcane: 'shadow',
   binary: 'shadow',
   // other-category
   ice: 'other',

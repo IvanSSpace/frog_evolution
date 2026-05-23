@@ -27,12 +27,22 @@ function isDesktopPlatform(tg: TelegramWebApp): boolean {
 // Инициализация SDK. Зовём один раз при старте приложения.
 export function initTelegram(): void {
   const tg = getTelegramWebApp()
-  if (!tg) return
+  if (!tg) {
+    // Браузер без Telegram = dev / desktop preview. TG chrome не существует.
+    document.body.classList.add('tg-desktop')
+    return
+  }
   tg.ready()
   tg.expand()
   tg.disableVerticalSwipes?.()
   tg.setHeaderColor?.('#1a2e1a')
   tg.setBackgroundColor?.('#1a2e1a')
+  // CSS-флаг для desktop platforms — top chrome не существует, обнуляем pad.
+  if (isDesktopPlatform(tg)) {
+    document.body.classList.add('tg-desktop')
+  } else {
+    document.body.classList.add('tg-mobile')
+  }
   // requestFullscreen / lockOrientation — Bot API 8.0+. На старых клиентах (≤6.x)
   // метод СУЩЕСТВУЕТ на объекте но кидает WebAppMethodUnsupported при вызове —
   // optional chaining не помогает, оборачиваем в try/catch.

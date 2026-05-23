@@ -22,32 +22,17 @@ import {
 const TRACK_LOADERS: Record<TrackId, () => Promise<{ default: CreateTrack }>> =
   {
     beyondHorizon: () => import('./tracks/beyondHorizon'),
-    stellarTide: () => import('./tracks/stellarTide'),
-    phylogenesis: () => import('./tracks/phylogenesis'),
-    leviathanLullaby: () => import('./tracks/leviathanLullaby'),
-    frogTomorrow: () => import('./tracks/frogTomorrow'),
-    cosmicBattle: () => import('./tracks/cosmicBattle'),
+    swampDance: () => import('./tracks/swampDance'),
   }
 
-export const TRACK_ORDER: TrackId[] = [
-  'beyondHorizon',
-  'stellarTide',
-  'phylogenesis',
-  'leviathanLullaby',
-  'frogTomorrow',
-  'cosmicBattle',
-]
+export const TRACK_ORDER: TrackId[] = ['swampDance', 'beyondHorizon']
 
 export const TRACK_TOTALS: Record<TrackId, number> = {
   beyondHorizon: 420,
-  stellarTide: 240,
-  phylogenesis: 240,
-  leviathanLullaby: 240,
-  frogTomorrow: 60,
-  cosmicBattle: 60,
+  swampDance: 96,
 }
 
-const CROSSFADE_SEC = 2
+const CROSSFADE_SEC = 0.15
 const RAMP_DOWN_SEC = 0.5
 const DISPOSE_DELAY_MS = 4000
 

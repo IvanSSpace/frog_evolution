@@ -17,10 +17,15 @@ export function saveVolumeDb(db: number): void {
   localStorage.setItem(KEY_VOLUME, String(db))
 }
 
+const VALID_TRACKS: ReadonlySet<TrackId> = new Set<TrackId>([
+  'beyondHorizon',
+  'swampDance',
+])
+
 export function loadSelectedTrack(): TrackId | null {
   const raw = localStorage.getItem(KEY_TRACK)
   if (!raw) return null
-  return raw as TrackId
+  return VALID_TRACKS.has(raw as TrackId) ? (raw as TrackId) : null
 }
 
 export function saveSelectedTrack(id: TrackId | null): void {

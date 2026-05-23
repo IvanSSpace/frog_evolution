@@ -37,7 +37,7 @@ export interface PurchaseShopItemOpts {
 
 export function createShopSlice(set: SetFn, get: GetFn): ShopActions {
   return {
-    purchaseShopItem: (itemId, opts) => {
+    purchaseShopItem: (itemId, _opts) => {
       // Cast чтобы получить runtime safety для unknown id.
       const id = itemId as ShopItemId
       const item = SHOP_ITEMS[id]
@@ -49,24 +49,11 @@ export function createShopSlice(set: SetFn, get: GetFn): ShopActions {
       const cost = getNextCost(item, purchasedTimes)
 
       // === Currency guards ===
-      if (item.currency === 'essence') {
-        if (cosmic.essence < cost) return false
-      } else {
-        // serum currency
-        if (id === 'serum_trade_up') {
-          const src = opts?.sourceElement
-          if (!src) return false
-          if ((cosmic.serums[src] ?? 0) < cost) return false
-        } else if (id === 'skip_ship_cooldown') {
-          const src = opts?.skipElement
-          if (!src) return false
-          if ((cosmic.serums[src] ?? 0) < cost) return false
-          // Special guard: ship должен быть в transit
-          if (!cosmic.ship || cosmic.ship.state !== 'transit') return false
-        } else {
-          // Future serum-items: fallback skip
-          return false
-        }
+      // 2026-05-22: серум больше не валюта. Все items платят essence.
+      if (cosmic.essence < cost) return false
+      // skip_ship_cooldown сохраняет special guard на ship state.
+      if (id === 'skip_ship_cooldown') {
+        if (!cosmic.ship || cosmic.ship.state !== 'transit') return false
       }
 
       // === Compute new state (atomic) ===
@@ -84,16 +71,8 @@ export function createShopSlice(set: SetFn, get: GetFn): ShopActions {
       let nextSerumDropBonus = cosmic.permaSerumDropBonus
       let nextShip: ShipState | null = cosmic.ship
 
-      // Cost deduction
-      if (item.currency === 'essence') {
-        nextEssence -= cost
-      } else if (id === 'serum_trade_up') {
-        const src = opts!.sourceElement as Element
-        nextSerums = { ...nextSerums, [src]: nextSerums[src] - cost }
-      } else if (id === 'skip_ship_cooldown') {
-        const src = opts!.skipElement as Element
-        nextSerums = { ...nextSerums, [src]: nextSerums[src] - cost }
-      }
+      // Cost deduction — все items платят essence (2026-05-22).
+      nextEssence -= cost
 
       // Apply effect
       switch (id) {

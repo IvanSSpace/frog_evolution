@@ -27,7 +27,12 @@
 // для spiralFrogTo / removeFrog / spawnFrog / startIdleAnim.
 
 import Phaser from 'phaser'
-import { useGameStore } from '../../../store/gameStore'
+import {
+  useGameStore,
+  l18MergeIncrementFraction,
+} from '../../../store/gameStore'
+
+const SIX_HOURS_MS = 6 * 60 * 60 * 1000
 import { useOnboardingStore } from '../../../store/onboarding/onboardingSlice'
 import { eventBus } from '../../../store/eventBus'
 import {
@@ -296,15 +301,22 @@ export class MergeController {
           storeL25.markCaptainBirthSeen()
           eventBus.emit('captain:birth-start', { x: cx, y: cy })
         }
-        // 2026-05-18: каждый L18+L18 даёт +1 essence + tiered bonus:
-        //   - First merge: +2× L18 income/sec ABSOLUTE permanent (compensates
-        //     loss of 2 destroyed L18 frogs symbolically — "ghost L18 income").
-        //   - Subsequent: +5% / +5% / +2.5%... (см. l18GoldMultiplier в gameStore).
+        // 2026-05-23: rework reward — permanent % multiplier удалён.
+        // Каждый L18+L18 merge даёт:
+        //   - +1 essence
+        //   - +5% / +2.5% temp buff к доходу на 6h (см. l18MergeIncrementFraction)
+        //   - First merge также: +2× L18 income/sec ABSOLUTE permanent
+        //     ("ghost L18 income", compensates loss of 2 destroyed L18 frogs).
         useGameStore.setState((s) => ({ essence: s.essence + 1 }))
         if (storeL25.l18MergesCount === 0) {
-          // First merge: добавить absolute passive bonus = 2× L18 income/sec.
           const l18IncomePerSec = getTargetIncomePerSec(MAX_LEVEL)
           storeL25.addL18AbsoluteBonus(l18IncomePerSec * 2)
+        }
+        // 6h temp buff: % зависит от count'а ДО инкремента (count=0 → +5%,
+        // count=1 → +5%, count≥2 → +2.5%).
+        const buffFraction = l18MergeIncrementFraction(storeL25.l18MergesCount)
+        if (buffFraction > 0) {
+          storeL25.activateTemporaryIncomeBuff(buffFraction * 100, SIX_HOURS_MS)
         }
         storeL25.incrementL18Merges()
         mergeApi(MAX_LEVEL, currentLocId)
@@ -399,15 +411,9 @@ export class MergeController {
             )
         }
 
-        // Plan 22-03: L18 ascension trigger. Только после carrier-merge'а
-        // (нормал+нормал на L18 — special path выше, обработан до этого блока).
-        // Carrier на L18 instant ascends: удаляется из store, аура pulse +
-        // лягушка исчезает с поля (MainScene listens 'cosmic:carrier-ascended').
-        // ВАЖНО порядок: сначала спавн + dispatch merge action (carrier создан в store
-        // под newFrogId), потом ascendCarrier(newFrogId) удаляет его. Consistent transition.
-        if (carrierMergePlan && newLevel === MAX_LEVEL) {
-          useGameStore.getState().ascendCarrier(newFrogId)
-        }
+        // 2026-05-23: L18 ascension trigger удалён — carrier продолжает мерджиться
+        // дальше до L18+L18 (cosmos sentinel выше). Специальный buff серума на
+        // L18+L18 — TBD.
 
         const wasNew = store.markDiscovered(newLevel)
         if (wasNew) {
@@ -429,7 +435,7 @@ export class MergeController {
     const scene = this.scene
     const cfg = FROG_LEVELS[level - 1]
     const ghost = scene.add.image(x, y, textureKeyForLevel(level))
-    ghost.setTint(cfg.tint)
+    // tint уже запечён в SVG при preload, setTint больше не нужен.
     ghost.setScale(BASE_SCALE)
     ghost.setAlpha(0.2)
     ghost.setDepth(99999)

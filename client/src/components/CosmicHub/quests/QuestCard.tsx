@@ -35,7 +35,7 @@ const QUEST_TYPE_ICON: Record<QuestType, string> = {
 }
 
 const REWARD_ICON: Record<QuestReward['kind'], string> = {
-  essence: '✨',
+  essence: '💠',
   serum: '💉',
   gold: '🪙',
   relationship_and_bonus: '🤝',
@@ -136,7 +136,7 @@ export function QuestCard({ quest }: Props) {
         style={{
           position: 'relative',
           height: 12,
-          background: 'rgba(255,255,255,0.1)',
+          background: 'rgba(54,83,20,0.15)',
           borderRadius: 999,
           overflow: 'hidden',
           marginBottom: 4,
@@ -192,7 +192,7 @@ export function QuestCard({ quest }: Props) {
             padding: '6px 12px',
             background: 'transparent',
             color: TEXT_DIM,
-            border: '1px solid rgba(255,255,255,0.2)',
+            border: '1px solid rgba(54,83,20,0.25)',
             borderRadius: 6,
             fontSize: 11,
             cursor: 'pointer',
@@ -232,7 +232,7 @@ export function QuestCard({ quest }: Props) {
               style={{
                 padding: '6px 12px',
                 background: '#ef4444',
-                color: '#fff',
+                color: '#365314',
                 border: 'none',
                 borderRadius: 6,
                 fontSize: 11,
@@ -253,7 +253,7 @@ export function QuestCard({ quest }: Props) {
                 padding: '6px 12px',
                 background: 'transparent',
                 color: TEXT_DIM,
-                border: '1px solid rgba(255,255,255,0.2)',
+                border: '1px solid rgba(54,83,20,0.25)',
                 borderRadius: 6,
                 fontSize: 11,
                 cursor: 'pointer',

@@ -38,7 +38,7 @@ export function QuestsTab() {
   const atCap = activeQuests.length >= ACTIVE_QUEST_CAP
 
   return (
-    <div style={{ padding: 12, color: '#fff' }}>
+    <div style={{ padding: 12, color: '#365314' }}>
       <section style={{ marginBottom: 12 }}>
         <h3 style={SECTION_HEADER_STYLE}>
           {t('cosmic_hub.quests.header_active', {

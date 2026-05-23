@@ -25,7 +25,6 @@ import Phaser from 'phaser'
 import { useGameStore } from '../../../store/gameStore'
 import { eventBus } from '../../../store/eventBus'
 import {
-  FROG_LEVELS,
   textureKeyForLevel,
   rollPoopType,
   POOP_INTERVAL_MS,
@@ -124,7 +123,8 @@ export class FrogSpawner {
 
     const body = scene.add.image(0, 0, textureKeyForLevel(level))
     body.scaleY = 1.0
-    body.setTint(FROG_LEVELS[level - 1].tint)
+    // Tint уже запечён в SVG при preload (replace #ffffff → cfg.tint hex).
+    // Цветные элементы (короны, узоры) сохраняют собственные цвета.
     body.setInteractive({ useHandCursor: true })
     scene.input.setDraggable(body)
 

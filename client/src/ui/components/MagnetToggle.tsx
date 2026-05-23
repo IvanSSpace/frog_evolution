@@ -7,13 +7,16 @@ import { useTranslation } from 'react-i18next'
 import { useGameStore } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
 import { hapticSelection } from '../../utils/telegram'
+import { magnetKeyForLocation } from '../../game/config/upgrades'
 
 export function MagnetToggle() {
   const { t } = useTranslation()
-  const magnetLevel = useGameStore((s) => s.upgrades.magnet)
+  // 2026-05-23: per-location магнит — берём ключ под текущую локацию.
+  const currentLocation = useGameStore((s) => s.currentLocation)
+  const magnetKey = magnetKeyForLocation(currentLocation)
+  const magnetLevel = useGameStore((s) => s.upgrades[magnetKey])
   const magnetEnabled = useGameStore((s) => s.magnetEnabled)
   const toggleMagnet = useGameStore((s) => s.toggleMagnet)
-  const currentLocation = useGameStore((s) => s.currentLocation)
   const [starMapActive, setStarMapActive] = useState(false)
 
   useEffect(() => {
@@ -28,7 +31,6 @@ export function MagnetToggle() {
   }, [])
 
   if (magnetLevel < 1) return null
-  if (currentLocation !== 1) return null
   if (starMapActive) return null // на Звёздной карте магнит не нужен
 
   return (
@@ -40,7 +42,7 @@ export function MagnetToggle() {
       aria-label={magnetEnabled ? t('magnet.off') : t('magnet.on')}
       style={{
         position: 'fixed',
-        top: 'calc(12% + 54px + 2px)',
+        top: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad) + 2px)',
         left: 12,
         zIndex: 50,
         pointerEvents: 'auto',

@@ -7,6 +7,10 @@ export interface Upgrades {
   dropSpeed: number
   tractor: number
   magnet: number
+  // 2026-05-23: магниты для L2 и L3 — отдельные апгрейды.
+  // Доступны для покупки после открытия космоса.
+  magnet2: number
+  magnet3: number
   crateQuality: number
   rareBoxSpeed: number
 }
@@ -21,9 +25,20 @@ export function toUpgrades(
     dropSpeed: r.dropSpeed ?? 0,
     tractor: r.tractor ?? 0,
     magnet: r.magnet ?? 0,
+    magnet2: r.magnet2 ?? 0,
+    magnet3: r.magnet3 ?? 0,
     crateQuality: r.crateQuality ?? 0,
     rareBoxSpeed: r.rareBoxSpeed ?? 0,
   }
+}
+
+// Helper: какой ключ апгрейда магнита соответствует данной локации.
+export function magnetKeyForLocation(
+  locationId: number,
+): 'magnet' | 'magnet2' | 'magnet3' {
+  if (locationId === 2) return 'magnet2'
+  if (locationId === 3) return 'magnet3'
+  return 'magnet'
 }
 
 export const UPGRADE_CONFIG = {
@@ -43,6 +58,27 @@ export const UPGRADE_CONFIG = {
     ],
   },
   magnet: {
+    maxLevel: 6,
+    spawnIntervalMs: [Infinity, 10000, 8000, 7000, 6000, 5000, 4000],
+    durationMs: [0, 5000, 5500, 6000, 6500, 7000, 8000],
+    mergesPerCycle: [0, 1, 1, 2, 2, 3, 3],
+    costs: [
+      300_000, 1_000_000, 5_000_000, 50_000_000, 500_000_000, 5_000_000_000,
+    ],
+  },
+  // 2026-05-23: магниты для L2/L3 — те же параметры что L1, но отдельный
+  // upgrade pathway. Доступны для покупки только после открытия космоса
+  // (gate в UI; backend всё равно validate'нет если попытка купить раньше).
+  magnet2: {
+    maxLevel: 6,
+    spawnIntervalMs: [Infinity, 10000, 8000, 7000, 6000, 5000, 4000],
+    durationMs: [0, 5000, 5500, 6000, 6500, 7000, 8000],
+    mergesPerCycle: [0, 1, 1, 2, 2, 3, 3],
+    costs: [
+      300_000, 1_000_000, 5_000_000, 50_000_000, 500_000_000, 5_000_000_000,
+    ],
+  },
+  magnet3: {
     maxLevel: 6,
     spawnIntervalMs: [Infinity, 10000, 8000, 7000, 6000, 5000, 4000],
     durationMs: [0, 5000, 5500, 6000, 6500, 7000, 8000],

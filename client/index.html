@@ -21,6 +21,18 @@
         padding: 0;
         box-sizing: border-box;
       }
+      /* Telegram chrome compensation. Default — mobile (54px). На desktop
+         (body.tg-desktop) → 0px. Set'ится в initTelegram() по platform.
+         --ui-top-offset — относительный отступ от верха viewport до UI.
+         12% нужны на mobile (TG chrome + breathing). На desktop = 0%. */
+      :root {
+        --tg-chrome-pad: 54px;
+        --ui-top-offset: 12%;
+      }
+      body.tg-desktop {
+        --tg-chrome-pad: 0px;
+        --ui-top-offset: 0%;
+      }
       html,
       body {
         width: 100%;
@@ -362,6 +374,71 @@
         animation: ffFadeOut 280ms ease-in both;
       }
 
+      @keyframes ffVinylSpin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .ff-vinyl-spin {
+        animation: ffVinylSpin 4s linear infinite;
+      }
+
+      @keyframes ffVinylSlideR {
+        from {
+          transform: translateX(140%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      @keyframes ffVinylSlideL {
+        from {
+          transform: translateX(-140%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      .ff-vinyl-slide-r {
+        animation: ffVinylSlideR 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      .ff-vinyl-slide-l {
+        animation: ffVinylSlideL 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      @keyframes ffVinylExitR {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(140%);
+          opacity: 0;
+        }
+      }
+      @keyframes ffVinylExitL {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(-140%);
+          opacity: 0;
+        }
+      }
+      .ff-vinyl-exit-r {
+        animation: ffVinylExitR 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      .ff-vinyl-exit-l {
+        animation: ffVinylExitL 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+
       #app {
         position: relative;
         width: 100%;
@@ -374,7 +451,7 @@
       }
       #game-canvas {
         position: absolute;
-        top: calc(12% + 54px);
+        top: calc(var(--ui-top-offset) + var(--tg-chrome-pad));
         bottom: 13%;
         left: 0;
         right: 0;

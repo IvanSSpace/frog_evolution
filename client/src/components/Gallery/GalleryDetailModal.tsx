@@ -59,7 +59,7 @@ export function GalleryDetailModal() {
       <div
         style={{
           position: 'absolute',
-          top: 'calc(12% + 54px)',
+          top: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad))',
           bottom: '13%',
           left: 0,
           right: 0,

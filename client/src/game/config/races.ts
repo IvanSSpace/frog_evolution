@@ -106,9 +106,10 @@ export const RACES: readonly RaceConfig[] = [
     // Механидоны — гибрид био+машина. Структурированные, рациональные.
     id: 'mechanidons',
     nameKey: 'races.mechanidons.name',
-    affinity: 'mechanical',
+    // 2026-05-23: серум `mechanical` удалён, переназначено на crystal.
+    affinity: 'crystal',
     emojiIcon: '⚙️',
-    homeColor: ELEMENT_TINTS.mechanical,
+    homeColor: ELEMENT_TINTS.crystal,
     personalityKey: 'races.mechanidons.personality',
     communicationStyleKey: 'races.mechanidons.communication_style',
     loreShortKey: 'races.mechanidons.lore_short',
@@ -142,9 +143,10 @@ export const RACES: readonly RaceConfig[] = [
     // Тенебрисы — anti-matter, между измерений. Мистики, наблюдатели.
     id: 'tenebrians',
     nameKey: 'races.tenebrians.name',
-    affinity: 'shadow',
+    // 2026-05-23: серум `shadow` удалён, переназначено на toxic.
+    affinity: 'toxic',
     emojiIcon: '🌑',
-    homeColor: ELEMENT_TINTS.shadow,
+    homeColor: ELEMENT_TINTS.toxic,
     personalityKey: 'races.tenebrians.personality',
     communicationStyleKey: 'races.tenebrians.communication_style',
     loreShortKey: 'races.tenebrians.lore_short',
@@ -178,9 +180,10 @@ export const RACES: readonly RaceConfig[] = [
     // Время-ткачи — вне-временные существа. Эзотерики, философы.
     id: 'timeweavers',
     nameKey: 'races.timeweavers.name',
-    affinity: 'void',
+    // 2026-05-23: серум `void` удалён, переназначено на binary.
+    affinity: 'binary',
     emojiIcon: '🌀',
-    homeColor: ELEMENT_TINTS.void,
+    homeColor: ELEMENT_TINTS.binary,
     personalityKey: 'races.timeweavers.personality',
     communicationStyleKey: 'races.timeweavers.communication_style',
     loreShortKey: 'races.timeweavers.lore_short',

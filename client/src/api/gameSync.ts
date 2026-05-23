@@ -65,6 +65,7 @@ function hardResetClient(): void {
 const SAVE_THROTTLE_MS = 5000 // максимум один PUT раз в 5 секунд при идле
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 let pendingSave = false
+let inFlightSave = false
 let syncEnabled = false
 let unsubscribeStore: (() => void) | null = null
 let lastKnownVersion: number | null = null
@@ -138,6 +139,13 @@ function snapshotForSave() {
       hasCosmosUnlocked: s.hasCosmosUnlocked,
       l18MergesCount: s.l18MergesCount,
       l18AbsoluteBonusPerSec: s.l18AbsoluteBonusPerSec,
+      // 2026-05-23: эволюция лягушек (per-level tier + cooldown timestamps).
+      // Permanent progress — должен переноситься между девайсами.
+      frogTiers: s.frogTiers,
+      frogTierCooldowns: s.frogTierCooldowns,
+      // 2026-05-23: временный 6h buff к доходу после L18+L18 merge.
+      // Persist чтобы не сбрасывался при cross-device login.
+      temporaryIncomeBuff: s.temporaryIncomeBuff,
       // Phase 22: user preferences (cross-device sync).
       preferences: {
         numberFormat: s.numberFormat,
@@ -174,6 +182,8 @@ export async function loadGameState(): Promise<boolean> {
         dropSpeed: upg?.dropSpeed ?? 0,
         tractor: upg?.tractor ?? 0,
         magnet: upg?.magnet ?? 0,
+        magnet2: upg?.magnet2 ?? 0,
+        magnet3: upg?.magnet3 ?? 0,
         crateQuality: upg?.crateQuality ?? 0,
         rareBoxSpeed: upg?.rareBoxSpeed ?? 0,
       },
@@ -280,6 +290,32 @@ export async function loadGameState(): Promise<boolean> {
       if ('activeQuests' in c) cosmicUpdate.activeQuests = c.activeQuests
       if ('completedQuests' in c)
         cosmicUpdate.completedQuests = c.completedQuests
+      // 2026-05-23: эволюция лягушек — tier (per-level 0/1/2) + cooldowns (timestamps).
+      if ('frogTiers' in c && Array.isArray(c.frogTiers)) {
+        cosmicUpdate.frogTiers = c.frogTiers
+      }
+      if ('frogTierCooldowns' in c && Array.isArray(c.frogTierCooldowns)) {
+        cosmicUpdate.frogTierCooldowns = c.frogTierCooldowns
+      }
+      // 2026-05-23: hydrate temporaryIncomeBuff (shape: {until, percent} | null).
+      if ('temporaryIncomeBuff' in c) {
+        const tb = c.temporaryIncomeBuff as unknown
+        if (
+          tb &&
+          typeof tb === 'object' &&
+          typeof (tb as Record<string, unknown>).until === 'number' &&
+          typeof (tb as Record<string, unknown>).percent === 'number' &&
+          (tb as Record<string, unknown>).percent! > 0 &&
+          ((tb as Record<string, unknown>).until as number) > Date.now()
+        ) {
+          cosmicUpdate.temporaryIncomeBuff = {
+            until: (tb as { until: number }).until,
+            percent: (tb as { percent: number }).percent,
+          }
+        } else {
+          cosmicUpdate.temporaryIncomeBuff = null
+        }
+      }
       if (Object.keys(cosmicUpdate).length > 0) {
         useGameStore.setState(cosmicUpdate as Partial<typeof store>)
       }
@@ -299,7 +335,10 @@ export async function loadGameState(): Promise<boolean> {
         cosmicUpdate.captainBirthSeen === true ||
         cosmicUpdate.hasCosmosUnlocked === true ||
         typeof cosmicUpdate.l18MergesCount === 'number' ||
-        typeof cosmicUpdate.l18AbsoluteBonusPerSec === 'number'
+        typeof cosmicUpdate.l18AbsoluteBonusPerSec === 'number' ||
+        Array.isArray(cosmicUpdate.frogTiers) ||
+        Array.isArray(cosmicUpdate.frogTierCooldowns) ||
+        'temporaryIncomeBuff' in cosmicUpdate
       if (needsPersistenceWrite) {
         const persistence = await import('../store/persistence')
         if (cosmicUpdate.captainBirthSeen === true) {
@@ -314,6 +353,21 @@ export async function loadGameState(): Promise<boolean> {
         if (typeof cosmicUpdate.l18AbsoluteBonusPerSec === 'number') {
           persistence.saveL18AbsoluteBonusPerSec(
             cosmicUpdate.l18AbsoluteBonusPerSec as number,
+          )
+        }
+        if (Array.isArray(cosmicUpdate.frogTiers)) {
+          persistence.saveFrogTiers(cosmicUpdate.frogTiers as number[])
+        }
+        if (Array.isArray(cosmicUpdate.frogTierCooldowns)) {
+          persistence.saveFrogTierCooldowns(
+            cosmicUpdate.frogTierCooldowns as number[],
+          )
+        }
+        if ('temporaryIncomeBuff' in cosmicUpdate) {
+          persistence.saveTemporaryIncomeBuff(
+            cosmicUpdate.temporaryIncomeBuff as
+              | { until: number; percent: number }
+              | null,
           )
         }
       }
@@ -393,6 +447,7 @@ export async function loadGameState(): Promise<boolean> {
 
 export async function saveGameState(force = false): Promise<boolean> {
   if (!syncEnabled && !force) return false
+  inFlightSave = true
   try {
     const payload = snapshotForSave()
     const result = await putServerGameState(payload)
@@ -421,6 +476,8 @@ export async function saveGameState(force = false): Promise<boolean> {
     }
     devWarn('[gameSync] failed to save state', err)
     return false
+  } finally {
+    inFlightSave = false
   }
 }
 
@@ -442,6 +499,12 @@ let heartbeatTimer: ReturnType<typeof setInterval> | null = null
 async function heartbeatCheck(): Promise<void> {
   if (!syncEnabled) return
   if (lastKnownVersion === null) return
+  // Skip if local save activity could mutate lastKnownVersion at any moment:
+  //   - inFlightSave: PUT in transit, response will update lastKnownVersion
+  //   - pendingSave / saveTimer: throttle timer about to fire a PUT
+  // Without this guard heartbeat races the PUT/response cycle and reloads
+  // on a server-bumped version that our own client just produced.
+  if (inFlightSave || pendingSave || saveTimer !== null) return
   try {
     const data = await getServerGameState()
     const serverVersion = typeof data.version === 'number' ? data.version : 0

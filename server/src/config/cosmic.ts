@@ -3,6 +3,8 @@
 // Phase 22: Rarity removed. Серум — плоский Record<Element, number>.
 // Carrier — { frogId, element, level }.
 
+// 2026-05-23: 16 → 11 (удалены shadow/arcane/mechanical/war/void — без planet archetype'ов).
+// Должен оставаться синхронизированным с client/src/store/cosmic/types.ts.
 export const ELEMENTS = [
   'fire',
   'ice',
@@ -10,16 +12,11 @@ export const ELEMENTS = [
   'forest',
   'toxic',
   'plasma',
-  'shadow',
   'crystal',
   'desert',
   'gas',
   'ring',
   'binary',
-  'arcane',
-  'mechanical',
-  'war',
-  'void',
 ] as const
 
 export type Element = (typeof ELEMENTS)[number]

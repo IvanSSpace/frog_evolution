@@ -178,7 +178,7 @@ export function LocationStack() {
       <div
         style={{
           position: 'fixed',
-          top: 'calc(12% + 54px + 8px)',
+          top: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad) + 8px)',
           right: 8,
           left: 'auto',
           zIndex: 50,

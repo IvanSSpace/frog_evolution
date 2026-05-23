@@ -30,37 +30,27 @@ import {
   forestSpec,
   toxicSpec,
   plasmaSpec,
-  shadowSpec,
   crystalSpec,
   desertSpec,
   gasSpec,
   ringSpec,
   binarySpec,
-  arcaneSpec,
-  mechanicalSpec,
-  warSpec,
-  voidSpec,
 } from './elementAuraSpecs'
 import type { Element } from '../../store/cosmic/types'
 
 const SPEC_BY_ELEMENT: Record<Element, AuraSpec> = {
   fire: fireSpec,
   water: waterSpec,
-  // ice не имеет dedicated spec — fallback на waterSpec (визуально близко, та же категория 'other').
+  // ice не имеет dedicated spec — fallback на waterSpec (визуально близко).
   ice: waterSpec,
   forest: forestSpec,
   toxic: toxicSpec,
   plasma: plasmaSpec,
-  shadow: shadowSpec,
   crystal: crystalSpec,
   desert: desertSpec,
   gas: gasSpec,
   ring: ringSpec,
   binary: binarySpec,
-  arcane: arcaneSpec,
-  mechanical: mechanicalSpec,
-  war: warSpec,
-  void: voidSpec,
 }
 
 const ASCENSION_DURATION_MS = 1500

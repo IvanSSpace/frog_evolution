@@ -68,9 +68,14 @@ const grantSerumSchema = z.object({
   amount: z.coerce.number().int().positive('Must be a positive integer'),
 })
 
+const grantFrogSchema = z.object({
+  level: z.coerce.number().int().min(1).max(18),
+})
+
 type GrantGoldForm = z.infer<typeof grantGoldSchema>
 type GrantEssenceForm = z.infer<typeof grantEssenceSchema>
 type GrantSerumForm = z.infer<typeof grantSerumSchema>
+type GrantFrogForm = z.infer<typeof grantFrogSchema>
 
 export function UserDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -166,6 +171,27 @@ export function UserDetailPage() {
   const goldForm = useForm<GrantGoldForm>({ resolver: zodResolver(grantGoldSchema) })
   const essenceForm = useForm<GrantEssenceForm>({ resolver: zodResolver(grantEssenceSchema) })
   const serumForm = useForm<GrantSerumForm>({ resolver: zodResolver(grantSerumSchema) })
+  const frogForm = useForm<GrantFrogForm>({
+    resolver: zodResolver(grantFrogSchema),
+    defaultValues: { level: 1 },
+  })
+
+  const grantFrogMutation = useMutation({
+    mutationFn: (body: { level: number }) =>
+      api.post(`/admin/users/${id}/grant-frog`, body),
+    onSuccess: (res) => {
+      const data = res.data as { level: number; locationId: number }
+      toast({ title: `Frog L${data.level} added to location ${data.locationId}` })
+      void queryClient.invalidateQueries({ queryKey: ['user', id] })
+    },
+    onError: (e: unknown) => {
+      const err = e as { response?: { data?: { error?: string } } }
+      toast({
+        title: err.response?.data?.error ?? 'Grant frog failed',
+        variant: 'destructive',
+      })
+    },
+  })
 
   if (isLoading) return <p className="text-muted-foreground">Loading user...</p>
   if (isError || !user) return <p className="text-destructive">User not found.</p>
@@ -373,6 +399,43 @@ export function UserDetailPage() {
                 </div>
                 <Button type="submit" size="sm" disabled={grantMutation.isPending}>
                   Grant Serum
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Grant frog */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Grant Frog</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form
+                onSubmit={frogForm.handleSubmit((d) =>
+                  grantFrogMutation.mutate({ level: d.level }),
+                )}
+                className="flex flex-col gap-2"
+              >
+                <div>
+                  <Label htmlFor="frog-level">Level</Label>
+                  <select
+                    id="frog-level"
+                    className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    {...frogForm.register('level')}
+                  >
+                    {Array.from({ length: 18 }, (_, i) => i + 1).map((lvl) => (
+                      <option key={lvl} value={lvl}>
+                        Level {lvl}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={grantFrogMutation.isPending}
+                >
+                  Grant Frog
                 </Button>
               </form>
             </CardContent>

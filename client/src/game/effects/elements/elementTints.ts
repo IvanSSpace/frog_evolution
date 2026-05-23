@@ -34,14 +34,9 @@ export const ELEMENT_TINTS: Record<Element, number> = {
   forest: 0x4ade80,
   toxic: 0x86efac,
   plasma: 0xfde047,
-  shadow: 0x6b7280,
   crystal: 0xddd6fe,
   desert: 0xfde68a,
   gas: 0xfdba74,
   ring: 0xc4b5fd,
   binary: 0xfca5a5,
-  arcane: 0xa78bfa,
-  mechanical: 0xfdd87a, // Phase 19-06 audit: was 0xfde68a (collision с desert)
-  war: 0xdc2626,
-  void: 0x1f2937,
 }

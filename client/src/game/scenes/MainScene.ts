@@ -1,9 +1,6 @@
 import Phaser from 'phaser'
-import {
-  useGameStore,
-  getDropIntervalMs,
-  getLocationById,
-} from '../../store/gameStore'
+import { useGameStore, getDropIntervalMs } from '../../store/gameStore'
+import { magnetKeyForLocation } from '../config/upgrades'
 import { eventBus } from '../../store/eventBus'
 import {
   FROG_LEVELS,
@@ -21,16 +18,11 @@ import {
   forestSpec,
   toxicSpec,
   plasmaSpec,
-  shadowSpec,
   crystalSpec,
   desertSpec,
   gasSpec,
   ringSpec,
   binarySpec,
-  arcaneSpec,
-  mechanicalSpec,
-  warSpec,
-  voidSpec,
 } from '../effects/elementAuraSpecs'
 import { SerumSelectionLayer } from '../effects/SerumSelectionLayer'
 import type { Element } from '../../store/cosmic/types'
@@ -144,19 +136,40 @@ export class MainScene extends Phaser.Scene {
   }
 
   preload() {
-    // Каждый уровень — свой SVG. Если несколько уровней используют один файл
-    // (placeholder), грузим его один раз — textureKeyForLevel переиспользует ключ.
+    // Каждый уровень: загружаем SVG как raw текст, потом на FILE_COMPLETE
+    // заменяем все `fill #ffffff` на cfg.tint hex и регистрируем blob URL
+    // под обычным texture key. setTint в spawnFrog мы НЕ вызываем —
+    // tint уже запечён, цветные элементы (корона, узоры) остаются нетронутыми.
     const loaded = new Set<string>()
     FROG_LEVELS.forEach((cfg, idx) => {
       const level = idx + 1
       const key = textureKeyForLevel(level)
       if (loaded.has(key)) return
       loaded.add(key)
-      this.load.svg(key, cfg.path, {
-        width: 50 * TEXTURE_QUALITY * cfg.size,
-        height: 47 * TEXTURE_QUALITY * cfg.size,
-      })
+      this.load.text(`frog_raw_text_${level}`, cfg.path)
     })
+
+    this.load.on(
+      Phaser.Loader.Events.FILE_COMPLETE,
+      (key: string, _type: string, data: unknown) => {
+        const m = key.match(/^frog_raw_text_(\d+)$/)
+        if (!m) return
+        const level = Number(m[1])
+        const cfg = FROG_LEVELS[level - 1]
+        if (!cfg || typeof data !== 'string') return
+        const tintHex = '#' + cfg.tint.toString(16).padStart(6, '0')
+        const recolored = data
+          .replace(/fill:\s*#ffffff/gi, `fill:${tintHex}`)
+          .replace(/fill="#ffffff"/gi, `fill="${tintHex}"`)
+          .replace(/fill="#fff"/gi, `fill="${tintHex}"`)
+        const blob = new Blob([recolored], { type: 'image/svg+xml' })
+        const url = URL.createObjectURL(blob)
+        this.load.svg(textureKeyForLevel(level), url, {
+          width: 50 * TEXTURE_QUALITY * cfg.size,
+          height: 47 * TEXTURE_QUALITY * cfg.size,
+        })
+      },
+    )
 
     this.load.svg('goo', '/goo.svg', {
       width: 18 * TEXTURE_QUALITY,
@@ -340,21 +353,11 @@ export class MainScene extends Phaser.Scene {
       new ElementAuraOverlay(this, () => this.frogs, 'forest', forestSpec),
       new ElementAuraOverlay(this, () => this.frogs, 'toxic', toxicSpec),
       new ElementAuraOverlay(this, () => this.frogs, 'plasma', plasmaSpec),
-      new ElementAuraOverlay(this, () => this.frogs, 'shadow', shadowSpec),
       new ElementAuraOverlay(this, () => this.frogs, 'crystal', crystalSpec),
       new ElementAuraOverlay(this, () => this.frogs, 'desert', desertSpec),
       new ElementAuraOverlay(this, () => this.frogs, 'gas', gasSpec),
       new ElementAuraOverlay(this, () => this.frogs, 'ring', ringSpec),
       new ElementAuraOverlay(this, () => this.frogs, 'binary', binarySpec),
-      new ElementAuraOverlay(this, () => this.frogs, 'arcane', arcaneSpec),
-      new ElementAuraOverlay(
-        this,
-        () => this.frogs,
-        'mechanical',
-        mechanicalSpec,
-      ),
-      new ElementAuraOverlay(this, () => this.frogs, 'war', warSpec),
-      new ElementAuraOverlay(this, () => this.frogs, 'void', voidSpec),
     ]
   }
 
@@ -679,19 +682,13 @@ export class MainScene extends Phaser.Scene {
       store.setBoxWaiting(waiting)
     }
 
-    // Магнит работает только на локации, где это разрешено (сейчас — только Лужа L1).
-    // Phase 14 (SERUM-06): auto-pause во время serum selection mode.
-    const location = getLocationById(store.currentLocation)
-    const magnetLevel = store.upgrades.magnet
+    // Магнит per-location. 2026-05-23: для L2/L3 свои upgrade-ключи (magnet2/magnet3),
+    // покупка открывается после cosmos. Активен если level > 0 (gate сам собой через
+    // отсутствие покупки). Phase 14 (SERUM-06): auto-pause во время serum selection.
+    const magnetKey = magnetKeyForLocation(store.currentLocation)
+    const magnetLevel = store.upgrades[magnetKey]
     const serumPaused = store.serumDragActive
-    // Phase 21-04: магнит — controller'ный tick. Phase 14 (SERUM-06): пока активен
-    // serum-drag, magnet полностью pause'ится (resetSpawnTimer + не tick).
-    if (
-      !serumPaused &&
-      location.magnetEnabled &&
-      magnetLevel > 0 &&
-      store.magnetEnabled
-    ) {
+    if (!serumPaused && magnetLevel > 0 && store.magnetEnabled) {
       this.magnet.tick(magnetLevel, delta)
     } else {
       this.magnet.resetSpawnTimer()
@@ -760,16 +757,11 @@ export class MainScene extends Phaser.Scene {
       'forest',
       'toxic',
       'plasma',
-      'shadow',
       'crystal',
       'desert',
       'gas',
       'ring',
       'binary',
-      'arcane',
-      'mechanical',
-      'war',
-      'void',
     ]
     // Representative level per location
     const LOC_LEVEL: Record<number, number> = { 1: 1, 2: 7, 3: 13, 4: 19 }

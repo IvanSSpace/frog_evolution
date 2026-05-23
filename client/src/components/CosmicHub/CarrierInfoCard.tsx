@@ -45,7 +45,7 @@ export function CarrierInfoCard({ carrier, onDispose }: Props) {
         <span
           className="flex-1 truncate"
           style={{
-            color: '#fff',
+            color: '#365314',
             fontSize: 14,
             fontWeight: 600,
           }}

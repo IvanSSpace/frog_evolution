@@ -134,25 +134,9 @@
         "name": "Beyond the Horizon",
         "desc": "7 минут · 7 секций · кинематографический эпик"
       },
-      "stellarTide": {
-        "name": "Stellar Tide",
-        "desc": "4 минуты · спокойные пульсации"
-      },
-      "phylogenesis": {
-        "name": "Phylogenesis",
-        "desc": "4 минуты · минимализм для размышлений"
-      },
-      "leviathanLullaby": {
-        "name": "Leviathan Lullaby",
-        "desc": "4 минуты · 4 движения, медленные сцены"
-      },
-      "frogTomorrow": {
-        "name": "Frog of Tomorrow",
-        "desc": "1 минута · тёмные сцены, дроун"
-      },
-      "cosmicBattle": {
-        "name": "Cosmic Battle",
-        "desc": "1 минута · 4 акта, экшн"
+      "swampDance": {
+        "name": "Болотный Танец",
+        "desc": "1.5 минуты · весёлый трек для Болота"
       }
     }
   },

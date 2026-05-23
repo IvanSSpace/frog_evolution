@@ -11,16 +11,11 @@ import {
   forestSpec,
   toxicSpec,
   plasmaSpec,
-  shadowSpec,
   crystalSpec,
   desertSpec,
   gasSpec,
   ringSpec,
   binarySpec,
-  arcaneSpec,
-  mechanicalSpec,
-  warSpec,
-  voidSpec,
 } from '../../game/effects/elementAuraSpecs'
 
 interface GalleryDetailPreviewProps {
@@ -54,16 +49,11 @@ const AURA_SPECS: Partial<Record<Element, AuraSpec>> = {
   forest: forestSpec,
   toxic: toxicSpec,
   plasma: plasmaSpec,
-  shadow: shadowSpec,
   crystal: crystalSpec,
   desert: desertSpec,
   gas: gasSpec,
   ring: ringSpec,
   binary: binarySpec,
-  arcane: arcaneSpec,
-  mechanical: mechanicalSpec,
-  war: warSpec,
-  void: voidSpec,
 }
 
 function makePreviewScene(
@@ -81,10 +71,30 @@ function makePreviewScene(
     }
 
     preload() {
-      this.load.svg(textureKey, svgPath, {
-        width: NATIVE_LOAD_SIZE,
-        height: NATIVE_LOAD_SIZE,
-      })
+      // Загружаем raw SVG-текст, на FILE_COMPLETE препроцессим: заменяем
+      // `fill #ffffff` на archetype element tint hex → Blob URL → svg texture.
+      // Цветные элементы (короны/узоры) сохраняют свои цвета.
+      this.load.text(`gallery_raw_${textureKey}`, svgPath)
+      this.load.on(
+        Phaser.Loader.Events.FILE_COMPLETE,
+        (key: string, _type: string, data: unknown) => {
+          if (key !== `gallery_raw_${textureKey}`) return
+          if (typeof data !== 'string') return
+          const tintHex =
+            '#' +
+            ELEMENT_TINTS[archetype].toString(16).padStart(6, '0')
+          const recolored = data
+            .replace(/fill:\s*#ffffff/gi, `fill:${tintHex}`)
+            .replace(/fill="#ffffff"/gi, `fill="${tintHex}"`)
+            .replace(/fill="#fff"/gi, `fill="${tintHex}"`)
+          const blob = new Blob([recolored], { type: 'image/svg+xml' })
+          const url = URL.createObjectURL(blob)
+          this.load.svg(textureKey, url, {
+            width: NATIVE_LOAD_SIZE,
+            height: NATIVE_LOAD_SIZE,
+          })
+        },
+      )
     }
 
     create() {
@@ -97,15 +107,13 @@ function makePreviewScene(
         aura.container.setDepth(0)
       }
 
-      // Лягушка
+      // Лягушка — tint уже запечён в SVG при preload, setTint не зовём.
       const container = this.add.container(SIZE / 2, SIZE / 2)
       container.setDepth(10)
       const frog = this.add.image(0, 0, textureKey)
       const displayPx = 2.0 * DISPLAY_BASE_PX // 170px
       const scale = displayPx / NATIVE_LOAD_SIZE
       frog.setScale(scale)
-      frog.setTint(ELEMENT_TINTS[archetype])
-      frog.setTintMode(0)
       container.add(frog)
     }
   }

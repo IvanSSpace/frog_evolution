@@ -96,7 +96,7 @@ export function RelationshipBar({ raceId, value }: Props) {
           style={{
             ...MINI_BADGE_STYLE,
             background: color,
-            color: '#fff',
+            color: '#365314',
             animation: pulseActive
               ? 'contacts-tier-pulse 800ms ease-in-out'
               : undefined,
@@ -116,7 +116,7 @@ export function RelationshipBar({ raceId, value }: Props) {
           position: 'relative',
           width: '100%',
           height: 8,
-          background: 'rgba(255,255,255,0.08)',
+          background: 'rgba(54,83,20,0.10)',
           borderRadius: 999,
           overflow: 'hidden',
         }}

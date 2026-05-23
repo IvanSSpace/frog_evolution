@@ -32,6 +32,10 @@ export interface PlanetInhabitant {
   role: 'home' | 'colony'
 }
 
+// 2026-05-23: серум типов сокращено до 11 — 1:1 с архетипами планет.
+// Удалены: shadow, arcane, mechanical, war, void (не имели planet archetype'ов).
+// Расы tenebrians/mechanidons/timeweavers переназначены на toxic/crystal/binary
+// (см. races.ts).
 export type Element =
   | 'fire'
   | 'ice'
@@ -39,16 +43,11 @@ export type Element =
   | 'forest'
   | 'toxic'
   | 'plasma'
-  | 'shadow'
   | 'crystal'
   | 'desert'
   | 'gas'
   | 'ring'
   | 'binary'
-  | 'arcane'
-  | 'mechanical'
-  | 'war'
-  | 'void'
 
 export const ELEMENTS: readonly Element[] = [
   'fire',
@@ -57,16 +56,11 @@ export const ELEMENTS: readonly Element[] = [
   'forest',
   'toxic',
   'plasma',
-  'shadow',
   'crystal',
   'desert',
   'gas',
   'ring',
   'binary',
-  'arcane',
-  'mechanical',
-  'war',
-  'void',
 ]
 
 // Phase 15 (REQ BOX-01): полный shape для inventory + cascade reveal flow.
@@ -136,7 +130,6 @@ export type CosmicTab =
   | 'boxes'
   | 'carriers'
   | 'shop'
-  | 'inventory'
   | 'contacts'
   | 'quests'
 

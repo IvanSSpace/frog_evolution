@@ -16,13 +16,7 @@ export interface TrackMeta {
   sections: TrackSection[]
 }
 
-export type TrackId =
-  | 'beyondHorizon'
-  | 'stellarTide'
-  | 'phylogenesis'
-  | 'leviathanLullaby'
-  | 'frogTomorrow'
-  | 'cosmicBattle'
+export type TrackId = 'beyondHorizon' | 'swampDance'
 
 export interface RuntimeContext {
   getElapsed: () => number

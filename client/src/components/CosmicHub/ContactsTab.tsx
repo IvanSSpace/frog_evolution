@@ -88,8 +88,8 @@ export function ContactsTab() {
                 justifyContent: 'space-between',
                 padding: '10px 12px',
                 border: 'none',
-                background: 'rgba(255,255,255,0.06)',
-                color: '#fff',
+                background: 'rgba(54,83,20,0.08)',
+                color: '#365314',
                 cursor: 'pointer',
                 touchAction: 'manipulation',
                 width: '100%',
@@ -130,7 +130,7 @@ export function ContactsTab() {
                     ...MINI_BADGE_STYLE,
                     background: isContacted
                       ? tierColor
-                      : 'rgba(255,255,255,0.1)',
+                      : 'rgba(54,83,20,0.15)',
                     color: '#fff',
                   }}
                 >

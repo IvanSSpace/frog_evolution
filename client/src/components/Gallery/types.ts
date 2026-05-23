@@ -16,16 +16,11 @@ export const ARCHETYPE_EMOJI: Record<Element, string> = {
   forest: '🌿',
   toxic: '☢️',
   plasma: '⚡',
-  shadow: '🌑',
   crystal: '💎',
   desert: '🏜️',
   gas: '💨',
   ring: '🪐',
   binary: '👯',
-  arcane: '✨',
-  mechanical: '⚙️',
-  war: '⚔️',
-  void: '🕳️',
 }
 
 export const ARCHETYPE_NAME_RU: Record<Element, string> = {
@@ -35,16 +30,11 @@ export const ARCHETYPE_NAME_RU: Record<Element, string> = {
   forest: 'Лес',
   toxic: 'Яд',
   plasma: 'Плазма',
-  shadow: 'Тень',
   crystal: 'Кристалл',
   desert: 'Пустыня',
   gas: 'Газ',
   ring: 'Кольцо',
   binary: 'Парность',
-  arcane: 'Магия',
-  mechanical: 'Механика',
-  war: 'Война',
-  void: 'Пустота',
 }
 
 export const RARITY_LABEL: Record<LegacyRarity, string> = {

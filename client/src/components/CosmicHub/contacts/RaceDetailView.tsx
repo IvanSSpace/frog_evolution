@@ -48,7 +48,7 @@ export function RaceDetailView({ raceId, onBack }: Props) {
   const chainLen = RACE_CHAINS[raceId]?.length ?? 0
 
   return (
-    <div style={{ padding: 12, color: '#fff' }}>
+    <div style={{ padding: 12, color: '#365314' }}>
       {/* ─── HEADER: back arrow + race emoji + name ─── */}
       <div
         style={{
@@ -68,7 +68,7 @@ export function RaceDetailView({ raceId, onBack }: Props) {
           style={{
             background: 'transparent',
             border: 'none',
-            color: '#fff',
+            color: '#365314',
             fontSize: 22,
             padding: '4px 8px',
             cursor: 'pointer',
@@ -105,7 +105,7 @@ export function RaceDetailView({ raceId, onBack }: Props) {
           >
             {t(race.personalityKey)}
           </div>
-          <div style={{ fontSize: 13, lineHeight: 1.5, color: '#fff' }}>
+          <div style={{ fontSize: 13, lineHeight: 1.5, color: '#365314' }}>
             {t(race.loreShortKey)}
           </div>
         </div>
@@ -165,7 +165,7 @@ function PendingInteraction({
         style={{
           fontSize: 14,
           lineHeight: 1.5,
-          color: '#fff',
+          color: '#365314',
           marginBottom: 12,
         }}
       >
@@ -208,9 +208,9 @@ function PendingInteraction({
                 onRefuse()
               }}
               style={{
-                background: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                color: '#fff',
+                background: 'rgba(54,83,20,0.10)',
+                border: '1px solid rgba(54,83,20,0.2)',
+                color: '#365314',
                 borderRadius: 999,
                 padding: '6px 12px',
                 fontSize: 12,

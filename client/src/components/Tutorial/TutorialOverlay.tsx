@@ -64,7 +64,7 @@ export function TutorialOverlay() {
       aria-labelledby="tutorial-title"
       style={{
         position: 'fixed',
-        top: 'calc(12% + 54px)',
+        top: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad))',
         bottom: '13%',
         left: 0,
         right: 0,

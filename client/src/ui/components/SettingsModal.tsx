@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next'
 import { TintedFrog } from './TintedFrog'
 import { setLang, type Lang } from '../../i18n/index'
 import { useGameStore } from '../../store/gameStore'
-import { FROG_LEVELS, getTargetIncomePerSec } from '../../game/config/frogs'
+import { FROG_LEVELS, getFrogPath, getTargetIncomePerSec } from '../../game/config/frogs'
 import { getTelegramWebApp, isDevMode } from '../../utils/telegram'
 import { ELEMENTS } from '../../store/cosmic/types'
 import { fmtRate } from '../../utils/formatting'
@@ -72,7 +72,7 @@ export function SettingsModal({ onClose }: Props) {
       <div
         style={{
           position: 'absolute',
-          top: 'calc(12% + 54px)',
+          top: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad))',
           bottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)',
           left: 0,
           right: 0,
@@ -365,6 +365,9 @@ function BestiaryCard({
   const frogName = t(`frogs.${level}`)
   const locName = t(`locations.${cfg.location}`)
   const income = fmtRate(getTargetIncomePerSec(level))
+  const [previewTier, setPreviewTier] = useState<0 | 1 | 2>(0)
+  const cycleTier = () =>
+    setPreviewTier((t) => ((t + 1) % 3) as 0 | 1 | 2)
 
   if (!isUnlocked) {
     return (
@@ -390,9 +393,29 @@ function BestiaryCard({
 
   return (
     <div
-      className="ff-card p-5 flex flex-col items-center gap-2"
+      className="ff-card p-5 flex flex-col items-center gap-2 relative"
       style={{ minHeight: BESTIARY_CARD_MIN_HEIGHT }}
     >
+      {/* Tier preview toggle — cycles 1 → 2 → 3 → 1 */}
+      <button
+        type="button"
+        onClick={cycleTier}
+        className="ff-btn ff-btn-green"
+        style={{
+          position: 'absolute',
+          top: 12,
+          right: 12,
+          width: 40,
+          height: 40,
+          padding: 0,
+          fontSize: 18,
+          zIndex: 2,
+        }}
+        aria-label="cycle evolution tier"
+      >
+        {previewTier + 1}
+      </button>
+
       {/* Image container */}
       <div
         className="relative flex items-center justify-center rounded-2xl"
@@ -406,7 +429,7 @@ function BestiaryCard({
         }}
       >
         <TintedFrog
-          path={cfg.path}
+          path={getFrogPath(level, previewTier)}
           tint={cfg.tint}
           alt={frogName}
           className="object-contain"
@@ -493,6 +516,18 @@ function SettingsTab() {
   const addGold = useGameStore((s) => s.addGold)
   const devResetUpgrades = useGameStore((s) => s.devResetUpgrades)
   const devClearAllFrogs = useGameStore((s) => s.devClearAllFrogs)
+  const devResetFrogTiers = () => {
+    const fresh = new Array(18).fill(0)
+    const freshCooldowns = new Array(18).fill(0)
+    useGameStore.setState({
+      frogTiers: fresh,
+      frogTierCooldowns: freshCooldowns,
+    })
+    void import('../../store/persistence').then((m) => {
+      m.saveFrogTiers(fresh)
+      m.saveFrogTierCooldowns(freshCooldowns)
+    })
+  }
   const addSerum = useGameStore((s) => s.addSerum)
   const crew = useGameStore((s) => s.crew)
   const resetCrew = () =>
@@ -650,6 +685,12 @@ function SettingsTab() {
             className="ff-btn ff-btn-red text-sm w-full"
           >
             Сбросить апгрейды
+          </button>
+          <button
+            onClick={devSync(devResetFrogTiers)}
+            className="ff-btn ff-btn-red text-sm w-full"
+          >
+            Сбросить эволюцию лягушек
           </button>
           <button
             onClick={devSync(devClearAllFrogs)}
