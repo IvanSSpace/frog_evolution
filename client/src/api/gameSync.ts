@@ -300,17 +300,19 @@ export async function loadGameState(): Promise<boolean> {
       // 2026-05-23: hydrate temporaryIncomeBuff (shape: {until, percent} | null).
       if ('temporaryIncomeBuff' in c) {
         const tb = c.temporaryIncomeBuff as unknown
-        if (
-          tb &&
-          typeof tb === 'object' &&
-          typeof (tb as Record<string, unknown>).until === 'number' &&
-          typeof (tb as Record<string, unknown>).percent === 'number' &&
-          (tb as Record<string, unknown>).percent! > 0 &&
-          ((tb as Record<string, unknown>).until as number) > Date.now()
-        ) {
-          cosmicUpdate.temporaryIncomeBuff = {
-            until: (tb as { until: number }).until,
-            percent: (tb as { percent: number }).percent,
+        if (tb && typeof tb === 'object') {
+          const rec = tb as Record<string, unknown>
+          const until = rec.until
+          const percent = rec.percent
+          if (
+            typeof until === 'number' &&
+            typeof percent === 'number' &&
+            percent > 0 &&
+            until > Date.now()
+          ) {
+            cosmicUpdate.temporaryIncomeBuff = { until, percent }
+          } else {
+            cosmicUpdate.temporaryIncomeBuff = null
           }
         } else {
           cosmicUpdate.temporaryIncomeBuff = null

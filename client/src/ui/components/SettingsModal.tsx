@@ -581,7 +581,7 @@ function SettingsTab() {
           style={{
             fontSize: 13,
             fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-            color: '#fde047',
+            color: '#365314',
             userSelect: 'text',
           }}
         >
