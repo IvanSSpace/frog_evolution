@@ -20,6 +20,7 @@ export function saveVolumeDb(db: number): void {
 const VALID_TRACKS: ReadonlySet<TrackId> = new Set<TrackId>([
   'beyondHorizon',
   'swampDance',
+  'frogJazz',
 ])
 
 export function loadSelectedTrack(): TrackId | null {

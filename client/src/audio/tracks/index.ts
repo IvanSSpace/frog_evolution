@@ -28,4 +28,16 @@ export const TRACK_META: Record<TrackId, TrackMeta> = {
       { start: 72, label: 'IV · Закат', key: 'C major' },
     ],
   },
+  frogJazz: {
+    id: 'frogJazz',
+    nameKey: 'player.tracks.frogJazz.name',
+    descKey: 'player.tracks.frogJazz.desc',
+    totalSec: 108,
+    sections: [
+      { start: 0, label: 'I · Intro', key: 'A minor' },
+      { start: 27, label: 'II · Theme', key: 'D minor' },
+      { start: 54, label: 'III · Scat', key: 'A minor' },
+      { start: 81, label: 'IV · Outro', key: 'A minor' },
+    ],
+  },
 }

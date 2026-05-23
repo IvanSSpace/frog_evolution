@@ -157,6 +157,10 @@
       "swampDance": {
         "name": "Swamp Dance",
         "desc": "1.5 minutes · cheerful Swamp tune"
+      },
+      "frogJazz": {
+        "name": "Frog Jazz",
+        "desc": "1.8 minutes · walking bass + brass + scat-ribbit"
       }
     }
   },
