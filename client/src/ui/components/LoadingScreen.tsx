@@ -31,13 +31,11 @@ const LOADING_PHRASES = [
 ]
 
 interface LoadingScreenProps {
-  /** Подзаголовок снизу — обычно "Подключение к серверу" или "Offline режим". */
+  /** Подзаголовок снизу. По умолчанию пуст — не показывается. */
   subtitle?: string
 }
 
-export function LoadingScreen({
-  subtitle = 'Подключение к серверу',
-}: LoadingScreenProps) {
+export function LoadingScreen({ subtitle }: LoadingScreenProps = {}) {
   // Стартовая фраза рандомная, потом ротируем по индексу — детерминированный
   // порядок чтобы не было повторов подряд.
   const [phraseIdx, setPhraseIdx] = useState(() =>
@@ -122,17 +120,19 @@ export function LoadingScreen({
         ))}
       </div>
 
-      {/* Подзаголовок */}
-      <div
-        style={{
-          fontSize: '11px',
-          opacity: 0.5,
-          letterSpacing: '0.05em',
-          marginTop: '16px',
-        }}
-      >
-        {subtitle}
-      </div>
+      {/* Подзаголовок — показываем только если явно передан */}
+      {subtitle && (
+        <div
+          style={{
+            fontSize: '11px',
+            opacity: 0.5,
+            letterSpacing: '0.05em',
+            marginTop: '16px',
+          }}
+        >
+          {subtitle}
+        </div>
+      )}
 
       <style>{`
         @keyframes frog-bounce {
