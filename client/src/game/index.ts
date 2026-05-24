@@ -204,12 +204,14 @@ export function startGame(): Phaser.Game {
     } else {
       sm().start('BattleScene', { locationId: locId })
     }
+    useGameStore.getState().setBattleSceneActive(true)
   })
 
   eventBus.on('battle:exit', () => {
     if (!sm().isActive('BattleScene')) return
     sm().sleep('BattleScene')
     sm().wake('MainScene')
+    useGameStore.getState().setBattleSceneActive(false)
   })
 
   // Подгоняем размер игры при ресайзе окна

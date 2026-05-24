@@ -257,6 +257,10 @@ interface GameStateBase {
   barracksVats: import('./barracks').Vat[]
   /** Обновить чан (claim после raid / accrual tick). */
   setBarracksVat: (idx: number, vat: import('./barracks').Vat) => void
+  /** True пока активна BattleScene (raid). HUD-элементы (magnet/location)
+   *  скрываются на это время. */
+  battleSceneActive: boolean
+  setBattleSceneActive: (v: boolean) => void
 }
 
 // Полный GameState = базовые поля + Cosmic Frogs System (Phase 11+)
@@ -689,6 +693,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     saveBarracksVats(next)
     set({ barracksVats: next })
   },
+  battleSceneActive: false,
+  setBattleSceneActive: (v) => set({ battleSceneActive: v }),
 
   // ============== COSMIC FROGS SYSTEM (Phase 11+) ==============
   // createCosmicSlice сначала кладёт actions + дефолтные данные,

@@ -37,6 +37,7 @@ export function LocationStack() {
   const currentLocation = useGameStore((s) => s.currentLocation)
   const setCurrentLocation = useGameStore((s) => s.setCurrentLocation)
   const locationFrogs = useGameStore((s) => s.locationFrogs)
+  const battleSceneActive = useGameStore((s) => s.battleSceneActive)
   // Phase 22 Plan 22-06: cosmos gate — pre-cosmos Star Map (id=6) скрыта.
   const cosmosUnlocked = useCosmosUnlocked()
   const [collapsed, setCollapsed] = useState(false)
@@ -115,6 +116,8 @@ export function LocationStack() {
   // Если visible только одна локация (Болото) и cosmos не разблокирован —
   // блок переключения не нужен (нечего переключать).
   if (ordered.length <= 1) return null
+  // Во время raid (BattleScene) блок переключения скрываем.
+  if (battleSceneActive) return null
 
   const handleSelect = (id: number) => {
     if (transitioning || starMapTransitioning) return

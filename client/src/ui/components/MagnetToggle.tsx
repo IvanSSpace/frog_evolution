@@ -17,6 +17,7 @@ export function MagnetToggle() {
   const magnetLevel = useGameStore((s) => s.upgrades[magnetKey])
   const magnetEnabled = useGameStore((s) => s.magnetEnabled)
   const toggleMagnet = useGameStore((s) => s.toggleMagnet)
+  const battleSceneActive = useGameStore((s) => s.battleSceneActive)
   const [starMapActive, setStarMapActive] = useState(false)
 
   useEffect(() => {
@@ -32,6 +33,7 @@ export function MagnetToggle() {
 
   if (magnetLevel < 1) return null
   if (starMapActive) return null // на Звёздной карте магнит не нужен
+  if (battleSceneActive) return null // во время raid не нужен
 
   return (
     <button
