@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { MainScene } from './scenes/MainScene'
 import { StarMapScene } from './scenes/StarMapScene'
 import { BattleScene } from './scenes/battle/BattleScene'
+import { BarracksScene } from './scenes/barracks/BarracksScene'
 import { eventBus } from '../store/eventBus'
 import { useGameStore } from '../store/gameStore'
 
@@ -91,7 +92,7 @@ export function startGame(): Phaser.Game {
     },
     // MainScene стартует автоматически. StarMapScene + BattleScene регистрируются,
     // но автостарт=false — запускаются вручную через event bus.
-    scene: [MainScene, StarMapScene, BattleScene],
+    scene: [MainScene, StarMapScene, BattleScene, BarracksScene],
     physics: {
       default: 'arcade',
       arcade: { gravity: { x: 0, y: 0 }, debug: false },
@@ -212,6 +213,32 @@ export function startGame(): Phaser.Game {
     sm().sleep('BattleScene')
     sm().wake('MainScene')
     useGameStore.getState().setBattleSceneActive(false)
+  })
+
+  // Barracks scene — отдельная локация казармы.
+  eventBus.on('barracks:open', () => {
+    if (sm().isActive('BarracksScene')) return
+    sm().sleep('MainScene')
+    if (sm().isSleeping('BarracksScene')) {
+      sm().wake('BarracksScene')
+    } else {
+      sm().start('BarracksScene')
+    }
+    useGameStore.getState().setBattleSceneActive(true)
+  })
+
+  eventBus.on('barracks:exit', () => {
+    if (!sm().isActive('BarracksScene')) return
+    sm().sleep('BarracksScene')
+    sm().wake('MainScene')
+    useGameStore.getState().setBattleSceneActive(false)
+  })
+
+  // При старте боя из казармы — убеждаемся что BarracksScene закрыта.
+  eventBus.on('battle:start', () => {
+    if (sm().isActive('BarracksScene')) {
+      sm().sleep('BarracksScene')
+    }
   })
 
   // Подгоняем размер игры при ресайзе окна

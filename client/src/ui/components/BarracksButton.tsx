@@ -7,15 +7,13 @@
 import { useEffect } from 'react'
 import { useGameStore } from '../../store/gameStore'
 import { hapticSelection } from '../../utils/telegram'
+import { eventBus } from '../../store/eventBus'
 
-interface Props {
-  onClick: () => void
-}
-
-export function BarracksButton({ onClick }: Props) {
+export function BarracksButton() {
   const discoveredLevels = useGameStore((s) => s.discoveredLevels)
   const barracksUnlocked = useGameStore((s) => s.barracksUnlocked)
   const unlockBarracks = useGameStore((s) => s.unlockBarracks)
+  const battleSceneActive = useGameStore((s) => s.battleSceneActive)
 
   // Auto-unlock при первом discovered L7+ (Лес).
   useEffect(() => {
@@ -26,12 +24,13 @@ export function BarracksButton({ onClick }: Props) {
   }, [discoveredLevels, barracksUnlocked, unlockBarracks])
 
   if (!barracksUnlocked) return null
+  if (battleSceneActive) return null
 
   return (
     <button
       onClick={() => {
         hapticSelection()
-        onClick()
+        eventBus.emit('barracks:open', {})
       }}
       aria-label="Казарма"
       style={{
