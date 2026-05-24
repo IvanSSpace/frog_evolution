@@ -6,6 +6,7 @@
 import Phaser from 'phaser'
 import { CLASS_META, getWarriorConfig, type WarriorClass } from '../../config/warriors'
 import { DPR } from '../main/types'
+import { textureKeyForLevel } from '../../config/frogs'
 import { GRID_COLS, ENEMY_ROWS, PLAYER_ROWS, type GridLayout } from './battleGrid'
 import type { BarracksCell } from '../../../store/barracks'
 import { BATTLE_DECK_SIZE, BARRACKS_GRID_W } from '../../../store/barracks'
@@ -69,27 +70,48 @@ export function createUnit(
   const container = scene.add.container(center.x, center.y)
   container.setDepth(5)
 
-  // Тело — круг цветом стороны
-  const bodyCircle = scene.add.circle(0, 0, radius, SIDE_COLOR[side], 1)
-  bodyCircle.setStrokeStyle(2 * DPR, 0x111827, 1)
-  container.add(bodyCircle)
+  // Side-indicator кольцо за лягушкой (цветное круглое плато).
+  const ring = scene.add.circle(0, 0, radius * 1.05, SIDE_COLOR[side], 0.32)
+  ring.setStrokeStyle(2 * DPR, SIDE_COLOR[side], 0.85)
+  container.add(ring)
 
-  // Бордер класса — внутренний круг с цветом класса
-  const classCircle = scene.add.circle(0, 0, radius * 0.7, meta.color, 0.7)
-  container.add(classCircle)
+  // Frog SVG sprite — текстура уже preloaded в MainScene.preload().
+  const texKey = textureKeyForLevel(level, tier)
+  let sprite: Phaser.GameObjects.Image | Phaser.GameObjects.Arc
+  if (scene.textures.exists(texKey)) {
+    const img = scene.add.image(0, 0, texKey)
+    const target = radius * 1.7
+    img.setDisplaySize(target, target * (47 / 50))
+    sprite = img
+    // Лёгкий зеркальный flip для противника, чтобы они «смотрели» в сторону игрока.
+    if (side === 'enemy') img.setFlipY(true)
+  } else {
+    // Fallback — круг с emoji (если текстура ещё не загружена)
+    const circle = scene.add.circle(0, 0, radius * 0.85, meta.color, 0.9)
+    circle.setStrokeStyle(2 * DPR, 0x111827, 1)
+    container.add(circle)
+    const emoji = scene.add.text(0, 0, meta.emoji, {
+      fontFamily: 'sans-serif',
+      fontSize: `${radius * 0.9}px`,
+    })
+    emoji.setOrigin(0.5, 0.5)
+    container.add(emoji)
+    sprite = circle
+  }
+  container.add(sprite)
 
-  // Emoji класса
-  const emoji = scene.add.text(0, -radius * 0.15, meta.emoji, {
+  // Эмодзи класса в правом верхнем углу
+  const classBadge = scene.add.text(radius * 0.7, -radius * 0.7, meta.emoji, {
     fontFamily: 'sans-serif',
-    fontSize: `${radius * 0.9}px`,
-  })
-  emoji.setOrigin(0.5, 0.5)
-  container.add(emoji)
-
-  // Уровень снизу
-  const levelText = scene.add.text(0, radius * 0.45, `L${level}`, {
-    fontFamily: 'Russo One, sans-serif',
     fontSize: `${radius * 0.55}px`,
+  })
+  classBadge.setOrigin(0.5, 0.5)
+  container.add(classBadge)
+
+  // Уровень в левом нижнем углу
+  const levelText = scene.add.text(-radius * 0.7, radius * 0.7, `L${level}`, {
+    fontFamily: 'Russo One, sans-serif',
+    fontSize: `${radius * 0.45}px`,
     color: '#fff',
     stroke: '#000',
     strokeThickness: 2 * DPR,
