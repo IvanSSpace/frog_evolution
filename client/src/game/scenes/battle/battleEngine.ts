@@ -24,8 +24,10 @@ import type { BattleUnit, Side } from './battleUnits'
 import { DPR } from '../main/types'
 import type { GridLayout } from './battleGrid'
 
-export const TICK_MS = 300
+export const TICK_MS = 600
 const MOVE_TWEEN_MS = 260
+const ATTACK_LUNGE_FRACTION = 0.14
+const ATTACK_LUNGE_MS = 110
 
 export type BattleResult = 'win' | 'lose'
 
@@ -243,18 +245,58 @@ export class BattleEngine {
     const targetCenter = this.layout.cellCenters[target.cellIdx]
     const myCenter = this.layout.cellCenters[unit.cellIdx]
     if (!targetCenter || !myCenter) return
-    // Lunge почти до границы своей клетки — атакующий «выходит» из неё к
-    // противнику. 0.48 = чуть меньше половины клетки, юнит остаётся в своей
-    // зоне но визуально касается врага у boundary.
-    const dx = (targetCenter.x - myCenter.x) * 0.48
-    const dy = (targetCenter.y - myCenter.y) * 0.48
+    // Микро-рывок в сторону врага — юнит не выходит из клетки.
+    const dx = (targetCenter.x - myCenter.x) * ATTACK_LUNGE_FRACTION
+    const dy = (targetCenter.y - myCenter.y) * ATTACK_LUNGE_FRACTION
     this.scene.tweens.add({
       targets: unit.container,
       x: myCenter.x + dx,
       y: myCenter.y + dy,
-      duration: 140,
+      duration: ATTACK_LUNGE_MS,
       yoyo: true,
       ease: 'Quad.easeOut',
+    })
+    // Squish body — резкое сжатие/разжатие как удар.
+    this.scene.tweens.add({
+      targets: unit.body,
+      scaleY: 0.7,
+      scaleX: 1.15,
+      duration: ATTACK_LUNGE_MS,
+      yoyo: true,
+      ease: 'Quad.easeOut',
+    })
+    // Дуга удара — белая swoosh между атакующим и целью.
+    this.spawnAttackArc(myCenter, targetCenter)
+  }
+
+  /** Анимированная дуга удара между атакующим и целью. */
+  private spawnAttackArc(
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+  ): void {
+    const midX = (from.x + to.x) / 2
+    const midY = (from.y + to.y) / 2
+    const angle = Math.atan2(to.y - from.y, to.x - from.x)
+    const radius = Math.min(this.layout.cellW, this.layout.cellH) * 0.35
+
+    const gfx = this.scene.add.graphics()
+    gfx.lineStyle(3 * DPR, 0xffffff, 1)
+    gfx.beginPath()
+    // Дуга ~80° вокруг точки midpoint, открыта в направлении удара.
+    gfx.arc(0, 0, radius, -Math.PI * 0.4, Math.PI * 0.4, false)
+    gfx.strokePath()
+    gfx.setPosition(midX, midY)
+    gfx.setRotation(angle)
+    gfx.setDepth(8)
+
+    this.scene.tweens.add({
+      targets: gfx,
+      alpha: 0,
+      scaleX: 1.5,
+      scaleY: 1.5,
+      duration: 260,
+      ease: 'Quad.easeOut',
+      onComplete: () => gfx.destroy(),
     })
   }
 
