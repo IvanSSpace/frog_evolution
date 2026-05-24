@@ -256,20 +256,20 @@ export class BattleEngine {
       yoyo: true,
       ease: 'Quad.easeOut',
     })
-    // Squish body — резкое сжатие/разжатие как удар.
+    // Squish body — мягкое сжатие как на MainScene (idle bob magnitude).
     this.scene.tweens.add({
       targets: unit.body,
-      scaleY: 0.7,
-      scaleX: 1.15,
+      scaleY: 0.88,
       duration: ATTACK_LUNGE_MS,
       yoyo: true,
       ease: 'Quad.easeOut',
     })
-    // Дуга удара — белая swoosh между атакующим и целью.
+    // Дуга удара — рисуется line-by-line.
     this.spawnAttackArc(myCenter, targetCenter)
   }
 
-  /** Анимированная дуга удара между атакующим и целью. */
+  /** Анимированная дуга удара между атакующим и целью — рисуется как
+   *  «росчерк» от одного конца к другому, затем плавно гаснет. */
   private spawnAttackArc(
     from: { x: number; y: number },
     to: { x: number; y: number },
@@ -279,24 +279,44 @@ export class BattleEngine {
     const angle = Math.atan2(to.y - from.y, to.x - from.x)
     const radius = Math.min(this.layout.cellW, this.layout.cellH) * 0.35
 
+    const startAngle = -Math.PI * 0.4
+    const endAngle = Math.PI * 0.4
+
     const gfx = this.scene.add.graphics()
-    gfx.lineStyle(3 * DPR, 0xffffff, 1)
-    gfx.beginPath()
-    // Дуга ~80° вокруг точки midpoint, открыта в направлении удара.
-    gfx.arc(0, 0, radius, -Math.PI * 0.4, Math.PI * 0.4, false)
-    gfx.strokePath()
     gfx.setPosition(midX, midY)
     gfx.setRotation(angle)
     gfx.setDepth(8)
 
+    const tracker = { p: 0 }
     this.scene.tweens.add({
-      targets: gfx,
-      alpha: 0,
-      scaleX: 1.5,
-      scaleY: 1.5,
-      duration: 260,
+      targets: tracker,
+      p: 1,
+      duration: 180,
       ease: 'Quad.easeOut',
-      onComplete: () => gfx.destroy(),
+      onUpdate: () => {
+        gfx.clear()
+        gfx.lineStyle(3 * DPR, 0xffffff, 1)
+        gfx.beginPath()
+        gfx.arc(
+          0,
+          0,
+          radius,
+          startAngle,
+          startAngle + (endAngle - startAngle) * tracker.p,
+          false,
+        )
+        gfx.strokePath()
+      },
+      onComplete: () => {
+        // Fade-out полностью прорисованной дуги.
+        this.scene.tweens.add({
+          targets: gfx,
+          alpha: 0,
+          duration: 200,
+          ease: 'Quad.easeIn',
+          onComplete: () => gfx.destroy(),
+        })
+      },
     })
   }
 
