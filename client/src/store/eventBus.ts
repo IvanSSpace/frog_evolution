@@ -27,7 +27,7 @@ type Events = {
   'starmap:open': void
   'starmap:close': void
   // Phase Barracks (2026-05-24) — PvP raid mode
-  'battle:start': { locationId?: number }
+  'battle:start': { locationId?: number; botId?: string }
   'battle:exit': Record<string, never>
   'starmap:planet-selected': {
     raceId: string

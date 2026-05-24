@@ -3,12 +3,13 @@
 // конвертации (cost = basePrice уровня). MVP: React-only, без drag-n-drop.
 // Drag-n-drop + Phaser scene = Этап 3.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useGameStore } from '../../store/gameStore'
+import { eventBus } from '../../store/eventBus'
 import { fmt } from '../../utils/formatting'
 import { hapticNotification, hapticSelection } from '../../utils/telegram'
 import { useModalLock } from '../../utils/modalLock'
-import { eventBus } from '../../store/eventBus'
+import { RaidPickModal } from './RaidPickModal'
 import { TintedFrog } from './TintedFrog'
 import { FROG_LEVELS, getFrogPath } from '../../game/config/frogs'
 import {
@@ -38,6 +39,17 @@ export function BarracksModal({ onClose }: Props) {
   const discoveredLevels = useGameStore((s) => s.discoveredLevels)
 
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null)
+  const [raidPickOpen, setRaidPickOpen] = useState(false)
+
+  // Когда раид стартует — авто-закрываем казарму, чтобы битва не была
+  // за модалкой.
+  useEffect(() => {
+    const onBattleStart = () => onClose()
+    eventBus.on('battle:start', onBattleStart)
+    return () => {
+      eventBus.off('battle:start', onBattleStart)
+    }
+  }, [onClose])
 
   // Пул доступных уровней — пока MVP, берём все discovered (1-18).
   // Этап 3: ограничим текущей локацией + drag-and-drop из реальных жаб поля.
@@ -243,9 +255,8 @@ export function BarracksModal({ onClose }: Props) {
           <button
             onClick={() => {
               if (filledCount === 0) return
-              hapticNotification('success')
-              eventBus.emit('battle:start', { locationId: 1 })
-              onClose()
+              hapticSelection()
+              setRaidPickOpen(true)
             }}
             disabled={filledCount === 0}
             className="ff-btn ff-btn-orange text-base flex-1"
@@ -255,6 +266,22 @@ export function BarracksModal({ onClose }: Props) {
           </button>
         </div>
       </div>
+
+      {raidPickOpen && (
+        <RaidPickModal
+          onClose={() => {
+            setRaidPickOpen(false)
+            // После старта рейда — закрываем казарму вместе с raid pick.
+            // Если просто закрыли pick без атаки — оставляем казарму открытой.
+            // Само событие 'battle:start' эмитится из RaidPickModal — если
+            // оно стартанулось, casa остаётся открытой за сценой; нужно
+            // закрыть её. Heuristic: если onClose от Pick'а пришёл и
+            // BattleScene стала active — закрываем казарму. Но это сложно
+            // отследить здесь; вместо этого закрываем казарму в onClick
+            // АТАКОВАТЬ кнопке (см. RaidPickModal).
+          }}
+        />
+      )}
     </div>
   )
 }
