@@ -16,6 +16,12 @@ export const DASH_RADIUS = 70 * DPR
 export const FIELD_PAD_X = 48 * DPR
 export const FIELD_PAD_Y = 60 * DPR // верхний отступ от верха канваса
 export const FIELD_PAD_Y_BOTTOM = 90 * DPR // нижний отступ — крупнее, чтобы лягушки не уходили слишком вниз
+
+// «Военный» вариант поля — расширенная зона. Не используется пока что —
+// чтобы включить, замени FIELD_PAD_* references на FIELD_PAD_*_MILITARY.
+export const FIELD_PAD_X_MILITARY = 24 * DPR
+export const FIELD_PAD_Y_MILITARY = 40 * DPR
+export const FIELD_PAD_Y_BOTTOM_MILITARY = 60 * DPR
 export const MERGE_RADIUS = 50 * DPR
 
 // Бокс-дропы
