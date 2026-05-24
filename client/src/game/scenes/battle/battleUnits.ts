@@ -88,8 +88,11 @@ export function createUnit(
   let sprite: Phaser.GameObjects.Image | Phaser.GameObjects.Arc
   if (scene.textures.exists(texKey)) {
     const img = scene.add.image(0, 0, texKey)
+    // Сохраняем пропорции SVG — берём scale так чтобы максимальное
+    // измерение вписалось в target. width/height = native pixel dims.
     const target = radius * 1.7
-    img.setDisplaySize(target, target * (47 / 50))
+    const baseScale = target / Math.max(img.width, img.height)
+    img.setScale(baseScale)
     sprite = img
   } else {
     // Fallback — круг с emoji (если текстура ещё не загружена)
@@ -106,17 +109,22 @@ export function createUnit(
   }
   container.add(sprite)
 
-  // Idle bob анимация — как у живых лягушек на главной сцене.
-  // ScaleY 1 ↔ 0.92, 700ms yoyo, infinite repeat. Случайный delay чтобы не
-  // синхронизировались (вид: каждая лягушка дышит своим ритмом).
+  // Сохраняем базовый scale для восстановления после move/attack.
+  const baseScaleY = sprite.scaleY
+  const baseScaleX = sprite.scaleX
+  sprite.setData('baseScaleY', baseScaleY)
+  sprite.setData('baseScaleX', baseScaleX)
+
+  // Idle bob — yoyo от base до base × 0.92, 700ms repeat infinite,
+  // random delay чтобы лягушки дышали в рассинхрон.
   scene.tweens.add({
     targets: sprite,
-    scaleY: { from: sprite.scaleY, to: sprite.scaleY * 0.92 },
-    duration: 700,
+    scaleY: { from: baseScaleY, to: baseScaleY * 0.92 },
+    duration: 600 + Math.random() * 300,
     yoyo: true,
     repeat: -1,
     ease: 'Sine.easeInOut',
-    delay: Math.random() * 700,
+    delay: Math.random() * 1000,
   })
 
   // L-номер в левом нижнем углу (внутри лягушки).
@@ -200,10 +208,13 @@ export function buildPlayerDeck(
 }
 
 /**
- * Сгенерировать deck бота. MVP: фиксированный пресет по локации.
- * loc1 (Болото): 4-6 юнитов L1-L4, разные классы.
- * loc2 (Лес):    5-7 юнитов L4-L9.
- * loc3 (Континент): 6-7 юнитов L10-L15.
+ * Сгенерировать deck бота. MVP пресеты:
+ *   loc1 (Болото) — воины противника, полные статы. Сложный бой.
+ *   loc2 (Лес)    — обычные слабые лягушки (×0.25 HP/dmg) — гражданские.
+ *   loc3 (Континент) — слабые лягушки (×0.3 HP/dmg) — гражданские.
+ *
+ * После победы на loc1 (убил воинов) loc2/3 — лёгкие чаны со стражами-
+ * мирянами вместо солдат, как в дизайне.
  */
 export function buildBotDeck(
   scene: Phaser.Scene,
@@ -212,11 +223,11 @@ export function buildBotDeck(
 ): BattleUnit[] {
   const presets: Record<
     number,
-    { count: number; levels: readonly number[] }
+    { count: number; levels: readonly number[]; statMul: number }
   > = {
-    1: { count: 5, levels: [1, 2, 3, 4] },
-    2: { count: 6, levels: [4, 5, 6, 7, 8, 9] },
-    3: { count: 7, levels: [10, 11, 12, 13, 14, 15] },
+    1: { count: 5, levels: [1, 2, 3, 4], statMul: 1.0 },
+    2: { count: 6, levels: [1, 2, 3, 4, 5], statMul: 0.25 },
+    3: { count: 7, levels: [2, 3, 4, 5, 6], statMul: 0.3 },
   }
   const cfg = presets[locationId] ?? presets[1]
   const pool: number[] = []
@@ -238,7 +249,15 @@ export function buildBotDeck(
   const units: BattleUnit[] = []
   for (let i = 0; i < pool.length; i++) {
     const unit = createUnit(scene, 'enemy', pool[i], 0, occupied[i], layout)
-    if (unit) units.push(unit)
+    if (!unit) continue
+    // Применяем stat multiplier для loc2/3 — обычные лягушки слабые.
+    if (cfg.statMul !== 1) {
+      unit.hp = Math.max(1, Math.round(unit.hp * cfg.statMul))
+      unit.maxHp = unit.hp
+      unit.damage = Math.max(1, unit.damage * cfg.statMul)
+      unit.hpBar.scaleX = 1
+    }
+    units.push(unit)
   }
   return units
 }

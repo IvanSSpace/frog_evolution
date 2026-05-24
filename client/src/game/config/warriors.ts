@@ -110,7 +110,7 @@ export const WARRIORS: readonly WarriorConfig[] = [
   {
     level: 1,
     class: 'swarm',
-    baseHp: 80,
+    baseHp: 40,
     baseDamage: 6,
     baseAttackSpeed: 1.0,
     ability: {
@@ -124,7 +124,7 @@ export const WARRIORS: readonly WarriorConfig[] = [
   {
     level: 2,
     class: 'carry',
-    baseHp: 100,
+    baseHp: 50,
     baseDamage: 12,
     baseAttackSpeed: 1.0,
     ability: {
@@ -137,7 +137,7 @@ export const WARRIORS: readonly WarriorConfig[] = [
   {
     level: 3,
     class: 'support',
-    baseHp: 90,
+    baseHp: 45,
     baseDamage: 7,
     baseAttackSpeed: 0.9,
     ability: {
@@ -150,7 +150,7 @@ export const WARRIORS: readonly WarriorConfig[] = [
   {
     level: 4,
     class: 'tank',
-    baseHp: 200,
+    baseHp: 100,
     baseDamage: 8,
     baseAttackSpeed: 0.7,
     ability: {
@@ -163,7 +163,7 @@ export const WARRIORS: readonly WarriorConfig[] = [
   {
     level: 5,
     class: 'mage',
-    baseHp: 80,
+    baseHp: 40,
     baseDamage: 10,
     baseAttackSpeed: 0.8,
     ability: {
@@ -177,7 +177,7 @@ export const WARRIORS: readonly WarriorConfig[] = [
   {
     level: 6,
     class: 'assassin',
-    baseHp: 100,
+    baseHp: 50,
     baseDamage: 18,
     baseAttackSpeed: 1.1,
     ability: {
@@ -193,7 +193,7 @@ export const WARRIORS: readonly WarriorConfig[] = [
   {
     level: 7,
     class: 'assassin',
-    baseHp: 140,
+    baseHp: 70,
     baseDamage: 26,
     baseAttackSpeed: 1.0,
     ability: {
@@ -207,7 +207,7 @@ export const WARRIORS: readonly WarriorConfig[] = [
   {
     level: 8,
     class: 'carry',
-    baseHp: 160,
+    baseHp: 80,
     baseDamage: 30,
     baseAttackSpeed: 1.1,
     ability: {
@@ -221,7 +221,7 @@ export const WARRIORS: readonly WarriorConfig[] = [
   {
     level: 9,
     class: 'tank',
-    baseHp: 380,
+    baseHp: 190,
     baseDamage: 14,
     baseAttackSpeed: 0.6,
     ability: {
@@ -234,7 +234,7 @@ export const WARRIORS: readonly WarriorConfig[] = [
   {
     level: 10,
     class: 'support',
-    baseHp: 200,
+    baseHp: 100,
     baseDamage: 12,
     baseAttackSpeed: 0.8,
     ability: {
@@ -248,7 +248,7 @@ export const WARRIORS: readonly WarriorConfig[] = [
   {
     level: 11,
     class: 'mage',
-    baseHp: 140,
+    baseHp: 70,
     baseDamage: 18,
     baseAttackSpeed: 0.8,
     ability: {
@@ -262,7 +262,7 @@ export const WARRIORS: readonly WarriorConfig[] = [
   {
     level: 12,
     class: 'swarm',
-    baseHp: 180,
+    baseHp: 90,
     baseDamage: 14,
     baseAttackSpeed: 0.9,
     ability: {
@@ -277,7 +277,7 @@ export const WARRIORS: readonly WarriorConfig[] = [
   {
     level: 13,
     class: 'assassin',
-    baseHp: 220,
+    baseHp: 110,
     baseDamage: 42,
     baseAttackSpeed: 0.9,
     ability: {
@@ -290,7 +290,7 @@ export const WARRIORS: readonly WarriorConfig[] = [
   {
     level: 14,
     class: 'carry',
-    baseHp: 250,
+    baseHp: 125,
     baseDamage: 48,
     baseAttackSpeed: 1.2,
     ability: {
@@ -303,7 +303,7 @@ export const WARRIORS: readonly WarriorConfig[] = [
   {
     level: 15,
     class: 'mage',
-    baseHp: 200,
+    baseHp: 100,
     baseDamage: 28,
     baseAttackSpeed: 0.7,
     ability: {
@@ -317,7 +317,7 @@ export const WARRIORS: readonly WarriorConfig[] = [
   {
     level: 16,
     class: 'tank',
-    baseHp: 600,
+    baseHp: 300,
     baseDamage: 22,
     baseAttackSpeed: 0.6,
     ability: {
@@ -331,7 +331,7 @@ export const WARRIORS: readonly WarriorConfig[] = [
   {
     level: 17,
     class: 'support',
-    baseHp: 280,
+    baseHp: 140,
     baseDamage: 20,
     baseAttackSpeed: 0.8,
     ability: {
@@ -344,7 +344,7 @@ export const WARRIORS: readonly WarriorConfig[] = [
   {
     level: 18,
     class: 'swarm',
-    baseHp: 320,
+    baseHp: 160,
     baseDamage: 24,
     baseAttackSpeed: 0.9,
     ability: {

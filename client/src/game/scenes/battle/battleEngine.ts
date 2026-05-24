@@ -190,15 +190,14 @@ export class BattleEngine {
   private moveAnim(unit: BattleUnit, newCellIdx: number): void {
     const center = this.layout.cellCenters[newCellIdx]
     if (!center) return
-    // Тот же паттерн что у живых лягушек на MainScene:
-    // 1) stretch (вытянулись для прыжка) 2) переезд container 3) squish (приземлились)
-    // 4) возврат к 1.0. Idle bob продолжается параллельно через delay.
     const body = unit.body
+    // Использует base scale из createUnit — чтобы сохранить пропорции SVG.
+    const baseY = (body.getData('baseScaleY') as number) ?? 1
     this.scene.tweens.killTweensOf(body)
 
     this.scene.tweens.add({
       targets: body,
-      scaleY: 1.2,
+      scaleY: baseY * 1.2,
       duration: 120,
       ease: 'Power2.easeOut',
     })
@@ -212,26 +211,26 @@ export class BattleEngine {
         if (!unit.alive) return
         this.scene.tweens.add({
           targets: body,
-          scaleY: 0.8,
+          scaleY: baseY * 0.8,
           duration: 80,
           ease: 'Power2.easeIn',
           onComplete: () => {
             if (!unit.alive) return
             this.scene.tweens.add({
               targets: body,
-              scaleY: 1.0,
+              scaleY: baseY,
               duration: 120,
               ease: 'Power2.easeOut',
               onComplete: () => {
                 if (!unit.alive) return
-                // Возобновляем idle bob
                 this.scene.tweens.add({
                   targets: body,
-                  scaleY: 0.92,
-                  duration: 700,
+                  scaleY: baseY * 0.92,
+                  duration: 600 + Math.random() * 300,
                   yoyo: true,
                   repeat: -1,
                   ease: 'Sine.easeInOut',
+                  delay: Math.random() * 500,
                 })
               },
             })
@@ -256,10 +255,11 @@ export class BattleEngine {
       yoyo: true,
       ease: 'Quad.easeOut',
     })
-    // Squish body — мягкое сжатие как на MainScene (idle bob magnitude).
+    // Squish body — мягкое сжатие относительно базового scale.
+    const baseY = (unit.body.getData('baseScaleY') as number) ?? 1
     this.scene.tweens.add({
       targets: unit.body,
-      scaleY: 0.88,
+      scaleY: baseY * 0.88,
       duration: ATTACK_LUNGE_MS,
       yoyo: true,
       ease: 'Quad.easeOut',
@@ -268,8 +268,8 @@ export class BattleEngine {
     this.spawnAttackArc(myCenter, targetCenter)
   }
 
-  /** Анимированная дуга удара между атакующим и целью — рисуется как
-   *  «росчерк» от одного конца к другому, затем плавно гаснет. */
+  /** Дуга-надрез (crescent) с заострёнными концами. Рисуется line-by-line
+   *  как «росчерк» от одного острия к другому, затем плавно гаснет. */
   private spawnAttackArc(
     from: { x: number; y: number },
     to: { x: number; y: number },
@@ -277,10 +277,11 @@ export class BattleEngine {
     const midX = (from.x + to.x) / 2
     const midY = (from.y + to.y) / 2
     const angle = Math.atan2(to.y - from.y, to.x - from.x)
-    const radius = Math.min(this.layout.cellW, this.layout.cellH) * 0.35
+    const baseR = Math.min(this.layout.cellW, this.layout.cellH) * 0.32
 
-    const startAngle = -Math.PI * 0.4
-    const endAngle = Math.PI * 0.4
+    const startAngle = -Math.PI * 0.42
+    const endAngle = Math.PI * 0.42
+    const totalAngle = endAngle - startAngle
 
     const gfx = this.scene.add.graphics()
     gfx.setPosition(midX, midY)
@@ -291,28 +292,27 @@ export class BattleEngine {
     this.scene.tweens.add({
       targets: tracker,
       p: 1,
-      duration: 180,
+      duration: 200,
       ease: 'Quad.easeOut',
       onUpdate: () => {
         gfx.clear()
-        gfx.lineStyle(3 * DPR, 0xffffff, 1)
+        // Crescent shape: внешняя arc forward + внутренняя arc обратно.
+        // На концах радиусы совпадают — естественный острый конец.
+        const curEnd = startAngle + totalAngle * tracker.p
+        const outerR = baseR + 4 * DPR
+        const innerR = baseR - 4 * DPR
+        gfx.fillStyle(0xffffff, 0.9)
         gfx.beginPath()
-        gfx.arc(
-          0,
-          0,
-          radius,
-          startAngle,
-          startAngle + (endAngle - startAngle) * tracker.p,
-          false,
-        )
-        gfx.strokePath()
+        gfx.arc(0, 0, outerR, startAngle, curEnd, false)
+        gfx.arc(0, 0, innerR, curEnd, startAngle, true)
+        gfx.closePath()
+        gfx.fillPath()
       },
       onComplete: () => {
-        // Fade-out полностью прорисованной дуги.
         this.scene.tweens.add({
           targets: gfx,
           alpha: 0,
-          duration: 200,
+          duration: 220,
           ease: 'Quad.easeIn',
           onComplete: () => gfx.destroy(),
         })
