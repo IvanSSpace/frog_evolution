@@ -188,21 +188,54 @@ export class BattleEngine {
   private moveAnim(unit: BattleUnit, newCellIdx: number): void {
     const center = this.layout.cellCenters[newCellIdx]
     if (!center) return
-    // Прыжок: tween по позиции + лёгкий scale-bounce
+    // Тот же паттерн что у живых лягушек на MainScene:
+    // 1) stretch (вытянулись для прыжка) 2) переезд container 3) squish (приземлились)
+    // 4) возврат к 1.0. Idle bob продолжается параллельно через delay.
+    const body = unit.body
+    this.scene.tweens.killTweensOf(body)
+
+    this.scene.tweens.add({
+      targets: body,
+      scaleY: 1.2,
+      duration: 120,
+      ease: 'Power2.easeOut',
+    })
     this.scene.tweens.add({
       targets: unit.container,
       x: center.x,
       y: center.y,
       duration: MOVE_TWEEN_MS,
-      ease: 'Quad.easeInOut',
-    })
-    this.scene.tweens.add({
-      targets: unit.container,
-      scaleY: 1.15,
-      scaleX: 0.9,
-      duration: MOVE_TWEEN_MS / 2,
-      yoyo: true,
-      ease: 'Quad.easeOut',
+      ease: 'Power2.easeOut',
+      onComplete: () => {
+        if (!unit.alive) return
+        this.scene.tweens.add({
+          targets: body,
+          scaleY: 0.8,
+          duration: 80,
+          ease: 'Power2.easeIn',
+          onComplete: () => {
+            if (!unit.alive) return
+            this.scene.tweens.add({
+              targets: body,
+              scaleY: 1.0,
+              duration: 120,
+              ease: 'Power2.easeOut',
+              onComplete: () => {
+                if (!unit.alive) return
+                // Возобновляем idle bob
+                this.scene.tweens.add({
+                  targets: body,
+                  scaleY: 0.92,
+                  duration: 700,
+                  yoyo: true,
+                  repeat: -1,
+                  ease: 'Sine.easeInOut',
+                })
+              },
+            })
+          },
+        })
+      },
     })
   }
 

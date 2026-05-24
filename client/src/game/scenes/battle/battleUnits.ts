@@ -34,6 +34,8 @@ export interface BattleUnit {
   attackSpeed: number
   /** Визуальный контейнер (sprite + label + hp bar). */
   container: Phaser.GameObjects.Container
+  /** Сам sprite (для idle bob). */
+  body: Phaser.GameObjects.GameObject
   /** Полоса HP — обновляется ticker'ом. */
   hpBar: Phaser.GameObjects.Rectangle
   /** Жив ли. */
@@ -70,10 +72,16 @@ export function createUnit(
   const container = scene.add.container(center.x, center.y)
   container.setDepth(5)
 
-  // Side-indicator кольцо за лягушкой (цветное круглое плато).
-  const ring = scene.add.circle(0, 0, radius * 1.05, SIDE_COLOR[side], 0.32)
-  ring.setStrokeStyle(2 * DPR, SIDE_COLOR[side], 0.85)
-  container.add(ring)
+  // Маленький side-индикатор — точка под лягушкой (а не огромное кольцо).
+  const indicator = scene.add.circle(
+    0,
+    radius * 0.85,
+    radius * 0.18,
+    SIDE_COLOR[side],
+    1,
+  )
+  indicator.setStrokeStyle(1 * DPR, 0x111827, 0.7)
+  container.add(indicator)
 
   // Frog SVG sprite — текстура уже preloaded в MainScene.preload().
   const texKey = textureKeyForLevel(level, tier)
@@ -98,18 +106,23 @@ export function createUnit(
   }
   container.add(sprite)
 
-  // Эмодзи класса в правом верхнем углу
-  const classBadge = scene.add.text(radius * 0.7, -radius * 0.7, meta.emoji, {
-    fontFamily: 'sans-serif',
-    fontSize: `${radius * 0.55}px`,
+  // Idle bob анимация — как у живых лягушек на главной сцене.
+  // ScaleY 1 ↔ 0.92, 700ms yoyo, infinite repeat. Случайный delay чтобы не
+  // синхронизировались (вид: каждая лягушка дышит своим ритмом).
+  scene.tweens.add({
+    targets: sprite,
+    scaleY: { from: sprite.scaleY, to: sprite.scaleY * 0.92 },
+    duration: 700,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.easeInOut',
+    delay: Math.random() * 700,
   })
-  classBadge.setOrigin(0.5, 0.5)
-  container.add(classBadge)
 
-  // Уровень в левом нижнем углу
-  const levelText = scene.add.text(-radius * 0.7, radius * 0.7, `L${level}`, {
+  // L-номер в левом нижнем углу (внутри лягушки).
+  const levelText = scene.add.text(-radius * 0.7, radius * 0.55, `L${level}`, {
     fontFamily: 'Russo One, sans-serif',
-    fontSize: `${radius * 0.45}px`,
+    fontSize: `${radius * 0.4}px`,
     color: '#fff',
     stroke: '#000',
     strokeThickness: 2 * DPR,
@@ -152,6 +165,7 @@ export function createUnit(
     damage: wcfg.baseDamage,
     attackSpeed: wcfg.baseAttackSpeed,
     container,
+    body: sprite,
     hpBar,
     alive: true,
   }
