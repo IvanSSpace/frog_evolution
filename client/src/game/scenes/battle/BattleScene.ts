@@ -40,6 +40,8 @@ export class BattleScene extends Phaser.Scene {
     cellIdx: number
     hp: number
   }> | null = null
+  /** Сколько локаций успешно зачищено в этом рейде (= количество звёзд). */
+  private starsEarned: number = 0
 
   constructor() {
     super({ key: 'BattleScene' })
@@ -48,9 +50,10 @@ export class BattleScene extends Phaser.Scene {
   /** Init params from scene.start('BattleScene', { locationId }). */
   init(data: { locationId?: number }) {
     this.locationId = data.locationId ?? 1
-    // Каждый новый заход в сцену с locationId=1 = свежий рейд → сброс выживших.
+    // Каждый новый заход в сцену с locationId=1 = свежий рейд → сброс выживших + звёзд.
     if (this.locationId === 1) {
       this.survivorState = null
+      this.starsEarned = 0
     }
   }
 
@@ -208,49 +211,140 @@ export class BattleScene extends Phaser.Scene {
     const isFinalLoc = this.locationId >= 3
     const winAndMore = result === 'win' && !isFinalLoc
 
-    // Награда за взятие локации (для loc1/loc2 — частичная при дальнейшем
-    // проходе; final award даётся при общем итоге).
+    // Награда + звезда за каждую зачищенную локацию.
     if (result === 'win') {
+      this.starsEarned = Math.min(3, this.starsEarned + 1)
       const reward = this.rewardForLocation(this.locationId)
       if (reward > 0) {
         useGameStore.getState().addGold(reward)
       }
     }
 
-    const txt = winAndMore
-      ? `ЛОКАЦИЯ ${this.locationId} ВЗЯТА!\n+${this.rewardForLocation(this.locationId)} 💧`
-      : result === 'win'
-        ? `ПОБЕДА!\n+${this.rewardForLocation(this.locationId)} 💧`
-        : 'ПОРАЖЕНИЕ'
-    const color = result === 'win' ? '#4ade80' : '#dc2626'
-    this.resultText = this.add.text(width / 2, height / 2, txt, {
+    if (winAndMore) {
+      // Промежуточная победа на loc1/loc2 — короткий toast, дальше переход.
+      const txt = `ЛОКАЦИЯ ${this.locationId} ВЗЯТА!\n+${this.rewardForLocation(this.locationId)} 💧`
+      this.resultText = this.add.text(width / 2, height / 2, txt, {
+        fontFamily: 'Russo One, sans-serif',
+        fontSize: `${32 * DPR}px`,
+        color: '#4ade80',
+        stroke: '#000',
+        strokeThickness: 6 * DPR,
+        align: 'center',
+      })
+      this.resultText.setOrigin(0.5, 0.5)
+      this.resultText.setDepth(20)
+      this.resultText.setScale(0.5)
+      this.tweens.add({
+        targets: this.resultText,
+        scale: 1,
+        duration: 400,
+        ease: 'Back.easeOut',
+      })
+      this.saveSurvivors()
+      this.time.delayedCall(1500, () => this.transitionToNextLocation())
+      return
+    }
+
+    // Финальный экран — итог рейда со звёздами.
+    this.showFinalResult(result)
+    this.time.delayedCall(2800, () => {
+      eventBus.emit('battle:exit', {})
+    })
+  }
+
+  /** Показывает финальный результат рейда с 3-звёздным рейтингом. */
+  private showFinalResult(result: BattleResult): void {
+    const { width, height } = this.scale
+    const isWin = result === 'win'
+    const stars = this.starsEarned // 0..3
+
+    // Заголовок — победа/поражение + награда total
+    const totalReward = this.computeTotalReward()
+    const headTxt =
+      isWin && stars === 3
+        ? 'РЕЙД ЗАВЕРШЁН!'
+        : stars > 0
+          ? `РЕЙД ПРЕРВАН`
+          : 'РЕЙД ПРОВАЛЕН'
+    const headColor = stars === 3 ? '#facc15' : stars > 0 ? '#fb923c' : '#dc2626'
+    const header = this.add.text(width / 2, height / 2 - 60 * DPR, headTxt, {
       fontFamily: 'Russo One, sans-serif',
-      fontSize: `${winAndMore ? 32 : 48 * DPR}px`,
-      color,
+      fontSize: `${36 * DPR}px`,
+      color: headColor,
       stroke: '#000',
       strokeThickness: 6 * DPR,
       align: 'center',
     })
-    this.resultText.setOrigin(0.5, 0.5)
-    this.resultText.setDepth(20)
-    this.resultText.setScale(0.5)
+    header.setOrigin(0.5, 0.5)
+    header.setDepth(20)
+    header.setScale(0.5)
     this.tweens.add({
-      targets: this.resultText,
+      targets: header,
       scale: 1,
       duration: 400,
       ease: 'Back.easeOut',
     })
+    this.resultText = header
 
-    if (winAndMore) {
-      // Сохраняем выживших + переход на следующую локацию через 1.5s
-      this.saveSurvivors()
-      this.time.delayedCall(1500, () => this.transitionToNextLocation())
-    } else {
-      // Финальная победа или поражение → выход через 2.2s
-      this.time.delayedCall(2200, () => {
-        eventBus.emit('battle:exit', {})
+    // Три звезды по центру — заполненные = золотые, пустые = серые
+    const starSize = 48 * DPR
+    const starGap = 14 * DPR
+    const totalStarsW = starSize * 3 + starGap * 2
+    const startX = width / 2 - totalStarsW / 2 + starSize / 2
+    for (let i = 0; i < 3; i++) {
+      const starX = startX + i * (starSize + starGap)
+      const starY = height / 2 + 10 * DPR
+      const filled = i < stars
+      const star = this.add.text(starX, starY, filled ? '⭐' : '☆', {
+        fontFamily: 'sans-serif',
+        fontSize: `${starSize}px`,
+        color: filled ? '#facc15' : '#64748b',
+      })
+      star.setOrigin(0.5, 0.5)
+      star.setDepth(20)
+      star.setScale(0)
+      this.tweens.add({
+        targets: star,
+        scale: 1,
+        duration: 320,
+        delay: 400 + i * 180,
+        ease: 'Back.easeOut',
       })
     }
+
+    // Подпись с наградой
+    if (totalReward > 0) {
+      const rewardTxt = this.add.text(
+        width / 2,
+        height / 2 + 80 * DPR,
+        `+${totalReward} 💧`,
+        {
+          fontFamily: 'Russo One, sans-serif',
+          fontSize: `${28 * DPR}px`,
+          color: '#fff',
+          stroke: '#000',
+          strokeThickness: 5 * DPR,
+        },
+      )
+      rewardTxt.setOrigin(0.5, 0.5)
+      rewardTxt.setDepth(20)
+      rewardTxt.setAlpha(0)
+      this.tweens.add({
+        targets: rewardTxt,
+        alpha: 1,
+        duration: 300,
+        delay: 900,
+      })
+    }
+  }
+
+  /** Сумма наград за все зачищенные локации. */
+  private computeTotalReward(): number {
+    let sum = 0
+    for (let i = 1; i <= this.starsEarned; i++) {
+      sum += this.rewardForLocation(i)
+    }
+    return sum
   }
 
   private transitionToNextLocation(): void {
