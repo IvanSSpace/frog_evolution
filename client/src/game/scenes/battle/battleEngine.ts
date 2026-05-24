@@ -210,16 +210,18 @@ export class BattleEngine {
     const targetCenter = this.layout.cellCenters[target.cellIdx]
     const myCenter = this.layout.cellCenters[unit.cellIdx]
     if (!targetCenter || !myCenter) return
-    // Lunge в сторону target и обратно
-    const dx = (targetCenter.x - myCenter.x) * 0.2
-    const dy = (targetCenter.y - myCenter.y) * 0.2
+    // Lunge почти до границы своей клетки — атакующий «выходит» из неё к
+    // противнику. 0.48 = чуть меньше половины клетки, юнит остаётся в своей
+    // зоне но визуально касается врага у boundary.
+    const dx = (targetCenter.x - myCenter.x) * 0.48
+    const dy = (targetCenter.y - myCenter.y) * 0.48
     this.scene.tweens.add({
       targets: unit.container,
       x: myCenter.x + dx,
       y: myCenter.y + dy,
-      duration: 90,
+      duration: 140,
       yoyo: true,
-      ease: 'Power2',
+      ease: 'Quad.easeOut',
     })
   }
 

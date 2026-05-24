@@ -83,8 +83,6 @@ export function createUnit(
     const target = radius * 1.7
     img.setDisplaySize(target, target * (47 / 50))
     sprite = img
-    // Лёгкий зеркальный flip для противника, чтобы они «смотрели» в сторону игрока.
-    if (side === 'enemy') img.setFlipY(true)
   } else {
     // Fallback — круг с emoji (если текстура ещё не загружена)
     const circle = scene.add.circle(0, 0, radius * 0.85, meta.color, 0.9)
