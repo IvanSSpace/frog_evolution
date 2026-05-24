@@ -107,21 +107,22 @@ export class BattleEngine {
     return best
   }
 
-  /** Выбрать соседнюю клетку (dist=1) ближе всего к target'у. */
+  /** Выбрать соседнюю клетку (dist=1) ближе всего к target'у.
+   *  Возвращает null если ни одна свободная клетка не приближает —
+   *  это предотвращает «топтание на месте» когда путь заблокирован
+   *  союзниками (раньше юнит шёл вбок с тем же расстоянием → осциллировал). */
   private pickStepTowards(unit: BattleUnit, targetIdx: number): number | null {
+    const currentDist = cellDistance(unit.cellIdx, targetIdx)
     const { row, col } = cellRC(unit.cellIdx)
     const candidates: number[] = []
-    // 4-directional movement
     if (row > 0) candidates.push(cellIndex(row - 1, col))
     if (row < GRID_ROWS - 1) candidates.push(cellIndex(row + 1, col))
     if (col > 0) candidates.push(cellIndex(row, col - 1))
     if (col < GRID_COLS - 1) candidates.push(cellIndex(row, col + 1))
 
-    // Фильтруем по occupancy (нельзя на клетку с союзником/врагом)
     const free = candidates.filter((idx) => !this.occupancy.has(idx))
     if (free.length === 0) return null
 
-    // Берём клетку с минимальным расстоянием до target
     let best = free[0]
     let bestDist = cellDistance(best, targetIdx)
     for (let i = 1; i < free.length; i++) {
@@ -131,6 +132,8 @@ export class BattleEngine {
         bestDist = d
       }
     }
+    // Стоим если ни одна клетка не лучше текущей.
+    if (bestDist >= currentDist) return null
     return best
   }
 
