@@ -26,6 +26,9 @@ type Events = {
   'rareCrate:claim': { level: number }
   'starmap:open': void
   'starmap:close': void
+  // Phase Barracks (2026-05-24) — PvP raid mode
+  'battle:start': { locationId?: number }
+  'battle:exit': Record<string, never>
   'starmap:planet-selected': {
     raceId: string
     raceName: string

@@ -8,6 +8,7 @@ import { useGameStore } from '../../store/gameStore'
 import { fmt } from '../../utils/formatting'
 import { hapticNotification, hapticSelection } from '../../utils/telegram'
 import { useModalLock } from '../../utils/modalLock'
+import { eventBus } from '../../store/eventBus'
 import { TintedFrog } from './TintedFrog'
 import { FROG_LEVELS, getFrogPath } from '../../game/config/frogs'
 import {
@@ -212,14 +213,16 @@ export function BarracksModal({ onClose }: Props) {
         >
           <button
             onClick={() => {
-              hapticNotification('warning')
-              // TODO Этап 4: открыть BattleScene
+              if (filledCount === 0) return
+              hapticNotification('success')
+              eventBus.emit('battle:start', { locationId: 1 })
+              onClose()
             }}
             disabled={filledCount === 0}
             className="ff-btn ff-btn-orange text-base flex-1"
             style={{ maxWidth: 240 }}
           >
-            В РЕЙД (скоро)
+            В РЕЙД
           </button>
         </div>
       </div>

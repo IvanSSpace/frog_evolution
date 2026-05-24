@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { MainScene } from './scenes/MainScene'
 import { StarMapScene } from './scenes/StarMapScene'
+import { BattleScene } from './scenes/battle/BattleScene'
 import { eventBus } from '../store/eventBus'
 import { useGameStore } from '../store/gameStore'
 
@@ -88,9 +89,9 @@ export function startGame(): Phaser.Game {
       // использовать дискретный GPU для WebGL вместо интегрированного.
       powerPreference: 'high-performance',
     },
-    // MainScene стартует автоматически. StarMapScene регистрируется,
-    // но автостарт=false — запускается вручную через event bus.
-    scene: [MainScene, StarMapScene],
+    // MainScene стартует автоматически. StarMapScene + BattleScene регистрируются,
+    // но автостарт=false — запускаются вручную через event bus.
+    scene: [MainScene, StarMapScene, BattleScene],
     physics: {
       default: 'arcade',
       arcade: { gravity: { x: 0, y: 0 }, debug: false },
@@ -190,6 +191,25 @@ export function startGame(): Phaser.Game {
       await main.locTransition.runCloseStarMapTransition(targetLoc)
       isTransitioning = false
     })
+  })
+
+  // Battle scene (PvP raid) — переключение MainScene <-> BattleScene.
+  // Этап 3a: простой sleep/wake без transition cinematics.
+  eventBus.on('battle:start', (payload?: { locationId?: number }) => {
+    const locId = payload?.locationId ?? 1
+    if (sm().isActive('BattleScene')) return
+    sm().sleep('MainScene')
+    if (sm().isSleeping('BattleScene')) {
+      sm().wake('BattleScene', { locationId: locId })
+    } else {
+      sm().start('BattleScene', { locationId: locId })
+    }
+  })
+
+  eventBus.on('battle:exit', () => {
+    if (!sm().isActive('BattleScene')) return
+    sm().sleep('BattleScene')
+    sm().wake('MainScene')
   })
 
   // Подгоняем размер игры при ресайзе окна
