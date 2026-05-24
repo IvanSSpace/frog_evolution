@@ -67,7 +67,19 @@ import {
   saveL18MergesCount,
   loadL18AbsoluteBonusPerSec,
   saveL18AbsoluteBonusPerSec,
+  loadBarracksGrid,
+  saveBarracksGrid,
+  loadBarracksVats,
+  saveBarracksVats,
+  loadBarracksUnlocked,
+  saveBarracksUnlocked,
 } from './persistence'
+import { getWarriorConvertCost } from '../game/config/warriors'
+import {
+  BARRACKS_GRID_SIZE,
+  type BarracksCell,
+  type Vat,
+} from './barracks'
 
 // Re-exports for backward compat — many consumers import these from gameStore.
 // New code should import directly from game/config/upgrades or game/config/locations.
@@ -222,6 +234,26 @@ interface GameStateBase {
   // и продлевают `until` (см. activateTemporaryIncomeBuff).
   temporaryIncomeBuff: { until: number; percent: number } | null
   activateTemporaryIncomeBuff: (percent: number, durationMs: number) => void
+
+  // 2026-05-24: Barracks / PvP raid mode state (Этап 1 — config + state).
+  // Unlocked после открытия Леса (L7 discovered). Сетка 5×4 = 20 клеток.
+  // До 7 воинов идут в бой. Чанов 3 (по одному на фарм-локацию).
+  barracksUnlocked: boolean
+  unlockBarracks: () => void
+  barracksGrid: (import('./barracks').BarracksCell | null)[]
+  /** Положить воина в первую свободную клетку. Возвращает индекс или -1
+   *  если все клетки заняты / недостаточно gold для конвертации. */
+  addWarriorToBarracks: (level: number, tier?: 0 | 1 | 2) => number
+  /** Очистить клетку (вернуть воина в "удалить"). MVP: без рефанда. */
+  removeWarriorFromBarracks: (slotIdx: number) => void
+  /** Прямая запись (для drag-n-drop / dev). */
+  setBarracksCell: (
+    slotIdx: number,
+    cell: import('./barracks').BarracksCell | null,
+  ) => void
+  barracksVats: import('./barracks').Vat[]
+  /** Обновить чан (claim после raid / accrual tick). */
+  setBarracksVat: (idx: number, vat: import('./barracks').Vat) => void
 }
 
 // Полный GameState = базовые поля + Cosmic Frogs System (Phase 11+)
@@ -579,6 +611,56 @@ export const useGameStore = create<GameState>((set, get) => ({
     const next = { until: now + durationMs, percent: nextPercent }
     saveTemporaryIncomeBuff(next)
     set({ temporaryIncomeBuff: next })
+  },
+
+  // ============== BARRACKS / PvP (2026-05-24 Этап 1) ==============
+  barracksUnlocked: loadBarracksUnlocked(),
+  unlockBarracks: () => {
+    const s = get()
+    if (s.barracksUnlocked) return
+    saveBarracksUnlocked(true)
+    set({ barracksUnlocked: true })
+  },
+  barracksGrid: loadBarracksGrid(),
+  addWarriorToBarracks: (level, tier = 0) => {
+    const s = get()
+    const cost = getWarriorConvertCost(level)
+    if (s.gold < cost) return -1
+    const grid = s.barracksGrid
+    const emptyIdx = grid.findIndex((c) => c === null)
+    if (emptyIdx === -1) return -1
+    const cell: BarracksCell = { level, tier, addedAtMs: Date.now() }
+    const nextGrid = grid.slice()
+    nextGrid[emptyIdx] = cell
+    saveBarracksGrid(nextGrid)
+    set({ gold: s.gold - cost, barracksGrid: nextGrid })
+    return emptyIdx
+  },
+  removeWarriorFromBarracks: (slotIdx) => {
+    const s = get()
+    if (slotIdx < 0 || slotIdx >= BARRACKS_GRID_SIZE) return
+    if (!s.barracksGrid[slotIdx]) return
+    const nextGrid = s.barracksGrid.slice()
+    nextGrid[slotIdx] = null
+    saveBarracksGrid(nextGrid)
+    set({ barracksGrid: nextGrid })
+  },
+  setBarracksCell: (slotIdx, cell) => {
+    const s = get()
+    if (slotIdx < 0 || slotIdx >= BARRACKS_GRID_SIZE) return
+    const nextGrid = s.barracksGrid.slice()
+    nextGrid[slotIdx] = cell
+    saveBarracksGrid(nextGrid)
+    set({ barracksGrid: nextGrid })
+  },
+  barracksVats: loadBarracksVats(),
+  setBarracksVat: (idx, vat) => {
+    const s = get()
+    if (idx < 0 || idx >= s.barracksVats.length) return
+    const next: Vat[] = s.barracksVats.slice()
+    next[idx] = vat
+    saveBarracksVats(next)
+    set({ barracksVats: next })
   },
 
   // ============== COSMIC FROGS SYSTEM (Phase 11+) ==============

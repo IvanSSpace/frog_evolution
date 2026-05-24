@@ -11,6 +11,8 @@ import { SettingsModal } from './ui/components/SettingsModal'
 import { LocationStack } from './ui/components/LocationStack'
 import { StarMapHUD } from './ui/components/StarMapHUD'
 import { MagnetToggle } from './ui/components/MagnetToggle'
+import { BarracksButton } from './ui/components/BarracksButton'
+import { BarracksModal } from './ui/components/BarracksModal'
 import { ShipFollowButton } from './ui/components/ShipFollowButton'
 import { OrientationLock } from './ui/components/OrientationLock'
 import { LoadingScreen } from './ui/components/LoadingScreen'
@@ -70,6 +72,7 @@ function App() {
   const [frogShopOpen, setFrogShopOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [cosmicHubOpen, setCosmicHubOpen] = useState(false)
+  const [barracksOpen, setBarracksOpen] = useState(false)
   const [serumOpen, setSerumOpen] = useState(false)
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [welcomeBack, setWelcomeBack] = useState<{
@@ -363,6 +366,7 @@ function App() {
       <MagnetToggle />
       <StarMapHUD />
       <ShipFollowButton />
+      <BarracksButton onClick={() => setBarracksOpen(true)} />
       <SerumBar />
       {/* tech-debt 2026-05-19: ActiveBonusesBar removed from HUD.
           Bonuses теперь показаны в Cosmic Hub → Carriers tab как
@@ -375,6 +379,7 @@ function App() {
       {frogShopOpen && <FrogShopModal onClose={() => setFrogShopOpen(false)} />}
       {serumOpen && <SerumModal onClose={() => setSerumOpen(false)} />}
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+      {barracksOpen && <BarracksModal onClose={() => setBarracksOpen(false)} />}
       <Suspense fallback={null}>
         {cosmicHubOpen && (
           <CosmicHubModal onClose={() => setCosmicHubOpen(false)} />

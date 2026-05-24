@@ -57,6 +57,11 @@ const L18_ABSOLUTE_BONUS_KEY = 'frog_evolution_l18_absolute_bonus'
 // Phase 23 Plan 23-01: onboarding flow per-device state.
 // Хранится отдельным ключом (не sync'ится с сервером) — это локальная UX-фича.
 const ONBOARDING_KEY = 'frog_evolution_onboarding'
+// 2026-05-24: barracks / PvP raid mode state. MVP — local storage only.
+// Серверный sync добавим в Этап 5 (vats accrual + opponent snapshots).
+const BARRACKS_GRID_KEY = 'frog_evolution_barracks_grid'
+const BARRACKS_VATS_KEY = 'frog_evolution_barracks_vats'
+const BARRACKS_UNLOCKED_KEY = 'frog_evolution_barracks_unlocked'
 
 // ─── upgrades ────────────────────────────────────────────────────────────────
 
@@ -1069,6 +1074,71 @@ export function saveBestiarySeenLevels(arr: number[]): void {
   } catch {
     /* ignore */
   }
+}
+
+// ─── barracks / vats / unlock (2026-05-24 PvP raid mode) ───────────────────
+
+import {
+  type BarracksCell,
+  type Vat,
+  defaultBarracksGrid,
+  defaultVats,
+  validateBarracksGrid,
+  validateVats,
+} from './barracks'
+
+export function loadBarracksGrid(): (BarracksCell | null)[] {
+  if (typeof localStorage === 'undefined') return defaultBarracksGrid()
+  try {
+    const raw = localStorage.getItem(BARRACKS_GRID_KEY)
+    if (!raw) return defaultBarracksGrid()
+    const parsed = JSON.parse(raw)
+    const valid = validateBarracksGrid(parsed)
+    return valid ?? defaultBarracksGrid()
+  } catch {
+    return defaultBarracksGrid()
+  }
+}
+
+export function saveBarracksGrid(grid: (BarracksCell | null)[]): void {
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(BARRACKS_GRID_KEY, JSON.stringify(grid))
+  } catch {
+    /* ignore */
+  }
+}
+
+export function loadBarracksVats(): Vat[] {
+  if (typeof localStorage === 'undefined') return defaultVats()
+  try {
+    const raw = localStorage.getItem(BARRACKS_VATS_KEY)
+    if (!raw) return defaultVats()
+    const parsed = JSON.parse(raw)
+    const valid = validateVats(parsed)
+    return valid ?? defaultVats()
+  } catch {
+    return defaultVats()
+  }
+}
+
+export function saveBarracksVats(vats: Vat[]): void {
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(BARRACKS_VATS_KEY, JSON.stringify(vats))
+  } catch {
+    /* ignore */
+  }
+}
+
+export function loadBarracksUnlocked(): boolean {
+  if (typeof localStorage === 'undefined') return false
+  return localStorage.getItem(BARRACKS_UNLOCKED_KEY) === 'true'
+}
+
+export function saveBarracksUnlocked(v: boolean): void {
+  if (typeof localStorage === 'undefined') return
+  localStorage.setItem(BARRACKS_UNLOCKED_KEY, v ? 'true' : 'false')
 }
 
 // Side effect on import: apply persisted format globally so first render
