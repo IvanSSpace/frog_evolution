@@ -77,6 +77,9 @@ import {
 import { getWarriorConvertCost } from '../game/config/warriors'
 import {
   BARRACKS_GRID_SIZE,
+  BATTLE_DECK_SIZE,
+  MAX_DECK_SIZE,
+  RESERVE_START_IDX,
   type BarracksCell,
   type Vat,
 } from './barracks'
@@ -627,7 +630,31 @@ export const useGameStore = create<GameState>((set, get) => ({
     const cost = getWarriorConvertCost(level)
     if (s.gold < cost) return -1
     const grid = s.barracksGrid
-    const emptyIdx = grid.findIndex((c) => c === null)
+    // Сначала ищем место в боевой зоне (idx 0-11), но не более MAX_DECK_SIZE
+    // занятых клеток там. Если все 7 слотов deck'а заняты — кладём в резерв.
+    let deckFilled = 0
+    for (let i = 0; i < BATTLE_DECK_SIZE; i++) {
+      if (grid[i] !== null) deckFilled++
+    }
+    let emptyIdx = -1
+    if (deckFilled < MAX_DECK_SIZE) {
+      // Свободное место в deck (верхние 3 ряда).
+      for (let i = 0; i < BATTLE_DECK_SIZE; i++) {
+        if (grid[i] === null) {
+          emptyIdx = i
+          break
+        }
+      }
+    }
+    if (emptyIdx === -1) {
+      // Либо deck full (7/7) либо нет физически свободных клеток — кладём в reserve.
+      for (let i = RESERVE_START_IDX; i < grid.length; i++) {
+        if (grid[i] === null) {
+          emptyIdx = i
+          break
+        }
+      }
+    }
     if (emptyIdx === -1) return -1
     const cell: BarracksCell = { level, tier, addedAtMs: Date.now() }
     const nextGrid = grid.slice()

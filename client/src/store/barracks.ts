@@ -11,6 +11,27 @@ export const BARRACKS_GRID_H = 5
 export const BARRACKS_GRID_SIZE = BARRACKS_GRID_W * BARRACKS_GRID_H // 20
 export const MAX_DECK_SIZE = 7 // сколько воинов идут в бой
 
+// Верхние 3 ряда = «боевая колода». Эти 12 клеток (idx 0-11) подсвечиваются
+// в UI и из них (максимум 7) отправляются на поле боя 4×3 player'a.
+// Нижние 2 ряда (idx 12-19) = «резерв», в бой не идут.
+export const BATTLE_DECK_ROWS = 3
+export const BATTLE_DECK_SIZE = BATTLE_DECK_ROWS * BARRACKS_GRID_W // 12
+export const RESERVE_START_IDX = BATTLE_DECK_SIZE // первая клетка резерва (12)
+
+/** Возвращает true если индекс клетки в боевой зоне (верхние 3 ряда). */
+export function isDeckSlot(idx: number): boolean {
+  return idx >= 0 && idx < BATTLE_DECK_SIZE
+}
+
+/** Количество занятых клеток в боевой зоне. */
+export function deckCount(grid: readonly (unknown | null)[]): number {
+  let n = 0
+  for (let i = 0; i < BATTLE_DECK_SIZE; i++) {
+    if (grid[i] !== null && grid[i] !== undefined) n++
+  }
+  return n
+}
+
 export const VATS_COUNT = 3 // по одному на Болото/Лес/Континент
 /** Максимальное время накопления = 6 часов (MVP). Расширяемо через upgrade. */
 export const VAT_CAP_MS = 6 * 60 * 60 * 1000

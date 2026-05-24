@@ -19,7 +19,10 @@ import {
 import {
   BARRACKS_GRID_H,
   BARRACKS_GRID_W,
+  BATTLE_DECK_ROWS,
+  BATTLE_DECK_SIZE,
   MAX_DECK_SIZE,
+  deckCount,
 } from '../../store/barracks'
 
 type Props = { onClose: () => void }
@@ -47,6 +50,7 @@ export function BarracksModal({ onClose }: Props) {
   availableLevels.sort((a, b) => a - b)
 
   const filledCount = grid.filter((c) => c !== null).length
+  const deckFilled = deckCount(grid)
 
   const handleAdd = (level: number) => {
     hapticSelection()
@@ -125,8 +129,13 @@ export function BarracksModal({ onClose }: Props) {
           <span style={{ color: '#365314' }}>
             Воинов: <b>{filledCount}</b>/{grid.length}
           </span>
-          <span style={{ color: '#365314' }}>
-            В бой: до {MAX_DECK_SIZE}
+          <span
+            style={{
+              color: deckFilled === MAX_DECK_SIZE ? '#16a34a' : '#365314',
+              fontWeight: 700,
+            }}
+          >
+            В бой: {deckFilled}/{MAX_DECK_SIZE}
           </span>
         </div>
 
@@ -138,17 +147,37 @@ export function BarracksModal({ onClose }: Props) {
               gridTemplateColumns: `repeat(${BARRACKS_GRID_W}, 1fr)`,
               gridTemplateRows: `repeat(${BARRACKS_GRID_H}, auto)`,
               gap: 6,
+              padding: 6,
+              borderRadius: 10,
+              // Боевая зона = верхние 3 ряда. Подсвечиваем через двойной градиент:
+              // top половина — жёлтая (deck), bottom — серая (reserve).
+              background: `linear-gradient(180deg,
+                rgba(251,191,36,0.18) 0%,
+                rgba(251,191,36,0.18) ${(BATTLE_DECK_ROWS / BARRACKS_GRID_H) * 100}%,
+                rgba(54,83,20,0.08) ${(BATTLE_DECK_ROWS / BARRACKS_GRID_H) * 100}%,
+                rgba(54,83,20,0.08) 100%)`,
+              border: '2px solid rgba(251,191,36,0.4)',
             }}
           >
-            {grid.map((cell, idx) => (
-              <BarracksSlot
-                key={idx}
-                idx={idx}
-                cell={cell}
-                isSelected={selectedSlot === idx}
-                onClick={handleSlotClick}
-              />
-            ))}
+            {grid.map((cell, idx) => {
+              const isDeck = idx < BATTLE_DECK_SIZE
+              return (
+                <BarracksSlot
+                  key={idx}
+                  idx={idx}
+                  cell={cell}
+                  isSelected={selectedSlot === idx}
+                  isDeck={isDeck}
+                  onClick={handleSlotClick}
+                />
+              )
+            })}
+          </div>
+
+          {/* Подписи зон */}
+          <div className="flex justify-between mt-2 px-1 text-xs ff-body">
+            <span style={{ color: '#a16207' }}>⚔ Боевая зона (top 3)</span>
+            <span style={{ color: '#475569' }}>Резерв (bottom 2)</span>
           </div>
 
           {selectedSlot !== null && grid[selectedSlot] && (
@@ -236,11 +265,13 @@ function BarracksSlot({
   idx,
   cell,
   isSelected,
+  isDeck,
   onClick,
 }: {
   idx: number
   cell: import('../../store/barracks').BarracksCell | null
   isSelected: boolean
+  isDeck: boolean
   onClick: (idx: number) => void
 }) {
   if (!cell) {
@@ -249,8 +280,10 @@ function BarracksSlot({
         onClick={() => onClick(idx)}
         style={{
           aspectRatio: '1',
-          background: 'rgba(54,83,20,0.08)',
-          border: '2px dashed rgba(77,107,31,0.3)',
+          background: isDeck
+            ? 'rgba(251,191,36,0.12)'
+            : 'rgba(54,83,20,0.08)',
+          border: `2px dashed ${isDeck ? 'rgba(251,191,36,0.5)' : 'rgba(77,107,31,0.3)'}`,
           borderRadius: 8,
           cursor: 'default',
         }}

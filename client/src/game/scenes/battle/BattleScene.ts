@@ -13,6 +13,13 @@ import Phaser from 'phaser'
 import { computeGrid, drawGridLines, type GridLayout } from './battleGrid'
 import { mapKeyForLocation, DPR } from '../main/types'
 import { eventBus } from '../../../store/eventBus'
+import { useGameStore } from '../../../store/gameStore'
+import {
+  buildBotDeck,
+  buildPlayerDeck,
+  type BattleUnit,
+} from './battleUnits'
+import { BattleEngine, type BattleResult } from './battleEngine'
 
 export class BattleScene extends Phaser.Scene {
   private locationId: number = 1
@@ -20,6 +27,10 @@ export class BattleScene extends Phaser.Scene {
   private gridLayout: GridLayout | null = null
   private gridGfx: Phaser.GameObjects.Graphics | null = null
   private titleText: Phaser.GameObjects.Text | null = null
+  private playerUnits: BattleUnit[] = []
+  private enemyUnits: BattleUnit[] = []
+  private engine: BattleEngine | null = null
+  private resultText: Phaser.GameObjects.Text | null = null
 
   constructor() {
     super({ key: 'BattleScene' })
@@ -48,6 +59,21 @@ export class BattleScene extends Phaser.Scene {
     // Сетка
     this.gridLayout = computeGrid(width, height)
     this.gridGfx = drawGridLines(this, this.gridLayout)
+
+    // Спавн юнитов из казармы (player) + bot deck (enemy)
+    const barracksGrid = useGameStore.getState().barracksGrid
+    this.playerUnits = buildPlayerDeck(this, barracksGrid, this.gridLayout)
+    this.enemyUnits = buildBotDeck(this, this.locationId, this.gridLayout)
+
+    // Battle engine — старт после 1-сек паузы (даёт UI прогрузиться)
+    this.engine = new BattleEngine(
+      this,
+      this.gridLayout,
+      this.playerUnits,
+      this.enemyUnits,
+      { onEnd: (r) => this.onBattleEnd(r) },
+    )
+    this.time.delayedCall(800, () => this.engine?.start())
 
     // Заголовок битвы (временный — заменим UI позже)
     this.titleText = this.add.text(
@@ -103,13 +129,51 @@ export class BattleScene extends Phaser.Scene {
     if (this.titleText) this.titleText.setPosition(width / 2, 24 * DPR)
   }
 
+  private onBattleEnd(result: BattleResult): void {
+    const { width, height } = this.scale
+    const txt = result === 'win' ? 'ПОБЕДА!' : 'ПОРАЖЕНИЕ'
+    const color = result === 'win' ? '#4ade80' : '#dc2626'
+    this.resultText = this.add.text(width / 2, height / 2, txt, {
+      fontFamily: 'Russo One, sans-serif',
+      fontSize: `${48 * DPR}px`,
+      color,
+      stroke: '#000',
+      strokeThickness: 6 * DPR,
+    })
+    this.resultText.setOrigin(0.5, 0.5)
+    this.resultText.setDepth(20)
+    this.resultText.setScale(0.5)
+    this.tweens.add({
+      targets: this.resultText,
+      scale: 1,
+      duration: 400,
+      ease: 'Back.easeOut',
+    })
+    // Авто-выход через 2 сек
+    this.time.delayedCall(2200, () => {
+      eventBus.emit('battle:exit', {})
+    })
+  }
+
   shutdown() {
     this.scale.off('resize', this.handleResize, this)
+    this.engine?.stop()
+    this.engine = null
     this.gridGfx?.destroy()
     this.gridGfx = null
     this.titleText?.destroy()
     this.titleText = null
+    this.resultText?.destroy()
+    this.resultText = null
     this.mapImage?.destroy()
     this.mapImage = null
+    for (const u of this.playerUnits) {
+      if (u.container.active) u.container.destroy()
+    }
+    for (const u of this.enemyUnits) {
+      if (u.container.active) u.container.destroy()
+    }
+    this.playerUnits = []
+    this.enemyUnits = []
   }
 }
