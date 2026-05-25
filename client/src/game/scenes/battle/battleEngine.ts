@@ -169,10 +169,11 @@ export class BattleEngine {
       }
     }
 
-    // Применяем damage одновременно
+    // Применяем damage одновременно. Броня митигирует: dmg × 100/(100+armor).
     for (const [target, dmg] of pendingDamage.entries()) {
       if (!target.alive) continue
-      target.hp = Math.max(0, target.hp - dmg)
+      const dealt = dmg * (100 / (100 + Math.max(0, target.armor)))
+      target.hp = Math.max(0, target.hp - dealt)
       this.updateHpBar(target)
       if (target.hp <= 0) {
         target.alive = false

@@ -255,47 +255,6 @@ export const QUESTS: Record<QuestId, QuestConfig> = {
     difficulty: 'hard',
   },
 
-  // ─── gasouls ───────────────────────────────────────────────────────────────
-  gasouls_lost_note: {
-    id: 'gasouls_lost_note',
-    raceId: 'gasouls',
-    type: 'delivery',
-    target: { kind: 'serum_count', element: 'gas', value: 5 },
-    reward: { kind: 'essence', value: 1 },
-    description_key: 'quests.gasouls_lost_note.description',
-    short_key: 'quests.gasouls_lost_note.short',
-    difficulty: 'easy',
-  },
-  gasouls_sunken_resonator: {
-    id: 'gasouls_sunken_resonator',
-    raceId: 'gasouls',
-    type: 'exploration',
-    target: { kind: 'missions_complete', value: 3 },
-    reward: { kind: 'serum', element: 'gas', count: 1 },
-    description_key: 'quests.gasouls_sunken_resonator.description',
-    short_key: 'quests.gasouls_sunken_resonator.short',
-    difficulty: 'easy',
-  },
-  gasouls_silent_chorus_b: {
-    id: 'gasouls_silent_chorus_b',
-    raceId: 'gasouls',
-    type: 'diplomacy',
-    target: { kind: 'raise_relationship', raceId: 'gasouls', tier: 6 },
-    reward: { kind: 'gold', value: 100_000_000 },
-    description_key: 'quests.gasouls_silent_chorus_b.description',
-    short_key: 'quests.gasouls_silent_chorus_b.short',
-    difficulty: 'medium',
-  },
-  gasouls_silent_chorus_c: {
-    id: 'gasouls_silent_chorus_c',
-    raceId: 'gasouls',
-    type: 'merge',
-    target: { kind: 'merge_count', value: 200 },
-    reward: { kind: 'essence', value: 5 },
-    description_key: 'quests.gasouls_silent_chorus_c.description',
-    short_key: 'quests.gasouls_silent_chorus_c.short',
-    difficulty: 'hard',
-  },
 
   // ─── mechanidons ───────────────────────────────────────────────────────────
   mechanidons_module_delivery: {

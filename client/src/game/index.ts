@@ -3,6 +3,8 @@ import { MainScene } from './scenes/MainScene'
 import { StarMapScene } from './scenes/StarMapScene'
 import { BattleScene } from './scenes/battle/BattleScene'
 import { BarracksScene } from './scenes/barracks/BarracksScene'
+import { RaidScoutScene } from './scenes/raid/RaidScoutScene'
+import { ShipScene } from './scenes/ship/ShipScene'
 import { eventBus } from '../store/eventBus'
 import { useGameStore } from '../store/gameStore'
 
@@ -92,7 +94,14 @@ export function startGame(): Phaser.Game {
     },
     // MainScene стартует автоматически. StarMapScene + BattleScene регистрируются,
     // но автостарт=false — запускаются вручную через event bus.
-    scene: [MainScene, StarMapScene, BattleScene, BarracksScene],
+    scene: [
+      MainScene,
+      StarMapScene,
+      BattleScene,
+      BarracksScene,
+      RaidScoutScene,
+      ShipScene,
+    ],
     physics: {
       default: 'arcade',
       arcade: { gravity: { x: 0, y: 0 }, debug: false },
@@ -196,21 +205,25 @@ export function startGame(): Phaser.Game {
 
   // Battle scene (PvP raid) — переключение MainScene <-> BattleScene.
   // Этап 3a: простой sleep/wake без transition cinematics.
-  eventBus.on('battle:start', (payload?: { locationId?: number }) => {
-    const locId = payload?.locationId ?? 1
-    if (sm().isActive('BattleScene')) return
-    sm().sleep('MainScene')
-    if (sm().isSleeping('BattleScene')) {
-      sm().wake('BattleScene', { locationId: locId })
-    } else {
-      sm().start('BattleScene', { locationId: locId })
-    }
-    useGameStore.getState().setBattleSceneActive(true)
-  })
+  eventBus.on(
+    'battle:start',
+    (payload?: { locationId?: number; planetId?: string }) => {
+      const locId = payload?.locationId ?? 1
+      const planetId = payload?.planetId
+      if (sm().isActive('BattleScene')) return
+      sm().sleep('MainScene')
+      // Всегда stop→start: каждый рейд = свежая сцена (init+create). Иначе при
+      // wake спящей сцены показывался бы stale-финал прошлого рейда без боя.
+      sm().stop('BattleScene')
+      sm().start('BattleScene', { locationId: locId, planetId })
+      useGameStore.getState().setBattleSceneActive(true)
+    },
+  )
 
   eventBus.on('battle:exit', () => {
     if (!sm().isActive('BattleScene')) return
-    sm().sleep('BattleScene')
+    // stop (не sleep): сцена уничтожается → следующий рейд стартует с нуля.
+    sm().stop('BattleScene')
     sm().wake('MainScene')
     useGameStore.getState().setBattleSceneActive(false)
   })
@@ -218,6 +231,7 @@ export function startGame(): Phaser.Game {
   // Barracks scene — отдельная локация казармы.
   eventBus.on('barracks:open', () => {
     if (sm().isActive('BarracksScene')) return
+    if (sm().isActive('ShipScene')) sm().sleep('ShipScene')
     sm().sleep('MainScene')
     if (sm().isSleeping('BarracksScene')) {
       sm().wake('BarracksScene')
@@ -234,10 +248,83 @@ export function startGame(): Phaser.Game {
     useGameStore.getState().setBattleSceneActive(false)
   })
 
-  // При старте боя из казармы — убеждаемся что BarracksScene закрыта.
+  // Ship scene — интерьер корабля с экипажем. Корабль и казарма взаимоисключающие:
+  // открытие одного авто-закрывает другое. Оба возвращают на ферму (MainScene).
+  eventBus.on('ship:open', () => {
+    if (sm().isActive('ShipScene')) return
+    if (sm().isActive('BarracksScene')) sm().sleep('BarracksScene')
+    if (sm().isActive('MainScene')) sm().sleep('MainScene')
+    if (sm().isSleeping('ShipScene')) {
+      sm().wake('ShipScene')
+    } else {
+      sm().start('ShipScene')
+    }
+    useGameStore.getState().setBattleSceneActive(true)
+  })
+
+  eventBus.on('ship:exit', () => {
+    if (!sm().isActive('ShipScene')) return
+    sm().sleep('ShipScene')
+    sm().wake('MainScene')
+    useGameStore.getState().setBattleSceneActive(false)
+  })
+
+  // Toggle из футера — повторный клик закрывает. Источник истины = scene manager.
+  eventBus.on('barracks:toggle', () => {
+    if (sm().isActive('BarracksScene')) eventBus.emit('barracks:exit', {})
+    else eventBus.emit('barracks:open', {})
+  })
+  eventBus.on('ship:toggle', () => {
+    if (sm().isActive('ShipScene')) eventBus.emit('ship:exit', {})
+    else eventBus.emit('ship:open', {})
+  })
+
+  // При старте боя из казармы/скаута — убеждаемся что они закрыты.
   eventBus.on('battle:start', () => {
     if (sm().isActive('BarracksScene')) {
       sm().sleep('BarracksScene')
+    }
+    if (sm().isActive('RaidScoutScene')) {
+      sm().sleep('RaidScoutScene')
+    }
+    if (sm().isActive('ShipScene')) {
+      sm().sleep('ShipScene')
+    }
+  })
+
+  // Raid scout — immersive-осмотр локаций. Открывается из InvestigateModal
+  // поверх StarMap (cosmos), либо из казармы (legacy). Запоминаем origin-сцену
+  // чтобы вернуть её при выходе.
+  let scoutOrigin: 'StarMapScene' | 'BarracksScene' | 'MainScene' = 'MainScene'
+  eventBus.on('raid:scout-open', () => {
+    if (sm().isActive('RaidScoutScene')) return
+    scoutOrigin = sm().isActive('StarMapScene')
+      ? 'StarMapScene'
+      : sm().isActive('BarracksScene')
+        ? 'BarracksScene'
+        : 'MainScene'
+    if (scoutOrigin !== 'MainScene') sm().sleep(scoutOrigin)
+    if (sm().isSleeping('RaidScoutScene')) {
+      sm().wake('RaidScoutScene')
+      const scout = sm().getScene('RaidScoutScene') as RaidScoutScene
+      scout.reset()
+    } else {
+      sm().start('RaidScoutScene')
+    }
+    useGameStore.getState().setBattleSceneActive(true)
+  })
+
+  eventBus.on('raid:scout-exit', () => {
+    if (!sm().isActive('RaidScoutScene')) return
+    sm().sleep('RaidScoutScene')
+    if (scoutOrigin === 'StarMapScene' && sm().isSleeping('StarMapScene')) {
+      sm().wake('StarMapScene')
+      useGameStore.getState().setBattleSceneActive(false)
+    } else if (sm().isSleeping('BarracksScene')) {
+      sm().wake('BarracksScene')
+    } else {
+      sm().wake('MainScene')
+      useGameStore.getState().setBattleSceneActive(false)
     }
   })
 

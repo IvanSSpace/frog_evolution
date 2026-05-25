@@ -35,17 +35,18 @@ export function BarracksButton() {
       aria-label="Казарма"
       style={{
         position: 'fixed',
-        bottom: 'calc(13% + env(safe-area-inset-bottom, 0px) + 8px)',
-        right: 12,
-        zIndex: 50,
+        // Below BottomBar — на нижней кромке экрана, вне зоны прыжков лягушек.
+        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 4px)',
+        right: 6,
+        zIndex: 60,
         pointerEvents: 'auto',
-        width: 48,
-        height: 48,
+        width: 36,
+        height: 36,
         ['--ff-tile-from' as never]: '#fca5a5',
         ['--ff-tile-to' as never]: '#dc2626',
         ['--ff-tile-border' as never]: '#7f1d1d',
         color: '#fff',
-        fontSize: 26,
+        fontSize: 18,
         lineHeight: 1,
       }}
       className="ff-tile"

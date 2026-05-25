@@ -1,5 +1,6 @@
 import React from 'react'
 import { useGameStore } from '../../store/gameStore'
+import { eventBus } from '../../store/eventBus'
 // Phase 22 Plan 22-06: cosmos gate — 🧬 Cosmic Hub button disabled до L18+L18.
 import { useCosmosUnlocked } from '../../utils/cosmosGate'
 
@@ -108,7 +109,6 @@ type BottomBarProps = {
   onOpenFrogShop?: () => void
   onOpenSettings?: () => void
   onOpenCosmicHub?: () => void
-  onOpenSerumModal?: () => void
   onOpenGallery?: () => void
 }
 
@@ -117,7 +117,6 @@ export function BottomBar({
   onOpenFrogShop,
   onOpenSettings,
   onOpenCosmicHub,
-  onOpenSerumModal,
   onOpenGallery,
 }: BottomBarProps) {
   // Phase 11 (COSMIC-HUB-04): badge на 🧬 = число неоткрытых боксов.
@@ -137,6 +136,20 @@ export function BottomBar({
   const hasNewBestiary = useGameStore((s) =>
     s.discoveredLevels.some((l) => !s.bestiarySeenLevels.includes(l)),
   )
+  // Казарма (PvP raid) — кнопка видна после анлока (discovered L7+).
+  const barracksUnlocked = useGameStore((s) => s.barracksUnlocked)
+  const discoveredLevels = useGameStore((s) => s.discoveredLevels)
+  const unlockBarracks = useGameStore((s) => s.unlockBarracks)
+
+  // Auto-unlock казармы при первом discovered L7+ (Лес). Эффект жил в
+  // BarracksButton.tsx, но тот компонент нигде не монтируется → unlock никогда
+  // не срабатывал. Перенесён сюда (BottomBar монтируется всегда).
+  React.useEffect(() => {
+    if (barracksUnlocked) return
+    if (discoveredLevels.some((l) => l >= 7)) {
+      unlockBarracks()
+    }
+  }, [discoveredLevels, barracksUnlocked, unlockBarracks])
 
   return (
     <div
@@ -156,19 +169,25 @@ export function BottomBar({
       <div className="flex gap-2 items-center">
         <Tile emoji="⬆️" skin="green" onClick={onOpenShop} />
         <Tile emoji="📊" skin="purple" onClick={onOpenGallery} />
-        {/* 🧪 — Серум. 2026-05-24: gated by cosmos unlock как Cosmic Hub
-            (серум-дроп тоже cosmos-gated, без unlock'а инвентарь всё равно
-            пустой). */}
-        <Tile
-          emoji="🧪"
-          skin="red"
-          badge
-          onClick={onOpenSerumModal}
-          disabled={!cosmosUnlocked}
-          title={
-            !cosmosUnlocked ? 'Откройте космос — соедините L18 + L18' : undefined
-          }
-        />
+        {/* ⚔️ — Казарма (PvP raid). Видна после анлока (Лес, L7+). */}
+        {barracksUnlocked && (
+          <Tile
+            emoji="⚔️"
+            skin="amber"
+            title="Казарма"
+            onClick={() => eventBus.emit('barracks:toggle', {})}
+          />
+        )}
+        {/* 🚀 — Корабль (просмотр экипажа). Видна после анлока казармы. */}
+        {barracksUnlocked && (
+          <Tile
+            emoji="🚀"
+            skin="teal"
+            title="Корабль"
+            onClick={() => eventBus.emit('ship:toggle', {})}
+          />
+        )}
+        {/* 🧪 Серум — перенесён вкладкой в Космический центр (CosmicHubModal). */}
         {/* 🧬 — Cosmic Hub (Phase 11). Badge = число неоткрытых боксов.
             Phase 22 Plan 22-06: disabled до L18+L18 sentinel (cosmos gate). */}
         <Tile
@@ -178,7 +197,9 @@ export function BottomBar({
           badge={readyBoxCount}
           disabled={!cosmosUnlocked}
           title={
-            !cosmosUnlocked ? 'Откройте космос — соедините L18 + L18' : undefined
+            !cosmosUnlocked
+              ? 'Откройте космос — соедините L18 + L18'
+              : undefined
           }
         />
       </div>

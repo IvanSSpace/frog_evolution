@@ -279,6 +279,18 @@ export class FrogSpawner {
       // Tap-as-drag-end остаётся (handler ниже route'ит через onFrogTapped → handleSerumTap).
       const serumActive = useGameStore.getState().serumDragActive
 
+      // Ворота казармы — если лягушку реально тащили и бросили в открытые
+      // ворота, она уходит в казарму (приоритет над merge). Tap (без move) не
+      // рекрутит — только осознанный drag.
+      if (
+        !serumActive &&
+        dragMoved &&
+        scene.tryGateDrop(frog, pointer.x, pointer.y)
+      ) {
+        eventBus.emit('frog:drop', { level: frog.level, merged: false })
+        return
+      }
+
       // Сначала проверяем мердж в позиции отпускания пальца.
       // L18+L18 разрешён — MergeController обрабатывает special cosmos sentinel path
       // (markCosmosUnlocked + captain birth cinematic в Phase 24).

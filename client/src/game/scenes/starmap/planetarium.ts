@@ -58,7 +58,45 @@ export const MAIN_RACES: Race[] = (planetMap.planets as PlanetMapEntry[])
     color: p.color,
     accent: p.accent,
     size: p.size * DPR,
+    biome: typeof p.biome === 'string' ? p.biome : undefined,
   }))
+
+// Биом для ЛЮБОЙ планеты (не только 16 main) — берётся из явного поля `biome`,
+// иначе из `archetype` (ice/desert/toxic совпадают с RAID_BIOMES напрямую,
+// остальные архетипы → fallback 'fire' в biomeMapKeyForLocation, пока нет их
+// raid-ассетов). Построен один раз из planetMap.json.
+const BIOME_BY_PLANET_ID: Record<string, string> = (() => {
+  const m: Record<string, string> = {}
+  for (const p of planetMap.planets as PlanetMapEntry[]) {
+    const biome =
+      typeof p.biome === 'string'
+        ? p.biome
+        : typeof p.archetype === 'string'
+          ? (p.archetype as string)
+          : undefined
+    if (biome) m[p.id] = biome
+  }
+  return m
+})()
+
+/** Биом планеты (fire/ice/desert/toxic) по id. Fallback 'fire' для raid-фона. */
+export function biomeForPlanetId(id: string | null | undefined): string {
+  if (!id) return 'fire'
+  return BIOME_BY_PLANET_ID[id] ?? 'fire'
+}
+
+// Имя ЛЮБОЙ планеты (main + bg) по id — для UI (InvestigateModal и т.д.).
+const NAME_BY_PLANET_ID: Record<string, string> = (() => {
+  const m: Record<string, string> = {}
+  for (const p of planetMap.planets as PlanetMapEntry[]) m[p.id] = p.name
+  return m
+})()
+
+/** Отображаемое имя планеты по id. Fallback — сам id. */
+export function planetNameById(id: string | null | undefined): string {
+  if (!id) return ''
+  return NAME_BY_PLANET_ID[id] ?? id
+}
 
 // Базовые HSL hue по архетипам (диапазон). Цвет генерируется из этого
 // + рандомное смещение, чтобы каждая планета имела УНИКАЛЬНЫЙ оттенок.

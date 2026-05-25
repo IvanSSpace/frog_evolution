@@ -26,10 +26,7 @@ import { DPR, BG_PLANET_MIN_ZOOM, generatePalette } from '../planetarium'
 // Phase 26 Plan 26-03: race-overlay visuals (glow halo + emoji icon + home pulse)
 // для habitable planets. Только если cosmos unlocked.
 import { RaceGlowController } from '../effects/raceGlow'
-import {
-  HABITABLE_PLANET_IDS,
-  getPlanetInhabitant,
-} from '../../../data/habitablePlanets'
+import { HABITABLE_PLANET_IDS } from '../../../data/habitablePlanets'
 import { useGameStore } from '../../../../store/gameStore'
 
 export class PlanetRenderer {
@@ -82,18 +79,13 @@ export class PlanetRenderer {
     container: Phaser.GameObjects.Container,
   ): void {
     if (!this.lastCosmosUnlocked) return
-    if (sys.id === 'home') return // player home — НЕ inhabitant
+    // 2026-05-24: убран race-glow overlay — планеты не маркируются как
+    // принадлежащие расе. Glossary + planetMap.json inhabitant data
+    // сохраняются для квестов / контактов; визуальная связка убрана.
+    if (sys.id === 'home') return
     if (!HABITABLE_PLANET_IDS.has(sys.id)) return
-    const inhabitant = getPlanetInhabitant(sys.id)
-    if (!inhabitant) return
-    this.raceGlow.attach({
-      planetId: sys.id,
-      x: sys.x,
-      y: sys.y,
-      size: sys.size,
-      depth: container.depth,
-      inhabitant,
-    })
+    void container
+    return
   }
 
   /**
@@ -103,33 +95,10 @@ export class PlanetRenderer {
    * отрендерена (LOD cull / нет в текущей scene) — skip.
    */
   private attachAllHabitable(): void {
-    for (const id of HABITABLE_PLANET_IDS) {
-      if (id === 'home') continue // defensive: player home никогда не overlay'ится
-      const container = this.scene.systemSprites.get(id)
-      if (!container) continue
-      const inhabitant = getPlanetInhabitant(id)
-      if (!inhabitant) continue
-      // sys.x/y/size недоступны напрямую — берём из container position +
-      // hit-area registration. systemSprites хранит containers с world coords.
-      this.raceGlow.attach({
-        planetId: id,
-        x: container.x,
-        y: container.y,
-        size: this.resolvePlanetSize(id),
-        depth: container.depth,
-        inhabitant,
-      })
-    }
-  }
-
-  /**
-   * Helper: достаёт visual radius planet'ы для reactive attach. allSystems
-   * scene-state хранит Race | BgSystem с size — ищем по id. Возвращает 14*DPR
-   * fallback (типичный bg size) если не найдено.
-   */
-  private resolvePlanetSize(planetId: string): number {
-    const sys = this.scene.allSystems.find((s) => s.id === planetId)
-    return sys ? sys.size : 14 * DPR
+    // 2026-05-25 TEST MODE: race-overlay (glow halo + emoji + мигающий home
+    // pulse) отключён — планеты больше не маркируются как «можно сражаться»
+    // (бой теперь доступен на любой планете, см. popovers.ts TEST MODE).
+    // Чтобы вернуть: восстановить loop с raceGlow.attach + helper resolvePlanetSize.
   }
 
   /**
@@ -648,22 +617,45 @@ export class PlanetRenderer {
       })
     }
 
-    // Подсказка пульсации для bliks (с задержкой, чтобы не вспыхивать при открытии сцены)
-    if (sys.id === 'bliks') {
-      const pulse = this.scene.add.graphics()
-      pulse.lineStyle(2 * DPR, 0xffd700, 0.7)
-      pulse.strokeCircle(0, 0, sys.size + 12 * DPR)
-      pulse.setAlpha(0)
-      container.add(pulse)
-      this.scene.time.delayedCall(700, () => {
-        this.scene.tweens.add({
-          targets: pulse,
-          scale: { from: 1, to: 1.4 },
-          alpha: { from: 0.7, to: 0 },
-          duration: 1200,
-          repeat: -1,
-          ease: 'Sine.easeOut',
-        })
+    // Race beacon — пульсирующее кольцо вокруг ВСЕХ race-планет, видно даже при
+    // zoom-out (большой радиус + ADD blend mode + двойное кольцо).
+    // Рендерится в world space (вне container'а), чтобы LOD не скрывал.
+    {
+      const ringColor = sys.accent ?? sys.color ?? 0xffd700
+      // Inner pulse — рядом с планетой.
+      const innerRing = this.scene.add.graphics()
+      innerRing.lineStyle(3 * DPR, ringColor, 0.85)
+      innerRing.strokeCircle(0, 0, sys.size + 18 * DPR)
+      innerRing.setBlendMode(Phaser.BlendModes.ADD)
+      innerRing.x = sys.x
+      innerRing.y = sys.y
+      innerRing.setDepth(8)
+      this.scene.tweens.add({
+        targets: innerRing,
+        scale: { from: 1, to: 1.55 },
+        alpha: { from: 0.85, to: 0 },
+        duration: 1400,
+        repeat: -1,
+        ease: 'Sine.easeOut',
+        delay: Math.random() * 800,
+      })
+
+      // Outer marker — большое статичное кольцо для zoom-out visibility.
+      const outerRing = this.scene.add.graphics()
+      outerRing.lineStyle(4 * DPR, ringColor, 0.55)
+      outerRing.strokeCircle(0, 0, sys.size + 80 * DPR)
+      outerRing.setBlendMode(Phaser.BlendModes.ADD)
+      outerRing.x = sys.x
+      outerRing.y = sys.y
+      outerRing.setDepth(7)
+      this.scene.tweens.add({
+        targets: outerRing,
+        alpha: { from: 0.55, to: 0.15 },
+        duration: 2000,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+        delay: Math.random() * 1000,
       })
     }
 

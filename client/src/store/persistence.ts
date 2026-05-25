@@ -5,6 +5,11 @@
 
 import { MAX_LEVEL } from '../game/config/frogs'
 import { UPGRADE_CONFIG, type Upgrades } from '../game/config/upgrades'
+import {
+  COMBAT_MAX_NODES,
+  defaultCombatTree,
+  type CombatTreeLevels,
+} from '../game/config/combatTree'
 import { LOCATIONS } from '../game/config/locations'
 import { setGlobalFormat, type NumberFormat } from '../utils/formatting'
 import { makeInitialCosmicSlice, type BoxData } from './cosmic/types'
@@ -28,6 +33,11 @@ import { QUESTS, COMPLETED_QUEST_HISTORY_CAP } from '../game/config/quests'
 // ─── storage keys ────────────────────────────────────────────────────────────
 
 const UPGRADES_KEY = 'frog_evolution_upgrades'
+// Боевая прокачка (combat tree) + spendable slime кошелёк.
+const COMBAT_TREE_KEY = 'frog_evolution_combat_tree'
+const SLIME_KEY = 'frog_evolution_slime'
+// Экипаж корабля (боевой отряд, перемещённый из казармы).
+const SHIP_CREW_KEY = 'frog_evolution_ship_crew'
 const PURCHASES_KEY = 'frog_evolution_frog_purchases'
 const FROG_TIERS_KEY = 'frog_evolution_frog_tiers'
 // 2026-05-23: cooldown timestamps per frog level (когда лочится снова можно эволвить).
@@ -62,6 +72,8 @@ const ONBOARDING_KEY = 'frog_evolution_onboarding'
 const BARRACKS_GRID_KEY = 'frog_evolution_barracks_grid'
 const BARRACKS_VATS_KEY = 'frog_evolution_barracks_vats'
 const BARRACKS_UNLOCKED_KEY = 'frog_evolution_barracks_unlocked'
+// 2026-05-25: per-planet raid invulnerability — planetId → expiresAt (Date.now ms).
+const RAID_COOLDOWNS_KEY = 'frog_evolution_raid_cooldowns'
 
 // ─── upgrades ────────────────────────────────────────────────────────────────
 
@@ -86,14 +98,8 @@ export function loadUpgrades(): Upgrades {
         ),
         tractor: Math.min(parsed.tractor ?? 0, UPGRADE_CONFIG.tractor.maxLevel),
         magnet: Math.min(parsed.magnet ?? 0, UPGRADE_CONFIG.magnet.maxLevel),
-        magnet2: Math.min(
-          parsed.magnet2 ?? 0,
-          UPGRADE_CONFIG.magnet2.maxLevel,
-        ),
-        magnet3: Math.min(
-          parsed.magnet3 ?? 0,
-          UPGRADE_CONFIG.magnet3.maxLevel,
-        ),
+        magnet2: Math.min(parsed.magnet2 ?? 0, UPGRADE_CONFIG.magnet2.maxLevel),
+        magnet3: Math.min(parsed.magnet3 ?? 0, UPGRADE_CONFIG.magnet3.maxLevel),
         crateQuality: Math.min(
           parsed.crateQuality ?? 0,
           UPGRADE_CONFIG.crateQuality.maxLevel,
@@ -113,6 +119,73 @@ export function loadUpgrades(): Upgrades {
 export function saveUpgrades(u: Upgrades) {
   try {
     localStorage.setItem(UPGRADES_KEY, JSON.stringify(u))
+  } catch {
+    /* ignore */
+  }
+}
+
+// ─── combat tree + slime ───────────────────────────────────────────────────
+
+export function loadCombatTree(): CombatTreeLevels {
+  const d = defaultCombatTree()
+  try {
+    const raw = localStorage.getItem(COMBAT_TREE_KEY)
+    if (raw) {
+      const p = JSON.parse(raw) as Partial<CombatTreeLevels>
+      const clamp = (v: unknown) =>
+        Math.min(COMBAT_MAX_NODES, Math.max(0, Math.floor(Number(v) || 0)))
+      return { damage: clamp(p.damage), hp: clamp(p.hp), armor: clamp(p.armor) }
+    }
+  } catch {
+    /* ignore */
+  }
+  return d
+}
+
+export function saveCombatTree(t: CombatTreeLevels) {
+  try {
+    localStorage.setItem(COMBAT_TREE_KEY, JSON.stringify(t))
+  } catch {
+    /* ignore */
+  }
+}
+
+export function loadSlime(): number {
+  try {
+    const raw = localStorage.getItem(SLIME_KEY)
+    if (raw) return Math.max(0, Math.floor(Number(JSON.parse(raw)) || 0))
+  } catch {
+    /* ignore */
+  }
+  return 0
+}
+
+export function saveSlime(v: number) {
+  try {
+    localStorage.setItem(SLIME_KEY, JSON.stringify(Math.max(0, Math.floor(v))))
+  } catch {
+    /* ignore */
+  }
+}
+
+// ─── ship crew ─────────────────────────────────────────────────────────────
+
+export function loadShipCrew(): (BarracksCell | null)[] {
+  try {
+    const raw = localStorage.getItem(SHIP_CREW_KEY)
+    if (raw) {
+      const valid = validateShipCrew(JSON.parse(raw))
+      if (valid) return valid
+    }
+  } catch {
+    /* ignore */
+  }
+  return defaultShipCrew()
+}
+
+export function saveShipCrew(crew: (BarracksCell | null)[]) {
+  try {
+    localStorage.setItem(SHIP_CREW_KEY, JSON.stringify(crew))
   } catch {
     /* ignore */
   }
@@ -1083,7 +1156,9 @@ import {
   type Vat,
   defaultBarracksGrid,
   defaultVats,
+  defaultShipCrew,
   validateBarracksGrid,
+  validateShipCrew,
   validateVats,
 } from './barracks'
 
@@ -1139,6 +1214,36 @@ export function loadBarracksUnlocked(): boolean {
 export function saveBarracksUnlocked(v: boolean): void {
   if (typeof localStorage === 'undefined') return
   localStorage.setItem(BARRACKS_UNLOCKED_KEY, v ? 'true' : 'false')
+}
+
+// Per-planet raid invulnerability: planetId → expiresAt (Date.now ms).
+// Real-time timestamp → переживает выход из игры (cooldown тикает в offline).
+export function loadRaidCooldowns(): Record<string, number> {
+  if (typeof localStorage === 'undefined') return {}
+  try {
+    const raw = localStorage.getItem(RAID_COOLDOWNS_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') return {}
+    const now = Date.now()
+    const out: Record<string, number> = {}
+    // Отбрасываем истёкшие на загрузке — храним только активные.
+    for (const [id, ts] of Object.entries(parsed)) {
+      if (typeof ts === 'number' && ts > now) out[id] = ts
+    }
+    return out
+  } catch {
+    return {}
+  }
+}
+
+export function saveRaidCooldowns(map: Record<string, number>): void {
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(RAID_COOLDOWNS_KEY, JSON.stringify(map))
+  } catch {
+    /* quota — ignore */
+  }
 }
 
 // Side effect on import: apply persisted format globally so first render

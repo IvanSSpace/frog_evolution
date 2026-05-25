@@ -448,69 +448,6 @@
         }
       }
     },
-    "gasouls": {
-      "name": "Gas Clouds",
-      "lore_short": "A gaseous form of life, made entirely of dense breath. Shapeless, they sing in resonances the size of small planets.",
-      "personality": "Shapeless, poetic",
-      "communication_style": "Poetic, metaphorical. Messages are short songs.",
-      "home_planet_name": "Soundfloat",
-      "chain": {
-        "0": {
-          "text": "We sing with Soundfloat. Do you hear our silence?"
-        },
-        "1": {
-          "text": "Our people are a resonance between worlds."
-        },
-        "2": {
-          "text": "Give us one beat of silence. One pulse."
-        },
-        "3": {
-          "text": "The song is older than words. Listen."
-        },
-        "4": {
-          "text": "Accept our song into your ship's log."
-        },
-        "5": {
-          "text": "Find the lost note in the asteroid cloud."
-        },
-        "6": {
-          "description": "our chord has gone out of tune"
-        },
-        "7": {
-          "text": "Agree to harmonize. Dissonance wounds."
-        },
-        "8": {
-          "text": "Save our choir — find the sunken resonator on the colony."
-        },
-        "9": {
-          "text": "We sing of you. Softer or louder — depends on you."
-        },
-        "10": {
-          "text": "Hum a single low overtone with us. Only one — and you enter the song."
-        },
-        "11": {
-          "text": "Agree to carry our song to Scorch. The Fireworms should hear it."
-        },
-        "12": {
-          "text": "Catch the echo of our ancestor near the asteroid belt. It went out unanswered."
-        },
-        "14": {
-          "text": "The song holds your note. Where it travels — you choose."
-        },
-        "15": {
-          "text": "Take our long breath into your chest. One — and we will sing in unison."
-        },
-        "16": {
-          "text": "Walk the line of resonance from Soundfloat to Lightning-Catch. Mark where the song dies."
-        },
-        "18": {
-          "text": "Agree to hear our silence. It is longer than any word."
-        },
-        "19": {
-          "text": "The note holds. You are its continuation."
-        }
-      }
-    },
     "mechanidons": {
       "name": "Mechanidons",
       "lore_short": "A bio-and-machine hybrid. Self-upgrading cyborg beings for whom technology is religion.",
@@ -1168,22 +1105,6 @@
     "forestcores_young_forest": {
       "description": "The young forest asks for merging... combine 10 times — let the canopies touch unhurriedly.",
       "short": "10 merges (Forestcores)"
-    },
-    "gasouls_lost_note": {
-      "description": "Hear us... one note is lost on the wind. Bring 5 gas serums — the melody will return.",
-      "short": "5 gas serums"
-    },
-    "gasouls_silent_chorus_b": {
-      "description": "The silent chorus calls you closer... raise relations to tier 6 — and our voices will sound for you.",
-      "short": "Tier 6 (Gasouls)"
-    },
-    "gasouls_silent_chorus_c": {
-      "description": "The chorus's full union needs 200 mergings... perform 200 merges — each joins two souls into one.",
-      "short": "200 merges (Gasouls)"
-    },
-    "gasouls_sunken_resonator": {
-      "description": "The resonator sank into mission mist... complete 3 missions — the wind's whisper will return to its strings.",
-      "short": "3 missions (Gasouls)"
     },
     "liquidoids_caravan": {
       "description": "The caravan awaits cargo. 5 water serums at the agreed price — deliver and the deal is closed.",

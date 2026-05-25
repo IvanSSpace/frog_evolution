@@ -28,7 +28,6 @@ import { ELEMENT_TINTS } from '../effects/elements/elementTints'
  */
 export type RaceId =
   | 'crystalloids'
-  | 'gasouls'
   | 'mechanidons'
   | 'fireworms'
   | 'liquidoids'
@@ -73,7 +72,7 @@ export interface RaceConfig {
  * Все 10 рас в каноническом порядке (CONTEXT.md table).
  *
  * Affinity mapping (из 26-CONTEXT D-Races-Lore table):
- *   crystalloids→crystal, gasouls→gas, mechanidons→mechanical, fireworms→fire,
+ *   crystalloids→crystal, mechanidons→mechanical, fireworms→fire,
  *   liquidoids→water, tenebrians→shadow, plasmaspirits→plasma, forestcores→forest,
  *   timeweavers→void, cometfolk→binary.
  */
@@ -89,18 +88,6 @@ export const RACES: readonly RaceConfig[] = [
     communicationStyleKey: 'races.crystalloids.communication_style',
     loreShortKey: 'races.crystalloids.lore_short',
     homePlanetNameKey: 'races.crystalloids.home_planet_name',
-  },
-  {
-    // Газо-облака — газовая форма, поют резонансами. Бесформенные, поэтичные.
-    id: 'gasouls',
-    nameKey: 'races.gasouls.name',
-    affinity: 'gas',
-    emojiIcon: '☁️',
-    homeColor: ELEMENT_TINTS.gas,
-    personalityKey: 'races.gasouls.personality',
-    communicationStyleKey: 'races.gasouls.communication_style',
-    loreShortKey: 'races.gasouls.lore_short',
-    homePlanetNameKey: 'races.gasouls.home_planet_name',
   },
   {
     // Механидоны — гибрид био+машина. Структурированные, рациональные.

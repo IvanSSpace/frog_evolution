@@ -40,6 +40,8 @@ export interface WarriorConfig {
   baseHp: number
   baseDamage: number
   baseAttackSpeed: number // удары в секунду
+  /** Базовая броня. Митигация: dmg × 100/(100+armor). Default 0. Танки > 0. */
+  baseArmor?: number
   ability: AbilityDef
 }
 
@@ -153,6 +155,7 @@ export const WARRIORS: readonly WarriorConfig[] = [
     baseHp: 100,
     baseDamage: 8,
     baseAttackSpeed: 0.7,
+    baseArmor: 15,
     ability: {
       id: 'shell_block',
       name: 'Панцирь',
@@ -224,6 +227,7 @@ export const WARRIORS: readonly WarriorConfig[] = [
     baseHp: 190,
     baseDamage: 14,
     baseAttackSpeed: 0.6,
+    baseArmor: 25,
     ability: {
       id: 'bump_armor',
       name: 'Бугры',
@@ -320,6 +324,7 @@ export const WARRIORS: readonly WarriorConfig[] = [
     baseHp: 300,
     baseDamage: 22,
     baseAttackSpeed: 0.6,
+    baseArmor: 40,
     ability: {
       id: 'roar_taunt',
       name: 'Рык',

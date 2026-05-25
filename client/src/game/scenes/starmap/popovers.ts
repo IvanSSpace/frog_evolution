@@ -32,14 +32,7 @@ import type { Race, BgSystem } from './types'
 import { effectiveSeed } from './helpers'
 import { eventBus } from '../../../store/eventBus'
 import { useGameStore } from '../../../store/gameStore'
-import { DAILY_CAP } from '../../data/missionConfig'
 import { AnimationOrchestrator } from './popovers/animationOrchestrator'
-// Phase 26 Plan 26-03: race info badge в popover для habitable planets.
-// Cosmos-gated через useGameStore.getState().hasCosmosUnlocked (consistent
-// с planetRenderer cosmos gate).
-import { getPlanetInhabitant } from '../../data/habitablePlanets'
-import { RACES_BY_ID, type RaceId } from '../../config/races'
-import i18n from '../../../i18n'
 
 const DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 3))
 
@@ -263,41 +256,12 @@ export class PopoverController {
     })
     subText.setOrigin(0.5, 0.5)
 
-    // Phase 26 Plan 26-03: race info badge — race emoji + name + role label.
-    // Показывается ТОЛЬКО когда planet is habitable AND cosmos unlocked.
-    // Pre-cosmos behavior идентичен uninhabited (D-CosmosGate intent).
-    const cosmosUnlocked = useGameStore.getState().hasCosmosUnlocked === true
-    const inhabitant = cosmosUnlocked ? getPlanetInhabitant(sys.id) : undefined
-    let raceText: Phaser.GameObjects.Text | undefined
-    if (inhabitant) {
-      const race = RACES_BY_ID[inhabitant.raceId as RaceId]
-      if (race) {
-        const raceName = i18n.t(race.nameKey)
-        const roleKey =
-          inhabitant.role === 'home' ? 'cosmos.role_home' : 'cosmos.role_colony'
-        const roleLabel = i18n.t(roleKey)
-        // Single string с emoji + race name + role indicator (compact 2-line
-        // layout не нужен — capsule остаётся one-line per row).
-        const raceLabel = `${race.emojiIcon} ${raceName} ${roleLabel}`
-        // Размещается под subText (y = 14*DPR + ~11*DPR spacing).
-        raceText = scene.add.text(0, 26 * DPR, raceLabel, {
-          fontFamily: 'Nunito, system-ui, sans-serif',
-          fontSize: `${9 * DPR}px`,
-          color: '#fde047',
-          fontStyle: 'bold',
-        })
-        raceText.setOrigin(0.5, 0.5)
-      }
-    }
+    // 2026-05-24: race-info badge убран из popover — планеты больше не
+    // "принадлежат" расе визуально. Glossary + Phase 26 data остаются.
 
-    // Фон-капсула — width учитывает все 3 строки, height растёт при наличии
-    // raceText (cosmos-gated).
-    const widthCandidates = [nameText.width, subText.width]
-    if (raceText) widthCandidates.push(raceText.width)
-    const w = Math.max(...widthCandidates) + PADDING_X * 2
-    const raceHeightDelta = raceText ? raceText.height + 4 : 0
-    const h =
-      nameText.height + subText.height + raceHeightDelta + PADDING_Y * 2 + 4
+    // Фон-капсула — width/height по двум строкам (имя + тип).
+    const w = Math.max(nameText.width, subText.width) + PADDING_X * 2
+    const h = nameText.height + subText.height + PADDING_Y * 2 + 4
     const bg = scene.add.graphics()
     bg.fillStyle(0x1f2a14, 0.92)
     bg.fillRoundedRect(-w / 2, -h / 2 + 4, w, h, 8 * DPR)
@@ -307,7 +271,6 @@ export class PopoverController {
     container.add(bg)
     container.add(nameText)
     container.add(subText)
-    if (raceText) container.add(raceText)
 
     // Кнопка действия под капсулой: «Изучить» если здесь, «Лететь» если docked-elsewhere,
     // «Перенаправить» если в полёте к ДРУГОЙ планете, ничего если уже летим именно сюда.
@@ -320,11 +283,35 @@ export class PopoverController {
     const BTN_H = 22 * DPR
     const BTN_Y = h / 2 + 4 + 6 * DPR + BTN_H / 2
 
-    if (isCurrentPlanet) {
-      const canInvestigate =
-        (useGameStore.getState().crew?.missionsToday ?? 0) < DAILY_CAP
+    // TEST MODE (2026-05-25): бой доступен на ЛЮБОЙ планете (кроме home) —
+    // чтобы не искать race-планету. Вернуть `&& MAIN_RACES.some(...)` для прода.
+    const isRacePlanet = sys.id !== 'home'
+
+    // Raid-неуязвимость: planetId → expiresAt (real-time). После атаки планета
+    // неуязвима 1.5ч → кнопка «Изучить» заменяется на статичный 🛡-лейбл.
+    const cdUntil = useGameStore.getState().raidCooldowns[sys.id] ?? 0
+    const raidOnCooldown = cdUntil > Date.now()
+
+    if (isCurrentPlanet && isRacePlanet && raidOnCooldown) {
+      // Неуязвима — нет интерактивной кнопки, показываем таймер.
+      const remMin = Math.max(1, Math.ceil((cdUntil - Date.now()) / 60000))
+      const remTxt =
+        remMin >= 60
+          ? `🛡 ${Math.floor(remMin / 60)}ч ${remMin % 60}м`
+          : `🛡 ${remMin}м`
+      const label = scene.add.text(0, BTN_Y, remTxt, {
+        fontFamily: 'Nunito, system-ui, sans-serif',
+        fontSize: `${9 * DPR}px`,
+        color: '#cbd5e1',
+        fontStyle: 'bold',
+      })
+      label.setOrigin(0.5, 0.5)
+      container.add(label)
+    } else if (isCurrentPlanet && isRacePlanet) {
+      // «Изучить» = превью вражеского отряда + «Атаковать / Уйти» (InvestigateModal).
+      // Серумный дневной кап убран — атаковать race-планету можно всегда.
       const btnBg = scene.add.graphics()
-      btnBg.fillStyle(canInvestigate ? 0xd97706 : 0x374151, 1)
+      btnBg.fillStyle(0xd97706, 1)
       btnBg.fillRoundedRect(
         -BTN_W / 2,
         BTN_Y - BTN_H / 2,
@@ -332,76 +319,57 @@ export class PopoverController {
         BTN_H,
         5 * DPR,
       )
-      if (canInvestigate) {
-        btnBg.lineStyle(1.5 * DPR, 0xfbbf24, 0.7)
-        btnBg.strokeRoundedRect(
-          -BTN_W / 2,
-          BTN_Y - BTN_H / 2,
-          BTN_W,
-          BTN_H,
-          5 * DPR,
-        )
-        btnBg.setInteractive(
-          new Phaser.Geom.Rectangle(
-            -BTN_W / 2,
-            BTN_Y - BTN_H / 2,
-            BTN_W,
-            BTN_H,
-          ),
-          Phaser.Geom.Rectangle.Contains,
-        )
-        let btnDownTime = 0
-        btnBg.on(
-          'pointerdown',
-          (
-            _p: unknown,
-            _lx: unknown,
-            _ly: unknown,
-            ev: Phaser.Types.Input.EventData,
-          ) => {
-            btnDownTime = Date.now()
-            ev.stopPropagation()
-          },
-        )
-        btnBg.on(
-          'pointerup',
-          (
-            _p: unknown,
-            _lx: unknown,
-            _ly: unknown,
-            ev: Phaser.Types.Input.EventData,
-          ) => {
-            ev.stopPropagation()
-            if (Date.now() - btnDownTime < 400) {
-              scene.tapHandledThisFrame = true
-              const ok = useGameStore
-                .getState()
-                .investigatePlanet(sys.id, 'good')
-              if (ok)
-                eventBus.emit('cosmic:toast', {
-                  type: 'generic',
-                  msg: '📦 Бокс получен!',
-                })
-              this.closeBgNamePopup()
-            }
-          },
-        )
-      }
-      const btnText = scene.add.text(
-        0,
-        BTN_Y,
-        canInvestigate ? '🔬 Изучить' : '⏱ Устал',
-        {
-          fontFamily: 'Nunito, system-ui, sans-serif',
-          fontSize: `${9 * DPR}px`,
-          color: canInvestigate ? '#ffffff' : '#9ca3af',
-          fontStyle: 'bold',
+      btnBg.lineStyle(1.5 * DPR, 0xfbbf24, 0.7)
+      btnBg.strokeRoundedRect(
+        -BTN_W / 2,
+        BTN_Y - BTN_H / 2,
+        BTN_W,
+        BTN_H,
+        5 * DPR,
+      )
+      btnBg.setInteractive(
+        new Phaser.Geom.Rectangle(-BTN_W / 2, BTN_Y - BTN_H / 2, BTN_W, BTN_H),
+        Phaser.Geom.Rectangle.Contains,
+      )
+      let btnDownTime = 0
+      btnBg.on(
+        'pointerdown',
+        (
+          _p: unknown,
+          _lx: unknown,
+          _ly: unknown,
+          ev: Phaser.Types.Input.EventData,
+        ) => {
+          btnDownTime = Date.now()
+          ev.stopPropagation()
         },
       )
+      btnBg.on(
+        'pointerup',
+        (
+          _p: unknown,
+          _lx: unknown,
+          _ly: unknown,
+          ev: Phaser.Types.Input.EventData,
+        ) => {
+          ev.stopPropagation()
+          if (Date.now() - btnDownTime < 400) {
+            scene.tapHandledThisFrame = true
+            useGameStore.getState().setInvestigatePlanetId(sys.id)
+            this.closeBgNamePopup()
+          }
+        },
+      )
+      const btnText = scene.add.text(0, BTN_Y, '🔬 Изучить', {
+        fontFamily: 'Nunito, system-ui, sans-serif',
+        fontSize: `${9 * DPR}px`,
+        color: '#ffffff',
+        fontStyle: 'bold',
+      })
       btnText.setOrigin(0.5, 0.5)
       container.add(btnBg)
       container.add(btnText)
-    } else if (!isAlreadyHeadingHere) {
+    } else if (!isCurrentPlanet && !isAlreadyHeadingHere) {
       // Не текущая planet и не та куда уже летим → показываем кнопку «Лететь».
       // Работает одинаково: docked → fresh flight, in-transit → redirect (внутри store).
       const btnBg = scene.add.graphics()

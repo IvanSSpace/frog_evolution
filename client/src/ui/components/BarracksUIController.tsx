@@ -5,11 +5,11 @@ import { useEffect, useState } from 'react'
 import { eventBus } from '../../store/eventBus'
 import { useGameStore } from '../../store/gameStore'
 import { WarriorPoolModal } from './WarriorPoolModal'
-import { RaidPickModal } from './RaidPickModal'
+import { CombatTreeModal } from './CombatTreeModal'
 
 export function BarracksUIController() {
   const [addSlotIdx, setAddSlotIdx] = useState<number | null>(null)
-  const [raidPickOpen, setRaidPickOpen] = useState(false)
+  const [combatTreeOpen, setCombatTreeOpen] = useState(false)
   const removeWarrior = useGameStore((s) => s.removeWarriorFromBarracks)
 
   useEffect(() => {
@@ -20,24 +20,24 @@ export function BarracksUIController() {
       // MVP: direct remove без confirm.
       removeWarrior(slotIdx)
     }
-    const onRaidPick = () => setRaidPickOpen(true)
+    const onCombatTree = () => setCombatTreeOpen(true)
     const onBattleStart = () => {
-      setRaidPickOpen(false)
       setAddSlotIdx(null)
+      setCombatTreeOpen(false)
     }
     const onBarracksExit = () => {
-      setRaidPickOpen(false)
       setAddSlotIdx(null)
+      setCombatTreeOpen(false)
     }
     eventBus.on('barracks:add-request', onAdd)
     eventBus.on('barracks:remove-request', onRemove)
-    eventBus.on('barracks:open-raid-pick', onRaidPick)
+    eventBus.on('barracks:open-combat-tree', onCombatTree)
     eventBus.on('battle:start', onBattleStart)
     eventBus.on('barracks:exit', onBarracksExit)
     return () => {
       eventBus.off('barracks:add-request', onAdd)
       eventBus.off('barracks:remove-request', onRemove)
-      eventBus.off('barracks:open-raid-pick', onRaidPick)
+      eventBus.off('barracks:open-combat-tree', onCombatTree)
       eventBus.off('battle:start', onBattleStart)
       eventBus.off('barracks:exit', onBarracksExit)
     }
@@ -51,8 +51,8 @@ export function BarracksUIController() {
           onClose={() => setAddSlotIdx(null)}
         />
       )}
-      {raidPickOpen && (
-        <RaidPickModal onClose={() => setRaidPickOpen(false)} />
+      {combatTreeOpen && (
+        <CombatTreeModal onClose={() => setCombatTreeOpen(false)} />
       )}
     </>
   )

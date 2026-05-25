@@ -10,6 +10,8 @@ export const BARRACKS_GRID_W = 4
 export const BARRACKS_GRID_H = 5
 export const BARRACKS_GRID_SIZE = BARRACKS_GRID_W * BARRACKS_GRID_H // 20
 export const MAX_DECK_SIZE = 7 // сколько воинов идут в бой
+/** Размер экипажа корабля = боевой отряд (грузится из казармы). */
+export const SHIP_CREW_SIZE = MAX_DECK_SIZE
 
 // Верхние 3 ряда = «боевая колода». Эти 12 клеток (idx 0-11) подсвечиваются
 // в UI и из них (максимум 7) отправляются на поле боя 4×3 player'a.
@@ -66,6 +68,39 @@ export interface Vat {
 
 export function defaultBarracksGrid(): (BarracksCell | null)[] {
   return new Array(BARRACKS_GRID_SIZE).fill(null)
+}
+
+/** Пустой экипаж корабля (SHIP_CREW_SIZE слотов). */
+export function defaultShipCrew(): (BarracksCell | null)[] {
+  return new Array(SHIP_CREW_SIZE).fill(null)
+}
+
+/** Валидация экипажа из save (массив длины SHIP_CREW_SIZE). */
+export function validateShipCrew(raw: unknown): (BarracksCell | null)[] | null {
+  if (!Array.isArray(raw)) return null
+  if (raw.length !== SHIP_CREW_SIZE) return null
+  const out: (BarracksCell | null)[] = []
+  for (const cell of raw) {
+    if (cell === null) {
+      out.push(null)
+      continue
+    }
+    if (
+      typeof cell !== 'object' ||
+      typeof (cell as BarracksCell).level !== 'number' ||
+      (cell as BarracksCell).level < 1 ||
+      (cell as BarracksCell).level > 18
+    ) {
+      return null
+    }
+    const c = cell as BarracksCell
+    out.push({
+      level: c.level,
+      tier: (c.tier === 1 || c.tier === 2 ? c.tier : 0) as 0 | 1 | 2,
+      addedAtMs: typeof c.addedAtMs === 'number' ? c.addedAtMs : Date.now(),
+    })
+  }
+  return out
 }
 
 /**

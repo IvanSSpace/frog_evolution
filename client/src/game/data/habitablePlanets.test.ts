@@ -1,13 +1,13 @@
 // Phase 26 Plan 26-02: invariants tests для habitable planets API.
 //
 // Покрывает:
-//   - 30 planets total (constraint от Plan 26-02).
-//   - per-race distribution (3 planets = 1 home + 2 colonies × 10 races).
-//   - totals (10 home + 20 colonies).
+//   - 27 planets total (9 рас × 3; gasouls удалена 2026-05-24).
+//   - per-race distribution (3 planets = 1 home + 2 colonies × 9 races).
+//   - totals (9 home + 18 colonies).
 //   - id='home' (player base) — НИКОГДА не inhabitant.
 //   - getPlanetInhabitant() undefined для non-existent IDs.
 //   - HABITABLE_PLANET_IDS Set size + membership.
-//   - uniqueness 30 IDs.
+//   - uniqueness IDs.
 
 import { describe, it, expect } from 'vitest'
 import { RACES } from '../config/races'
@@ -19,8 +19,8 @@ import {
 } from './habitablePlanets'
 
 describe('habitablePlanets', () => {
-  it('returns 30 habitable planets', () => {
-    expect(getHabitablePlanets()).toHaveLength(30)
+  it('returns 27 habitable planets', () => {
+    expect(getHabitablePlanets()).toHaveLength(27)
   })
 
   it('every race has exactly 1 home + 2 colonies', () => {
@@ -34,12 +34,12 @@ describe('habitablePlanets', () => {
     }
   })
 
-  it('total: 10 home + 20 colony', () => {
+  it('total: 9 home + 18 colony', () => {
     const all = getHabitablePlanets()
     const homes = all.filter((p) => p.inhabitant.role === 'home')
     const colonies = all.filter((p) => p.inhabitant.role === 'colony')
-    expect(homes).toHaveLength(10)
-    expect(colonies).toHaveLength(20)
+    expect(homes).toHaveLength(9)
+    expect(colonies).toHaveLength(18)
   })
 
   it('player home planet (id="home") is never inhabitant', () => {
@@ -52,14 +52,14 @@ describe('habitablePlanets', () => {
     expect(inh).toBeUndefined()
   })
 
-  it('HABITABLE_PLANET_IDS set has 30 entries matching getHabitablePlanets', () => {
-    expect(HABITABLE_PLANET_IDS.size).toBe(30)
+  it('HABITABLE_PLANET_IDS set has 27 entries matching getHabitablePlanets', () => {
+    expect(HABITABLE_PLANET_IDS.size).toBe(27)
     for (const p of getHabitablePlanets()) {
       expect(HABITABLE_PLANET_IDS.has(p.id)).toBe(true)
     }
   })
 
-  it('all 30 planet IDs are unique', () => {
+  it('all planet IDs are unique', () => {
     const ids = getHabitablePlanets().map((p) => p.id)
     expect(new Set(ids).size).toBe(ids.length)
   })

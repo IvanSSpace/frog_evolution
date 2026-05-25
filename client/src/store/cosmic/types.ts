@@ -132,6 +132,7 @@ export type CosmicTab =
   | 'shop'
   | 'contacts'
   | 'quests'
+  | 'serum'
 
 // Phase 22 Plan 22-05: ShopItemId mirror (импорт из config/cosmicShop вызвал бы
 // циклическую зависимость types <-> config). Источник истины — config/cosmicShop.ts.
@@ -269,7 +270,6 @@ export interface CosmicSlice {
 // Compile-time check через `RaceId[]` ловит drift если RaceId union расширится.
 export const ALL_RACE_IDS: readonly RaceId[] = [
   'crystalloids',
-  'gasouls',
   'mechanidons',
   'fireworms',
   'liquidoids',

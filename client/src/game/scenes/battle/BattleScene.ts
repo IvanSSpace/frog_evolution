@@ -11,21 +11,30 @@
 
 import Phaser from 'phaser'
 import { computeGrid, drawGridLines, type GridLayout } from './battleGrid'
-import { mapKeyForLocation, DPR } from '../main/types'
+import {
+  mapKeyForLocation,
+  biomeMapKeyForLocation,
+  biomeFrogTint,
+  DPR,
+} from '../main/types'
+import { biomeForPlanetId } from '../starmap/planetarium'
 import { eventBus } from '../../../store/eventBus'
 import { useGameStore } from '../../../store/gameStore'
 import {
   buildBotDeck,
   buildPlayerDeck,
   createUnit,
+  barracksIdxToBattleCell,
   type BattleUnit,
 } from './battleUnits'
 import { BattleEngine, type BattleResult } from './battleEngine'
 
 export class BattleScene extends Phaser.Scene {
   private locationId: number = 1
+  // Planet under attack — определяет биом фона (fire/ice/desert/toxic).
+  private planetId: string | null = null
+  private biome = 'fire'
   private mapImage: Phaser.GameObjects.Image | null = null
-  private overlay: Phaser.GameObjects.Rectangle | null = null
   private gridLayout: GridLayout | null = null
   private gridGfx: Phaser.GameObjects.Graphics | null = null
   private titleText: Phaser.GameObjects.Text | null = null
@@ -39,6 +48,8 @@ export class BattleScene extends Phaser.Scene {
     tier: 0 | 1 | 2
     cellIdx: number
     hp: number
+    /** Исходный barracks-слот — чтобы на новой локации вернуть юнита в нижнюю формацию. */
+    srcIdx?: number | null
   }> | null = null
   /** Сколько локаций успешно зачищено в этом рейде (= количество звёзд). */
   private starsEarned: number = 0
@@ -47,9 +58,11 @@ export class BattleScene extends Phaser.Scene {
     super({ key: 'BattleScene' })
   }
 
-  /** Init params from scene.start('BattleScene', { locationId }). */
-  init(data: { locationId?: number }) {
+  /** Init params from scene.start('BattleScene', { locationId, planetId }). */
+  init(data: { locationId?: number; planetId?: string }) {
     this.locationId = data.locationId ?? 1
+    // planetId приходит при заходе на loc1; на loc2/3 (та же сцена) сохраняем.
+    if (data.planetId !== undefined) this.planetId = data.planetId
     // Каждый новый заход в сцену с locationId=1 = свежий рейд → сброс выживших + звёзд.
     if (this.locationId === 1) {
       this.survivorState = null
@@ -60,8 +73,16 @@ export class BattleScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale
 
-    // Фон карты — переиспользуем те же текстуры, что в MainScene.
-    const mapKey = mapKeyForLocation(this.locationId)
+    // Биом атакуемой планеты (planetId из battle:start payload) — фон боя.
+    // Берём из this.planetId, НЕ из store: investigatePlanetId обнуляется
+    // при закрытии InvestigateModal до старта боя.
+    this.biome = biomeForPlanetId(this.planetId)
+
+    // Фон карты — биом-вариант планеты; fallback на обычную карту.
+    const biomeKey = biomeMapKeyForLocation(this.biome, this.locationId)
+    const mapKey = this.textures.exists(biomeKey)
+      ? biomeKey
+      : mapKeyForLocation(this.locationId)
     if (this.textures.exists(mapKey)) {
       const img = this.add.image(width / 2, height / 2, mapKey)
       img.setDisplaySize(width, height)
@@ -72,20 +93,24 @@ export class BattleScene extends Phaser.Scene {
       this.add.rectangle(width / 2, height / 2, width, height, 0x1a2e1a)
     }
 
-    // Полупрозрачный tint поверх карты — визуально отличает вражескую
-    // локацию от своей. Цвет зависит от locationId.
-    this.applyOverlayTint()
-
     // Сетка
     this.gridLayout = computeGrid(width, height)
     this.gridGfx = drawGridLines(this, this.gridLayout)
 
-    // Спавн юнитов из казармы (player) + bot deck (enemy)
-    const barracksGrid = useGameStore.getState().barracksGrid
+    // Спавн юнитов из ЭКИПАЖА КОРАБЛЯ (player) + bot deck (enemy).
+    // Корабль = носитель отряда: в бой идут лягушки, загруженные в корабль
+    // (а не вся казарма). buildPlayerDeck читает первые слоты как deck.
+    const crew = useGameStore.getState().shipCrew
     this.playerUnits = this.survivorState
       ? this.spawnFromSurvivors()
-      : buildPlayerDeck(this, barracksGrid, this.gridLayout)
-    this.enemyUnits = buildBotDeck(this, this.locationId, this.gridLayout)
+      : buildPlayerDeck(this, crew, this.gridLayout)
+    this.enemyUnits = buildBotDeck(
+      this,
+      this.locationId,
+      this.gridLayout,
+      biomeFrogTint(this.biome),
+      this.planetId,
+    )
 
     // Battle engine — старт после 1-сек паузы (даёт UI прогрузиться)
     this.engine = new BattleEngine(
@@ -114,18 +139,13 @@ export class BattleScene extends Phaser.Scene {
     this.titleText.setDepth(10)
 
     // Кнопка выхода (заглушка)
-    const exitBtn = this.add.text(
-      width - 16 * DPR,
-      24 * DPR,
-      '✕',
-      {
-        fontFamily: 'Russo One, sans-serif',
-        fontSize: `${28 * DPR}px`,
-        color: '#fff',
-        backgroundColor: '#7f1d1d',
-        padding: { left: 12, right: 12, top: 4, bottom: 4 },
-      },
-    )
+    const exitBtn = this.add.text(width - 16 * DPR, 24 * DPR, '✕', {
+      fontFamily: 'Russo One, sans-serif',
+      fontSize: `${28 * DPR}px`,
+      color: '#fff',
+      backgroundColor: '#7f1d1d',
+      padding: { left: 12, right: 12, top: 4, bottom: 4 },
+    })
     exitBtn.setOrigin(1, 0)
     exitBtn.setDepth(10)
     exitBtn.setInteractive({ useHandCursor: true })
@@ -151,38 +171,29 @@ export class BattleScene extends Phaser.Scene {
     if (this.titleText) this.titleText.setPosition(width / 2, 24 * DPR)
   }
 
-  private applyOverlayTint(): void {
-    const { width, height } = this.scale
-    if (this.overlay) {
-      this.overlay.destroy()
-    }
-    const tintColor =
-      this.locationId === 1
-        ? 0x991b1b // болото — багровый
-        : this.locationId === 2
-          ? 0x7c3aed // лес — фиолетовый
-          : 0xb45309 // континент — оранжевый
-    const overlay = this.add.rectangle(
-      width / 2,
-      height / 2,
-      width,
-      height,
-      tintColor,
-      0.25,
-    )
-    overlay.setDepth(0.5)
-    this.overlay = overlay
-  }
-
   private spawnFromSurvivors(): BattleUnit[] {
     if (!this.gridLayout || !this.survivorState) return []
     const units: BattleUnit[] = []
     for (const s of this.survivorState) {
-      const unit = createUnit(this, 'player', s.level, s.tier, s.cellIdx, this.gridLayout)
+      // На новой локации выживших возвращаем в исходную нижнюю формацию
+      // (по barracks-слоту), а не туда, куда они продвинулись в прошлом бою.
+      const formationCell =
+        typeof s.srcIdx === 'number'
+          ? barracksIdxToBattleCell(s.srcIdx)
+          : s.cellIdx
+      const unit = createUnit(
+        this,
+        'player',
+        s.level,
+        s.tier,
+        formationCell,
+        this.gridLayout,
+      )
       if (!unit) continue
-      // Перенос текущего HP
+      // Перенос текущего HP + восстановление barracks-слота (для loot/потерь).
       unit.hp = s.hp
       unit.hpBar.scaleX = Math.max(0, s.hp / unit.maxHp)
+      unit.sourceBarracksIdx = s.srcIdx
       units.push(unit)
     }
     return units
@@ -196,6 +207,7 @@ export class BattleScene extends Phaser.Scene {
         tier: u.tier,
         cellIdx: u.cellIdx,
         hp: u.hp,
+        srcIdx: u.sourceBarracksIdx,
       }))
   }
 
@@ -217,6 +229,8 @@ export class BattleScene extends Phaser.Scene {
       const reward = this.rewardForLocation(this.locationId)
       if (reward > 0) {
         useGameStore.getState().addGold(reward)
+        // Боевой кошелёк slime — тратится на древо прокачки (combat tree).
+        useGameStore.getState().addSlime(reward)
       }
     }
 
@@ -247,6 +261,23 @@ export class BattleScene extends Phaser.Scene {
 
     // Финальный экран — итог рейда со звёздами.
     this.showFinalResult(result)
+    // Raid context — emit raid:battle-ended с dead slots + planet info.
+    // planetId берём из this.planetId (battle:start payload), НЕ из store:
+    // investigatePlanetId обнуляется при закрытии InvestigateModal до боя.
+    if (this.planetId) {
+      const deadSlotIdxs: number[] = []
+      for (const u of this.playerUnits) {
+        if (!u.alive && typeof u.sourceBarracksIdx === 'number') {
+          deadSlotIdxs.push(u.sourceBarracksIdx)
+        }
+      }
+      eventBus.emit('raid:battle-ended', {
+        victory: result === 'win',
+        deadSlotIdxs,
+        planetId: this.planetId,
+        planetElement: null,
+      })
+    }
     this.time.delayedCall(2800, () => {
       eventBus.emit('battle:exit', {})
     })
@@ -266,7 +297,8 @@ export class BattleScene extends Phaser.Scene {
         : stars > 0
           ? `РЕЙД ПРЕРВАН`
           : 'РЕЙД ПРОВАЛЕН'
-    const headColor = stars === 3 ? '#facc15' : stars > 0 ? '#fb923c' : '#dc2626'
+    const headColor =
+      stars === 3 ? '#facc15' : stars > 0 ? '#fb923c' : '#dc2626'
     const header = this.add.text(width / 2, height / 2 - 60 * DPR, headTxt, {
       fontFamily: 'Russo One, sans-serif',
       fontSize: `${36 * DPR}px`,
@@ -363,36 +395,99 @@ export class BattleScene extends Phaser.Scene {
     this.resultText?.destroy()
     this.resultText = null
 
-    // Обновить фон + overlay под новую локацию
     this.locationId += 1
     const { width, height } = this.scale
-    const newMapKey = mapKeyForLocation(this.locationId)
-    if (this.mapImage) this.mapImage.destroy()
-    if (this.textures.exists(newMapKey)) {
-      const img = this.add.image(width / 2, height / 2, newMapKey)
-      img.setDisplaySize(width, height)
-      img.setDepth(0)
-      this.mapImage = img
-    }
-    this.applyOverlayTint()
+    const cx = width / 2
+    const cy = height / 2
+    const newBiomeKey = biomeMapKeyForLocation(this.biome, this.locationId)
+    const newMapKey = this.textures.exists(newBiomeKey)
+      ? newBiomeKey
+      : mapKeyForLocation(this.locationId)
 
     if (this.titleText) {
       this.titleText.setText(`БОЙ · loc ${this.locationId}`)
     }
 
-    // Re-spawn survivors + новая bot deck
-    this.playerUnits = this.spawnFromSurvivors()
-    this.enemyUnits = buildBotDeck(this, this.locationId, this.gridLayout)
+    // Dual-container zoom между локациями — как на ферме/скауте
+    // (LocationTransition): старый фон сжимается в точку, новый растёт из-за экрана.
+    const oldBg = this.mapImage
+    this.mapImage = null
+    const oldContainer = oldBg ? this.add.container(cx, cy) : null
+    if (oldContainer && oldBg) {
+      oldContainer.add(oldBg)
+      oldBg.setPosition(0, 0)
+      oldContainer.setDepth(200)
+    }
+    const newContainer = this.add.container(cx, cy)
+    newContainer.setDepth(100)
+    let newBg: Phaser.GameObjects.Image | null = null
+    if (this.textures.exists(newMapKey)) {
+      newBg = this.add.image(0, 0, newMapKey)
+      newBg.setDisplaySize(width, height)
+      newContainer.add(newBg)
+    }
+    newContainer.setScale(8)
+    newContainer.setAlpha(0)
 
-    // Re-start engine
-    this.engine = new BattleEngine(
-      this,
-      this.gridLayout,
-      this.playerUnits,
-      this.enemyUnits,
-      { onEnd: (r) => this.onBattleEnd(r) },
-    )
-    this.time.delayedCall(600, () => this.engine?.start())
+    const dur = 450
+    if (oldContainer) {
+      this.tweens.add({
+        targets: oldContainer,
+        scale: 0.01,
+        duration: dur,
+        ease: 'Sine.easeInOut',
+      })
+      this.tweens.add({
+        targets: oldContainer,
+        alpha: 0,
+        duration: dur * 0.22,
+        delay: dur * 0.78,
+        ease: 'Sine.easeIn',
+      })
+    }
+    this.tweens.add({
+      targets: newContainer,
+      alpha: 1,
+      duration: dur * 0.35,
+      ease: 'Sine.easeOut',
+    })
+    this.tweens.add({
+      targets: newContainer,
+      scale: 1,
+      duration: dur,
+      ease: 'Sine.easeInOut',
+      onComplete: () => {
+        oldContainer?.destroy(true)
+        // Разворачиваем новый фон обратно в scene root (мировые координаты).
+        if (newBg) {
+          newContainer.remove(newBg, false)
+          this.add.existing(newBg)
+          newBg.setPosition(cx, cy)
+          newBg.setDepth(0)
+          this.mapImage = newBg
+        }
+        newContainer.destroy(false)
+
+        if (!this.gridLayout) return
+        // Re-spawn survivors + новая bot deck
+        this.playerUnits = this.spawnFromSurvivors()
+        this.enemyUnits = buildBotDeck(
+          this,
+          this.locationId,
+          this.gridLayout,
+          biomeFrogTint(this.biome),
+          this.planetId,
+        )
+        this.engine = new BattleEngine(
+          this,
+          this.gridLayout,
+          this.playerUnits,
+          this.enemyUnits,
+          { onEnd: (r) => this.onBattleEnd(r) },
+        )
+        this.time.delayedCall(400, () => this.engine?.start())
+      },
+    })
   }
 
   shutdown() {
@@ -405,8 +500,6 @@ export class BattleScene extends Phaser.Scene {
     this.titleText = null
     this.resultText?.destroy()
     this.resultText = null
-    this.overlay?.destroy()
-    this.overlay = null
     this.mapImage?.destroy()
     this.mapImage = null
     for (const u of this.playerUnits) {

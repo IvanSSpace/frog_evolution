@@ -103,6 +103,7 @@ export class StarMapScene extends Phaser.Scene {
   private onEbPopoverClose?: () => void
   private onEbCenterHome?: () => void
   private onEbGotoShip?: () => void
+  private onEbFocusPlanet?: (e: { planetId: string }) => void
   // Линии связи между главными расами + кэш edges для перерисовки при изменении zoom.
   mainLinesGfx: Phaser.GameObjects.Graphics | null = null
   mainLinesEdges: Array<{
@@ -262,10 +263,18 @@ export class StarMapScene extends Phaser.Scene {
         }),
       )
 
-    // Помечаем 51 случайную фоновую как обитаемую (16 главных + 51 = 67 всего обитаемых)
+    // Помечаем 51 случайную фоновую как обитаемую (16 главных + 51 = 67 всего обитаемых).
+    // Газовые гиганты и кольцевые газовые исключены — на газовых планетах нет
+    // твёрдой поверхности, жизни быть не может.
     const inhabitedNeeded = Math.max(0, TOTAL_INHABITED - MAIN_RACES.length)
     const rngI = mulberry32(SEED + 99)
-    const indices = bg.map((_, i) => i).sort(() => rngI() - 0.5)
+    const indices = bg
+      .map((_, i) => i)
+      .filter(
+        (i) =>
+          bg[i].archetype !== 'gas_giant' && bg[i].archetype !== 'gas_ringed',
+      )
+      .sort(() => rngI() - 0.5)
     for (let i = 0; i < Math.min(inhabitedNeeded, indices.length); i++) {
       bg[indices[i]].isInhabited = true
     }
@@ -406,6 +415,37 @@ export class StarMapScene extends Phaser.Scene {
       })
     }
     eventBus.on('starmap:goto-ship', this.onEbGotoShip)
+
+    // Pan камеры к указанной планете (raid target cycler).
+    this.onEbFocusPlanet = (e: { planetId: string }) => {
+      const target = this.allSystems.find((s) => s.id === e.planetId)
+      if (!target) return
+      const cam = this.cameras.main
+      // Целевой zoom — чуть прибавить если игрок далеко zoomed-out.
+      const targetZoom = Math.max(0.7, Math.min(cam.zoom, 1.4))
+      this.tweens.add({
+        targets: {
+          z: cam.zoom,
+          x: this.camera.centerX,
+          y: this.camera.centerY,
+        },
+        z: targetZoom,
+        x: target.x,
+        y: target.y,
+        duration: 750,
+        ease: 'Cubic.easeInOut',
+        onUpdate: (tween) => {
+          const tgt = tween.targets[0] as { z: number; x: number; y: number }
+          cam.setZoom(tgt.z)
+          this.camera.setCenter(tgt.x, tgt.y)
+          this.camera.scheduleBoundsUpdate()
+        },
+        onComplete: () => {
+          this.camera.updatePlanetHitAreas()
+        },
+      })
+    }
+    eventBus.on('starmap:focus-planet', this.onEbFocusPlanet)
 
     // Живые анимации (ambient effects). Вынесены в starmap/ambient/* (Wave 3).
     // Космическая пыль убрана — perf trade-off, визуально не критично.
@@ -782,6 +822,10 @@ export class StarMapScene extends Phaser.Scene {
     if (this.onEbGotoShip) {
       eventBus.off('starmap:goto-ship', this.onEbGotoShip)
       this.onEbGotoShip = undefined
+    }
+    if (this.onEbFocusPlanet) {
+      eventBus.off('starmap:focus-planet', this.onEbFocusPlanet)
+      this.onEbFocusPlanet = undefined
     }
     this.planetRenderer?.destroy()
     {

@@ -32,6 +32,8 @@ export interface Race {
   color: number
   accent: number
   size: number
+  // Биом планеты (fire/ice/desert/toxic) — определяет raid-фон локаций.
+  biome?: string
 }
 
 // Архетипы планет — визуальная типизация. Каждая фоновая получает один.

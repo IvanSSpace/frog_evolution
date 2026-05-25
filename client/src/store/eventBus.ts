@@ -26,12 +26,44 @@ type Events = {
   'rareCrate:claim': { level: number }
   'starmap:open': void
   'starmap:close': void
+  // Pan камеры к указанной планете (по id из MAIN_RACES). Используется
+  // raid target cycler в bottom-right StarMap.
+  'starmap:focus-planet': { planetId: string }
   // Phase Barracks (2026-05-24) — PvP raid mode
-  'battle:start': { locationId?: number; botId?: string }
+  'battle:start': {
+    locationId?: number
+    botId?: string
+    enemyDeck?: Array<{ level: number; cellIdx: number }>
+    planetElement?: import('./cosmic/types').Element | null
+    planetId?: string
+  }
+  /** Raid battle start — выпускается InvestigateModal после tap «Атаковать». */
+  'raid:battle-start': {
+    planetId: string
+  }
+  /** Post-battle losses applied — IDs barracks slots где юниты погибли. */
+  'raid:battle-ended': {
+    victory: boolean
+    deadSlotIdxs: number[]
+    planetId: string
+    planetElement: import('./cosmic/types').Element | null
+  }
   'battle:exit': Record<string, never>
   'barracks:open': Record<string, never>
   'barracks:exit': Record<string, never>
+  // Toggle из футера — index.ts открывает/закрывает по факту активной сцены.
+  'barracks:toggle': Record<string, never>
+  // Корабль — интерьер с экипажем (вид как казарма).
+  'ship:open': Record<string, never>
+  'ship:exit': Record<string, never>
+  'ship:toggle': Record<string, never>
   'barracks:open-raid-pick': Record<string, never>
+  'barracks:open-combat-tree': Record<string, never>
+  'raid:scout-open': Record<string, never>
+  'raid:scout-exit': Record<string, never>
+  // Синхрон React-оверлея кнопок локаций со сценой скаута.
+  'raid:scout-changed': { locId: number }
+  'raid:scout-set-loc': { locId: number }
   'barracks:add-request': { slotIdx: number }
   'barracks:remove-request': { slotIdx: number }
   'starmap:planet-selected': {

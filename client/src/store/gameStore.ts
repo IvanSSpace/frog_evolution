@@ -31,8 +31,17 @@ import {
   locationGroupForLevel,
 } from '../game/config/evolution'
 import {
+  combatNodeCost,
+  type CombatBranch,
+  type CombatTreeLevels,
+} from '../game/config/combatTree'
+import {
   loadUpgrades,
   saveUpgrades,
+  loadCombatTree,
+  saveCombatTree,
+  loadSlime,
+  saveSlime,
   loadFrogPurchases,
   saveFrogPurchases,
   loadFrogTiers,
@@ -73,6 +82,10 @@ import {
   saveBarracksVats,
   loadBarracksUnlocked,
   saveBarracksUnlocked,
+  loadShipCrew,
+  saveShipCrew,
+  loadRaidCooldowns,
+  saveRaidCooldowns,
 } from './persistence'
 import { getWarriorConvertCost } from '../game/config/warriors'
 import {
@@ -101,6 +114,9 @@ export {
   getLocationById,
 }
 export type { LocationConfig }
+
+// Длительность raid-неуязвимости планеты после атаки (1.5ч real-time).
+export const RAID_INVULN_MS = 90 * 60 * 1000
 
 // ============== STORE ==============
 
@@ -245,8 +261,13 @@ interface GameStateBase {
   unlockBarracks: () => void
   barracksGrid: (import('./barracks').BarracksCell | null)[]
   /** Положить воина в первую свободную клетку. Возвращает индекс или -1
-   *  если все клетки заняты / недостаточно gold для конвертации. */
-  addWarriorToBarracks: (level: number, tier?: 0 | 1 | 2) => number
+   *  если все клетки заняты / недостаточно gold для конвертации.
+   *  free=true — без списания gold (рекрут через ворота на поле). */
+  addWarriorToBarracks: (
+    level: number,
+    tier?: 0 | 1 | 2,
+    free?: boolean,
+  ) => number
   /** Очистить клетку (вернуть воина в "удалить"). MVP: без рефанда. */
   removeWarriorFromBarracks: (slotIdx: number) => void
   /** Прямая запись (для drag-n-drop / dev). */
@@ -261,6 +282,56 @@ interface GameStateBase {
    *  скрываются на это время. */
   battleSceneActive: boolean
   setBattleSceneActive: (v: boolean) => void
+  /** True пока игрок выбирает цель рейда через StarMap. PlanetSelectPanel
+   *  показывает CTA "Напасть" вместо "Лететь" + UI индикатор. Transient. */
+  raidMode: boolean
+  setRaidMode: (v: boolean) => void
+  /** Активный investigate target — planetId на орбите которой стоим. null = нет. */
+  investigatePlanetId: string | null
+  setInvestigatePlanetId: (id: string | null) => void
+  /** Planet, осматриваемая в immersive RaidScoutScene. null = осмотр закрыт.
+   *  Запоминается чтобы вернуться в InvestigateModal после «Назад». */
+  scoutPlanetId: string | null
+  setScoutPlanetId: (id: string | null) => void
+  /** Per-planet raid invulnerability: planetId → expiresAt (Date.now ms).
+   *  После атаки планета неуязвима RAID_INVULN_MS (real-time, переживает выход). */
+  raidCooldowns: Record<string, number>
+  setRaidCooldown: (planetId: string) => void
+  /** Post-battle loot summary (slime, серумы по element'у планеты). */
+  raidLoot: {
+    slime: number
+    element: import('./cosmic/types').Element | null
+    serumCount: number
+    deadCount: number
+    victory: boolean
+  } | null
+  setRaidLoot: (
+    loot: {
+      slime: number
+      element: import('./cosmic/types').Element | null
+      serumCount: number
+      deadCount: number
+      victory: boolean
+    } | null,
+  ) => void
+
+  // ─── Экипаж корабля (боевой отряд, перемещён из казармы) ───
+  shipCrew: (import('./barracks').BarracksCell | null)[]
+  /** Загрузить воинов из боевой зоны казармы (top deck) в корабль.
+   *  Лягушки ПЕРЕМЕЩАЮТСЯ (клетки казармы пустеют). Возвращает кол-во загруженных. */
+  loadDeckIntoShip: () => number
+  /** Выгрузить экипаж обратно в свободные клетки казармы. */
+  unloadShipToBarracks: () => void
+
+  // ─── Боевая прокачка (combat tree) + slime кошелёк ───
+  /** Spendable slime — начисляется за победы в рейдах, тратится на древо. */
+  slime: number
+  addSlime: (amount: number) => void
+  spendSlime: (amount: number) => boolean
+  /** Уровни узлов древа по веткам (damage/hp/armor). */
+  combatTree: CombatTreeLevels
+  /** Купить следующий узел ветки за slime. false если максимум/не хватает slime. */
+  buyCombatNode: (branch: CombatBranch) => boolean
 }
 
 // Полный GameState = базовые поля + Cosmic Frogs System (Phase 11+)
@@ -629,10 +700,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ barracksUnlocked: true })
   },
   barracksGrid: loadBarracksGrid(),
-  addWarriorToBarracks: (level, tier = 0) => {
+  addWarriorToBarracks: (level, tier = 0, free = false) => {
     const s = get()
-    const cost = getWarriorConvertCost(level)
-    if (s.gold < cost) return -1
+    const cost = free ? 0 : getWarriorConvertCost(level)
+    if (!free && s.gold < cost) return -1
     const grid = s.barracksGrid
     // Сначала ищем место в боевой зоне (idx 0-11), но не более MAX_DECK_SIZE
     // занятых клеток там. Если все 7 слотов deck'а заняты — кладём в резерв.
@@ -695,6 +766,100 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
   battleSceneActive: false,
   setBattleSceneActive: (v) => set({ battleSceneActive: v }),
+
+  // ─── Экипаж корабля ───
+  shipCrew: loadShipCrew(),
+  loadDeckIntoShip: () => {
+    const s = get()
+    const grid = s.barracksGrid.slice()
+    const crew = s.shipCrew.slice()
+    let loaded = 0
+    // Боевая зона казармы = idx 0..BATTLE_DECK_SIZE-1. Переносим в свободные
+    // слоты экипажа (max SHIP_CREW_SIZE), клетки казармы пустеют.
+    for (let i = 0; i < BATTLE_DECK_SIZE; i++) {
+      if (!grid[i]) continue
+      const slot = crew.findIndex((c) => c === null)
+      if (slot === -1) break // корабль полон
+      crew[slot] = grid[i]
+      grid[i] = null
+      loaded++
+    }
+    if (loaded > 0) {
+      saveBarracksGrid(grid)
+      saveShipCrew(crew)
+      set({ barracksGrid: grid, shipCrew: crew })
+    }
+    return loaded
+  },
+  unloadShipToBarracks: () => {
+    const s = get()
+    const grid = s.barracksGrid.slice()
+    const crew = s.shipCrew.slice()
+    let changed = false
+    for (let ci = 0; ci < crew.length; ci++) {
+      if (!crew[ci]) continue
+      const target = grid.findIndex((c) => c === null)
+      if (target === -1) break // казарма полна
+      grid[target] = crew[ci]
+      crew[ci] = null
+      changed = true
+    }
+    if (changed) {
+      saveBarracksGrid(grid)
+      saveShipCrew(crew)
+      set({ barracksGrid: grid, shipCrew: crew })
+    }
+  },
+
+  raidMode: false,
+  setRaidMode: (v) => set({ raidMode: v }),
+  investigatePlanetId: null,
+  setInvestigatePlanetId: (id) => set({ investigatePlanetId: id }),
+  scoutPlanetId: null,
+  setScoutPlanetId: (id) => set({ scoutPlanetId: id }),
+  raidCooldowns: loadRaidCooldowns(),
+  setRaidCooldown: (planetId) => {
+    const next = {
+      ...get().raidCooldowns,
+      [planetId]: Date.now() + RAID_INVULN_MS,
+    }
+    set({ raidCooldowns: next })
+    saveRaidCooldowns(next)
+  },
+  raidLoot: null,
+  setRaidLoot: (loot) => set({ raidLoot: loot }),
+
+  // ─── Боевая прокачка + slime ───
+  slime: loadSlime(),
+  addSlime: (amount) =>
+    set((s) => {
+      const next = Math.max(0, s.slime + amount)
+      saveSlime(next)
+      return { slime: next }
+    }),
+  spendSlime: (amount) => {
+    if (get().slime < amount) return false
+    set((s) => {
+      const next = Math.max(0, s.slime - amount)
+      saveSlime(next)
+      return { slime: next }
+    })
+    return true
+  },
+  combatTree: loadCombatTree(),
+  buyCombatNode: (branch) => {
+    const state = get()
+    const level = state.combatTree[branch]
+    const cost = combatNodeCost(branch, level)
+    if (cost === null) return false // ветка максимальна
+    if (state.slime < cost) return false
+    const nextTree = { ...state.combatTree, [branch]: level + 1 }
+    const nextSlime = Math.max(0, state.slime - cost)
+    saveCombatTree(nextTree)
+    saveSlime(nextSlime)
+    set({ combatTree: nextTree, slime: nextSlime })
+    return true
+  },
 
   // ============== COSMIC FROGS SYSTEM (Phase 11+) ==============
   // createCosmicSlice сначала кладёт actions + дефолтные данные,

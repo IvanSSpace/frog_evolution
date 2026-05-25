@@ -14,7 +14,6 @@
 import Phaser from 'phaser'
 import {
   DPR,
-  mapKeyForLocation,
   FIELD_PAD_X_MILITARY,
   FIELD_PAD_Y_MILITARY,
   FIELD_PAD_Y_BOTTOM_MILITARY,
@@ -25,7 +24,6 @@ import {
   BARRACKS_GRID_W,
   BARRACKS_GRID_H,
   BATTLE_DECK_ROWS,
-  BATTLE_DECK_SIZE,
   MAX_DECK_SIZE,
   deckCount,
   type BarracksCell,
@@ -85,9 +83,14 @@ export class BarracksScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale
 
-    // Фон — Континент (map3) визуально похож на крепость / казарму.
-    const mapKey = mapKeyForLocation(3)
-    if (this.textures.exists(mapKey)) {
+    // Фон — выделенный арт казармы (barracks.png). Fallback на map3 если
+    // barracks.png не положен в /public/maps/.
+    const mapKey = this.textures.exists('barracks')
+      ? 'barracks'
+      : this.textures.exists('map3')
+        ? 'map3'
+        : null
+    if (mapKey) {
       const img = this.add.image(width / 2, height / 2, mapKey)
       img.setDisplaySize(width, height)
       img.setDepth(0)
@@ -95,14 +98,14 @@ export class BarracksScene extends Phaser.Scene {
     } else {
       this.add.rectangle(width / 2, height / 2, width, height, 0x1a2e1a)
     }
-    // Лёгкий тинт-индикатор «казарма» (нейтральный коричневый).
+    // Очень лёгкий тинт для контраста сетки поверх арта.
     const tint = this.add.rectangle(
       width / 2,
       height / 2,
       width,
       height,
-      0x422006,
-      0.18,
+      0x000000,
+      0.08,
     )
     tint.setDepth(0.5)
     this.overlay = tint
@@ -138,40 +141,8 @@ export class BarracksScene extends Phaser.Scene {
     this.deckCountText.setOrigin(0.5, 0)
     this.deckCountText.setDepth(10)
 
-    // Кнопка выхода ✕
-    const exitBtn = this.add.text(width - 16 * DPR, 20 * DPR, '✕', {
-      fontFamily: 'Russo One, sans-serif',
-      fontSize: `${24 * DPR}px`,
-      color: '#fff',
-      backgroundColor: '#7f1d1d',
-      padding: { left: 10, right: 10, top: 4, bottom: 4 },
-    })
-    exitBtn.setOrigin(1, 0)
-    exitBtn.setDepth(10)
-    exitBtn.setInteractive({ useHandCursor: true })
-    exitBtn.on('pointerdown', () => {
-      eventBus.emit('barracks:exit', {})
-    })
-
-    // Кнопка В РЕЙД (низ)
-    const raidBtn = this.add.text(
-      width / 2,
-      height - 30 * DPR,
-      '⚔  В РЕЙД',
-      {
-        fontFamily: 'Russo One, sans-serif',
-        fontSize: `${22 * DPR}px`,
-        color: '#fff',
-        backgroundColor: '#dc2626',
-        padding: { left: 18, right: 18, top: 8, bottom: 8 },
-      },
-    )
-    raidBtn.setOrigin(0.5, 1)
-    raidBtn.setDepth(10)
-    raidBtn.setInteractive({ useHandCursor: true })
-    raidBtn.on('pointerdown', () => {
-      eventBus.emit('barracks:open-raid-pick', {})
-    })
+    // Кнопки действий (✕ ВЫХОД / ⚔ В РЕЙД / ⬆ ПРОКАЧКА) вынесены в React-оверлей
+    // BarracksActionButtons.tsx — app-стиль (ff-btn) вместо сырых Phaser add.text.
 
     // Render warriors из текущего state
     this.renderAllCells()
@@ -193,6 +164,25 @@ export class BarracksScene extends Phaser.Scene {
   private deckCountLabel(): string {
     const grid = useGameStore.getState().barracksGrid
     return `В бой: ${deckCount(grid)}/${MAX_DECK_SIZE}`
+  }
+
+  /** Возвращает index клетки в которой находится точка (worldX, worldY), либо null. */
+  private cellIndexAt(worldX: number, worldY: number): number | null {
+    if (!this.layout) return null
+    const h = this.layout
+    if (
+      worldX < h.originX ||
+      worldX > h.originX + h.width ||
+      worldY < h.originY ||
+      worldY > h.originY + h.height
+    ) {
+      return null
+    }
+    const col = Math.floor((worldX - h.originX) / h.cellW)
+    const row = Math.floor((worldY - h.originY) / h.cellH)
+    if (col < 0 || col >= BARRACKS_GRID_W) return null
+    if (row < 0 || row >= BARRACKS_GRID_H) return null
+    return row * BARRACKS_GRID_W + col
   }
 
   private drawDeckHighlight() {
@@ -282,15 +272,55 @@ export class BarracksScene extends Phaser.Scene {
     hit.setInteractive({ useHandCursor: true })
     container.add(hit)
 
+    // Tap по пустой клетке — open pool. Tap по занятой — НИЧЕГО (delete не
+    // допускается, перемещение делается drag'ом ниже).
     hit.on('pointerdown', () => {
-      if (cell) {
-        eventBus.emit('barracks:remove-request', { slotIdx: idx })
-      } else {
+      if (!cell) {
         eventBus.emit('barracks:add-request', { slotIdx: idx })
       }
     })
 
     if (!cell) return container
+
+    // Drag-and-drop для занятых клеток. Снимаем frog, тащим по экрану,
+    // на dragend — snap к ближайшей клетке: move если пустая, swap если
+    // занятая, revert если вне grid.
+    hit.input!.draggable = true
+    this.input.setDraggable(hit, true)
+    let originalDepth = container.depth
+    hit.on('dragstart', () => {
+      originalDepth = container.depth
+      container.setDepth(50) // на верх во время drag
+    })
+    hit.on('drag', (_p: Phaser.Input.Pointer, dragX: number, dragY: number) => {
+      // dragX/dragY — local относительно объекта hit (он в container'е).
+      // Сдвигаем сам container в мировых координатах.
+      container.x = center.x + dragX
+      container.y = center.y + dragY
+    })
+    hit.on('dragend', (p: Phaser.Input.Pointer) => {
+      container.setDepth(originalDepth)
+      const target = this.cellIndexAt(p.worldX, p.worldY)
+      if (target === null || target === idx) {
+        // Revert
+        container.x = center.x
+        container.y = center.y
+        return
+      }
+      const grid = useGameStore.getState().barracksGrid
+      const targetCell = grid[target]
+      const setCell = useGameStore.getState().setBarracksCell
+      if (!targetCell) {
+        // Move
+        setCell(idx, null)
+        setCell(target, cell)
+      } else {
+        // Swap
+        setCell(idx, targetCell)
+        setCell(target, cell)
+      }
+      // renderAllCells() триггерится через store subscribe — controllers пересоздадутся.
+    })
 
     // Лягушка-воин
     const cfg = FROG_LEVELS[cell.level - 1]
@@ -302,7 +332,7 @@ export class BarracksScene extends Phaser.Scene {
     let sprite: Phaser.GameObjects.Image | Phaser.GameObjects.Arc
     if (this.textures.exists(texKey)) {
       const img = this.add.image(0, 0, texKey)
-      const target = radius * 1.7
+      const target = radius * 2.5
       const baseScale = target / Math.max(img.width, img.height)
       img.setScale(baseScale)
       sprite = img
@@ -338,13 +368,18 @@ export class BarracksScene extends Phaser.Scene {
       badge.setOrigin(0.5, 0.5)
       container.add(badge)
     }
-    const lvlText = this.add.text(-radius * 0.7, radius * 0.55, `L${cell.level}`, {
-      fontFamily: 'Russo One, sans-serif',
-      fontSize: `${radius * 0.4}px`,
-      color: '#fff',
-      stroke: '#000',
-      strokeThickness: 2 * DPR,
-    })
+    const lvlText = this.add.text(
+      -radius * 0.7,
+      radius * 0.55,
+      `L${cell.level}`,
+      {
+        fontFamily: 'Russo One, sans-serif',
+        fontSize: `${radius * 0.4}px`,
+        color: '#fff',
+        stroke: '#000',
+        strokeThickness: 2 * DPR,
+      },
+    )
     lvlText.setOrigin(0.5, 0.5)
     container.add(lvlText)
 

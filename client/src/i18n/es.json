@@ -448,69 +448,6 @@
         }
       }
     },
-    "gasouls": {
-      "name": "Nubes de Gas",
-      "lore_short": "Forma de vida gaseosa, hecha enteramente de mezclas respiratorias densas. Sin forma, cantan en resonancias del tamaño de pequeños planetas.",
-      "personality": "Sin forma, poéticos",
-      "communication_style": "Poéticos, metafóricos. Sus mensajes son canciones breves.",
-      "home_planet_name": "Sonoflotante",
-      "chain": {
-        "0": {
-          "text": "Cantamos con Sonoflotante. ¿Oyes nuestro silencio?"
-        },
-        "1": {
-          "text": "Nuestro pueblo es una resonancia entre mundos."
-        },
-        "2": {
-          "text": "Regálanos un compás de silencio. Un impulso."
-        },
-        "3": {
-          "text": "La canción es más antigua que las palabras. Escucha."
-        },
-        "4": {
-          "text": "Acepta nuestra canción en tu bitácora de a bordo."
-        },
-        "5": {
-          "text": "Encuentra la nota perdida en la nube de asteroides."
-        },
-        "6": {
-          "description": "nuestro acorde se desafinó"
-        },
-        "7": {
-          "text": "Acepta armonizar. La disonancia hiere."
-        },
-        "8": {
-          "text": "Salva a nuestro coro — encuentra el resonador hundido en la colonia."
-        },
-        "9": {
-          "text": "Cantamos sobre ti. Más suave o más alto — depende de ti."
-        },
-        "10": {
-          "text": "Acompáñanos con un solo armónico grave. Solo uno — y entrarás en la canción."
-        },
-        "11": {
-          "text": "Acepta llevar nuestra canción hasta Calcinante. Los Gusanos de Fuego deben oírla."
-        },
-        "12": {
-          "text": "Atrapa el eco de nuestro ancestro junto al cinturón de asteroides. Se fue sin respuesta."
-        },
-        "14": {
-          "text": "La canción guarda tu nota. A dónde irá — lo eliges tú."
-        },
-        "15": {
-          "text": "Lleva nuestro largo aliento dentro de tu pecho. Uno — y cantaremos al unísono."
-        },
-        "16": {
-          "text": "Recorre la línea de resonancia desde Sonoflotante hasta Atrapa-Rayos. Marca dónde la canción muere."
-        },
-        "18": {
-          "text": "Acepta escuchar nuestro silencio. Es más largo que cualquier palabra."
-        },
-        "19": {
-          "text": "La nota perdura. Tú eres su continuación."
-        }
-      }
-    },
     "mechanidons": {
       "name": "Mecanidones",
       "lore_short": "Híbrido entre bio y máquina. Seres cyborg que se auto-mejoran, para quienes la tecnología es religión.",
@@ -1168,22 +1105,6 @@
     "forestcores_young_forest": {
       "description": "El bosque joven pide fusión... combina 10 veces — que las copas se toquen sin prisa.",
       "short": "10 fusiones (Bosqueraíces)"
-    },
-    "gasouls_lost_note": {
-      "description": "Escúchanos... una nota se perdió en el viento. Trae 5 sueros de gas — la melodía volverá.",
-      "short": "5 sueros de gas"
-    },
-    "gasouls_silent_chorus_b": {
-      "description": "El coro silencioso te llama más cerca... sube la relación al nivel 6 — y nuestras voces sonarán para ti.",
-      "short": "Nivel 6 (Gasalmas)"
-    },
-    "gasouls_silent_chorus_c": {
-      "description": "La unión completa del coro requiere 200 fusiones... realiza 200 fusiones — cada una une dos almas en una.",
-      "short": "200 fusiones (Gasalmas)"
-    },
-    "gasouls_sunken_resonator": {
-      "description": "El resonador se hundió en la niebla de misiones... completa 3 misiones — el susurro del viento volverá a sus cuerdas.",
-      "short": "3 misiones (Gasalmas)"
     },
     "liquidoids_caravan": {
       "description": "La caravana espera la carga. 5 sueros de agua al precio acordado — entrega y el trato está cerrado.",

@@ -22,7 +22,6 @@ vi.mock('../config/raceChains', async () => {
   )
   const allRaceIds: RaceId[] = [
     'crystalloids',
-    'gasouls',
     'mechanidons',
     'fireworms',
     'liquidoids',
@@ -70,7 +69,6 @@ import { CHAIN_PENDING_CAP, INITIAL_RELATIONSHIP } from '../config/raceChains'
 
 const ALL_RACE_IDS: RaceId[] = [
   'crystalloids',
-  'gasouls',
   'mechanidons',
   'fireworms',
   'liquidoids',

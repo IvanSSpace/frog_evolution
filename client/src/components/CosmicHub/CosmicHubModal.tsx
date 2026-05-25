@@ -4,11 +4,15 @@ import type { CosmicTab } from '../../store/cosmic/types'
 import { CarriersTab } from './CarriersTab'
 import { ContactsTab } from './ContactsTab'
 import { QuestsTab } from './QuestsTab'
+import { SerumInventoryTab } from './SerumInventoryTab'
 import { PityCounterDisplay } from './PityCounterDisplay'
 import { useCosmosUnlocked } from '../../utils/cosmosGate'
 import { useModalLock } from '../../utils/modalLock'
 
-type AllowedTab = Extract<CosmicTab, 'carriers' | 'contacts' | 'quests'>
+type AllowedTab = Extract<
+  CosmicTab,
+  'carriers' | 'contacts' | 'quests' | 'serum'
+>
 
 const SESSION_KEY = 'cosmic_last_tab'
 
@@ -18,7 +22,8 @@ function getInitialTab(): AllowedTab {
     if (
       saved === 'carriers' ||
       saved === 'contacts' ||
-      saved === 'quests'
+      saved === 'quests' ||
+      saved === 'serum'
     ) {
       return saved
     }
@@ -46,6 +51,7 @@ export default function CosmicHubModal({ onClose }: Props) {
 
   const TABS: Tab[] = [
     { id: 'carriers', label: t('cosmic_hub.tab_carriers'), icon: '🐸' },
+    { id: 'serum', label: 'Серумы', icon: '🧪' },
     { id: 'contacts', label: t('cosmic_hub.tab_contacts'), icon: '📡' },
     { id: 'quests', label: t('cosmic_hub.tab_quests'), icon: '📜' },
   ]
@@ -66,6 +72,8 @@ export default function CosmicHubModal({ onClose }: Props) {
         return <ContactsTab />
       case 'quests':
         return <QuestsTab />
+      case 'serum':
+        return <SerumInventoryTab onClose={onClose} />
     }
   }
 
@@ -157,9 +165,15 @@ export default function CosmicHubModal({ onClose }: Props) {
                       paddingTop: 4,
                       paddingBottom: 4,
                       opacity: isActive ? 1 : 0.55,
-                      ['--ff-btn-from' as never]: isActive ? '#4ade80' : '#cbd5e1',
-                      ['--ff-btn-to' as never]: isActive ? '#16a34a' : '#64748b',
-                      ['--ff-btn-border' as never]: isActive ? '#14532d' : '#334155',
+                      ['--ff-btn-from' as never]: isActive
+                        ? '#4ade80'
+                        : '#cbd5e1',
+                      ['--ff-btn-to' as never]: isActive
+                        ? '#16a34a'
+                        : '#64748b',
+                      ['--ff-btn-border' as never]: isActive
+                        ? '#14532d'
+                        : '#334155',
                     }}
                   >
                     <span style={{ marginRight: 4 }}>{tab.icon}</span>

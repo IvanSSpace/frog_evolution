@@ -130,7 +130,6 @@ import { ELEMENTS } from '../../store/cosmic/types'
 
 const ALL_RACE_IDS: RaceId[] = [
   'crystalloids',
-  'gasouls',
   'mechanidons',
   'fireworms',
   'liquidoids',

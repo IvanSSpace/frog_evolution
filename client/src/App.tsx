@@ -9,10 +9,12 @@ import { DiscoveryModal } from './ui/components/DiscoveryModal'
 import { RareCrateModal } from './ui/components/RareCrateModal'
 import { SettingsModal } from './ui/components/SettingsModal'
 import { LocationStack } from './ui/components/LocationStack'
+import { RaidScoutLocationStack } from './ui/components/RaidScoutLocationStack'
 import { StarMapHUD } from './ui/components/StarMapHUD'
 import { MagnetToggle } from './ui/components/MagnetToggle'
-import { BarracksButton } from './ui/components/BarracksButton'
 import { BarracksUIController } from './ui/components/BarracksUIController'
+import { BarracksActionButtons } from './ui/components/BarracksActionButtons'
+import { ShipActionButtons } from './ui/components/ShipActionButtons'
 import { ShipFollowButton } from './ui/components/ShipFollowButton'
 import { OrientationLock } from './ui/components/OrientationLock'
 import { LoadingScreen } from './ui/components/LoadingScreen'
@@ -27,6 +29,9 @@ import { GalleryDetailModal } from './components/Gallery/GalleryDetailModal'
 import { MilestoneToast } from './components/CosmicHub/bestiary/MilestoneToast'
 // import { TutorialOverlay } from './components/Tutorial/TutorialOverlay'  // disabled 2026-05-18 — Phase 23 onboarding replaces
 import { OnboardingController } from './components/Onboarding/OnboardingController'
+import { InvestigateModalController } from './components/Raid/InvestigateModal'
+import { RaidLootModalController } from './components/Raid/RaidLootModal'
+import { RaidFlowController } from './components/Raid/RaidFlowController'
 import { CaptainBirthModal } from './components/Captain/CaptainBirthModal'
 import { installCaptainBirthController } from './components/Captain/captainBirthController'
 import { FirstContactController } from './components/FirstContact/firstContactController'
@@ -36,7 +41,6 @@ import { QuestController } from './game/quests/questController'
 // Phase 28 Plan 28-05: quest reward popup controller — subscribes to
 // 'quests:completed' and renders QuestRewardPopup for head of queue.
 import { QuestRewardController } from './components/Quests/questRewardController'
-import { SerumModal } from './components/CosmicHub/SerumModal'
 import { SerumBar } from './components/SerumBar'
 import { installBestiaryDevHelpers } from './utils/devHelpers'
 import { installFrogTierDevHelpers } from './utils/devFrogTiers'
@@ -72,7 +76,6 @@ function App() {
   const [frogShopOpen, setFrogShopOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [cosmicHubOpen, setCosmicHubOpen] = useState(false)
-  const [serumOpen, setSerumOpen] = useState(false)
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [welcomeBack, setWelcomeBack] = useState<{
     earned: number
@@ -325,7 +328,12 @@ function App() {
 
   const handleRareCrateClaim = (wonLevel: number) => {
     setRareCrate(null)
-    eventBus.emit('rareCrate:claim', { level: wonLevel })
+    // Deferred emit — даём React закоммитить unmount модалки (useModalLock cleanup
+    // → setPhaserInputEnabled(true)) ДО спавна frog'а. Иначе body.setInteractive
+    // регистрируется пока Phaser input disabled, и draggable не активируется.
+    setTimeout(() => {
+      eventBus.emit('rareCrate:claim', { level: wonLevel })
+    }, 0)
   }
 
   if (bootState === 'loading') {
@@ -346,7 +354,11 @@ function App() {
         </div>
       )}
       <div className="w-full h-full flex flex-col">
-        <div style={{ height: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad))' }}>
+        <div
+          style={{
+            height: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad))',
+          }}
+        >
           <Header />
         </div>
         <div className="flex-1" />
@@ -356,7 +368,6 @@ function App() {
             onOpenFrogShop={() => setFrogShopOpen(true)}
             onOpenSettings={() => setSettingsOpen(true)}
             onOpenCosmicHub={() => setCosmicHubOpen(true)}
-            onOpenSerumModal={() => setSerumOpen(true)}
             onOpenGallery={() => setGalleryOpen(true)}
           />
         </div>
@@ -365,20 +376,21 @@ function App() {
       <MagnetToggle />
       <StarMapHUD />
       <ShipFollowButton />
-      <BarracksButton />
       <SerumBar />
       {/* tech-debt 2026-05-19: ActiveBonusesBar removed from HUD.
           Bonuses теперь показаны в Cosmic Hub → Carriers tab как
           CarrierBonusesPanel (display-only section, не интерактивный HUD pill). */}
       <LocationStack />
+      <RaidScoutLocationStack />
 
       {galleryOpen && <GalleryModal onClose={() => setGalleryOpen(false)} />}
       <GalleryDetailModal />
       {shopOpen && <ShopModal onClose={() => setShopOpen(false)} />}
       {frogShopOpen && <FrogShopModal onClose={() => setFrogShopOpen(false)} />}
-      {serumOpen && <SerumModal onClose={() => setSerumOpen(false)} />}
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       <BarracksUIController />
+      <BarracksActionButtons />
+      <ShipActionButtons />
       <Suspense fallback={null}>
         {cosmicHubOpen && (
           <CosmicHubModal onClose={() => setCosmicHubOpen(false)} />
@@ -398,6 +410,9 @@ function App() {
       {/* Phase 23 Plan 23-01: onboarding coordinator (Wave 1 — empty shell;
           Plan 23-02..05 add Welcome / TapHint / MergeDemo / LocationCelebration overlays). */}
       <OnboardingController />
+      <InvestigateModalController />
+      <RaidLootModalController />
+      <RaidFlowController />
       {/* Phase 24 Plan 24-04: Captain birth modal — self-subscribes к
           eventBus 'captain:birth-effect-complete' (Plan 24-02), null-render'ит
           когда invisible. Cinematic trigger — MergeController L18+L18 branch. */}
