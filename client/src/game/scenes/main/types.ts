@@ -31,6 +31,11 @@ export const BOX_FALL_DURATION = 380 // длительность падения 
 export const BOX_DISPLAY_SIZE = 56 * DPR // размер коробки на экране
 export const BOX_IDLE_INTERVAL = 5500 // период подпрыгивания
 export const BOX_OPEN_RADIUS = 80 * DPR // радиус разлёта тапа — открывает все коробки рядом
+// Окно магнит-иммунитета (мс) для свежих из бокса лягушек. AoE-открытие
+// спавнит несколько одноуровневых лягушек рядом — без защиты магнит ловит их
+// в тот же тик и делает «случайный» merge прямо от клика. См. BoxController
+// (ставит флаг) + MergeController.findClosestSameLevelPair (проверяет).
+export const BOX_SPAWN_MERGE_PROTECT_MS = 1500
 
 export const RARE_BOX_TINT = 0xffd700
 export const RARE_BOX_SCALE_MULT = 1.25
@@ -118,4 +123,8 @@ export interface FrogData {
   poopTimer: Phaser.Time.TimerEvent | null
   // Phase 12: stable cross-session id для match с CarrierData.frogId.
   id: string
+  // Магнит-иммунитет до этого момента (Date.now() ms). Ставится на лягушек,
+  // заспавненных AoE-открытием бокса, чтобы клик по коробкам не делал
+  // мгновенный авто-merge. undefined = защиты нет.
+  mergeProtectedUntil?: number
 }

@@ -111,9 +111,13 @@ export class MergeController {
   // Ищет ближайшую пару лягушек одного уровня — кандидата для магнита
   findClosestSameLevelPair(): [FrogData, FrogData] | null {
     const byLevel = new Map<number, FrogData[]>()
+    const now = Date.now()
     for (const f of this.scene.frogs) {
       if (f.isMerging || f.isDragging || f.isAttracted) continue
       if (f.level >= MAX_LEVEL) continue
+      // Свежие из бокса лягушки иммунны к магниту короткое время — иначе
+      // AoE-открытие коробок = мгновенный «случайный» merge от клика.
+      if (f.mergeProtectedUntil && now < f.mergeProtectedUntil) continue
       const arr = byLevel.get(f.level) ?? []
       arr.push(f)
       byLevel.set(f.level, arr)

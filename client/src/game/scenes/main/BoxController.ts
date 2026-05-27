@@ -32,6 +32,8 @@ import {
   BOX_DISPLAY_SIZE,
   BOX_FALL_DURATION,
   BOX_IDLE_INTERVAL,
+  BOX_OPEN_RADIUS,
+  BOX_SPAWN_MERGE_PROTECT_MS,
   DPR,
   FIELD_PAD_X,
   FIELD_PAD_Y,
@@ -127,11 +129,11 @@ export class BoxController {
       // и destroy'ит ring (вне зависимости от какого бокса тап — даже не того,
       // вокруг которого был ring).
       this.dismissTutorialTapHint(box.id ?? '')
-      // 2026-05-23: убран radius-открытие — теперь 1 tap = 1 box. Раньше
-      // открывались все боксы в BOX_OPEN_RADIUS, что приводило к мгновенному
-      // авто-merge'у (магнит ловил соседних свежеспавненных лягушек). Игрок
-      // должен явно тапнуть каждый бокс.
-      this.onBoxTapped(box)
+      // AoE-открытие: тап раскрывает все коробки в BOX_OPEN_RADIUS (splash).
+      // Раньше это убирали из-за «случайного» авто-merge'а — теперь свежие
+      // лягушки получают магнит-иммунитет (BOX_SPAWN_MERGE_PROTECT_MS),
+      // поэтому клик по боксам больше не делает мгновенный merge.
+      this.openBoxesInRadius(box)
     })
 
     if (preLanded) {
@@ -296,6 +298,26 @@ export class BoxController {
     scene.time.delayedCall(BOX_IDLE_INTERVAL, cycle)
   }
 
+  /**
+   * AoE-открытие (splash): раскрывает тапнутый бокс + все активные боксы в
+   * радиусе BOX_OPEN_RADIUS. Снимок целей берём ДО цикла — onBoxTapped мутирует
+   * scene.boxes (и может заспавнить rare-бокс, который в снимок не попадёт →
+   * без бесконечного цикла). Защита от случайного merge'а — в onBoxTapped.
+   */
+  private openBoxesInRadius(tapped: BoxData) {
+    const cx = tapped.img.x
+    const cy = tapped.img.y
+    const targets = this.scene.boxes.filter((b) => {
+      if (b === tapped) return true
+      if (b.isLanding || !b.img.active) return false
+      return (
+        Phaser.Math.Distance.Between(cx, cy, b.img.x, b.img.y) <=
+        BOX_OPEN_RADIUS
+      )
+    })
+    for (const b of targets) this.onBoxTapped(b)
+  }
+
   onBoxTapped(box: BoxData) {
     const scene = this.scene
     if (box.isLanding) return
@@ -375,6 +397,9 @@ export class BoxController {
       const frogLevel =
         loc.id === 1 ? getCrateLevel(state.upgrades.crateQuality) : loc.minLevel
       const newFrog = this.spawner.spawnFrog(x, y, frogLevel)
+      // Магнит-иммунитет: клик по боксам (особенно AoE) не должен делать
+      // мгновенный авто-merge свежих лягушек. См. types.BOX_SPAWN_MERGE_PROTECT_MS.
+      newFrog.mergeProtectedUntil = Date.now() + BOX_SPAWN_MERGE_PROTECT_MS
       state.addFrogToLocation(loc.id, frogLevel)
       newFrog.container.setScale(0)
       scene.tweens.add({
