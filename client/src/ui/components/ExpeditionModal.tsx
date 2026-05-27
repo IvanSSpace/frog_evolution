@@ -98,17 +98,26 @@ function fmtCountdown(ms: number): string {
 const isMoving = (e: ExpeditionView) =>
   e.phase === 'outbound' || e.phase === 'returning'
 
-// Bold the loot amount (+N) inside a report line so "what we got" stands out.
+// Bold loot (+N) and damage (−N) amounts inside a report line so "what changed"
+// stands out. Урон (−N) красим в красный, лут (+N) — жирным.
 function highlightLoot(text: string): ReactNode[] {
-  return text.split(/(\+\d+)/g).map((part, i) =>
-    /^\+\d+$/.test(part) ? (
-      <strong key={i} style={{ fontWeight: 800 }}>
-        {part}
-      </strong>
-    ) : (
-      <span key={i}>{part}</span>
-    ),
-  )
+  return text.split(/([+−]\d+)/g).map((part, i) => {
+    if (/^\+\d+$/.test(part)) {
+      return (
+        <strong key={i} style={{ fontWeight: 800 }}>
+          {part}
+        </strong>
+      )
+    }
+    if (/^−\d+$/.test(part)) {
+      return (
+        <strong key={i} style={{ fontWeight: 800, color: '#ff5d6c' }}>
+          {part}
+        </strong>
+      )
+    }
+    return <span key={i}>{part}</span>
+  })
 }
 
 // Компактный слот инвентаря: иконка + бейдж + тултип по клику (подробности).

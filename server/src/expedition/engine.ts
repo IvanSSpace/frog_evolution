@@ -149,6 +149,12 @@ export function simulate(
     const raw = lo + rng.float() * (hi - lo)
     return Math.round(raw * riskNow * (1 - shipStats.hull) * factor)
   }
+  // Дописывает урон к последней строке события: «… 💥 −14 HP» — игрок видит,
+  // сколько здоровья сняло именно это событие.
+  const annotateDamage = (hit: number) => {
+    const last = log[log.length - 1]
+    if (last) last.text += ` 💥 −${hit} HP`
+  }
 
   // displayBase = journal clock (ЧЧ:ММ); realBase = real seconds since departure
   // for this beat. Lines spread evenly across the beat's real-time window
@@ -235,16 +241,20 @@ export function simulate(
     emit(beat, base, realSec, rng)
     remember(beat)
 
-    // Опасное событие наносит урон корпусу. Накапливается; при HP=0 — гибель
-    // (LOST дописывается следом за текстом события, на том же бите).
+    // Опасное событие наносит урон корпусу — пишем сколько прямо в строку.
+    // Накапливается; при HP=0 — гибель (LOST дописывается следом за событием).
     if (beat.category === 'hazard') {
-      dmg += hazardHit(risk, rng, 1)
-      if (dmg >= lossThreshold) {
-        dmg = lossThreshold
-        wreckedAtSec = realSec
-        emit(LOST, base, realSec, rng)
-        shipLost = true
-        break
+      const hit = hazardHit(risk, rng, 1)
+      if (hit > 0) {
+        dmg += hit
+        annotateDamage(hit)
+        if (dmg >= lossThreshold) {
+          dmg = lossThreshold
+          wreckedAtSec = realSec
+          emit(LOST, base, realSec, rng)
+          shipLost = true
+          break
+        }
       }
     }
 
@@ -301,13 +311,17 @@ export function simulate(
       )
       emit(beat, base, realBaseAt(beatIndex), rng)
       if (beat.category === 'hazard') {
-        dmg += hazardHit(recallRisk, rng, cfg.returnRiskFactor)
-        if (dmg >= lossThreshold) {
-          dmg = lossThreshold
-          wreckedAtSec = outboundSec
-          emit(LOST, base, realBaseAt(beatIndex), rng)
-          shipLost = true
-          break
+        const hit = hazardHit(recallRisk, rng, cfg.returnRiskFactor)
+        if (hit > 0) {
+          dmg += hit
+          annotateDamage(hit)
+          if (dmg >= lossThreshold) {
+            dmg = lossThreshold
+            wreckedAtSec = outboundSec
+            emit(LOST, base, realBaseAt(beatIndex), rng)
+            shipLost = true
+            break
+          }
         }
       }
     }
