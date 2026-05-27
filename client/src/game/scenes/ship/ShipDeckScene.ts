@@ -189,45 +189,52 @@ export class ShipDeckScene extends Phaser.Scene {
       .setOrigin(0.5)
     this.layer.add(this.hintText)
 
-    // Две кнопки запуска: «в космос» (серверная экспедиция) и «на миссию»
-    // (VS-арена). Обе активны только когда выбран хотя бы 1 член экипажа.
+    // Две кнопки запуска в один ряд (одна высота): «⚔️ На миссию» (VS-арена)
+    // слева от «🚀 В космос» (серверная экспедиция). Обе активны только когда
+    // выбран хотя бы 1 член экипажа.
     const canLaunch = this.selected.size >= 1
+    const btnY = h - 40 * DPR
 
-    // 🚀 В космос — пассивная экспедиция (как было).
-    this.launchBtn = this.add
-      .text(w / 2, h - 86 * DPR, canLaunch ? '🚀 В космос' : 'Выбери экипаж', {
-        fontFamily: 'sans-serif',
-        fontSize: `${17 * DPR}px`,
-        color: '#ffffff',
-        backgroundColor: canLaunch ? '#16a34a' : '#64748b',
-        padding: { x: 20 * DPR, y: 10 * DPR },
-        fontStyle: 'bold',
-      })
-      .setStroke(canLaunch ? '#0f5132' : '#334155', 3 * DPR)
-      .setOrigin(0.5)
-    if (canLaunch) {
-      this.launchBtn.setInteractive({ useHandCursor: true })
-      this.launchBtn.on('pointerup', () => this.onLaunch())
-    }
-    this.layer.add(this.launchBtn)
-
-    // ⚔️ На миссию — VS-арена (бой на поле планеты).
+    // ⚔️ На миссию — слева от центра (origin справа → растёт влево).
     const missionBtn = this.add
-      .text(w / 2, h - 34 * DPR, '⚔️ На миссию', {
+      .text(w / 2 - 8 * DPR, btnY, '⚔️ На миссию', {
         fontFamily: 'sans-serif',
         fontSize: `${17 * DPR}px`,
         color: '#ffffff',
         backgroundColor: canLaunch ? '#b45309' : '#64748b',
-        padding: { x: 20 * DPR, y: 10 * DPR },
+        padding: { x: 18 * DPR, y: 10 * DPR },
         fontStyle: 'bold',
       })
       .setStroke(canLaunch ? '#7c2d12' : '#334155', 3 * DPR)
-      .setOrigin(0.5)
+      .setOrigin(1, 0.5)
     if (canLaunch) {
       missionBtn.setInteractive({ useHandCursor: true })
       missionBtn.on('pointerup', () => this.onMission())
     }
     this.layer.add(missionBtn)
+
+    // 🚀 В космос — справа от центра (origin слева → растёт вправо).
+    this.launchBtn = this.add
+      .text(
+        w / 2 + 8 * DPR,
+        btnY,
+        canLaunch ? '🚀 В космос' : 'Выбери экипаж',
+        {
+          fontFamily: 'sans-serif',
+          fontSize: `${17 * DPR}px`,
+          color: '#ffffff',
+          backgroundColor: canLaunch ? '#16a34a' : '#64748b',
+          padding: { x: 18 * DPR, y: 10 * DPR },
+          fontStyle: 'bold',
+        },
+      )
+      .setStroke(canLaunch ? '#0f5132' : '#334155', 3 * DPR)
+      .setOrigin(0, 0.5)
+    if (canLaunch) {
+      this.launchBtn.setInteractive({ useHandCursor: true })
+      this.launchBtn.on('pointerup', () => this.onLaunch())
+    }
+    this.layer.add(this.launchBtn)
   }
 
   // ⚔️ Отправить выбранный экипаж в VS-арену (бой). crew = уровни выбранных жаб
