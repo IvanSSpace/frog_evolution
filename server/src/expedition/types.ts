@@ -72,9 +72,10 @@ export interface ExpeditionResult {
   log: LogLine[]
   loot: { gold: number; serums: Record<Element, number>; mutagen: number }
   risk: number // 0..1, escalating danger at the moment shown
-  shipLost: boolean // true if a catastrophe was passed before recall
-  hp: number // current ship health (0 if lost)
+  shipLost: boolean // true if HP hit 0 (wrecked) — можно воскресить
+  hp: number // current ship health (0 if wrecked)
   maxHp: number // baseHp + fleet bonus
+  wreckedAtSec: number | null // outbound-сек момента крушения (для resume при воскрешении)
 }
 
 export interface SimulateParams {
@@ -84,4 +85,5 @@ export interface SimulateParams {
   recalled: boolean // append the return leg + arrival beat
   fleet?: number // лягушек во флоте → поднимает maxHp (legacy, v1: 0)
   maxHp?: number // explicit max HP (from ship upgrades); overrides fleet calc
+  reviveCount?: number // сколько раз воскрешали — каждое даёт +1 «жизнь» (maxHp буфер)
 }

@@ -61,8 +61,15 @@ function cfgFor(exp: ExpeditionRow): ExpeditionConfig {
   return { ...EXPEDITION_CONFIG, tickIntervalSec: exp.tickIntervalSec }
 }
 
-// shipStats JSON also carries { maxHp, shipId } alongside the ShipStats fields.
-type StoredStats = ShipStats & { maxHp?: number; shipId?: number }
+// shipStats JSON also carries { maxHp, shipId, reviveCount } alongside ShipStats.
+type StoredStats = ShipStats & {
+  maxHp?: number
+  shipId?: number
+  reviveCount?: number
+}
+
+// Воскрешение: стоимость в золоте, растёт с каждым воскрешением экспедиции.
+const REVIVE_COST_BASE = 50_000
 
 function statsFor(exp: ExpeditionRow): ShipStats {
   const s = exp.shipStats as StoredStats | null
@@ -73,6 +80,11 @@ function statsFor(exp: ExpeditionRow): ShipStats {
 function maxHpFor(exp: ExpeditionRow): number | undefined {
   const s = exp.shipStats as StoredStats | null
   return typeof s?.maxHp === 'number' ? s.maxHp : undefined
+}
+
+function reviveCountFor(exp: ExpeditionRow): number {
+  const s = exp.shipStats as StoredStats | null
+  return Number(s?.reviveCount) || 0
 }
 
 function shipIdFor(exp: ExpeditionRow): number | undefined {
@@ -102,7 +114,14 @@ function computeView(exp: ExpeditionRow, now: Date) {
   }
 
   const result = simulate(
-    { seed: exp.seed, shipStats: stats, outboundSec, recalled, maxHp: maxHpFor(exp) },
+    {
+      seed: exp.seed,
+      shipStats: stats,
+      outboundSec,
+      recalled,
+      maxHp: maxHpFor(exp),
+      reviveCount: reviveCountFor(exp),
+    },
     cfg,
   )
 
@@ -133,6 +152,8 @@ function viewPayload(exp: ExpeditionRow, now: Date) {
     maxHp: result.maxHp,
     canRecall: exp.status === 'OUTBOUND' && !result.shipLost,
     canClaim: exp.status === 'RETURNING' && arrived,
+    canRevive: result.shipLost && exp.status !== 'CLAIMED',
+    reviveCost: REVIVE_COST_BASE * (reviveCountFor(exp) + 1),
     loot: lootSummary(result),
     journal: renderJournal(result.log),
   }
@@ -363,6 +384,47 @@ export async function expeditionRoutes(app: FastifyInstance) {
     const updated = await prisma.expedition.update({
       where: { id },
       data: { status: 'OUTBOUND', startedAt: newStarted, recalledAt: null, arrivalAt: null },
+    })
+    return { ok: true, expedition: viewPayload(updated as ExpeditionRow, now) }
+  })
+
+  // POST /expedition/:id/revive — воскресить разбитый корабль за золото.
+  // Восстанавливает HP (ещё одна «жизнь»), лут сохраняется, корабль летит дальше
+  // с момента крушения (startedAt сдвигается на wreckedAtSec).
+  app.post('/expedition/:id/revive', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const id = Number((request.params as { id: string }).id)
+    const exp = await prisma.expedition.findFirst({ where: { id, userId: request.user.id } })
+    if (!exp) return reply.code(404).send({ error: 'not found' })
+
+    const now = new Date()
+    const { result } = computeView(exp as ExpeditionRow, now)
+    if (!result.shipLost) return reply.code(400).send({ error: 'not wrecked' })
+
+    const gs = await prisma.gameState.findUnique({ where: { userId: request.user.id } })
+    if (!gs) return reply.code(404).send({ error: 'no game state' })
+    const reviveCount = reviveCountFor(exp as ExpeditionRow)
+    const cost = REVIVE_COST_BASE * (reviveCount + 1)
+    if (gs.gold < BigInt(cost)) {
+      return reply.code(400).send({ error: 'insufficient gold', need: cost })
+    }
+
+    const wreckedAtSec = result.wreckedAtSec ?? result.outboundSec
+    const newStarted = new Date(now.getTime() - wreckedAtSec * 1000)
+    const stored = (exp.shipStats as Record<string, unknown> | null) ?? {}
+
+    await prisma.gameState.update({
+      where: { userId: request.user.id },
+      data: { gold: gs.gold - BigInt(cost) },
+    })
+    const updated = await prisma.expedition.update({
+      where: { id },
+      data: {
+        status: 'OUTBOUND',
+        startedAt: newStarted,
+        recalledAt: null,
+        arrivalAt: null,
+        shipStats: { ...stored, reviveCount: reviveCount + 1 } as object,
+      },
     })
     return { ok: true, expedition: viewPayload(updated as ExpeditionRow, now) }
   })

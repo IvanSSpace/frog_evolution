@@ -14,6 +14,7 @@ import {
   getActiveExpeditions,
   recallExpedition,
   continueExpedition,
+  reviveExpedition,
   claimExpedition,
   getShips,
   upgradeShip,
@@ -336,6 +337,19 @@ export function ExpeditionModal({ onClose }: Props) {
         setExps(prev)
         setError(e instanceof Error ? e.message : 'Не удалось продолжить')
       })
+  }
+
+  const onRevive = async () => {
+    if (!activeExp) return
+    setBusy(true)
+    try {
+      await reviveExpedition(activeExp.id)
+      await refresh()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось воскресить')
+    } finally {
+      setBusy(false)
+    }
   }
 
   const onClaim = async () => {
@@ -789,15 +803,31 @@ export function ExpeditionModal({ onClose }: Props) {
                       🚀 Продолжить ({fmtCountdown(returnMs)} до базы)
                     </button>
                   )}
-                  {(activeExp.canClaim || activeExp.phase === 'lost') && (
+                  {activeExp.canRevive && (
+                    <>
+                      <button
+                        className="ff-btn ff-btn-green flex-1 py-2 text-sm"
+                        disabled={busy}
+                        onClick={() => void onRevive()}
+                      >
+                        🔧 Воскресить ({fmt(activeExp.reviveCost)})
+                      </button>
+                      <button
+                        className="ff-btn ff-btn-red flex-1 py-2 text-sm"
+                        disabled={busy}
+                        onClick={() => void onClaim()}
+                      >
+                        Принять потерю
+                      </button>
+                    </>
+                  )}
+                  {activeExp.canClaim && !activeExp.canRevive && (
                     <button
                       className="ff-btn ff-btn-green flex-1 py-2 text-sm"
                       disabled={busy}
                       onClick={() => void onClaim()}
                     >
-                      {activeExp.phase === 'lost'
-                        ? 'Принять потерю'
-                        : '📦 Забрать лут'}
+                      📦 Забрать лут
                     </button>
                   )}
                 </div>

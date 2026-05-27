@@ -25,6 +25,8 @@ export interface ExpeditionView {
   maxHp: number
   canRecall: boolean
   canClaim: boolean
+  canRevive: boolean
+  reviveCost: number
   loot: { gold: number; serums: Record<string, number>; mutagen: number }
   journal: JournalLine[]
 }
@@ -103,6 +105,14 @@ export function recallExpedition(id: number): Promise<OneResp> {
 // Отмена возврата (мисклик) — снова летим вперёд с той же секунды.
 export function continueExpedition(id: number): Promise<OneResp> {
   return apiJson<OneResp>(`/expedition/${id}/continue`, {
+    method: 'POST',
+    body: '{}',
+  })
+}
+
+// Воскресить разбитый корабль за золото — HP восстановлено, лут цел, летим дальше.
+export function reviveExpedition(id: number): Promise<OneResp> {
+  return apiJson<OneResp>(`/expedition/${id}/revive`, {
     method: 'POST',
     body: '{}',
   })

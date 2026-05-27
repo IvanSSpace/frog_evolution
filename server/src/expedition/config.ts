@@ -29,10 +29,11 @@ export interface ExpeditionConfig {
   goldPerTickBase: number
   serumChancePerTick: number // base chance a tick drops a serum
 
-  // Risk model — "recall in time". No danger early; chance ramps after.
-  riskFreeSec: number // grace window with zero catastrophe chance
+  // Risk model — "recall in time". No danger early; risk ramps after.
+  riskFreeSec: number // grace window with zero risk
   riskRampSec: number // after grace, risk climbs to max over this span
-  catastrophePerTickMax: number // peak per-tick chance the ship is lost
+  catastrophePerTickMax: number // (legacy) peak per-tick instant-loss chance — больше не используется
+  dmgPerTickMax: number // peak HP-урон за бит при полном риске; HP=0 → корабль потерян
 }
 
 // Production tempo: hour-scale idle, FS-style.
@@ -52,6 +53,7 @@ export const EXPEDITION_CONFIG: ExpeditionConfig = {
   riskFreeSec: 30 * 60,
   riskRampSec: 90 * 60,
   catastrophePerTickMax: 0.04,
+  dmgPerTickMax: 14,
 }
 
 // Demo/test tempo: minute-scale so a full arc runs in seconds.

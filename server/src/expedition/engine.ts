@@ -95,8 +95,18 @@ export function simulate(
   params: SimulateParams,
   cfg: ExpeditionConfig = EXPEDITION_CONFIG,
 ): ExpeditionResult {
-  const { seed, shipStats, outboundSec, recalled, fleet = 0 } = params
+  const {
+    seed,
+    shipStats,
+    outboundSec,
+    recalled,
+    fleet = 0,
+    reviveCount = 0,
+  } = params
   const maxHp = params.maxHp ?? cfg.baseHp + cfg.hpPerFrog * fleet
+  // Каждое воскрешение даёт ещё один буфер maxHp. Корабль потерян когда суммарный
+  // урон превысит порог; HP-бар = остаток текущей «жизни».
+  const lossThreshold = maxHp * (reviveCount + 1)
 
   const rootRng = new Rng(seed)
   const ctx: Ctx = {
@@ -107,6 +117,8 @@ export function simulate(
   const log: LogLine[] = []
   const loot = { gold: 0, serums: zeroSerums(), mutagen: 0 }
   let shipLost = false
+  let dmg = 0 // накопленный урон
+  let wreckedAtSec: number | null = null
 
   // displayBase = journal clock (ЧЧ:ММ); realBase = real seconds since departure
   // for this beat. Lines spread evenly across the beat's real-time window
@@ -165,12 +177,21 @@ export function simulate(
     const realSec = beatIndex * cfg.tickIntervalSec
     const risk = riskAt(realSec, cfg) // recall-timing tension = real time
 
-    // Catastrophe roll — the "recall in time" tension. Hull shaves it.
-    const catChance = risk * cfg.catastrophePerTickMax * (1 - shipStats.hull)
-    if (risk > 0 && rng.chance(catChance)) {
-      emit(LOST, base, realSec, rng)
-      shipLost = true
-      break
+    // Урон от опасности копится (броня/hull снижает). Корабль теряется только
+    // когда HP = 0 (dmg достиг порога), а не мгновенным рандом-роллом.
+    if (risk > 0) {
+      const hit = rng.int(
+        Math.round(risk * cfg.dmgPerTickMax * 0.5),
+        Math.round(risk * cfg.dmgPerTickMax),
+      )
+      dmg += Math.round(hit * (1 - shipStats.hull))
+      if (dmg >= lossThreshold) {
+        dmg = lossThreshold
+        wreckedAtSec = realSec
+        emit(LOST, base, realSec, rng)
+        shipLost = true
+        break
+      }
     }
 
     // Eligible = unlocked by journal progress, not on cooldown, and (reaction
@@ -235,15 +256,19 @@ export function simulate(
       beatIndex++
       const base = beatBase(beatIndex)
       const rng = new Rng(tickSeed(seed, beatIndex))
-      const catChance =
-        recallRisk *
-        cfg.catastrophePerTickMax *
-        (1 - shipStats.hull) *
-        cfg.returnRiskFactor
-      if (catChance > 0 && rng.chance(catChance)) {
-        emit(LOST, base, realBaseAt(beatIndex), rng)
-        shipLost = true
-        break
+      if (recallRisk > 0) {
+        const hit = rng.int(
+          Math.round(recallRisk * cfg.dmgPerTickMax * 0.5),
+          Math.round(recallRisk * cfg.dmgPerTickMax),
+        )
+        dmg += Math.round(hit * (1 - shipStats.hull) * cfg.returnRiskFactor)
+        if (dmg >= lossThreshold) {
+          dmg = lossThreshold
+          wreckedAtSec = outboundSec
+          emit(LOST, base, realBaseAt(beatIndex), rng)
+          shipLost = true
+          break
+        }
       }
       emit(rng.weighted(returnPool), base, realBaseAt(beatIndex), rng)
     }
@@ -277,7 +302,8 @@ export function simulate(
     loot,
     risk: riskAt(outboundSec, cfg),
     shipLost,
-    hp: shipLost ? 0 : maxHp,
+    hp: Math.max(0, Math.min(maxHp, lossThreshold - dmg)),
     maxHp,
+    wreckedAtSec,
   }
 }
