@@ -283,17 +283,8 @@ export class MainScene extends Phaser.Scene {
     this.bg.setDisplaySize(width, height)
     this.bg.setDepth(-1) // фон всегда под лягушками
 
-    // Ворота казармы (снизу-справа). Видны после анлока казармы.
-    this.createGate()
-    const prevGateUnlocked = useGameStore.getState().barracksUnlocked
-    let gateShown = prevGateUnlocked
-    const unsubGate = useGameStore.subscribe((state) => {
-      if (state.barracksUnlocked !== gateShown) {
-        gateShown = state.barracksUnlocked
-        this.gateContainer?.setVisible(gateShown)
-      }
-    })
-    this.events.once(Phaser.Scenes.Events.DESTROY, () => unsubGate())
+    // Ворота казармы убраны с поля (фича казармы отключена). Gate не создаём —
+    // tryGateDrop остаётся безопасным no-op (gateContainer === null).
 
     // DEV-only: визуализация границ игрового поля; production билд не показывает.
     if (import.meta.env.DEV) {
@@ -433,84 +424,6 @@ export class MainScene extends Phaser.Scene {
   }
 
   // ─── Ворота казармы (drag-рекрут с поля) ───────────────────────────────
-
-  private createGate() {
-    const { width, height } = this.scale
-    // Маленькая иконка ПОД полем (в нижнем паддинге), низ-справа.
-    this.gateW = 54 * DPR
-    this.gateH = 54 * DPR
-    const cx = width - 12 * DPR - this.gateW / 2
-    const cy = height - FIELD_PAD_Y_BOTTOM / 2
-
-    const c = this.add.container(cx, cy)
-    c.setDepth(50)
-    c.setVisible(useGameStore.getState().barracksUnlocked)
-
-    const frame = this.add.rectangle(
-      0,
-      0,
-      this.gateW,
-      this.gateH,
-      0x3b2417,
-      0.5,
-    )
-    frame.setStrokeStyle(3 * DPR, 0x1f1206, 1)
-    c.add(frame)
-    this.gateFrame = frame
-
-    const doorW = this.gateW / 2
-    const doorH = this.gateH - 6 * DPR
-    const left = this.add.rectangle(
-      -doorW / 2,
-      0,
-      doorW - 2 * DPR,
-      doorH,
-      0x7c3a16,
-      1,
-    )
-    left.setStrokeStyle(2 * DPR, 0x2a1607, 1)
-    const right = this.add.rectangle(
-      doorW / 2,
-      0,
-      doorW - 2 * DPR,
-      doorH,
-      0x7c3a16,
-      1,
-    )
-    right.setStrokeStyle(2 * DPR, 0x2a1607, 1)
-    c.add(left)
-    c.add(right)
-    this.gateLeftDoor = left
-    this.gateRightDoor = right
-
-    const icon = this.add.text(0, 0, '🚪', {
-      fontFamily: 'sans-serif',
-      fontSize: `${this.gateH * 0.4}px`,
-    })
-    icon.setOrigin(0.5, 0.5)
-    c.add(icon)
-
-    // Tap по воротам = toggle. Хит-зона = весь контейнер.
-    c.setSize(this.gateW, this.gateH)
-    c.setInteractive(
-      new Phaser.Geom.Rectangle(
-        -this.gateW / 2,
-        -this.gateH / 2,
-        this.gateW,
-        this.gateH,
-      ),
-      Phaser.Geom.Rectangle.Contains,
-    )
-    c.on('pointerdown', () => this.toggleGate())
-
-    this.gateContainer = c
-    this.applyGateVisual()
-  }
-
-  private toggleGate() {
-    this.gateOpen = !this.gateOpen
-    this.applyGateVisual()
-  }
 
   /** Визуал ворот по gateOpen. Анимация моментальная (placeholder). */
   private applyGateVisual() {

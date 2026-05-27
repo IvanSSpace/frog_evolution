@@ -68,94 +68,103 @@ export function Header() {
         className="grid items-center w-full flex-1"
         style={{ gridTemplateColumns: '1fr auto 1fr' }}
       >
-      <div className="flex flex-col items-start gap-0.5">
-        {cosmosUnlocked && (
-          <>
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 700,
-                color: '#fde047',
-                textShadow: '0 1px 0 rgba(0,0,0,0.4)',
-                lineHeight: 1.2,
-              }}
-              title="Эссенция"
-            >
-              💠 {fmt(essence)}
-            </div>
-          </>
-        )}
-      </div>
-
-      <div className="flex flex-col items-center" style={{ marginTop: 24, gap: 2 }}>
-        <div className="ff-balance">
-          <img
-            src="/goo.svg"
-            style={{
-              width: '1.4em',
-              height: '1.4em',
-              display: 'inline-block',
-              verticalAlign: 'middle',
-            }}
-            alt=""
-          />
-          <span className="tabular-nums text-base">{fmt(gold)}</span>
-        </div>
         <div
-          className="ff-display tabular-nums"
-          style={{
-            fontSize: '11px',
-            color: '#fde047',
-            textShadow: '0 1px 0 rgba(0,0,0,0.45)',
-            letterSpacing: '0.3px',
-            marginTop: 0,
-          }}
+          className="flex flex-col items-start gap-0.5"
+          style={{ marginTop: 34 }}
         >
-          +{fmtRate(incomePerSec * multiplier)}{' '}
-          <img
-            src="/goo.svg"
-            style={{
-              width: '0.9em',
-              height: '0.9em',
-              display: 'inline-block',
-              verticalAlign: 'middle',
-              marginRight: 1,
-            }}
-            alt=""
-          />
-          {t('header.per_sec')}
-          {bonusPct > 0 && (
-            <span
-              style={{
-                marginLeft: 4,
-                fontSize: 10,
-                color: '#ec4899',
-                fontWeight: 700,
-              }}
-            >
-              ×{multiplier.toFixed(3).replace(/0+$/, '').replace(/\.$/, '')}{' '}
-              (+{bonusPct}%)
-            </span>
-          )}
-          {tempActive && (
-            <span
-              style={{
-                marginLeft: 4,
-                fontSize: 10,
-                color: '#a855f7',
-                fontWeight: 700,
-              }}
-              title="Временный бафф к доходу"
-            >
-              ⏱ {formatCountdown(tempRemaining)}
-            </span>
+          {cosmosUnlocked && (
+            <>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: '#fde047',
+                  textShadow: '0 1px 0 rgba(0,0,0,0.4)',
+                  lineHeight: 1.2,
+                }}
+                title="Эссенция"
+              >
+                💠 {fmt(essence)}
+              </div>
+            </>
           )}
         </div>
-      </div>
 
-      <div className="justify-self-end flex flex-col items-end gap-2" style={{ marginTop: 34, marginRight: 16 }}>
-        <BoxProgress progress={boxProgress} waiting={boxWaiting} />
-      </div>
+        <div
+          className="flex flex-col items-center"
+          style={{ marginTop: 24, gap: 2 }}
+        >
+          <div className="ff-balance">
+            <img
+              src="/goo.svg"
+              style={{
+                width: '1.4em',
+                height: '1.4em',
+                display: 'inline-block',
+                verticalAlign: 'middle',
+              }}
+              alt=""
+            />
+            <span className="tabular-nums text-base">{fmt(gold)}</span>
+          </div>
+          <div
+            className="ff-display tabular-nums"
+            style={{
+              fontSize: '11px',
+              color: '#fde047',
+              textShadow: '0 1px 0 rgba(0,0,0,0.45)',
+              letterSpacing: '0.3px',
+              marginTop: 0,
+            }}
+          >
+            +{fmtRate(incomePerSec * multiplier)}{' '}
+            <img
+              src="/goo.svg"
+              style={{
+                width: '0.9em',
+                height: '0.9em',
+                display: 'inline-block',
+                verticalAlign: 'middle',
+                marginRight: 1,
+              }}
+              alt=""
+            />
+            {t('header.per_sec')}
+            {bonusPct > 0 && (
+              <span
+                style={{
+                  marginLeft: 4,
+                  fontSize: 10,
+                  color: '#ec4899',
+                  fontWeight: 700,
+                }}
+              >
+                ×{multiplier.toFixed(3).replace(/0+$/, '').replace(/\.$/, '')}{' '}
+                (+{bonusPct}%)
+              </span>
+            )}
+            {tempActive && (
+              <span
+                style={{
+                  marginLeft: 4,
+                  fontSize: 10,
+                  color: '#a855f7',
+                  fontWeight: 700,
+                }}
+                title="Временный бафф к доходу"
+              >
+                ⏱ {formatCountdown(tempRemaining)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div
+          className="justify-self-end flex flex-col items-end gap-2"
+          style={{ marginTop: 34, marginRight: 16 }}
+        >
+          <BoxProgress progress={boxProgress} waiting={boxWaiting} />
+        </div>
       </div>
 
       <RareBoxProgress progress={rareBoxProgress} />
@@ -208,8 +217,14 @@ function RareBoxProgress({ progress }: { progress: number }) {
   const pct = Math.round(progress * 100)
   const isReady = pct >= 100
   return (
-    <div className="relative" style={{ marginLeft: 0, marginRight: 4, width: 'calc(100% - 4px)' }}>
-      <div className="ff-progress-track w-full h-1.5" style={{ borderRadius: 0 }}>
+    <div
+      className="relative"
+      style={{ marginLeft: 0, marginRight: 4, width: 'calc(100% - 4px)' }}
+    >
+      <div
+        className="ff-progress-track w-full h-1.5"
+        style={{ borderRadius: 0 }}
+      >
         <div
           className={`ff-progress-fill ${isReady ? 'animate-pulse' : ''}`}
           style={{
