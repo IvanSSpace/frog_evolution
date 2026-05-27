@@ -15,3 +15,5 @@ playwright-report/
 
 # macOS Finder metadata
 .DS_Store
+
+frog_evolution_code.code-workspace

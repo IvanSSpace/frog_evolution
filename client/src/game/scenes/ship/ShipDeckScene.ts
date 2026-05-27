@@ -43,6 +43,7 @@ export class ShipDeckScene extends Phaser.Scene {
   private titleText!: Phaser.GameObjects.Text
   private hintText!: Phaser.GameObjects.Text
   private launchBtn!: Phaser.GameObjects.Text
+  private missionBtn?: Phaser.GameObjects.Text
   private ship!: Phaser.GameObjects.Image
   private crewSprites: Phaser.GameObjects.Image[] = []
 
@@ -189,25 +190,68 @@ export class ShipDeckScene extends Phaser.Scene {
       .setOrigin(0.5)
     this.layer.add(this.hintText)
 
-    // Только экспедиция. Кнопка «⚔️ На миссию» (VS-арена) скрыта — режим WIP,
-    // оставляем рабочую механику. Одна кнопка по центру.
+    // Две кнопки: «🚀 Экспедиция» (loot) и «⚔️ На миссию» (VS-арена).
+    // Пока экипаж не выбран — одна disabled-кнопка «Выбери экипаж» по центру.
     const canLaunch = this.selected.size >= 1
-    this.launchBtn = this.add
-      .text(w / 2, h - 40 * DPR, canLaunch ? '🚀 Запустить' : 'Выбери экипаж', {
-        fontFamily: 'sans-serif',
-        fontSize: `${18 * DPR}px`,
-        color: '#ffffff',
-        backgroundColor: canLaunch ? '#16a34a' : '#64748b',
-        padding: { x: 22 * DPR, y: 11 * DPR },
-        fontStyle: 'bold',
-      })
-      .setStroke(canLaunch ? '#0f5132' : '#334155', 3 * DPR)
-      .setOrigin(0.5)
-    if (canLaunch) {
+    const btnY = h - 40 * DPR
+    if (!canLaunch) {
+      this.launchBtn = this.add
+        .text(w / 2, btnY, 'Выбери экипаж', {
+          fontFamily: 'sans-serif',
+          fontSize: `${18 * DPR}px`,
+          color: '#ffffff',
+          backgroundColor: '#64748b',
+          padding: { x: 22 * DPR, y: 11 * DPR },
+          fontStyle: 'bold',
+        })
+        .setStroke('#334155', 3 * DPR)
+        .setOrigin(0.5)
+      this.layer.add(this.launchBtn)
+    } else {
+      // Экспедиция — слева от центра.
+      this.launchBtn = this.add
+        .text(w / 2, btnY, '🚀 Экспедиция', {
+          fontFamily: 'sans-serif',
+          fontSize: `${16 * DPR}px`,
+          color: '#ffffff',
+          backgroundColor: '#16a34a',
+          padding: { x: 16 * DPR, y: 11 * DPR },
+          fontStyle: 'bold',
+        })
+        .setStroke('#0f5132', 3 * DPR)
+        .setOrigin(1, 0.5)
+        .setX(w / 2 - 8 * DPR)
       this.launchBtn.setInteractive({ useHandCursor: true })
       this.launchBtn.on('pointerup', () => this.onLaunch())
+      this.layer.add(this.launchBtn)
+
+      // Миссия (VS-арена) — справа от центра.
+      this.missionBtn = this.add
+        .text(w / 2, btnY, '⚔️ На миссию', {
+          fontFamily: 'sans-serif',
+          fontSize: `${16 * DPR}px`,
+          color: '#ffffff',
+          backgroundColor: '#b91c1c',
+          padding: { x: 16 * DPR, y: 11 * DPR },
+          fontStyle: 'bold',
+        })
+        .setStroke('#7f1d1d', 3 * DPR)
+        .setOrigin(0, 0.5)
+        .setX(w / 2 + 8 * DPR)
+      this.missionBtn.setInteractive({ useHandCursor: true })
+      this.missionBtn.on('pointerup', () => this.onMission())
+      this.layer.add(this.missionBtn)
     }
-    this.layer.add(this.launchBtn)
+  }
+
+  // VS-арена: открываем выбор миссии (React-оверлей SurvivorMissionSelect).
+  private onMission() {
+    if (this.launching || this.selected.size < 1) return
+    const crew = [...this.selected].map((i) => this.frogs[i])
+    eventBus.emit('survivor:choose-mission', {
+      crew,
+      shipId: this.params.shipId,
+    })
   }
 
   private makeFrog(

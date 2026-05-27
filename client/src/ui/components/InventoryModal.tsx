@@ -8,6 +8,8 @@ import {
   ELEMENT_TINT,
   ELEMENT_BOTTLE_FILTER,
 } from '../../components/CosmicHub/ElementGrid'
+import { eventBus } from '../../store/eventBus'
+import { hapticImpact } from '../../utils/telegram'
 
 type Props = { onClose: () => void }
 
@@ -29,6 +31,7 @@ function InvSlot({
   tint,
   filter,
   label,
+  onApply,
 }: {
   icon?: string
   emoji?: string
@@ -36,11 +39,12 @@ function InvSlot({
   tint: string
   filter?: string
   label: string
+  onApply?: () => void
 }) {
   const [tip, setTip] = useState(false)
   return (
     <div
-      onClick={() => setTip((t) => !t)}
+      onClick={() => (onApply ? onApply() : setTip((t) => !t))}
       style={{
         flexShrink: 0,
         width: 52,
@@ -139,6 +143,7 @@ export function InventoryModal({ onClose }: Props) {
   const serums = useGameStore((s) => s.serums)
   const mutagen = useGameStore((s) => s.mutagen)
   const routes = useGameStore((s) => s.routes)
+  const setSerumDragActive = useGameStore((s) => s.setSerumDragActive)
 
   const handleClose = onClose
 
@@ -186,6 +191,12 @@ export function InventoryModal({ onClose }: Props) {
         tint={ELEMENT_TINT[e]}
         filter={ELEMENT_BOTTLE_FILTER[e]}
         label={`🧪 Сыворотка «${e}» — превращает лягушку в носителя стихии «${e}».`}
+        onApply={() => {
+          hapticImpact('light')
+          setSerumDragActive(true, { element: e })
+          eventBus.emit('cosmic:select-serum', { element: e })
+          onClose()
+        }}
       />,
     )
   })
