@@ -43,6 +43,17 @@ const CAT_COLOR: Record<string, string> = {
   return: '#6ec1ff',
 }
 
+// Звёздные маршруты — редкость = цвет + сложность.
+const ROUTE_RARITIES: {
+  key: 'common' | 'rare' | 'epic'
+  name: string
+  tint: string
+}[] = [
+  { key: 'common', name: 'обычный', tint: '#94a3b8' },
+  { key: 'rare', name: 'редкий', tint: '#60a5fa' },
+  { key: 'epic', name: 'эпический', tint: '#c084fc' },
+]
+
 // SYNC с server/src/expedition/config.ts (SHIP_UPG_COSTS / SHIP_UPG_MAX).
 // Нужно для оптимистичного апгрейда (мгновенный UI без round-trip).
 const SHIP_UPG_MAX = 5
@@ -212,6 +223,17 @@ function ShipInventory({ loot }: { loot: ExpeditionView['loot'] }) {
           tint="#a855f7"
           label="🧬 Мутаген — редкий космо-лут. Нужен для эволюции лягушек (вместе с эссенцией)."
         />
+      )}
+      {ROUTE_RARITIES.filter((r) => (loot.routes?.[r.key] ?? 0) > 0).map(
+        (r) => (
+          <InvSlot
+            key={r.key}
+            emoji="🗺️"
+            count={loot.routes[r.key]}
+            tint={r.tint}
+            label={`🗺️ Звёздный маршрут (${r.name}) — это миссия. Редкость = сложность прохождения.`}
+          />
+        ),
       )}
       {serumSlots.map((e: Element) => (
         <InvSlot

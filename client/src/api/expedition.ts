@@ -27,7 +27,12 @@ export interface ExpeditionView {
   canClaim: boolean
   canRevive: boolean
   reviveCost: number
-  loot: { gold: number; serums: Record<string, number>; mutagen: number }
+  loot: {
+    gold: number
+    serums: Record<string, number>
+    mutagen: number
+    routes: { common: number; rare: number; epic: number }
+  }
   journal: JournalLine[]
 }
 
@@ -60,7 +65,12 @@ interface ListResp {
 interface ClaimResp {
   ok: true
   shipLost: boolean
-  loot: { gold: number; serums: Record<string, number>; mutagen: number }
+  loot: {
+    gold: number
+    serums: Record<string, number>
+    mutagen: number
+    routes: { common: number; rare: number; epic: number }
+  }
 }
 
 // demo=true → minute-scale tempo (instant rich log) for testing the feature.
