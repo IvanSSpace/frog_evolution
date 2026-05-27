@@ -105,7 +105,7 @@ export function LocationStack() {
   // Если visible только одна локация (Болото) и cosmos не разблокирован —
   // блок переключения не нужен (нечего переключать).
   if (ordered.length <= 1) return null
-  // Во время raid (BattleScene) блок переключения скрываем.
+  // Во время вспомогательных сцен (ShipDeck/Survivor) блок переключения скрываем.
   if (battleSceneActive) return null
 
   const handleSelect = (id: number) => {

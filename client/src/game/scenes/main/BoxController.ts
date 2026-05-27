@@ -25,6 +25,7 @@ import {
   getRareBoxThreshold,
 } from '../../../store/gameStore'
 import { eventBus } from '../../../store/eventBus'
+import { saveFieldBoxes } from '../../../store/persistence'
 import { MAX_LEVEL } from '../../config/frogs'
 import { hapticImpact } from '../../../utils/telegram'
 import {
@@ -79,17 +80,38 @@ export class BoxController {
     return this.scene.frogs.length + this.scene.boxes.length < cap
   }
 
-  spawnBox(isRare = false, preLanded = false) {
+  /** Сохранить текущие field-боксы в localStorage (только на Болоте — на других
+   *  локациях боксов нет, не затираем сохранённое). Вызывается на spawn/open. */
+  private persistFieldBoxes(): void {
+    if (useGameStore.getState().currentLocation !== 1) return
+    saveFieldBoxes(
+      this.scene.boxes
+        .filter((b) => b.img.active)
+        .map((b) => ({ x: b.img.x, y: b.baseY, r: !!b.isRare })),
+    )
+  }
+
+  /** Восстановить сохранённые field-боксы на поле (preLanded, без падения).
+   *  Вызывается из MainScene.create на Болоте до offline-fill. */
+  restoreFieldBoxes(boxes: { x: number; y: number; r: boolean }[]): void {
+    for (const b of boxes) {
+      if (!this.canSpawnBox()) break
+      this.spawnBox(b.r, true, b.x, b.y)
+    }
+  }
+
+  spawnBox(isRare = false, preLanded = false, atX?: number, atY?: number) {
     const scene = this.scene
     const { width, height } = scene.scale
-    const x = Phaser.Math.Between(
-      FIELD_PAD_X + 40 * DPR,
-      width - FIELD_PAD_X - 40 * DPR,
-    )
-    const targetY = Phaser.Math.Between(
-      FIELD_PAD_Y + 40 * DPR,
-      height - FIELD_PAD_Y_BOTTOM - 40 * DPR,
-    )
+    const x =
+      atX ??
+      Phaser.Math.Between(FIELD_PAD_X + 40 * DPR, width - FIELD_PAD_X - 40 * DPR)
+    const targetY =
+      atY ??
+      Phaser.Math.Between(
+        FIELD_PAD_Y + 40 * DPR,
+        height - FIELD_PAD_Y_BOTTOM - 40 * DPR,
+      )
 
     // Стартуем выше канваса — коробка просто влетает в кадр без fade.
     // Если preLanded — стартуем сразу на целевой Y, без анимации падения.
@@ -118,6 +140,7 @@ export class BoxController {
     }
     scene.boxes.push(box)
     scene.syncEntityCount()
+    this.persistFieldBoxes()
 
     // Инпут вешаем сразу, во время падения handler игнорирует через isLanding
     img.setInteractive({ useHandCursor: true })
@@ -329,6 +352,7 @@ export class BoxController {
 
     scene.boxes = scene.boxes.filter((b) => b !== box)
     scene.syncEntityCount()
+    this.persistFieldBoxes()
     scene.tweens.killTweensOf(box.img)
     box.idleTween = null
     box.img.disableInteractive()

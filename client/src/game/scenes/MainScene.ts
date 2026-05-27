@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { useGameStore, getDropIntervalMs } from '../../store/gameStore'
 import { magnetKeyForLocation } from '../config/upgrades'
 import { eventBus } from '../../store/eventBus'
+import { loadFieldBoxes } from '../../store/persistence'
 import {
   FROG_LEVELS,
   textureKeyForLevel,
@@ -127,16 +128,6 @@ export class MainScene extends Phaser.Scene {
   // Phase 21-05 (Wave 5): tap / serum-drag handlers + selection subscribe.
   private interaction!: FrogInteraction
 
-  // Ворота казармы (снизу-справа). Открыты → drag лягушки внутрь = рекрут
-  // (бесплатно, лягушка уходит с поля в казарму). Тап по воротам = toggle.
-  private gateContainer: Phaser.GameObjects.Container | null = null
-  private gateFrame: Phaser.GameObjects.Rectangle | null = null
-  private gateOpen = false
-  private gateLeftDoor: Phaser.GameObjects.Rectangle | null = null
-  private gateRightDoor: Phaser.GameObjects.Rectangle | null = null
-  private gateW = 0
-  private gateH = 0
-
   // Camera всегда на зум 1.0 — без камерных трюков, чтобы canvas не «дёргался»
   // и не было чёрной рамки. Эффект «другого масштаба» полностью отрабатывают
   // контейнеры oldContainer / newContainer.
@@ -189,15 +180,6 @@ export class MainScene extends Phaser.Scene {
     this.load.image('map2', '/maps/map2.webp')
     this.load.image('map3', '/maps/map3.webp')
     this.load.image('map4', '/maps/map4.webp')
-    // Биом-фоны локаций — raid-режим (scout + бой). По набору из 4 на биом
-    // планеты (fire/ice/desert/toxic). Ключи: <biome>_map[N].
-    for (const biome of ['fire', 'ice', 'desert', 'toxic']) {
-      this.load.image(`${biome}_map`, `/maps/${biome}_map.webp`)
-      this.load.image(`${biome}_map2`, `/maps/${biome}_map2.webp`)
-      this.load.image(`${biome}_map3`, `/maps/${biome}_map3.webp`)
-      this.load.image(`${biome}_map4`, `/maps/${biome}_map4.webp`)
-    }
-    this.load.image('barracks', '/maps/barracks.webp')
     this.load.image('box', '/box.webp')
   }
 
@@ -282,9 +264,6 @@ export class MainScene extends Phaser.Scene {
     )
     this.bg.setDisplaySize(width, height)
     this.bg.setDepth(-1) // фон всегда под лягушками
-
-    // Ворота казармы убраны с поля (фича казармы отключена). Gate не создаём —
-    // tryGateDrop остаётся безопасным no-op (gateContainer === null).
 
     // DEV-only: визуализация границ игрового поля; production билд не показывает.
     if (import.meta.env.DEV) {
@@ -376,6 +355,12 @@ export class MainScene extends Phaser.Scene {
 
     this.spawnLocationFrogs()
 
+    // Восстанавливаем коробки, лежавшие на земле Болота до перезахода
+    // (раньше field-боксы не персистились и пропадали). До offline-fill.
+    if (useGameStore.getState().currentLocation === 1) {
+      this.box.restoreFieldBoxes(loadFieldBoxes())
+    }
+
     // Дренируем offline-drop буфер: боксы которые должны были упасть пока
     // игрок был away (count пришёл в _offlineBoxBuffer через модульный listener).
     this.drainOfflineBoxBuffer()
@@ -421,75 +406,6 @@ export class MainScene extends Phaser.Scene {
       height - FIELD_PAD_Y_BOTTOM - margin,
     )
     return { x, y }
-  }
-
-  // ─── Ворота казармы (drag-рекрут с поля) ───────────────────────────────
-
-  /** Визуал ворот по gateOpen. Анимация моментальная (placeholder). */
-  private applyGateVisual() {
-    const open = this.gateOpen
-    this.gateLeftDoor?.setVisible(!open)
-    this.gateRightDoor?.setVisible(!open)
-    if (this.gateFrame) {
-      // Открыты — зелёная подсветка «можно бросать»; закрыты — нейтральный.
-      this.gateFrame.setFillStyle(open ? 0x16a34a : 0x3b2417, open ? 0.32 : 0.5)
-      this.gateFrame.setStrokeStyle(3 * DPR, open ? 0x16a34a : 0x1f1206, 1)
-    }
-  }
-
-  /** True если точка (мировые px) внутри ворот. */
-  private gateContains(x: number, y: number): boolean {
-    if (!this.gateContainer) return false
-    return (
-      Math.abs(x - this.gateContainer.x) <= this.gateW / 2 &&
-      Math.abs(y - this.gateContainer.y) <= this.gateH / 2
-    )
-  }
-
-  /** Короткий pulse-фидбэк ворот (зелёный = успех, красный = отказ). */
-  private pulseGate(color: number) {
-    if (!this.gateContainer) return
-    this.tweens.killTweensOf(this.gateContainer)
-    this.gateContainer.setScale(1)
-    this.tweens.add({
-      targets: this.gateContainer,
-      scale: 1.18,
-      duration: 110,
-      yoyo: true,
-      ease: 'Quad.easeOut',
-    })
-    if (this.gateFrame) {
-      this.gateFrame.setStrokeStyle(4 * DPR, color, 1)
-      this.time.delayedCall(220, () => this.applyGateVisual())
-    }
-  }
-
-  /**
-   * Попытка рекрута лягушки через ворота при drop'е.
-   * Возвращает true если лягушка ушла в казарму (caller не возвращает её на поле).
-   * Рекрут бесплатный (free=true). Лягушка удаляется с поля + из store.
-   */
-  tryGateDrop(frog: FrogData, x: number, y: number): boolean {
-    if (!this.gateOpen) return false
-    if (!this.gateContainer || !this.gateContainer.visible) return false
-    if (!this.gateContains(x, y)) return false
-
-    const level = frog.level
-    const tier = (useGameStore.getState().frogTiers[level - 1] ?? 0) as
-      | 0
-      | 1
-      | 2
-    const idx = useGameStore.getState().addWarriorToBarracks(level, tier, true)
-    if (idx < 0) {
-      // Казарма полна — отказ, лягушка отскочит назад.
-      this.pulseGate(0xdc2626)
-      return false
-    }
-    const locId = useGameStore.getState().currentLocation
-    this.spawner.removeFrog(frog)
-    useGameStore.getState().removeFrogFromLocation(locId, level)
-    this.pulseGate(0x16a34a)
-    return true
   }
 
   // Phase 21-01: тонкий wrapper над FrogSpawner — оставлен для совместимости

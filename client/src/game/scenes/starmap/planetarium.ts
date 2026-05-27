@@ -62,9 +62,7 @@ export const MAIN_RACES: Race[] = (planetMap.planets as PlanetMapEntry[])
   }))
 
 // Биом для ЛЮБОЙ планеты (не только 16 main) — берётся из явного поля `biome`,
-// иначе из `archetype` (ice/desert/toxic совпадают с RAID_BIOMES напрямую,
-// остальные архетипы → fallback 'fire' в biomeMapKeyForLocation, пока нет их
-// raid-ассетов). Построен один раз из planetMap.json.
+// иначе из `archetype` (ice/desert/toxic/fire). Построен один раз из planetMap.json.
 const BIOME_BY_PLANET_ID: Record<string, string> = (() => {
   const m: Record<string, string> = {}
   for (const p of planetMap.planets as PlanetMapEntry[]) {

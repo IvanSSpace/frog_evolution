@@ -1,17 +1,9 @@
 import React from 'react'
 import { useGameStore } from '../../store/gameStore'
-import { eventBus } from '../../store/eventBus'
 // Phase 22 Plan 22-06: cosmos gate — 🧬 Cosmic Hub button disabled до L18+L18.
 import { useCosmosUnlocked } from '../../utils/cosmosGate'
 import { Icon } from '../icons/Icon'
 import type { IconName } from '../icons/iconRegistry'
-
-// Feature-flag: вход в Казарму (PvP raid) скрыт из интерфейса (2026-05-26).
-// Мета-сложность ещё не готова, функционал может вернуться позже — поэтому
-// флаг, а не удаление. Чтобы вернуть кнопку — поставь true.
-// Типизирован как boolean (не литерал), чтобы JSX-гард ниже не был
-// constant-binary-expression для ESLint.
-const BARRACKS_ENTRY_ENABLED: boolean = false
 
 type BadgeProps = { children: React.ReactNode }
 
@@ -168,22 +160,9 @@ export function BottomBar({
   const hasNewBestiary = useGameStore((s) =>
     s.discoveredLevels.some((l) => !s.bestiarySeenLevels.includes(l)),
   )
-  // Казарма (PvP raid) — кнопка видна после анлока (discovered L7+).
-  const barracksUnlocked = useGameStore((s) => s.barracksUnlocked)
   const discoveredLevels = useGameStore((s) => s.discoveredLevels)
-  const unlockBarracks = useGameStore((s) => s.unlockBarracks)
   // Экспедиции (корабли) доступны только после открытия Леса (discovered L7+).
   const forestUnlocked = discoveredLevels.some((l) => l >= 7)
-
-  // Auto-unlock казармы при первом discovered L7+ (Лес). Эффект жил в
-  // BarracksButton.tsx, но тот компонент нигде не монтируется → unlock никогда
-  // не срабатывал. Перенесён сюда (BottomBar монтируется всегда).
-  React.useEffect(() => {
-    if (barracksUnlocked) return
-    if (discoveredLevels.some((l) => l >= 7)) {
-      unlockBarracks()
-    }
-  }, [discoveredLevels, barracksUnlocked, unlockBarracks])
 
   return (
     <div
@@ -224,18 +203,6 @@ export function BottomBar({
           disabled={!forestUnlocked}
           onClick={onOpenExpedition}
         />
-        {/* ⚔️ — Казарма (PvP raid). Видна после анлока (Лес, L7+).
-            СКРЫТА через BARRACKS_ENTRY_ENABLED (см. флаг вверху файла).
-            Логика анлока (barracksUnlocked / unlockBarracks effect выше) намеренно
-            оставлена нетронутой, чтобы возврат был тривиальным. */}
-        {BARRACKS_ENTRY_ENABLED && barracksUnlocked && (
-          <Tile
-            icon="barracks"
-            skin="amber"
-            title="Казарма"
-            onClick={() => eventBus.emit('barracks:toggle', {})}
-          />
-        )}
         {/* 🧪 Серум — перенесён вкладкой в Космический центр (CosmicHubModal). */}
         {/* 🧬 — Cosmic Hub (Phase 11). Badge = число неоткрытых боксов.
             Phase 22 Plan 22-06: disabled до L18+L18 sentinel (cosmos gate). */}

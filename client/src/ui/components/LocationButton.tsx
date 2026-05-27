@@ -1,6 +1,5 @@
 // LocationButton — переиспользуемая кнопка локации (круг с эмодзи + pink-ring
-// активной локации). Общий визуал для фермы (LocationStack) и рейд-скаута
-// (RaidScoutLocationStack), чтобы кнопки выглядели одинаково.
+// активной локации). Используется в LocationStack.
 
 import { useTranslation } from 'react-i18next'
 import type { LocationConfig } from '../../store/gameStore'

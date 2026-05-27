@@ -12,20 +12,13 @@ export type IconName =
   | 'frog-shop'
   | 'upgrade-shop'
   | 'gallery'
-  | 'barracks'
   | 'ship'
   | 'cosmic-hub'
   | 'bestiary'
-  // Кнопки казармы / корабля
-  | 'combat-tree'
-  | 'raid'
+  // Кнопки корабля
   | 'recall'
   | 'in-transit'
   | 'unload'
-  // Combat tree
-  | 'damage'
-  | 'hp'
-  | 'armor'
   // Валюты
   | 'slime'
   | 'gold'
@@ -44,25 +37,18 @@ export type IconName =
   // Общие
   | 'close'
   | 'lock'
-  | 'attack'
 
 /** Эмодзи-fallback пока нет SVG в public/icons/<name>.svg. */
 export const ICON_EMOJI: Record<IconName, string> = {
   'frog-shop': '🐸',
   'upgrade-shop': '⬆️',
   gallery: '📊',
-  barracks: '⚔️',
   ship: '🚀',
   'cosmic-hub': '🧬',
   bestiary: '📖',
-  'combat-tree': '⬆',
-  raid: '⚔',
   recall: '↩',
   'in-transit': '🛸',
   unload: '🛬',
-  damage: '🗡',
-  hp: '❤',
-  armor: '🛡',
   slime: '💧',
   gold: '🪙',
   essence: '💠',
@@ -77,7 +63,6 @@ export const ICON_EMOJI: Record<IconName, string> = {
   'tab-quests': '📜',
   close: '✕',
   lock: '🔒',
-  attack: '⚔',
 }
 
 /** Путь к SVG/PNG-ассету иконки в public/icons/. */

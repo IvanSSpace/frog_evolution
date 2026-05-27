@@ -5,11 +5,6 @@
 
 import { MAX_LEVEL } from '../game/config/frogs'
 import { UPGRADE_CONFIG, type Upgrades } from '../game/config/upgrades'
-import {
-  COMBAT_MAX_NODES,
-  defaultCombatTree,
-  type CombatTreeLevels,
-} from '../game/config/combatTree'
 import { LOCATIONS } from '../game/config/locations'
 import { setGlobalFormat, type NumberFormat } from '../utils/formatting'
 import { makeInitialCosmicSlice, type BoxData } from './cosmic/types'
@@ -33,8 +28,6 @@ import { QUESTS, COMPLETED_QUEST_HISTORY_CAP } from '../game/config/quests'
 // ─── storage keys ────────────────────────────────────────────────────────────
 
 const UPGRADES_KEY = 'frog_evolution_upgrades'
-// Боевая прокачка (combat tree). Валюта — gold (= слизь 💧), отдельного кошелька нет.
-const COMBAT_TREE_KEY = 'frog_evolution_combat_tree'
 const PURCHASES_KEY = 'frog_evolution_frog_purchases'
 const FROG_TIERS_KEY = 'frog_evolution_frog_tiers'
 // 2026-05-23: cooldown timestamps per frog level (когда лочится снова можно эволвить).
@@ -64,13 +57,6 @@ const L18_ABSOLUTE_BONUS_KEY = 'frog_evolution_l18_absolute_bonus'
 // Phase 23 Plan 23-01: onboarding flow per-device state.
 // Хранится отдельным ключом (не sync'ится с сервером) — это локальная UX-фича.
 const ONBOARDING_KEY = 'frog_evolution_onboarding'
-// 2026-05-24: barracks / PvP raid mode state. MVP — local storage only.
-// Серверный sync добавим в Этап 5 (vats accrual + opponent snapshots).
-const BARRACKS_GRID_KEY = 'frog_evolution_barracks_grid'
-const BARRACKS_VATS_KEY = 'frog_evolution_barracks_vats'
-const BARRACKS_UNLOCKED_KEY = 'frog_evolution_barracks_unlocked'
-// 2026-05-25: per-planet raid invulnerability — planetId → expiresAt (Date.now ms).
-const RAID_COOLDOWNS_KEY = 'frog_evolution_raid_cooldowns'
 
 // ─── upgrades ────────────────────────────────────────────────────────────────
 
@@ -118,32 +104,6 @@ export function loadUpgrades(): Upgrades {
 export function saveUpgrades(u: Upgrades) {
   try {
     localStorage.setItem(UPGRADES_KEY, JSON.stringify(u))
-  } catch {
-    /* ignore */
-  }
-}
-
-// ─── combat tree ────────────────────────────────────────────────────────────
-
-export function loadCombatTree(): CombatTreeLevels {
-  const d = defaultCombatTree()
-  try {
-    const raw = localStorage.getItem(COMBAT_TREE_KEY)
-    if (raw) {
-      const p = JSON.parse(raw) as Partial<CombatTreeLevels>
-      const clamp = (v: unknown) =>
-        Math.min(COMBAT_MAX_NODES, Math.max(0, Math.floor(Number(v) || 0)))
-      return { damage: clamp(p.damage), hp: clamp(p.hp), armor: clamp(p.armor) }
-    }
-  } catch {
-    /* ignore */
-  }
-  return d
-}
-
-export function saveCombatTree(t: CombatTreeLevels) {
-  try {
-    localStorage.setItem(COMBAT_TREE_KEY, JSON.stringify(t))
   } catch {
     /* ignore */
   }
@@ -824,6 +784,46 @@ export function saveBoxOpenCount(n: number): void {
   localStorage.setItem(BOX_OPEN_COUNT_KEY, String(n))
 }
 
+// ─── field boxes (коробки на земле Болота) ──────────────────────────────────
+// Раньше field-боксы не персистились: на перезаходе исчезали (offline-fill
+// триггерился только при offline > 60с). Сохраняем позиции, восстанавливаем
+// на возврате в Болото.
+
+export interface FieldBoxSnap {
+  x: number
+  y: number
+  r: boolean // isRare
+}
+
+const FIELD_BOXES_KEY = 'frog_evolution_field_boxes'
+
+export function loadFieldBoxes(): FieldBoxSnap[] {
+  if (typeof localStorage === 'undefined') return []
+  const raw = localStorage.getItem(FIELD_BOXES_KEY)
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .filter(
+        (b) =>
+          b &&
+          typeof b.x === 'number' &&
+          typeof b.y === 'number' &&
+          Number.isFinite(b.x) &&
+          Number.isFinite(b.y),
+      )
+      .map((b) => ({ x: b.x, y: b.y, r: !!b.r }))
+  } catch {
+    return []
+  }
+}
+
+export function saveFieldBoxes(boxes: FieldBoxSnap[]): void {
+  if (typeof localStorage === 'undefined') return
+  localStorage.setItem(FIELD_BOXES_KEY, JSON.stringify(boxes))
+}
+
 // ─── cosmos unlock flag (Phase 22 Plan 22-06) ───────────────────────────────
 //
 // Хранится отдельным ключом (не в COSMIC_KEY), чтобы выживать любые corrupt
@@ -1119,101 +1119,6 @@ export function saveBestiarySeenLevels(arr: number[]): void {
     localStorage.setItem(BESTIARY_SEEN_KEY, JSON.stringify(arr))
   } catch {
     /* ignore */
-  }
-}
-
-// ─── barracks / vats / unlock (2026-05-24 PvP raid mode) ───────────────────
-
-import {
-  type BarracksCell,
-  type Vat,
-  defaultBarracksGrid,
-  defaultVats,
-  validateBarracksGrid,
-  validateVats,
-} from './barracks'
-
-export function loadBarracksGrid(): (BarracksCell | null)[] {
-  if (typeof localStorage === 'undefined') return defaultBarracksGrid()
-  try {
-    const raw = localStorage.getItem(BARRACKS_GRID_KEY)
-    if (!raw) return defaultBarracksGrid()
-    const parsed = JSON.parse(raw)
-    const valid = validateBarracksGrid(parsed)
-    return valid ?? defaultBarracksGrid()
-  } catch {
-    return defaultBarracksGrid()
-  }
-}
-
-export function saveBarracksGrid(grid: (BarracksCell | null)[]): void {
-  if (typeof localStorage === 'undefined') return
-  try {
-    localStorage.setItem(BARRACKS_GRID_KEY, JSON.stringify(grid))
-  } catch {
-    /* ignore */
-  }
-}
-
-export function loadBarracksVats(): Vat[] {
-  if (typeof localStorage === 'undefined') return defaultVats()
-  try {
-    const raw = localStorage.getItem(BARRACKS_VATS_KEY)
-    if (!raw) return defaultVats()
-    const parsed = JSON.parse(raw)
-    const valid = validateVats(parsed)
-    return valid ?? defaultVats()
-  } catch {
-    return defaultVats()
-  }
-}
-
-export function saveBarracksVats(vats: Vat[]): void {
-  if (typeof localStorage === 'undefined') return
-  try {
-    localStorage.setItem(BARRACKS_VATS_KEY, JSON.stringify(vats))
-  } catch {
-    /* ignore */
-  }
-}
-
-export function loadBarracksUnlocked(): boolean {
-  if (typeof localStorage === 'undefined') return false
-  return localStorage.getItem(BARRACKS_UNLOCKED_KEY) === 'true'
-}
-
-export function saveBarracksUnlocked(v: boolean): void {
-  if (typeof localStorage === 'undefined') return
-  localStorage.setItem(BARRACKS_UNLOCKED_KEY, v ? 'true' : 'false')
-}
-
-// Per-planet raid invulnerability: planetId → expiresAt (Date.now ms).
-// Real-time timestamp → переживает выход из игры (cooldown тикает в offline).
-export function loadRaidCooldowns(): Record<string, number> {
-  if (typeof localStorage === 'undefined') return {}
-  try {
-    const raw = localStorage.getItem(RAID_COOLDOWNS_KEY)
-    if (!raw) return {}
-    const parsed = JSON.parse(raw)
-    if (!parsed || typeof parsed !== 'object') return {}
-    const now = Date.now()
-    const out: Record<string, number> = {}
-    // Отбрасываем истёкшие на загрузке — храним только активные.
-    for (const [id, ts] of Object.entries(parsed)) {
-      if (typeof ts === 'number' && ts > now) out[id] = ts
-    }
-    return out
-  } catch {
-    return {}
-  }
-}
-
-export function saveRaidCooldowns(map: Record<string, number>): void {
-  if (typeof localStorage === 'undefined') return
-  try {
-    localStorage.setItem(RAID_COOLDOWNS_KEY, JSON.stringify(map))
-  } catch {
-    /* quota — ignore */
   }
 }
 

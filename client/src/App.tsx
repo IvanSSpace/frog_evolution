@@ -12,11 +12,8 @@ import { DiscoveryModal } from './ui/components/DiscoveryModal'
 import { RareCrateModal } from './ui/components/RareCrateModal'
 import { SettingsModal } from './ui/components/SettingsModal'
 import { LocationStack } from './ui/components/LocationStack'
-import { RaidScoutLocationStack } from './ui/components/RaidScoutLocationStack'
 import { StarMapHUD } from './ui/components/StarMapHUD'
 import { MagnetToggle } from './ui/components/MagnetToggle'
-import { BarracksUIController } from './ui/components/BarracksUIController'
-import { BarracksActionButtons } from './ui/components/BarracksActionButtons'
 import { SurvivorUpgradeModal } from './ui/components/SurvivorUpgradeModal'
 import { SurvivorMissionSelect } from './ui/components/SurvivorMissionSelect'
 import { ShipFollowButton } from './ui/components/ShipFollowButton'
@@ -33,9 +30,6 @@ import { GalleryDetailModal } from './components/Gallery/GalleryDetailModal'
 import { MilestoneToast } from './components/CosmicHub/bestiary/MilestoneToast'
 // import { TutorialOverlay } from './components/Tutorial/TutorialOverlay'  // disabled 2026-05-18 — Phase 23 onboarding replaces
 import { OnboardingController } from './components/Onboarding/OnboardingController'
-import { InvestigateModalController } from './components/Raid/InvestigateModal'
-import { RaidLootModalController } from './components/Raid/RaidLootModal'
-import { RaidFlowController } from './components/Raid/RaidFlowController'
 import { CaptainBirthModal } from './components/Captain/CaptainBirthModal'
 import { EvolutionCeremony } from './components/Evolution/EvolutionCeremony'
 import { installCaptainBirthController } from './components/Captain/captainBirthController'
@@ -416,7 +410,6 @@ function App() {
           Bonuses теперь показаны в Cosmic Hub → Carriers tab как
           CarrierBonusesPanel (display-only section, не интерактивный HUD pill). */}
       <LocationStack />
-      <RaidScoutLocationStack />
 
       {galleryOpen && <GalleryModal onClose={() => setGalleryOpen(false)} />}
       <GalleryDetailModal />
@@ -429,8 +422,6 @@ function App() {
         <InventoryModal onClose={() => setInventoryOpen(false)} />
       )}
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
-      <BarracksUIController />
-      <BarracksActionButtons />
       <SurvivorUpgradeModal />
       <SurvivorMissionSelect />
       <Suspense fallback={null}>
@@ -452,9 +443,6 @@ function App() {
       {/* Phase 23 Plan 23-01: onboarding coordinator (Wave 1 — empty shell;
           Plan 23-02..05 add Welcome / TapHint / MergeDemo / LocationCelebration overlays). */}
       <OnboardingController />
-      <InvestigateModalController />
-      <RaidLootModalController />
-      <RaidFlowController />
       {/* Phase 24 Plan 24-04: Captain birth modal — self-subscribes к
           eventBus 'captain:birth-effect-complete' (Plan 24-02), null-render'ит
           когда invisible. Cinematic trigger — MergeController L18+L18 branch. */}
