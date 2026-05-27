@@ -17,6 +17,7 @@ import { MagnetToggle } from './ui/components/MagnetToggle'
 import { BarracksUIController } from './ui/components/BarracksUIController'
 import { BarracksActionButtons } from './ui/components/BarracksActionButtons'
 import { SurvivorUpgradeModal } from './ui/components/SurvivorUpgradeModal'
+import { SurvivorMissionSelect } from './ui/components/SurvivorMissionSelect'
 import { ShipFollowButton } from './ui/components/ShipFollowButton'
 import { OrientationLock } from './ui/components/OrientationLock'
 import { LoadingScreen } from './ui/components/LoadingScreen'
@@ -425,6 +426,7 @@ function App() {
       <BarracksUIController />
       <BarracksActionButtons />
       <SurvivorUpgradeModal />
+      <SurvivorMissionSelect />
       <Suspense fallback={null}>
         {cosmicHubOpen && (
           <CosmicHubModal onClose={() => setCosmicHubOpen(false)} />

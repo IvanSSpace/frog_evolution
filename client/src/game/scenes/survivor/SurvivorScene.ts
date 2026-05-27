@@ -23,11 +23,13 @@ import { eventBus } from '../../../store/eventBus'
 import { useGameStore } from '../../../store/gameStore'
 import { hapticImpact, hapticNotification } from '../../../utils/telegram'
 import { VirtualJoystick } from './VirtualJoystick'
+import { getMission, type SurvivorMission } from './missions'
 
 interface SurvivorInit {
   crew: number[]
   shipId: number
   planetId?: string
+  missionId?: string
 }
 
 // === Tuning (DPR-scaled где это пиксели) ===
@@ -63,7 +65,6 @@ const SPAWN_INTERVAL_START = 1050 // ms
 const SPAWN_INTERVAL_MIN = 340 // ms
 const SPAWN_RAMP_MS = 75_000 // за это время рейт доходит до min
 
-const BOSS_TIME = 60_000 // ms до появления босса
 const BOSS_SIZE = 190 * DPR
 const BOSS_HITR = 78 * DPR
 const BOSS_HP = 1300
@@ -77,9 +78,21 @@ const CRYSTAL_R = 6 * DPR
 const CRYSTAL_PICKUP_R = 95 * DPR // базовый радиус притяжения (апгрейд «магнит» множит)
 const CRYSTAL_COLLECT_R = 26 * DPR // дистанция подбора
 const CRYSTAL_PULL = 0.22 // lerp-сила притяжения к герою
-const XP_BASE = 4 // кристаллов на 1→2 уровень
-const XP_PER_LEVEL = 2 // +N к порогу за каждый следующий уровень
+// XP-кривая как в Vampire Survivors: 1→2 = 5, дальше +10 за уровень
+// (2→3=15, 3→4=25 …). Раньше было 4 +2/ур — втрое площе, отсюда слишком
+// быстрый скейл и непобедимость.
+const XP_BASE = 5 // кристаллов на 1→2 уровень
+const XP_PER_LEVEL = 10 // +N к порогу за каждый следующий уровень
 const ATK_INTERVAL_MIN = 150 // пол скорострельности (апгрейд не опустит ниже)
+
+// Масштабирование врагов (анти-снежоком, как в VS). HP растёт и от уровня
+// ИГРОКА (тянется за прокачкой), и от времени забега. Урон/толпа — от времени.
+const ENEMY_HP_PER_LEVEL = 0.22 // +22% HP врага за каждый уровень игрока
+const ENEMY_HP_PER_MIN = 1.0 // +100% HP врага за минуту забега
+const ENEMY_DMG_PER_MIN = 0.6 // +60% урона врага за минуту
+const ENEMY_SPEED_PER_MIN = 0.18 // +18% скорости за минуту (кап в коде)
+const BOSS_HP_PER_LEVEL = 0.5 // HP босса тоже тянется за уровнем игрока
+const SPAWN_BURST_EVERY_MS = 25_000 // +1 моб за тик спавна каждые 25с (кап 4)
 
 // Орбитальные сферы (защитный апгрейд): крутятся вокруг героя, бьют врага при
 // касании, после удара «гаснут» и через ORB_CD восстанавливаются.
@@ -221,6 +234,7 @@ function heroMaxHpForLevel(level: number): number {
 }
 
 export class SurvivorScene extends Phaser.Scene {
+  private mission: SurvivorMission = getMission()
   private crew: number[] = []
   private crewIdx = 0
 
@@ -272,6 +286,7 @@ export class SurvivorScene extends Phaser.Scene {
     // Сортируем по убыванию: первая «жизнь» — сильнейшая жаба.
     this.crew = [...(data.crew ?? [])].sort((a, b) => b - a)
     if (this.crew.length === 0) this.crew = [1]
+    this.mission = getMission(data.missionId)
     void data.shipId // shipId зарезервирован для Phase 3 (привязка лута к кораблю)
     this.crewIdx = 0
     this.mobs = []
@@ -455,7 +470,10 @@ export class SurvivorScene extends Phaser.Scene {
     this.xpBarFill.width =
       this.scale.width * Phaser.Math.Clamp(this.xp / this.xpNeeded, 0, 1)
     const lives = this.crew.length - this.crewIdx
-    const sec = Math.max(0, Math.ceil((BOSS_TIME - this.elapsed) / 1000))
+    const sec = Math.max(
+      0,
+      Math.ceil((this.mission.bossTimeMs - this.elapsed) / 1000),
+    )
     const bossLabel = this.bossSpawned ? '👑 БОСС' : `👑 ${sec}с`
     this.infoText.setText(
       `🐸×${lives}   ⭐${this.heroXpLevel}   ☠ ${this.kills}   ${bossLabel}`,
@@ -662,18 +680,37 @@ export class SurvivorScene extends Phaser.Scene {
     }
   }
 
+  // === Масштабирование врагов (VS-стиль анти-снежоком) ===
+  private get minutes(): number {
+    return this.elapsed / 60_000
+  }
+  private enemyHp(): number {
+    const lvlMult = 1 + (this.heroXpLevel - 1) * ENEMY_HP_PER_LEVEL
+    const timeMult = 1 + this.minutes * ENEMY_HP_PER_MIN
+    return Math.round(MOB_HP * this.mission.enemyMult * lvlMult * timeMult)
+  }
+  private enemyDmg(): number {
+    return Math.round(
+      MOB_DMG * this.mission.enemyMult * (1 + this.minutes * ENEMY_DMG_PER_MIN),
+    )
+  }
+  private enemySpeed(): number {
+    return MOB_SPEED * Math.min(1.6, 1 + this.minutes * ENEMY_SPEED_PER_MIN)
+  }
+
   private handleSpawning(deltaMs: number) {
     if (this.over) return
     this.spawnAcc += deltaMs
     const ramp = Phaser.Math.Clamp(this.elapsed / SPAWN_RAMP_MS, 0, 1)
-    const interval = Phaser.Math.Linear(
-      SPAWN_INTERVAL_START,
-      SPAWN_INTERVAL_MIN,
-      ramp,
-    )
+    // Чем сложнее миссия — тем чаще спавн.
+    const interval =
+      Phaser.Math.Linear(SPAWN_INTERVAL_START, SPAWN_INTERVAL_MIN, ramp) /
+      this.mission.enemyMult
     if (this.spawnAcc >= interval) {
       this.spawnAcc = 0
-      this.spawnMob()
+      // Толпа растёт со временем: +1 моб за тик каждые SPAWN_BURST_EVERY_MS (кап 4).
+      const burst = Math.min(4, 1 + Math.floor(this.elapsed / SPAWN_BURST_EVERY_MS))
+      for (let i = 0; i < burst; i++) this.spawnMob()
     }
   }
 
@@ -687,11 +724,12 @@ export class SurvivorScene extends Phaser.Scene {
     // Лёгкий красный wash (не полная заливка) — детали жабы остаются читаемыми.
     const sprite = this.makeFrogSprite(x, y, 1, MOB_SIZE, 0xff9d9d)
     sprite.setDepth(5)
+    const hp = this.enemyHp()
     this.mobs.push({
       sprite,
-      hp: MOB_HP,
-      speed: MOB_SPEED,
-      dmg: MOB_DMG,
+      hp,
+      speed: this.enemySpeed(),
+      dmg: this.enemyDmg(),
       hitr: MOB_HITR,
       lastHit: 0,
       isBoss: false,
@@ -699,7 +737,7 @@ export class SurvivorScene extends Phaser.Scene {
   }
 
   private maybeSpawnBoss() {
-    if (this.bossSpawned || this.elapsed < BOSS_TIME) return
+    if (this.bossSpawned || this.elapsed < this.mission.bossTimeMs) return
     this.bossSpawned = true
     hapticNotification('warning')
     const cam = this.cameras.main
@@ -708,11 +746,17 @@ export class SurvivorScene extends Phaser.Scene {
     const y = Phaser.Math.Clamp(this.hero.y - margin, 0, WORLD)
     const sprite = this.makeFrogSprite(x, y, 18, BOSS_SIZE, 0xc29dff)
     sprite.setDepth(8)
+    // Босс тоже тянется за уровнем игрока + сложностью миссии.
+    const bossHp = Math.round(
+      BOSS_HP *
+        this.mission.enemyMult *
+        (1 + (this.heroXpLevel - 1) * BOSS_HP_PER_LEVEL),
+    )
     this.mobs.push({
       sprite,
-      hp: BOSS_HP,
+      hp: bossHp,
       speed: BOSS_SPEED,
-      dmg: BOSS_DMG,
+      dmg: Math.round(BOSS_DMG * this.mission.enemyMult),
       hitr: BOSS_HITR,
       lastHit: 0,
       isBoss: true,
@@ -937,7 +981,8 @@ export class SurvivorScene extends Phaser.Scene {
     this.over = true
     this.joystick.end()
 
-    const reward = result === 'win' ? 1500 + this.kills * 15 : this.kills * 6
+    const base = result === 'win' ? 1500 + this.kills * 15 : this.kills * 6
+    const reward = Math.round(base * this.mission.rewardMult)
     if (reward > 0) useGameStore.getState().addGold(reward)
 
     const w = this.scale.width

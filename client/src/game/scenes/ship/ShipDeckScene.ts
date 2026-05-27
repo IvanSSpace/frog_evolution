@@ -237,13 +237,13 @@ export class ShipDeckScene extends Phaser.Scene {
     this.layer.add(this.launchBtn)
   }
 
-  // ⚔️ Отправить выбранный экипаж в VS-арену (бой). crew = уровни выбранных жаб
-  // («жизни»). game/index.ts ловит survivor:start → бутит SurvivorScene.
+  // ⚔️ Открыть React-выбор миссии. НЕ закрываем ShipDeck и не ставим launching —
+  // если игрок отменит выбор, он останется в снаряжении. На выбор миссии React
+  // эмитит survivor:start (см. SurvivorMissionSelect). crew = уровни жаб («жизни»).
   private onMission() {
     if (this.launching || this.selected.size < 1) return
-    this.launching = true
     const crew = [...this.selected].map((i) => this.frogs[i])
-    eventBus.emit('survivor:start', { crew, shipId: this.params.shipId })
+    eventBus.emit('survivor:choose-mission', { crew, shipId: this.params.shipId })
   }
 
   private makeFrog(

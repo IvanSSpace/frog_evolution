@@ -335,6 +335,7 @@ export function startGame(): Phaser.Game {
       crew: p.crew,
       shipId: p.shipId,
       planetId: p.planetId,
+      missionId: p.missionId,
     })
     useGameStore.getState().setBattleSceneActive(true)
   })

@@ -71,7 +71,14 @@ type Events = {
   // VS-арена миссии (Survivor mode, Phase 1 прототип). Запускается из
   // ShipDeckScene кнопкой «На миссию»; crew = уровни выбранного экипажа
   // (= «жизни»: смерть текущей жабы → следующая, послабее).
-  'survivor:start': { crew: number[]; shipId: number; planetId?: string }
+  'survivor:start': {
+    crew: number[]
+    shipId: number
+    planetId?: string
+    missionId?: string
+  }
+  // ShipDeck «На миссию» → открывает React-выбор миссии (SurvivorMissionSelect).
+  'survivor:choose-mission': { crew: number[]; shipId: number }
   'survivor:complete': { result: 'win' | 'lose'; reward: number; kills: number }
   'survivor:exit': Record<string, never>
   // Левелап: сцена замирает и шлёт 3 варианта апгрейда (2 атака + 1 защита) в
