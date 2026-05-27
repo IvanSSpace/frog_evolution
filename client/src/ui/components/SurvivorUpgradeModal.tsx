@@ -5,8 +5,10 @@
 // 'survivor:level-up' { level, choices } и замирает (paused). Игрок жмёт карту →
 // 'survivor:pick-upgrade' { id } → сцена применяет апгрейд и продолжает.
 //
-// Самомонтируется в App (рендерит null пока нет события). Бэкдроп ловит тапы,
-// чтобы они не проходили на канвас под модалкой.
+// Паттерн как у ExpeditionModal: оверлей УСЛОВНО монтируется и зовёт
+// useModalLock() без аргумента (lock на mount, release на unmount) — это надёжно
+// снимает блокировку canvas (иначе ref-count залипал и игра становилась
+// некликабельной после нескольких прокачек).
 
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -21,6 +23,7 @@ type Choice = {
   desc: string
   kind: 'attack' | 'defense'
 }
+type LevelUpData = { level: number; choices: Choice[] }
 
 const KIND_META = {
   attack: { label: '⚔ Атака', accent: '#dc2626', glow: 'rgba(220,38,38,0.5)' },
@@ -32,12 +35,10 @@ const KIND_META = {
 } as const
 
 export function SurvivorUpgradeModal() {
-  const [data, setData] = useState<{ level: number; choices: Choice[] } | null>(
-    null,
-  )
+  const [data, setData] = useState<LevelUpData | null>(null)
 
   useEffect(() => {
-    const onLevel = (p: { level: number; choices: Choice[] }) => setData(p)
+    const onLevel = (p: LevelUpData) => setData(p)
     const onExit = () => setData(null)
     eventBus.on('survivor:level-up', onLevel)
     eventBus.on('survivor:exit', onExit)
@@ -47,17 +48,27 @@ export function SurvivorUpgradeModal() {
     }
   }, [])
 
-  // Глушит pointer-events у Phaser canvas пока модалка открыта — иначе canvas
-  // перехватывает тапы и кнопки не кликаются (см. body.modal-open в modalLock).
-  useModalLock(data !== null)
-
   if (!data) return null
 
   const pick = (id: string) => {
     hapticImpact('medium')
-    setData(null)
+    // Сцена резюмится синхронно; затем закрываем оверлей (unmount снимает lock).
     eventBus.emit('survivor:pick-upgrade', { id })
+    setData(null)
   }
+
+  return <UpgradeOverlay data={data} onPick={pick} />
+}
+
+function UpgradeOverlay({
+  data,
+  onPick,
+}: {
+  data: LevelUpData
+  onPick: (id: string) => void
+}) {
+  // Lock привязан к mount/unmount этого оверлея — снимается гарантированно.
+  useModalLock()
 
   return createPortal(
     <div
@@ -109,7 +120,7 @@ export function SurvivorUpgradeModal() {
             <button
               key={c.id}
               type="button"
-              onClick={() => pick(c.id)}
+              onClick={() => onPick(c.id)}
               className="ff-card"
               style={{
                 display: 'flex',

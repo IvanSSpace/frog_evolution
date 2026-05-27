@@ -684,7 +684,8 @@ export class SurvivorScene extends Phaser.Scene {
     const ang = Math.random() * Math.PI * 2
     const x = Phaser.Math.Clamp(this.hero.x + Math.cos(ang) * margin, 0, WORLD)
     const y = Phaser.Math.Clamp(this.hero.y + Math.sin(ang) * margin, 0, WORLD)
-    const sprite = this.makeFrogSprite(x, y, 1, MOB_SIZE, 0xff6b6b)
+    // Лёгкий красный wash (не полная заливка) — детали жабы остаются читаемыми.
+    const sprite = this.makeFrogSprite(x, y, 1, MOB_SIZE, 0xff9d9d)
     sprite.setDepth(5)
     this.mobs.push({
       sprite,
@@ -705,7 +706,7 @@ export class SurvivorScene extends Phaser.Scene {
     const margin = Math.max(cam.width, cam.height) / (2 * cam.zoom) + 120 * DPR
     const x = Phaser.Math.Clamp(this.hero.x, 0, WORLD)
     const y = Phaser.Math.Clamp(this.hero.y - margin, 0, WORLD)
-    const sprite = this.makeFrogSprite(x, y, 18, BOSS_SIZE, 0x9b30ff)
+    const sprite = this.makeFrogSprite(x, y, 18, BOSS_SIZE, 0xc29dff)
     sprite.setDepth(8)
     this.mobs.push({
       sprite,
