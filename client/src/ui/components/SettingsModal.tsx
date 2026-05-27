@@ -78,7 +78,7 @@ export function SettingsModal({ onClose }: Props) {
         style={{
           position: 'absolute',
           top: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad))',
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)',
+          bottom: 'env(safe-area-inset-bottom, 0px)',
           left: 0,
           right: 0,
           zIndex: 151,
@@ -160,7 +160,6 @@ export function SettingsModal({ onClose }: Props) {
 }
 
 // ────────────────────────── BESTIARY TAB ──────────────────────────
-
 
 function BestiaryTab() {
   const discoveredLevels = useGameStore((s) => s.discoveredLevels)
@@ -371,8 +370,7 @@ function BestiaryCard({
   const locName = t(`locations.${cfg.location}`)
   const income = fmtRate(getTargetIncomePerSec(level))
   const [previewTier, setPreviewTier] = useState<0 | 1 | 2>(0)
-  const cycleTier = () =>
-    setPreviewTier((t) => ((t + 1) % 3) as 0 | 1 | 2)
+  const cycleTier = () => setPreviewTier((t) => ((t + 1) % 3) as 0 | 1 | 2)
 
   if (!isUnlocked) {
     return (
@@ -581,7 +579,8 @@ function SettingsTab() {
         <div
           style={{
             fontSize: 13,
-            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+            fontFamily:
+              'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
             color: '#365314',
             userSelect: 'text',
           }}

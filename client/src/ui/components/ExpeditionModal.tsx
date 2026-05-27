@@ -424,7 +424,7 @@ export function ExpeditionModal({ onClose }: Props) {
         style={{
           position: 'absolute',
           top: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad))',
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)',
+          bottom: 'env(safe-area-inset-bottom, 0px)',
           left: 0,
           right: 0,
           zIndex: 151,
