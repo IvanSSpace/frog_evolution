@@ -7,6 +7,14 @@ import { CHAINS_RESPONSE } from '../data/chains'
 import { simulate } from '../expedition/engine'
 import { renderJournal, lootSummary } from '../expedition/render'
 import {
+  SCENARIOS,
+  DEPARTURE,
+  RETURN,
+  ARRIVAL,
+  LOST,
+} from '../expedition/content'
+import type { Scenario } from '../expedition/types'
+import {
   EXPEDITION_CONFIG,
   DEMO_CONFIG,
   DEFAULT_SHIP_STATS,

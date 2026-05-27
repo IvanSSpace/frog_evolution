@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useGameStore } from '../../store/gameStore'
 import { useModalLock } from '../../utils/modalLock'
@@ -116,153 +116,150 @@ function InvSlot({
   )
 }
 
-function Section({
-  title,
-  children,
-  empty,
-}: {
-  title: string
-  children: React.ReactNode
-  empty: boolean
-}) {
+// Пустой слот — тех же размеров, без содержимого (заполняет сетку).
+function EmptySlot() {
   return (
-    <div className="flex flex-col gap-2">
-      <div className="ff-display text-sm text-emerald-900">{title}</div>
-      {empty ? (
-        <div className="ff-body text-[12px] text-emerald-800/70">
-          Пока пусто.
-        </div>
-      ) : (
-        <div className="flex flex-wrap gap-2.5">{children}</div>
-      )}
-    </div>
+    <div
+      style={{
+        flexShrink: 0,
+        width: 52,
+        height: 56,
+        borderRadius: 10,
+        border: '2px dashed rgba(77,107,31,0.35)',
+        background: 'rgba(77,107,31,0.06)',
+      }}
+    />
   )
 }
 
 export function InventoryModal({ onClose }: Props) {
   useModalLock()
-  const [closing, setClosing] = useState(false)
 
   const gold = useGameStore((s) => s.gold)
   const serums = useGameStore((s) => s.serums)
   const mutagen = useGameStore((s) => s.mutagen)
   const routes = useGameStore((s) => s.routes)
 
-  const handleClose = useCallback(() => {
-    if (closing) return
-    setClosing(true)
-    window.setTimeout(onClose, 280)
-  }, [closing, onClose])
+  const handleClose = onClose
 
   const serumSlots = ELEMENTS.filter((e) => (serums[e] ?? 0) > 0)
   const routeSlots = ROUTE_RARITIES.filter((r) => (routes?.[r.key] ?? 0) > 0)
-  const hasCosmic = mutagen > 0 || routeSlots.length > 0
+
+  // Единая сетка слотов: золото + мутаген + маршруты + сыворотки. Без разделов.
+  const filled: React.ReactNode[] = [
+    <InvSlot
+      key="gold"
+      icon="/goo.svg"
+      count={Number(gold)}
+      tint="#d9a441"
+      label="💰 Золото (слизь) — основная валюта. Тратится в магазинах и на прокачку."
+    />,
+  ]
+  if (mutagen > 0) {
+    filled.push(
+      <InvSlot
+        key="mutagen"
+        emoji="🧬"
+        count={mutagen}
+        tint="#a855f7"
+        label="🧬 Мутаген — редкий космо-лут. Нужен для эволюции лягушек (вместе с эссенцией)."
+      />,
+    )
+  }
+  routeSlots.forEach((r) => {
+    filled.push(
+      <InvSlot
+        key={`route-${r.key}`}
+        emoji="🗺️"
+        count={routes[r.key]}
+        tint={r.tint}
+        label={`🗺️ Звёздный маршрут (${r.name}) — это миссия. Редкость = сложность прохождения.`}
+      />,
+    )
+  })
+  serumSlots.forEach((e: Element) => {
+    filled.push(
+      <InvSlot
+        key={`serum-${e}`}
+        icon="/genBottle.svg"
+        count={serums[e]}
+        tint={ELEMENT_TINT[e]}
+        filter={ELEMENT_BOTTLE_FILTER[e]}
+        label={`🧪 Сыворотка «${e}» — превращает лягушку в носителя стихии «${e}».`}
+      />,
+    )
+  })
+  // Добиваем пустыми слотами до полной сетки (минимум 4 ряда по 5).
+  const MIN_SLOTS = 20
+  const total = Math.max(MIN_SLOTS, Math.ceil(filled.length / 5) * 5)
+  const emptyCount = total - filled.length
 
   return createPortal(
     <div
+      onClick={handleClose}
+      className="ff-backdrop ff-fade"
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 150,
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
         pointerEvents: 'auto',
-        background: 'transparent',
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) handleClose()
+        padding: '0 16px 4px',
       }}
     >
       <div
+        onClick={(e) => e.stopPropagation()}
+        className="ff-panel ff-pop"
         style={{
-          position: 'absolute',
-          top: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad))',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 151,
-          pointerEvents: 'none',
-          overflow: 'hidden',
+          width: '100%',
+          maxWidth: 380,
+          height: '75vh',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
+        {/* Header — как у Shop/FrogShop */}
         <div
-          className={closing ? 'ff-slide-up' : 'ff-slide-down'}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            pointerEvents: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            background: 'linear-gradient(180deg, #f5fbe9 0%, #d9eeb6 100%)',
-            border: '4px solid #4d6b1f',
-            boxShadow: '0 0 0 3px #f7ffe0 inset',
-          }}
+          className="relative flex items-center justify-between px-5 pt-4 pb-3"
+          style={{ borderBottom: '3px dashed rgba(77,107,31,0.4)' }}
         >
-          {/* Header */}
-          <div
-            className="flex items-center gap-2 px-3 pt-3 pb-2 flex-shrink-0"
-            style={{ borderBottom: '3px dashed rgba(77,107,31,0.4)' }}
+          <h2
+            className="ff-display ff-stroke-white text-2xl"
+            style={{ color: '#16a34a', letterSpacing: 1 }}
           >
-            <div className="flex-1 ff-display text-base text-emerald-900">
-              🎒 Инвентарь
-            </div>
-            <button
-              type="button"
-              onClick={handleClose}
-              aria-label="Закрыть"
-              className="ff-tile w-10 h-10 text-xl flex-shrink-0"
-              style={{
-                ['--ff-tile-from' as never]: '#fca5a5',
-                ['--ff-tile-to' as never]: '#dc2626',
-                ['--ff-tile-border' as never]: '#7f1d1d',
-                color: '#fff',
-              }}
-            >
-              ✕
-            </button>
-          </div>
+            🎒 Инвентарь
+          </h2>
+          <button
+            onClick={handleClose}
+            aria-label="Закрыть"
+            className="ff-tile w-9 h-9 text-lg"
+            style={{
+              ['--ff-tile-from' as never]: '#fca5a5',
+              ['--ff-tile-to' as never]: '#dc2626',
+              ['--ff-tile-border' as never]: '#7f1d1d',
+              color: '#fff',
+            }}
+          >
+            ✕
+          </button>
+        </div>
 
-          {/* Body */}
-          <div className="flex-1 flex flex-col gap-4 overflow-y-auto px-4 py-3">
-            <Section title="💰 Валюта" empty={false}>
-              <InvSlot
-                icon="/goo.svg"
-                count={Number(gold)}
-                tint="#d9a441"
-                label="💰 Золото (слизь) — основная валюта. Тратится в магазинах и на прокачку."
-              />
-            </Section>
-
-            <Section title="🌌 Космический лут" empty={!hasCosmic}>
-              {mutagen > 0 && (
-                <InvSlot
-                  emoji="🧬"
-                  count={mutagen}
-                  tint="#a855f7"
-                  label="🧬 Мутаген — редкий космо-лут. Нужен для эволюции лягушек (вместе с эссенцией)."
-                />
-              )}
-              {routeSlots.map((r) => (
-                <InvSlot
-                  key={r.key}
-                  emoji="🗺️"
-                  count={routes[r.key]}
-                  tint={r.tint}
-                  label={`🗺️ Звёздный маршрут (${r.name}) — это миссия. Редкость = сложность прохождения.`}
-                />
-              ))}
-            </Section>
-
-            <Section title="🧪 Сыворотки" empty={serumSlots.length === 0}>
-              {serumSlots.map((e: Element) => (
-                <InvSlot
-                  key={e}
-                  icon="/genBottle.svg"
-                  count={serums[e]}
-                  tint={ELEMENT_TINT[e]}
-                  filter={ELEMENT_BOTTLE_FILTER[e]}
-                  label={`🧪 Сыворотка «${e}» — превращает лягушку в носителя стихии «${e}».`}
-                />
-              ))}
-            </Section>
+        {/* Body — единая сетка слотов (как ячейки инвентаря). */}
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 10,
+              justifyContent: 'center',
+            }}
+          >
+            {filled}
+            {Array.from({ length: emptyCount }).map((_, i) => (
+              <EmptySlot key={`empty-${i}`} />
+            ))}
           </div>
         </div>
       </div>
