@@ -90,11 +90,11 @@ export function ExpeditionScenariosPage() {
   return (
     <div className="p-6 max-w-4xl">
       <h1 className="text-2xl font-bold mb-1">Каталог событий</h1>
-      <div className="text-sm text-gray-600 mb-2">
+      <div className="text-sm text-muted-foreground mb-2">
         Всего сценариев: <b>{data.total}</b> · показано:{' '}
         <b>{rows.length}</b>
       </div>
-      <div className="text-xs text-gray-500 mb-4">
+      <div className="text-xs text-muted-foreground mb-4">
         Урон наносят только <b style={{ color: CAT_COLOR.hazard }}>hazard</b>
         -события: <b>{data.hazardDmg.min}–{data.hazardDmg.max} HP</b> при полном
         риске (× текущий риск, × резист брони; обратный путь ×
@@ -129,7 +129,7 @@ export function ExpeditionScenariosPage() {
             className={`rounded px-2.5 py-1 text-xs border ${
               poolFilter === pool
                 ? 'bg-gray-800 text-white border-gray-800'
-                : 'bg-white text-gray-700 border-gray-300'
+                : 'bg-background text-foreground border-border'
             }`}
           >
             {pool}: {n}
@@ -145,7 +145,7 @@ export function ExpeditionScenariosPage() {
 
       {/* Разбивка по награде — что событие даёт */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <span className="text-xs text-gray-500">Награда:</span>
+        <span className="text-xs text-muted-foreground">Награда:</span>
         {rewards.map(([rw, n]) => (
           <button
             key={rw}
@@ -153,7 +153,7 @@ export function ExpeditionScenariosPage() {
             className={`rounded px-2.5 py-1 text-xs border ${
               rewardFilter === rw
                 ? 'bg-emerald-600 text-white border-emerald-600'
-                : 'bg-white text-gray-700 border-gray-300'
+                : 'bg-background text-foreground border-border'
             }`}
           >
             {REWARD_LABEL[rw] ?? rw}: {n}
@@ -166,7 +166,7 @@ export function ExpeditionScenariosPage() {
         {rows.map((s) => (
           <div
             key={`${s.pool}-${s.id}`}
-            className="border rounded p-3"
+            className="border rounded p-3 bg-card text-card-foreground"
             style={{ borderLeft: `4px solid ${CAT_COLOR[s.category] ?? '#999'}` }}
           >
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs mb-1">
@@ -177,8 +177,8 @@ export function ExpeditionScenariosPage() {
               >
                 {s.category}
               </span>
-              <span className="text-gray-500">пул: {s.pool}</span>
-              <span className="text-gray-500">вес: {s.weight}</span>
+              <span className="text-muted-foreground">пул: {s.pool}</span>
+              <span className="text-muted-foreground">вес: {s.weight}</span>
               {s.category === 'hazard' && (
                 <span
                   className="rounded px-1.5 py-0.5 font-semibold text-white"
@@ -188,7 +188,7 @@ export function ExpeditionScenariosPage() {
                 </span>
               )}
               {s.minSec > 0 && (
-                <span className="text-gray-500">
+                <span className="text-muted-foreground">
                   с {(s.minSec / 60).toFixed(0)}мин
                 </span>
               )}
@@ -204,7 +204,7 @@ export function ExpeditionScenariosPage() {
                 </span>
               )}
             </div>
-            <div className="text-sm text-gray-800 flex flex-col gap-0.5">
+            <div className="text-sm text-foreground flex flex-col gap-0.5">
               {s.lines.map((l, i) => (
                 <div key={i}>· {l}</div>
               ))}
