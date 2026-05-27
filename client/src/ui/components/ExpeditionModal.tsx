@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { Virtuoso } from 'react-virtuoso'
 import { useGameStore } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
 import { useModalLock } from '../../utils/modalLock'
@@ -185,7 +186,6 @@ export function ExpeditionModal({ onClose }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [claimMsg, setClaimMsg] = useState<string | null>(null)
   const [nowTs, setNowTs] = useState(() => Date.now())
-  const logRef = useRef<HTMLDivElement>(null)
 
   const gold = useGameStore((s) => s.gold)
 
@@ -246,12 +246,6 @@ export function ExpeditionModal({ onClose }: Props) {
       void refresh()
     }
   }, [activeExp, nowTs, refresh])
-
-  // Auto-scroll journal.
-  useEffect(() => {
-    const el = logRef.current
-    if (el) el.scrollTop = el.scrollHeight
-  }, [selectedShipId, nowTs])
 
   // Снаряжение: уходим в Phaser-сцену (выбор экипажа + анимация запуска).
   // Закрываем модалку, чтобы сцена была видна; App переоткроет на launch/cancel.
@@ -657,42 +651,55 @@ export function ExpeditionModal({ onClose }: Props) {
 
                 <ShipInventory loot={activeExp.loot} />
 
-                {/* Journal */}
+                {/* Journal — виртуализирован (react-virtuoso) */}
                 <div
-                  ref={logRef}
-                  className="flex-1 min-h-0 overflow-y-auto"
+                  className="flex-1 min-h-0"
                   style={{
                     background:
                       'radial-gradient(ellipse at top,#0f3d18,#072810)',
                     border: '2px solid #1f5a2a',
                     borderRadius: 6,
-                    padding: '10px 12px',
+                    overflow: 'hidden',
                     fontFamily: 'ui-monospace, Menlo, monospace',
                     fontSize: 13,
                     lineHeight: 1.5,
                   }}
                 >
-                  {visibleJournal.map((l, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        display: 'flex',
-                        gap: 10,
-                        color: CAT_COLOR[l.category] ?? '#7CFC7C',
-                      }}
-                    >
-                      <span
+                  <Virtuoso
+                    key={selectedShipId ?? 0}
+                    style={{ height: '100%' }}
+                    data={visibleJournal}
+                    followOutput="auto"
+                    initialTopMostItemIndex={Math.max(
+                      0,
+                      visibleJournal.length - 1,
+                    )}
+                    components={{
+                      Header: () => <div style={{ height: 8 }} />,
+                      Footer: () => <div style={{ height: 8 }} />,
+                    }}
+                    itemContent={(_i, l) => (
+                      <div
                         style={{
-                          opacity: 0.7,
-                          flexShrink: 0,
-                          fontVariantNumeric: 'tabular-nums',
+                          display: 'flex',
+                          gap: 10,
+                          padding: '1px 12px',
+                          color: CAT_COLOR[l.category] ?? '#7CFC7C',
                         }}
                       >
-                        {l.time}
-                      </span>
-                      <span>{highlightLoot(l.text)}</span>
-                    </div>
-                  ))}
+                        <span
+                          style={{
+                            opacity: 0.7,
+                            flexShrink: 0,
+                            fontVariantNumeric: 'tabular-nums',
+                          }}
+                        >
+                          {l.time}
+                        </span>
+                        <span>{highlightLoot(l.text)}</span>
+                      </div>
+                    )}
+                  />
                 </div>
 
                 {/* Actions */}
