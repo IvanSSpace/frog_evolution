@@ -8,6 +8,7 @@ import {
   RETURN,
   ARRIVAL,
   LOST,
+  LOOT_LEADIN,
 } from './content'
 import type {
   ExpeditionResult,
@@ -144,8 +145,19 @@ export function simulate(
   const emit = (s: Scenario, displayBase: number, realBase: number, rng: Rng) => {
     const nums = beatNums(s.loot)
     const scaledGold = scaleGold(nums.gold) // {gold} токен и лут — к доходу
-    const n = s.lines.length
-    s.lines.forEach((line, i) => {
+    // Лут не сваливается мгновенно: перед событием с добычей вставляем подводку.
+    const hasLoot = !!(
+      s.loot &&
+      (s.loot.gold || s.loot.mutagen || s.loot.route || s.loot.serums)
+    )
+    const effLines = hasLoot
+      ? [
+          { dt: 0, text: rng.pick(LOOT_LEADIN) },
+          ...s.lines.map((l) => ({ dt: l.dt + 8, text: l.text })),
+        ]
+      : s.lines
+    const n = effLines.length
+    effLines.forEach((line, i) => {
       log.push({
         t: displayBase + line.dt,
         revealSec: realBase + (n > 1 ? (i * cfg.tickIntervalSec) / n : 0),
