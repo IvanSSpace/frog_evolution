@@ -4,7 +4,9 @@
 // МИЛИ при касании. Герой авто-атакует ДАЛЬНОБОЙНО (снаряд в ближайшего).
 // Экипаж = «жизни»: герой умер → выходит следующая жаба (послабее), урон отряда
 // КОНСТАНТНЫЙ. Кончился экипаж → fail. На BOSS_TIME спавнится босс → убил → win.
-// Прокачки в забеге пока НЕТ (Phase 2 — кристаллы с мобов).
+// Прокачка (Phase 2): мобы роняют кристаллы → магнит-сбор → XP-шкала сверху
+// (стиль мега-бокса) → заполнилась → модалка выбора 1 из 3 апгрейдов (игра
+// замирает). Прокачка RUN-LOCAL — сбрасывается каждый забег (init).
 //
 // Управление: floating joystick (VirtualJoystick) — тап в любую точку.
 //
@@ -70,6 +72,28 @@ const BOSS_DMG = 24
 
 const RESPAWN_INVULN = 1500 // ms неуязвимости после смены «жизни»
 
+// === Кристаллы + прокачка (run-local, сбрасывается каждый забег в init) ===
+const CRYSTAL_R = 6 * DPR
+const CRYSTAL_PICKUP_R = 95 * DPR // базовый радиус притяжения (апгрейд «магнит» множит)
+const CRYSTAL_COLLECT_R = 26 * DPR // дистанция подбора
+const CRYSTAL_PULL = 0.22 // lerp-сила притяжения к герою
+const XP_BASE = 4 // кристаллов на 1→2 уровень
+const XP_PER_LEVEL = 2 // +N к порогу за каждый следующий уровень
+const ATK_INTERVAL_MIN = 150 // пол скорострельности (апгрейд не опустит ниже)
+
+// Пул апгрейдов (выбор 3 случайных на левелапе). apply — в applyUpgrade().
+const UPGRADE_POOL: { id: string; label: string }[] = [
+  { id: 'hp', label: '❤️ +30 макс. HP' },
+  { id: 'dmg', label: '🗡 +8 урон' },
+  { id: 'atkspd', label: '⚡ Скорострельность +15%' },
+  { id: 'speed', label: '🥾 +12% скорость' },
+  { id: 'magnet', label: '🧲 +35% радиус сбора' },
+]
+
+interface Crystal {
+  sprite: Phaser.GameObjects.Arc
+}
+
 interface Hero {
   sprite: Phaser.GameObjects.Image
   // Логическая позиция (для движения/коллизий). Спрайт рендерится в (x, y-hop),
@@ -94,6 +118,7 @@ interface Projectile {
   vx: number
   vy: number
   born: number
+  dmg: number
 }
 
 function heroMaxHpForLevel(level: number): number {
@@ -120,8 +145,23 @@ export class SurvivorScene extends Phaser.Scene {
   private heroHopT = 0 // накопитель фазы хопа (растёт пока герой движется)
   private heroBaseScale = 1 // равномерный масштаб героя (squash-stretch множит его)
 
+  // Run-local статы (апгрейды их меняют; сброс в init каждый забег).
+  private dmg = ATTACK_DMG
+  private atkInterval = ATTACK_INTERVAL
+  private moveMult = 1
+  private pickupR = CRYSTAL_PICKUP_R
+
+  // Прокачка через кристаллы.
+  private crystals: Crystal[] = []
+  private xp = 0
+  private heroXpLevel = 1
+  private xpNeeded = XP_BASE
+  private paused = false // true пока открыто окно апгрейда (логика заморожена)
+  private pickerLayer?: Phaser.GameObjects.Container
+
   // HUD
   private hpBarFill!: Phaser.GameObjects.Rectangle
+  private xpBarFill!: Phaser.GameObjects.Rectangle
   private infoText!: Phaser.GameObjects.Text
 
   constructor() {
@@ -143,6 +183,17 @@ export class SurvivorScene extends Phaser.Scene {
     this.bossSpawned = false
     this.invulnUntil = 0
     this.over = false
+    // Прокачка run-local — каждый забег с нуля (как в Vampire Survivors).
+    this.dmg = ATTACK_DMG
+    this.atkInterval = ATTACK_INTERVAL
+    this.moveMult = 1
+    this.pickupR = CRYSTAL_PICKUP_R
+    this.crystals = []
+    this.xp = 0
+    this.heroXpLevel = 1
+    this.xpNeeded = XP_BASE
+    this.paused = false
+    this.pickerLayer = undefined
   }
 
   create() {
@@ -180,12 +231,14 @@ export class SurvivorScene extends Phaser.Scene {
 
     // Joystick + input.
     this.joystick = new VirtualJoystick(this)
-    this.input.on('pointerdown', (p: Phaser.Input.Pointer) =>
-      this.joystick.start(p.x, p.y),
-    )
-    this.input.on('pointermove', (p: Phaser.Input.Pointer) =>
-      this.joystick.move(p.x, p.y),
-    )
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      if (this.paused || this.over) return
+      this.joystick.start(p.x, p.y)
+    })
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+      if (this.paused || this.over) return
+      this.joystick.move(p.x, p.y)
+    })
     this.input.on('pointerup', () => this.joystick.end())
     this.input.on('pointerupoutside', () => this.joystick.end())
 
@@ -220,21 +273,36 @@ export class SurvivorScene extends Phaser.Scene {
     const w = this.scale.width
     const barW = 220 * DPR
     const barH = 14 * DPR
-    const top = 18 * DPR
 
+    // XP-шкала — сверху во всю ширину, в стиле прогресса мега-бокса
+    // (квадратная, синяя заливка). Заполнилась → окно выбора апгрейда.
+    const xpH = 7 * DPR
     this.add
-      .rectangle(w / 2, top, barW, barH, 0x000000, 0.5)
+      .rectangle(0, 0, w, xpH, 0x0a1426, 0.85)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(99990)
+    this.xpBarFill = this.add
+      .rectangle(0, 0, w, xpH, 0x2f6bff)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(99991)
+
+    // HP-бар — по центру чуть ниже XP-шкалы.
+    const hpY = xpH + 16 * DPR
+    this.add
+      .rectangle(w / 2, hpY, barW, barH, 0x000000, 0.5)
       .setScrollFactor(0)
       .setDepth(99990)
       .setStrokeStyle(2 * DPR, 0xffffff, 0.4)
     this.hpBarFill = this.add
-      .rectangle(w / 2 - barW / 2, top, barW, barH - 4 * DPR, 0x4ad295)
+      .rectangle(w / 2 - barW / 2, hpY, barW, barH - 4 * DPR, 0x4ad295)
       .setOrigin(0, 0.5)
       .setScrollFactor(0)
       .setDepth(99991)
 
     this.infoText = this.add
-      .text(12 * DPR, 12 * DPR, '', {
+      .text(12 * DPR, hpY + 14 * DPR, '', {
         fontFamily: 'Russo One, sans-serif',
         fontSize: `${13 * DPR}px`,
         color: '#eaffd8',
@@ -246,7 +314,7 @@ export class SurvivorScene extends Phaser.Scene {
 
     // ✕ — выход (abandon, без награды).
     this.add
-      .text(w - 16 * DPR, 14 * DPR, '✕', {
+      .text(w - 16 * DPR, xpH + 6 * DPR, '✕', {
         fontFamily: 'Russo One, sans-serif',
         fontSize: `${22 * DPR}px`,
         color: '#ff8b8b',
@@ -268,15 +336,19 @@ export class SurvivorScene extends Phaser.Scene {
     this.hpBarFill.width = barW * pct
     this.hpBarFill.fillColor =
       pct > 0.5 ? 0x4ad295 : pct > 0.25 ? 0xffd24a : 0xff5d6c
+    this.xpBarFill.width =
+      this.scale.width * Phaser.Math.Clamp(this.xp / this.xpNeeded, 0, 1)
     const lives = this.crew.length - this.crewIdx
     const sec = Math.max(0, Math.ceil((BOSS_TIME - this.elapsed) / 1000))
     const bossLabel = this.bossSpawned ? '👑 БОСС' : `👑 ${sec}с`
-    this.infoText.setText(`🐸×${lives}   ☠ ${this.kills}   ${bossLabel}`)
+    this.infoText.setText(
+      `🐸×${lives}   ⭐${this.heroXpLevel}   ☠ ${this.kills}   ${bossLabel}`,
+    )
   }
 
   // === Main loop ===
   override update(_time: number, deltaMs: number) {
-    if (this.over) return
+    if (this.over || this.paused) return // окно апгрейда замораживает забег
     const dt = deltaMs / 1000
     this.elapsed += deltaMs
 
@@ -284,6 +356,7 @@ export class SurvivorScene extends Phaser.Scene {
     this.autoAttack(deltaMs)
     this.updateProjectiles(deltaMs)
     this.updateMobs(deltaMs)
+    this.updateCrystals()
     this.handleSpawning(deltaMs)
     this.maybeSpawnBoss()
     this.updateHud()
@@ -293,16 +366,9 @@ export class SurvivorScene extends Phaser.Scene {
     const d = this.joystick.dir
     const moving = d.x !== 0 || d.y !== 0
     if (moving) {
-      this.hero.x = Phaser.Math.Clamp(
-        this.hero.x + d.x * HERO_SPEED * dt,
-        0,
-        WORLD,
-      )
-      this.hero.y = Phaser.Math.Clamp(
-        this.hero.y + d.y * HERO_SPEED * dt,
-        0,
-        WORLD,
-      )
+      const spd = HERO_SPEED * this.moveMult
+      this.hero.x = Phaser.Math.Clamp(this.hero.x + d.x * spd * dt, 0, WORLD)
+      this.hero.y = Phaser.Math.Clamp(this.hero.y + d.y * spd * dt, 0, WORLD)
       if (d.x !== 0) this.hero.sprite.setFlipX(d.x < 0)
     }
     // Хоп идёт ВСЕГДА: движется — полный прыжок; стоит — лёгкий бобинг (герой
@@ -342,10 +408,10 @@ export class SurvivorScene extends Phaser.Scene {
 
   private autoAttack(deltaMs: number) {
     this.attackAcc += deltaMs
-    if (this.attackAcc < ATTACK_INTERVAL) return
+    if (this.attackAcc < this.atkInterval) return
     const target = this.nearestMob()
     if (!target) {
-      this.attackAcc = ATTACK_INTERVAL // готов выстрелить как только появится цель
+      this.attackAcc = this.atkInterval // готов выстрелить как только появится цель
       return
     }
     this.attackAcc = 0
@@ -360,6 +426,7 @@ export class SurvivorScene extends Phaser.Scene {
       vx: Math.cos(ang) * PROJ_SPEED,
       vy: Math.sin(ang) * PROJ_SPEED,
       born: this.elapsed,
+      dmg: this.dmg,
     })
   }
 
@@ -378,7 +445,7 @@ export class SurvivorScene extends Phaser.Scene {
         const dd =
           (m.sprite.x - p.sprite.x) ** 2 + (m.sprite.y - p.sprite.y) ** 2
         if (dd <= r * r) {
-          m.hp -= ATTACK_DMG
+          m.hp -= p.dmg
           this.hitFlash(m.sprite)
           this.destroyProjectile(p)
           if (m.hp <= 0) this.killMob(m)
@@ -476,7 +543,9 @@ export class SurvivorScene extends Phaser.Scene {
     const x = m.sprite.x
     const y = m.sprite.y
     m.sprite.destroy()
-    // Pop-частицы (Phase 2 — здесь будет дроп кристалла).
+    // Обычный моб роняет кристалл (XP). Босс не роняет — его смерть = победа.
+    if (!m.isBoss) this.spawnCrystal(x, y)
+    // Pop-частицы.
     for (let i = 0; i < 5; i++) {
       const a = (i / 5) * Math.PI * 2
       const p = this.add.circle(
@@ -497,6 +566,126 @@ export class SurvivorScene extends Phaser.Scene {
       })
     }
     if (m.isBoss) this.endRun('win')
+  }
+
+  // === Кристаллы + прокачка ===
+  private spawnCrystal(x: number, y: number) {
+    const c = this.add
+      .circle(x, y, CRYSTAL_R, 0x46e6ff, 1)
+      .setStrokeStyle(2 * DPR, 0xffffff, 0.8)
+      .setDepth(4)
+    this.crystals.push({ sprite: c })
+  }
+
+  private updateCrystals() {
+    const hx = this.hero.x
+    const hy = this.hero.y
+    const pickup2 = this.pickupR * this.pickupR
+    const collect2 = CRYSTAL_COLLECT_R * CRYSTAL_COLLECT_R
+    for (const c of [...this.crystals]) {
+      if (this.paused) break // левелап открыл окно — стоп до выбора апгрейда
+      const s = c.sprite
+      const d2 = (hx - s.x) ** 2 + (hy - s.y) ** 2
+      if (d2 <= collect2) {
+        s.destroy()
+        this.crystals = this.crystals.filter((x) => x !== c)
+        this.gainXp(1)
+        continue
+      }
+      if (d2 <= pickup2) {
+        // Притяжение к герою (магнит).
+        s.x = Phaser.Math.Linear(s.x, hx, CRYSTAL_PULL)
+        s.y = Phaser.Math.Linear(s.y, hy, CRYSTAL_PULL)
+      }
+    }
+  }
+
+  private gainXp(n: number) {
+    this.xp += n
+    if (this.xp >= this.xpNeeded) {
+      this.xp -= this.xpNeeded
+      this.heroXpLevel += 1
+      this.xpNeeded = XP_BASE + (this.heroXpLevel - 1) * XP_PER_LEVEL
+      this.openUpgradePicker()
+    }
+  }
+
+  /** Модалка выбора 1 из 3 апгрейдов поверх игры — забег заморожен (paused). */
+  private openUpgradePicker() {
+    if (this.pickerLayer) return
+    this.paused = true
+    this.joystick.end()
+    hapticNotification('success')
+
+    const w = this.scale.width
+    const h = this.scale.height
+    const layer = this.add.container(0, 0).setScrollFactor(0).setDepth(100020)
+
+    layer.add(this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.62))
+    layer.add(
+      this.add
+        .text(w / 2, h * 0.28, `Уровень ${this.heroXpLevel}!\nВыбери апгрейд`, {
+          fontFamily: 'Russo One, sans-serif',
+          fontSize: `${20 * DPR}px`,
+          color: '#ffe27a',
+          align: 'center',
+          stroke: '#0b1b0e',
+          strokeThickness: 4 * DPR,
+        })
+        .setOrigin(0.5),
+    )
+
+    const pool = Phaser.Utils.Array.Shuffle([...UPGRADE_POOL]).slice(0, 3)
+    pool.forEach((u, i) => {
+      const cy = h * 0.44 + i * 74 * DPR
+      const card = this.add
+        .text(w / 2, cy, u.label, {
+          fontFamily: 'sans-serif',
+          fontSize: `${17 * DPR}px`,
+          color: '#ffffff',
+          backgroundColor: '#16a34a',
+          padding: { x: 26 * DPR, y: 14 * DPR },
+          fontStyle: 'bold',
+          align: 'center',
+          fixedWidth: w * 0.7,
+        })
+        .setStroke('#0f5132', 3 * DPR)
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true })
+      card.on('pointerup', () => this.chooseUpgrade(u.id))
+      layer.add(card)
+    })
+
+    this.pickerLayer = layer
+  }
+
+  private chooseUpgrade(id: string) {
+    this.applyUpgrade(id)
+    this.pickerLayer?.destroy()
+    this.pickerLayer = undefined
+    this.joystick.end()
+    this.paused = false
+  }
+
+  private applyUpgrade(id: string) {
+    switch (id) {
+      case 'hp':
+        this.hero.maxHp += 30
+        this.hero.hp += 30
+        break
+      case 'dmg':
+        this.dmg += 8
+        break
+      case 'atkspd':
+        this.atkInterval = Math.max(ATK_INTERVAL_MIN, this.atkInterval * 0.85)
+        break
+      case 'speed':
+        this.moveMult *= 1.12
+        break
+      case 'magnet':
+        this.pickupR *= 1.35
+        break
+    }
   }
 
   private hitFlash(s: Phaser.GameObjects.Image) {
@@ -603,9 +792,13 @@ export class SurvivorScene extends Phaser.Scene {
   private cleanup() {
     this.input.removeAllListeners()
     this.joystick?.destroy()
+    this.pickerLayer?.destroy()
+    this.pickerLayer = undefined
     for (const m of this.mobs) m.sprite.destroy()
     for (const p of this.projectiles) p.sprite.destroy()
+    for (const c of this.crystals) c.sprite.destroy()
     this.mobs = []
     this.projectiles = []
+    this.crystals = []
   }
 }
