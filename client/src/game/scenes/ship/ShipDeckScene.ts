@@ -189,15 +189,18 @@ export class ShipDeckScene extends Phaser.Scene {
       .setOrigin(0.5)
     this.layer.add(this.hintText)
 
-    // launch button — в стиле приложения (зелёная ff-btn), серая когда нельзя
+    // Две кнопки запуска: «в космос» (серверная экспедиция) и «на миссию»
+    // (VS-арена). Обе активны только когда выбран хотя бы 1 член экипажа.
     const canLaunch = this.selected.size >= 1
+
+    // 🚀 В космос — пассивная экспедиция (как было).
     this.launchBtn = this.add
-      .text(w / 2, h - 34 * DPR, canLaunch ? '🚀 Запустить' : 'Выбери экипаж', {
+      .text(w / 2, h - 86 * DPR, canLaunch ? '🚀 В космос' : 'Выбери экипаж', {
         fontFamily: 'sans-serif',
-        fontSize: `${18 * DPR}px`,
+        fontSize: `${17 * DPR}px`,
         color: '#ffffff',
         backgroundColor: canLaunch ? '#16a34a' : '#64748b',
-        padding: { x: 22 * DPR, y: 11 * DPR },
+        padding: { x: 20 * DPR, y: 10 * DPR },
         fontStyle: 'bold',
       })
       .setStroke(canLaunch ? '#0f5132' : '#334155', 3 * DPR)
@@ -207,6 +210,33 @@ export class ShipDeckScene extends Phaser.Scene {
       this.launchBtn.on('pointerup', () => this.onLaunch())
     }
     this.layer.add(this.launchBtn)
+
+    // ⚔️ На миссию — VS-арена (бой на поле планеты).
+    const missionBtn = this.add
+      .text(w / 2, h - 34 * DPR, '⚔️ На миссию', {
+        fontFamily: 'sans-serif',
+        fontSize: `${17 * DPR}px`,
+        color: '#ffffff',
+        backgroundColor: canLaunch ? '#b45309' : '#64748b',
+        padding: { x: 20 * DPR, y: 10 * DPR },
+        fontStyle: 'bold',
+      })
+      .setStroke(canLaunch ? '#7c2d12' : '#334155', 3 * DPR)
+      .setOrigin(0.5)
+    if (canLaunch) {
+      missionBtn.setInteractive({ useHandCursor: true })
+      missionBtn.on('pointerup', () => this.onMission())
+    }
+    this.layer.add(missionBtn)
+  }
+
+  // ⚔️ Отправить выбранный экипаж в VS-арену (бой). crew = уровни выбранных жаб
+  // («жизни»). game/index.ts ловит survivor:start → бутит SurvivorScene.
+  private onMission() {
+    if (this.launching || this.selected.size < 1) return
+    this.launching = true
+    const crew = [...this.selected].map((i) => this.frogs[i])
+    eventBus.emit('survivor:start', { crew, shipId: this.params.shipId })
   }
 
   private makeFrog(

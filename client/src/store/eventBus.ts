@@ -68,6 +68,12 @@ type Events = {
   }
   'shipdeck:launch': { shipId: number; crew: number[]; demo: boolean }
   'shipdeck:cancel': Record<string, never>
+  // VS-арена миссии (Survivor mode, Phase 1 прототип). Запускается из
+  // ShipDeckScene кнопкой «На миссию»; crew = уровни выбранного экипажа
+  // (= «жизни»: смерть текущей жабы → следующая, послабее).
+  'survivor:start': { crew: number[]; shipId: number; planetId?: string }
+  'survivor:complete': { result: 'win' | 'lose'; reward: number; kills: number }
+  'survivor:exit': Record<string, never>
   // Синхрон React-оверлея кнопок локаций со сценой скаута.
   'raid:scout-changed': { locId: number }
   'raid:scout-set-loc': { locId: number }
