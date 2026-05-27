@@ -40,6 +40,8 @@ export function StarMapHUD() {
 
   if (!active) return null
 
+  // FPS-счётчик — только в dev (npm run dev). На проде (у игроков) скрыт.
+  const showFps = import.meta.env.DEV
   const fpsColor =
     data.fps > 50 ? '#86efac' : data.fps > 30 ? '#fde047' : '#fca5a5'
   const baseStyle: React.CSSProperties = {
@@ -65,15 +67,19 @@ export function StarMapHUD() {
         <span>X:{data.x}</span>
         <span>Y:{data.y}</span>
         <span>Z:{data.zoom.toFixed(2)}</span>
-        <span style={{ color: fpsColor }}>FPS:{Math.round(data.fps)}</span>
+        {showFps && (
+          <span style={{ color: fpsColor }}>FPS:{Math.round(data.fps)}</span>
+        )}
         <span style={{ opacity: 0.7 }}>
           {data.vis}/{data.total}
         </span>
       </div>
-      {/* Дублирующий FPS над BottomBar — основной для слежения за perf. */}
-      <div style={{ ...baseStyle, bottom: 'calc(13% + 6px)', left: 8 }}>
-        <span style={{ color: fpsColor }}>FPS:{Math.round(data.fps)}</span>
-      </div>
+      {/* Дублирующий FPS над BottomBar — основной для слежения за perf. Dev-only. */}
+      {showFps && (
+        <div style={{ ...baseStyle, bottom: 'calc(13% + 6px)', left: 8 }}>
+          <span style={{ color: fpsColor }}>FPS:{Math.round(data.fps)}</span>
+        </div>
+      )}
     </>
   )
 }
