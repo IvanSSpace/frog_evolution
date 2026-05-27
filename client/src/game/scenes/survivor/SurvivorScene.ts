@@ -35,6 +35,11 @@ const HERO_SIZE = 96 * DPR // целевая ВЫСОТА спрайта (шир
 const HERO_HITR = 34 * DPR
 const HERO_HOP_AMP = 13 * DPR // высота подскока при движении
 const HERO_HOP_FREQ = 13 // рад/с — частота хопа
+// Squash-stretch как на ферме: в воздухе тянется вверх, у земли сжимается.
+const HERO_HOP_STRETCH_Y = 1.18
+const HERO_HOP_SQUASH_Y = 0.82
+const HERO_HOP_STRETCH_X = 0.92
+const HERO_HOP_SQUASH_X = 1.12
 
 const ATTACK_INTERVAL = 560 // ms между выстрелами
 const ATTACK_DMG = 22 // КОНСТАНТНЫЙ урон отряда (не зависит от текущей «жизни»)
@@ -109,6 +114,7 @@ export class SurvivorScene extends Phaser.Scene {
   private invulnUntil = 0
   private over = false
   private heroHopT = 0 // накопитель фазы хопа (растёт пока герой движется)
+  private heroBaseScale = 1 // равномерный масштаб героя (squash-stretch множит его)
 
   // HUD
   private hpBarFill!: Phaser.GameObjects.Rectangle
@@ -155,6 +161,7 @@ export class SurvivorScene extends Phaser.Scene {
     const lvl = this.crew[0]
     const sprite = this.makeFrogSprite(cx, cy, lvl, HERO_SIZE)
     sprite.setDepth(10)
+    this.heroBaseScale = sprite.scaleX
     this.hero = {
       sprite,
       x: cx,
@@ -295,12 +302,22 @@ export class SurvivorScene extends Phaser.Scene {
     } else {
       this.heroHopT = 0 // стоит на земле
     }
-    // Спрайт = логическая позиция минус подскок (|sin| → серия прыжков).
-    const hop = moving
-      ? Math.abs(Math.sin(this.heroHopT * HERO_HOP_FREQ)) * HERO_HOP_AMP
-      : 0
+    // s: 0 у земли → 1 в апексе (|sin|). Высота подскока + squash-stretch:
+    // у земли сжат (squash), в воздухе вытянут (stretch) — как на ферме.
+    const s = moving ? Math.abs(Math.sin(this.heroHopT * HERO_HOP_FREQ)) : 0
+    const sx =
+      this.heroBaseScale *
+      (moving
+        ? Phaser.Math.Linear(HERO_HOP_SQUASH_X, HERO_HOP_STRETCH_X, s)
+        : 1)
+    const sy =
+      this.heroBaseScale *
+      (moving
+        ? Phaser.Math.Linear(HERO_HOP_SQUASH_Y, HERO_HOP_STRETCH_Y, s)
+        : 1)
+    this.hero.sprite.setScale(sx, sy)
     this.hero.sprite.x = this.hero.x
-    this.hero.sprite.y = this.hero.y - hop
+    this.hero.sprite.y = this.hero.y - s * HERO_HOP_AMP
   }
 
   private nearestMob(): Mob | null {
@@ -512,6 +529,7 @@ export class SurvivorScene extends Phaser.Scene {
     if (this.textures.exists(key)) {
       this.hero.sprite.setTexture(key)
       this.hero.sprite.setScale(HERO_SIZE / this.hero.sprite.height)
+      this.heroBaseScale = this.hero.sprite.scaleX
     }
     this.hero.sprite.clearTint()
     this.invulnUntil = this.elapsed + RESPAWN_INVULN
