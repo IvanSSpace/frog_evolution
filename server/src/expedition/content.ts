@@ -708,6 +708,14 @@ export const SCENARIOS: Scenario[] = [
     { dt: 0, text: 'Целый брошенный сейф в куске метеорита. И он открыт!' },
     { dt: 4, text: 'Джекпот: +{gold} и +{slime} слизи. Сегодня мой день!' },
   ] },
+  { id: 'loot_mutagen', category: 'loot', weight: 2, minSec: 240, loot: { mutagen: 1 }, set: ['loot', 'weird'], lines: [
+    { dt: 0, text: 'В дрейфующей капсуле — пульсирующий сгусток. Биосканер визжит.' },
+    { dt: 4, text: 'Это мутаген! Чистая эволюционная масса. В трюм: +{mutagen} 🧬.' },
+  ] },
+  { id: 'loot_mutagen_reef', category: 'loot', weight: 2, minSec: 360, loot: { mutagen: 1 }, set: ['loot', 'awe'], lines: [
+    { dt: 0, text: 'Кристаллы рифа светятся живым. Внутри — капля мутагена.' },
+    { dt: 4, text: 'Аккуратно извлёк: +{mutagen} 🧬. Редкая удача.' },
+  ] },
   { id: 'loot_salvage', category: 'loot', weight: 4, minSec: 120, loot: { gold: 300 }, set: ['loot', 'wreck'], lines: [
     { dt: 0, text: 'Разобрал разбитый зонд на запчасти. Цветмет в цене.' },
     { dt: 4, text: 'Сдам на базе: +{gold}.' },

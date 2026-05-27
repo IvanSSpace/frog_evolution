@@ -40,34 +40,45 @@ function capitalizeSentences(s: string): string {
 
 // Replace {slot} tokens. galaxy/arm come from the fixed ctx; {slime}/{gold} are
 // the actual loot this beat granted; the rest roll fresh from the dictionaries.
-function fill(text: string, ctx: Ctx, rng: Rng, nums: { slime: number; gold: number }): string {
+function fill(
+  text: string,
+  ctx: Ctx,
+  rng: Rng,
+  nums: { slime: number; gold: number; mutagen: number },
+): string {
   const filled = text.replace(/\{(\w+)\}/g, (_, key: string) => {
     if (key === 'galaxy') return ctx.galaxy
     if (key === 'arm') return ctx.arm
     if (key === 'slime') return String(nums.slime)
     if (key === 'gold') return String(nums.gold)
+    if (key === 'mutagen') return String(nums.mutagen)
     if (key in DICT) return rng.pick(DICT[key as keyof typeof DICT])
     return key
   })
   return capitalizeSentences(filled)
 }
 
-// How much loot a beat narrates (for {slime}/{gold} tokens).
-function beatNums(loot?: LootDelta): { slime: number; gold: number } {
+// How much loot a beat narrates (for {slime}/{gold}/{mutagen} tokens).
+function beatNums(loot?: LootDelta): {
+  slime: number
+  gold: number
+  mutagen: number
+} {
   let slime = 0
   if (loot?.serums) {
     const vals = Object.values(loot.serums) as number[]
     slime = vals.length === 0 ? 1 : vals.reduce((a, b) => a + b, 0)
   }
-  return { slime, gold: loot?.gold ?? 0 }
+  return { slime, gold: loot?.gold ?? 0, mutagen: loot?.mutagen ?? 0 }
 }
 
 function applyLoot(
   loot: LootDelta,
-  bag: { gold: number; serums: Record<Element, number> },
+  bag: { gold: number; serums: Record<Element, number>; mutagen: number },
   rng: Rng,
 ): void {
   if (loot.gold) bag.gold += loot.gold
+  if (loot.mutagen) bag.mutagen += loot.mutagen
   if (loot.serums) {
     const entries = Object.entries(loot.serums) as [Element, number][]
     if (entries.length === 0) {
@@ -94,7 +105,7 @@ export function simulate(
   }
 
   const log: LogLine[] = []
-  const loot = { gold: 0, serums: zeroSerums() }
+  const loot = { gold: 0, serums: zeroSerums(), mutagen: 0 }
   let shipLost = false
 
   // displayBase = journal clock (ЧЧ:ММ); realBase = real seconds since departure
@@ -200,6 +211,7 @@ export function simulate(
     // Lost everything. Loot is forfeit; the journey ends here.
     loot.gold = 0
     loot.serums = zeroSerums()
+    loot.mutagen = 0
     phase = 'arrived'
   } else if (recalled) {
     // Return leg: 3× shorter, and far safer — catastrophe chance is scaled by
@@ -239,6 +251,7 @@ export function simulate(
     if (shipLost) {
       loot.gold = 0
       loot.serums = zeroSerums()
+      loot.mutagen = 0
     } else {
       beatIndex++
       emit(

@@ -73,14 +73,39 @@ const LOCATION_GROUPS: ReadonlyArray<readonly number[]> = [
   [13, 14, 15, 16, 17, 18], // L3 frogs
 ]
 
+// Мутаген (🧬 космо-лут) — нужен на эволюцию вместе с эссенцией.
+// MUTAGEN_COST[level-1][targetTier-1]. Растёт по локации + целевому тиру.
+const MUTAGEN_COST: ReadonlyArray<readonly [number, number]> = [
+  [0, 1], // frog1
+  [0, 1], // frog2
+  [0, 1], // frog3
+  [1, 1], // frog4
+  [1, 1], // frog5
+  [1, 2], // frog6
+  [1, 2], // frog7
+  [1, 2], // frog8
+  [1, 2], // frog9
+  [2, 2], // frog10
+  [2, 3], // frog11
+  [2, 3], // frog12
+  [2, 3], // frog13
+  [2, 4], // frog14
+  [3, 4], // frog15
+  [3, 4], // frog16
+  [3, 5], // frog17
+  [3, 5], // frog18
+]
+
 // Стоимость эволюции frog level с currentTier до currentTier+1.
-// Возвращает gold + essence для следующего апгрейда.
+// Возвращает gold + essence + mutagen для следующего апгрейда.
 export function getEvolutionCost(
   level: number,
   currentTier: number,
-): { gold: number; essence: number } {
-  if (level < 1 || level > MAX_LEVEL) return { gold: 0, essence: 0 }
-  if (currentTier < 0 || currentTier >= 2) return { gold: 0, essence: 0 }
+): { gold: number; essence: number; mutagen: number } {
+  if (level < 1 || level > MAX_LEVEL)
+    return { gold: 0, essence: 0, mutagen: 0 }
+  if (currentTier < 0 || currentTier >= 2)
+    return { gold: 0, essence: 0, mutagen: 0 }
   const targetTier = currentTier + 1
   const gold = Math.floor(
     GOLD_BASE *
@@ -88,7 +113,8 @@ export function getEvolutionCost(
       Math.pow(GOLD_TIER_MULT, targetTier - 1),
   )
   const essence = ESSENCE_COST[level - 1][targetTier - 1]
-  return { gold, essence }
+  const mutagen = MUTAGEN_COST[level - 1][targetTier - 1]
+  return { gold, essence, mutagen }
 }
 
 // % бонус к income за конкретную эволюцию.

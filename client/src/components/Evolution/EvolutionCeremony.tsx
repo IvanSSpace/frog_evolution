@@ -27,7 +27,7 @@ import { useModalLock } from '../../utils/modalLock'
 import { hapticNotification } from '../../utils/telegram'
 import './evolutionCeremony.css'
 
-const SWAP_MS = 1450 // совпадает с пиком ec-flash (≈72% от 2s)
+const SWAP_MS = 2600 // совпадает с пиком ec-flash (≈72% от 3.6s)
 const FADE_OUT_MS = 360
 
 type Ceremony = {
@@ -215,74 +215,74 @@ export function EvolutionCeremony() {
         }}
       />
 
-      {/* Заголовок + бонус — только после reveal. */}
-      {revealed && (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          className="ec-title"
+      {/* Заголовок + бонус. Блок рендерится ВСЕГДА (даже в buildup) и резервирует
+          высоту → лягушка-сцена стоит на одном месте, новая появляется там же где
+          была старая (без прыжка вверх). Видимость/анимация — только в reveal. */}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className={revealed ? 'ec-title' : undefined}
+        style={{
+          marginTop: 18,
+          textAlign: 'center',
+          position: 'relative',
+          zIndex: 2,
+          opacity: revealed ? undefined : 0,
+          pointerEvents: revealed ? 'auto' : 'none',
+        }}
+      >
+        <h1
           style={{
-            marginTop: 18,
-            textAlign: 'center',
-            position: 'relative',
-            zIndex: 2,
+            margin: 0,
+            fontSize: 30,
+            fontWeight: 900,
+            color: '#fde047',
+            letterSpacing: 1,
+            textShadow: '0 2px 16px rgba(253, 224, 71, 0.5)',
           }}
         >
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 30,
-              fontWeight: 900,
-              color: '#fde047',
-              letterSpacing: 1,
-              textShadow: '0 2px 16px rgba(253, 224, 71, 0.5)',
-            }}
-          >
-            Эволюция!
-          </h1>
+          Эволюция!
+        </h1>
+        <p
+          style={{
+            margin: '8px 0 0',
+            fontSize: 15,
+            fontWeight: 700,
+            color: '#d4f7c5',
+          }}
+        >
+          {data.name} → тир {data.newTier}
+        </p>
+        {data.bonusPct > 0 && (
           <p
             style={{
-              margin: '8px 0 0',
-              fontSize: 15,
-              fontWeight: 700,
-              color: '#d4f7c5',
+              margin: '4px 0 0',
+              fontSize: 14,
+              fontWeight: 800,
+              color: '#4ade80',
             }}
           >
-            {data.name} → тир {data.newTier}
+            +{data.bonusPct}% к доходу
           </p>
-          {data.bonusPct > 0 && (
-            <p
-              style={{
-                margin: '4px 0 0',
-                fontSize: 14,
-                fontWeight: 800,
-                color: '#4ade80',
-              }}
-            >
-              +{data.bonusPct}% к доходу
-            </p>
-          )}
+        )}
 
-          <button
-            type="button"
-            onClick={handleDismiss}
-            style={{
-              marginTop: 18,
-              minWidth: 180,
-              background: '#16a34a',
-              borderRadius: 12,
-              padding: '12px 28px',
-              color: '#fff',
-              fontWeight: 700,
-              fontSize: 16,
-              border: '2px solid #14532d',
-              cursor: 'pointer',
-              touchAction: 'manipulation',
-            }}
-          >
-            Класс!
-          </button>
-        </div>
-      )}
+        <button
+          type="button"
+          onClick={handleDismiss}
+          className="ff-btn ff-btn-green"
+          style={{
+            marginTop: 18,
+            minWidth: 180,
+            paddingTop: 12,
+            paddingBottom: 12,
+            paddingLeft: 28,
+            paddingRight: 28,
+            fontSize: 16,
+            touchAction: 'manipulation',
+          }}
+        >
+          Класс!
+        </button>
+      </div>
     </div>
   )
 

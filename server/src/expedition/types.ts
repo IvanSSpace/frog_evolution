@@ -29,6 +29,7 @@ export interface LogLine {
 export interface LootDelta {
   gold?: number
   serums?: Partial<Record<Element, number>>
+  mutagen?: number // 🧬 редкий лут, тратится на эволюцию лягушек
 }
 
 // Ship capabilities. Bias the engine's weights and yields.
@@ -69,7 +70,7 @@ export interface ExpeditionResult {
   outboundSec: number // how long the ship traveled outward
   elapsedSec: number // total wall time the journey covers in the log
   log: LogLine[]
-  loot: { gold: number; serums: Record<Element, number> }
+  loot: { gold: number; serums: Record<Element, number>; mutagen: number }
   risk: number // 0..1, escalating danger at the moment shown
   shipLost: boolean // true if a catastrophe was passed before recall
   hp: number // current ship health (0 if lost)

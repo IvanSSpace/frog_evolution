@@ -126,24 +126,25 @@
 
 .ec-frog-old {
   animation:
-    ec-buildup 1.45s ease-in forwards,
-    ec-shake 0.11s linear infinite;
+    ec-buildup 2.6s ease-in forwards,
+    ec-shake 0.14s linear infinite;
 }
 
 .ec-frog-new {
-  animation: ec-reveal 0.62s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: ec-reveal 1s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 .ec-flash {
-  animation: ec-flash 2s ease-out forwards;
+  /* пик на ≈72% от 3.6s ≈ 2.6s — совпадает со swap'ом old→new (SWAP_MS). */
+  animation: ec-flash 3.6s ease-out forwards;
 }
 
 .ec-title {
-  animation: ec-title 420ms cubic-bezier(0.34, 1.56, 0.64, 1) 120ms both;
+  animation: ec-title 560ms cubic-bezier(0.34, 1.56, 0.64, 1) 180ms both;
 }
 
 .ec-sparkle {
-  animation: ec-sparkle 0.7s ease-out both;
+  animation: ec-sparkle 1.05s ease-out both;
 }
 
 .ec-aura {

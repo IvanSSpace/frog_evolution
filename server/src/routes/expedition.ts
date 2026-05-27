@@ -147,11 +147,12 @@ async function grantLoot(userId: number, result: ExpeditionResult) {
   for (const [el, qty] of Object.entries(result.loot.serums)) {
     if (qty > 0) serums = adjustSerum(serums, el as Element, qty)
   }
+  const mutagen = (Number(cosmic.mutagen) || 0) + result.loot.mutagen
   await prisma.gameState.update({
     where: { userId },
     data: {
       gold: state.gold + BigInt(result.loot.gold),
-      cosmic: { ...cosmic, serums } as object,
+      cosmic: { ...cosmic, serums, mutagen } as object,
     },
   })
 }

@@ -47,10 +47,11 @@ export function toPlainText(result: ExpeditionResult): string {
 export function lootSummary(result: ExpeditionResult): {
   gold: number
   serums: Partial<Record<Element, number>>
+  mutagen: number
 } {
   const serums: Partial<Record<Element, number>> = {}
   for (const [e, n] of Object.entries(result.loot.serums)) {
     if (n > 0) serums[e as Element] = n
   }
-  return { gold: result.loot.gold, serums }
+  return { gold: result.loot.gold, serums, mutagen: result.loot.mutagen }
 }
