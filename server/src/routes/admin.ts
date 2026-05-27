@@ -145,6 +145,14 @@ export async function adminRoutes(app: FastifyInstance) {
         total: flat.length,
         byCategory,
         byPool,
+        // Урон наносят только hazard-события: плоский [min..max] HP × риск
+        // × резист брони, кап = maxHitFrac×maxHp. Числа из конфига для подписи.
+        hazardDmg: {
+          min: EXPEDITION_CONFIG.hazardDmgMin,
+          max: EXPEDITION_CONFIG.hazardDmgMax,
+          maxHitFrac: EXPEDITION_CONFIG.hazardHitMaxFrac,
+          returnFactor: EXPEDITION_CONFIG.returnRiskFactor,
+        },
         scenarios: flat,
       }
     },

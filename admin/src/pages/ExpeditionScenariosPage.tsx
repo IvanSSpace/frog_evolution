@@ -31,6 +31,12 @@ interface ScenariosResp {
   total: number
   byCategory: Record<string, number>
   byPool: Record<string, number>
+  hazardDmg: {
+    min: number
+    max: number
+    maxHitFrac: number
+    returnFactor: number
+  }
   scenarios: ScenarioRow[]
 }
 
@@ -70,9 +76,16 @@ export function ExpeditionScenariosPage() {
   return (
     <div className="p-6 max-w-4xl">
       <h1 className="text-2xl font-bold mb-1">Каталог событий</h1>
-      <div className="text-sm text-gray-600 mb-4">
+      <div className="text-sm text-gray-600 mb-2">
         Всего сценариев: <b>{data.total}</b> · показано:{' '}
         <b>{rows.length}</b>
+      </div>
+      <div className="text-xs text-gray-500 mb-4">
+        Урон наносят только <b style={{ color: CAT_COLOR.hazard }}>hazard</b>
+        -события: <b>{data.hazardDmg.min}–{data.hazardDmg.max} HP</b> при полном
+        риске (× текущий риск, × резист брони; обратный путь ×
+        {data.hazardDmg.returnFactor}). Кап одного удара —{' '}
+        {Math.round(data.hazardDmg.maxHitFrac * 100)}% maxHP (анти-ваншот).
       </div>
 
       {/* Счётчики по категориям — клик = фильтр */}
@@ -134,6 +147,14 @@ export function ExpeditionScenariosPage() {
               </span>
               <span className="text-gray-500">пул: {s.pool}</span>
               <span className="text-gray-500">вес: {s.weight}</span>
+              {s.category === 'hazard' && (
+                <span
+                  className="rounded px-1.5 py-0.5 font-semibold text-white"
+                  style={{ background: CAT_COLOR.hazard }}
+                >
+                  💥 {data.hazardDmg.min}–{data.hazardDmg.max} HP
+                </span>
+              )}
               {s.minSec > 0 && (
                 <span className="text-gray-500">
                   с {(s.minSec / 60).toFixed(0)}мин
