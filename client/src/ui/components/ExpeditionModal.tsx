@@ -100,22 +100,26 @@ function highlightLoot(text: string): ReactNode[] {
   )
 }
 
-// Компактный слот инвентаря: иконка + бейдж-счётчик.
+// Компактный слот инвентаря: иконка + бейдж + тултип по клику (подробности).
 function InvSlot({
   icon,
   emoji,
   count,
   tint,
   filter,
+  label,
 }: {
   icon?: string
   emoji?: string
   count: number
   tint: string
   filter?: string
+  label?: string
 }) {
+  const [tip, setTip] = useState(false)
   return (
     <div
+      onClick={() => label && setTip((t) => !t)}
       style={{
         flexShrink: 0,
         width: 40,
@@ -127,6 +131,7 @@ function InvSlot({
         alignItems: 'center',
         justifyContent: 'center',
         position: 'relative',
+        cursor: label ? 'pointer' : undefined,
       }}
     >
       <span
@@ -158,6 +163,34 @@ function InvSlot({
           style={{ height: 24, width: 'auto', filter, pointerEvents: 'none' }}
         />
       )}
+      {tip && label && (
+        <div
+          onClick={(e) => {
+            e.stopPropagation()
+            setTip(false)
+          }}
+          style={{
+            position: 'absolute',
+            bottom: '112%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 180,
+            maxWidth: '60vw',
+            background: '#131a2e',
+            color: '#e8ecf6',
+            border: `1px solid ${tint}`,
+            borderRadius: 8,
+            padding: '7px 9px',
+            fontSize: 11,
+            lineHeight: 1.35,
+            zIndex: 20,
+            boxShadow: '0 4px 14px rgba(0,0,0,0.5)',
+            pointerEvents: 'auto',
+          }}
+        >
+          {label}
+        </div>
+      )}
     </div>
   )
 }
@@ -166,9 +199,19 @@ function ShipInventory({ loot }: { loot: ExpeditionView['loot'] }) {
   const serumSlots = ELEMENTS.filter((e) => (loot.serums[e] ?? 0) > 0)
   return (
     <div className="flex gap-1.5 overflow-x-auto flex-shrink-0">
-      <InvSlot icon="/goo.svg" count={loot.gold} tint="#d9a441" />
+      <InvSlot
+        icon="/goo.svg"
+        count={loot.gold}
+        tint="#d9a441"
+        label="💰 Золото — основная валюта (слизь). Тратится в магазинах и на прокачку."
+      />
       {loot.mutagen > 0 && (
-        <InvSlot emoji="🧬" count={loot.mutagen} tint="#a855f7" />
+        <InvSlot
+          emoji="🧬"
+          count={loot.mutagen}
+          tint="#a855f7"
+          label="🧬 Мутаген — редкий космо-лут. Нужен для эволюции лягушек (вместе с эссенцией)."
+        />
       )}
       {serumSlots.map((e: Element) => (
         <InvSlot
@@ -177,6 +220,7 @@ function ShipInventory({ loot }: { loot: ExpeditionView['loot'] }) {
           count={loot.serums[e]}
           tint={ELEMENT_TINT[e]}
           filter={ELEMENT_BOTTLE_FILTER[e]}
+          label={`🧪 Сыворотка «${e}» — превращает лягушку в носителя стихии «${e}».`}
         />
       ))}
     </div>
