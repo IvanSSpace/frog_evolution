@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { eventBus } from '../../store/eventBus'
 import { hapticImpact, hapticSelection } from '../../utils/telegram'
-import { useModalLock } from '../../utils/modalLock'
+import { setPhaserInputEnabled } from '../../game'
 import { SURVIVOR_MISSIONS } from '../../game/scenes/survivor/missions'
 
 type Ctx = { crew: number[]; shipId: number }
@@ -37,7 +37,11 @@ export function SurvivorMissionSelect() {
 }
 
 function MissionOverlay({ ctx, onClose }: { ctx: Ctx; onClose: () => void }) {
-  useModalLock()
+  // Прямой toggle canvas-input на mount/unmount (без глобального modalLock).
+  useEffect(() => {
+    setPhaserInputEnabled(false)
+    return () => setPhaserInputEnabled(true)
+  }, [])
 
   const launch = (missionId: string) => {
     hapticImpact('medium')

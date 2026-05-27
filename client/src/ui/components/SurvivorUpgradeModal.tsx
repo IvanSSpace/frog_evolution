@@ -14,7 +14,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { eventBus } from '../../store/eventBus'
 import { hapticImpact } from '../../utils/telegram'
-import { useModalLock } from '../../utils/modalLock'
+import { setPhaserInputEnabled } from '../../game'
 
 type Choice = {
   id: string
@@ -67,8 +67,14 @@ function UpgradeOverlay({
   data: LevelUpData
   onPick: (id: string) => void
 }) {
-  // Lock привязан к mount/unmount этого оверлея — снимается гарантированно.
-  useModalLock()
+  // Глушим Phaser-canvas input на время показа оверлея (иначе canvas
+  // перехватывает тапы). Прямой toggle на mount/unmount — без глобального
+  // ref-count modalLock, который где-то разбалансировался и навсегда вырубал
+  // управление после прокачки.
+  useEffect(() => {
+    setPhaserInputEnabled(false)
+    return () => setPhaserInputEnabled(true)
+  }, [])
 
   return createPortal(
     <div
