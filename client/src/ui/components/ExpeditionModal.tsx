@@ -268,30 +268,67 @@ export function ExpeditionModal({ onClose }: Props) {
     handleClose()
   }
 
-  const onRecall = async () => {
-    if (!activeExp) return
-    setBusy(true)
-    try {
-      await recallExpedition(activeExp.id)
-      await refresh()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось отозвать')
-    } finally {
-      setBusy(false)
-    }
+  // Оптимистично: мгновенно меняем фазу локально, сервер подтверждает/откат.
+  const onRecall = () => {
+    if (!activeExp || activeExp.phase !== 'outbound') return
+    const id = activeExp.id
+    const prev = exps
+    const now = Date.now()
+    const returnSec = activeExp.outboundSec / 3 // SYNC returnSpeedMultiplier
+    setExps(
+      exps.map((e) =>
+        e.id === id
+          ? {
+              ...e,
+              phase: 'returning' as const,
+              recalledAt: new Date(now).toISOString(),
+              arrivalAt: new Date(now + returnSec * 1000).toISOString(),
+              canRecall: false,
+              canClaim: false,
+            }
+          : e,
+      ),
+    )
+    void recallExpedition(id)
+      .then(() => refresh())
+      .catch((e) => {
+        setExps(prev)
+        setError(e instanceof Error ? e.message : 'Не удалось отозвать')
+      })
   }
 
-  const onContinue = async () => {
-    if (!activeExp) return
-    setBusy(true)
-    try {
-      await continueExpedition(activeExp.id)
-      await refresh()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось продолжить')
-    } finally {
-      setBusy(false)
-    }
+  const onContinue = () => {
+    if (!activeExp || activeExp.phase !== 'returning') return
+    const id = activeExp.id
+    const prev = exps
+    const now = Date.now()
+    const recalledMs = activeExp.recalledAt
+      ? new Date(activeExp.recalledAt).getTime()
+      : now
+    const newStarted = new Date(
+      new Date(activeExp.startedAt).getTime() + (now - recalledMs),
+    ).toISOString()
+    setExps(
+      exps.map((e) =>
+        e.id === id
+          ? {
+              ...e,
+              phase: 'outbound' as const,
+              startedAt: newStarted,
+              recalledAt: null,
+              arrivalAt: null,
+              canRecall: true,
+              canClaim: false,
+            }
+          : e,
+      ),
+    )
+    void continueExpedition(id)
+      .then(() => refresh())
+      .catch((e) => {
+        setExps(prev)
+        setError(e instanceof Error ? e.message : 'Не удалось продолжить')
+      })
   }
 
   const onClaim = async () => {
@@ -358,6 +395,12 @@ export function ExpeditionModal({ onClose }: Props) {
   const elapsedSec = activeExp
     ? (nowTs - new Date(activeExp.startedAt).getTime()) / 1000
     : 0
+  // Таймер полёта: тикает на outbound, замирает на возврате/прибытии (фиксируется
+  // outboundSec на момент отзыва — возврат не «доливает» время полёта).
+  const flightSec =
+    activeExp && activeExp.phase === 'outbound'
+      ? elapsedSec
+      : (activeExp?.outboundSec ?? 0)
   const visibleJournal = activeExp
     ? activeExp.phase === 'arrived' || activeExp.phase === 'lost'
       ? activeExp.journal
@@ -608,7 +651,7 @@ export function ExpeditionModal({ onClose }: Props) {
                     {PHASE_LABEL[activeExp.phase]}
                   </span>
                   <span className="text-[#5a7a2a] tabular-nums">
-                    ⏱ {fmtCountdown(elapsedSec * 1000)}
+                    ⏱ {fmtCountdown(flightSec * 1000)}
                   </span>
                 </div>
 
@@ -657,8 +700,7 @@ export function ExpeditionModal({ onClose }: Props) {
                   {activeExp.canRecall && (
                     <button
                       className="ff-btn ff-btn-grey flex-1 py-3"
-                      disabled={busy}
-                      onClick={() => void onRecall()}
+                      onClick={() => onRecall()}
                     >
                       ↩︎ Вернуться
                     </button>
@@ -666,8 +708,7 @@ export function ExpeditionModal({ onClose }: Props) {
                   {activeExp.phase === 'returning' && !activeExp.canClaim && (
                     <button
                       className="ff-btn ff-btn-green flex-1 py-3"
-                      disabled={busy}
-                      onClick={() => void onContinue()}
+                      onClick={() => onContinue()}
                       title="Отменить возврат и лететь дальше"
                     >
                       🚀 Продолжить ({fmtCountdown(returnMs)} до базы)
