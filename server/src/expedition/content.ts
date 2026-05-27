@@ -36,6 +36,12 @@ export const DICT = {
     'Перекрёсток Сабаль',
     'Угли Тагора',
     'Призрачная Дуга',
+    'Россыпь Виенны',
+    'Тёмная Гавань',
+    'Спящий Левиафан',
+    'Изумрудный Прилив',
+    'Пепельное Кольцо',
+    'Зов Бездны',
   ],
   arm: [
     'Внешний рукав',
@@ -66,6 +72,14 @@ export const DICT = {
     'Тёмная Жемчужина',
     'Лазурный Окоём',
     'Грибная Пустошь',
+    'Янтарная-3',
+    'Туманный Шар',
+    'Колыбель-Прайм',
+    'Ониксовый Мир',
+    'Дальняя Тина',
+    'Песочные Часы',
+    'Терновая Звезда',
+    'Уголёк',
   ],
   star: [
     'красный карлик',
@@ -92,6 +106,11 @@ export const DICT = {
     'облако светящейся пыли',
     'застывшая ударная волна',
     'эхо чужого сигнала',
+    'кольцо холодного пламени',
+    'дыра в звёздной карте',
+    'искажение пространства',
+    'медленный временной вихрь',
+    'призрачная туманность',
   ],
   phenomenon: [
     'двойная вспышка',
@@ -120,6 +139,11 @@ export const DICT = {
     'одинокий бледный угорь',
     'выводок пыльных мотыльков',
     'дремлющий каменный полип',
+    'призрачный звёздный скат',
+    'стадо ледяных тихоходок',
+    'гигантская спора-парус',
+    'светлячковая мошкара',
+    'одинокий бронированный краб',
   ],
   faction: [
     'торговцы Велаама',
@@ -149,6 +173,11 @@ export const DICT = {
     'древний саркофаг-капсула',
     'торговый понтон без команды',
     'башня старого маяка',
+    'разломанный спутник-ретранслятор',
+    'дрейфующая шлюпка',
+    'ржавый добывающий комбайн',
+    'опечатанный чёрный ящик',
+    'кокон из неизвестного сплава',
   ],
   adj: [
     'странн',
@@ -931,6 +960,157 @@ export const SCENARIOS: Scenario[] = [
   { id: 'react_lonely_radio2', category: 'mundane', weight: 3, needs: 'lonely', lines: [{ dt: 0, text: 'Послал «привет» в пустоту на всех частотах. Вдруг кто услышит.' }] },
   { id: 'react_weird_pinch', category: 'mundane', weight: 3, needs: 'weird', lines: [{ dt: 0, text: 'Ущипнул себя. Не сон. Космос правда такой странный.' }] },
   { id: 'react_combat_patch', category: 'mundane', weight: 3, needs: 'combat', lines: [{ dt: 0, text: 'Заклеил пробоину от боя. Шрам кораблю к лицу.' }] },
+
+  // ═══════════════ ДОБАВЛЕНО v3: ещё больше ═══════════════
+
+  // ── навигация / рутина ──
+  { id: 'nav_21', category: 'travel', weight: 6, lines: [{ dt: 0, text: 'Иду по следу чужого двигателя. Кто-то прошёл тут недавно.' }] },
+  { id: 'nav_22', category: 'travel', weight: 5, lines: [{ dt: 0, text: 'Срезаю через мёртвую зону связи. Тихо, аж в ушах звенит.' }] },
+  { id: 'nav_23', category: 'travel', weight: 5, lines: [{ dt: 0, text: 'Облетаю {anomaly} по дуге. Береженого космос бережёт.' }] },
+  { id: 'nav_24', category: 'travel', weight: 4, lines: [{ dt: 0, text: 'Сверился с картой — впереди {arm}. Незнакомый край.' }] },
+  { id: 'nav_25', category: 'travel', weight: 4, lines: [{ dt: 0, text: 'Заглушил двигатель, лечу по инерции. Экономлю топливо и нервы.' }] },
+  { id: 'mundane_dust', category: 'mundane', weight: 4, lines: [{ dt: 0, text: 'Протёр пыль с приборов. Откуда пыль в вакууме — загадка.' }] },
+  { id: 'mundane_letter', category: 'mundane', weight: 4, lines: [{ dt: 0, text: 'Написал письмо домой. Отправлю, как поймаю сеть.' }] },
+  { id: 'mundane_game', category: 'mundane', weight: 4, lines: [{ dt: 0, text: 'Играю сам с собой в крестики-нолики на иллюминаторе. Ничья.' }] },
+  { id: 'mundane_meal', category: 'mundane', weight: 5, lines: [{ dt: 0, text: 'Разогрел паёк. Опять водоросли. Мечтаю о живой мухе.' }] },
+  { id: 'mundane_checklist', category: 'mundane', weight: 5, lines: [{ dt: 0, text: 'Прошёлся по чек-листу. Всё на месте, можно дальше.' }] },
+
+  // ── открытия ──
+  { id: 'disc_hollow_moon', category: 'discovery', weight: 3, minSec: 180, set: ['weird'], lines: [
+    { dt: 0, text: 'Луна {planet} звенит как пустая. Внутри — полость?' },
+    { dt: 4, text: 'Сканер не врёт: оболочка тонкая. Кто-то её выел.' },
+  ] },
+  { id: 'disc_red_desert', category: 'discovery', weight: 4, set: ['lonely'], lines: [
+    { dt: 0, text: 'Планета {planet} — красная пустыня от полюса до полюса.' },
+    { dt: 4, text: 'Ни воды, ни жизни. Только ветер гоняет пыль.' },
+  ] },
+  { id: 'disc_floating_city', category: 'discovery', weight: 3, minSec: 200, set: ['awe', 'weird'], lines: [
+    { dt: 0, text: 'В облаках газового гиганта парит город на платформах.' },
+    { dt: 4, text: 'Огни горят. Но на вызов — тишина.' },
+  ] },
+  { id: 'disc_comet_swarm', category: 'discovery', weight: 4, set: ['awe'], lines: [
+    { dt: 0, text: 'Рой комет идёт параллельным курсом. Хвосты как знамёна.' },
+  ] },
+  { id: 'disc_black_obelisk', category: 'discovery', weight: 3, minSec: 240, set: ['weird'], lines: [
+    { dt: 0, text: 'В пустоте висит чёрный обелиск. Идеально ровный, без швов.' },
+    { dt: 4, text: 'Кто его поставил? И зачем здесь? Мурашки.' },
+  ] },
+  { id: 'disc_twin_moons', category: 'discovery', weight: 4, set: ['awe'], lines: [
+    { dt: 0, text: 'Две луны целуются на орбите {planet}. Скоро столкнутся — но не при мне.' },
+  ] },
+  { id: 'disc_fungal', category: 'discovery', weight: 3, set: ['weird'], lines: [
+    { dt: 0, text: 'Вся {planet} заросла светящимся грибом. Дышит во сне.' },
+  ] },
+  { id: 'disc_frozen_sea', category: 'discovery', weight: 4, lines: [
+    { dt: 0, text: 'Океан планеты застыл в волне. Лёд поймал момент шторма.' },
+  ] },
+  { id: 'disc_ship_cradle', category: 'discovery', weight: 3, minSec: 180, set: ['wreck', 'lonely'], lines: [
+    { dt: 0, text: 'Орбитальная верфь, давно мёртвая. Недостроенный корабль так и висит.' },
+    { dt: 4, text: 'Кто-то не успел достроить мечту. Записал координаты.' },
+  ] },
+  { id: 'disc_meteor_garden', category: 'discovery', weight: 4, set: ['awe'], lines: [
+    { dt: 0, text: 'На голом астероиде — крошечный сад под куполом. Кто-то ухаживает?' },
+  ] },
+
+  // ── встречи мирные ──
+  { id: 'enc_smugglers', category: 'encounter', weight: 3, minSec: 150, loot: { gold: 200 }, set: ['loot'], lines: [
+    { dt: 0, text: 'Контрабандисты слизи предлагают «выгодное дельце». Рискну.' },
+    { dt: 4, text: 'Перепродал партию: +{gold}. Не спрашиваю, откуда товар.' },
+  ] },
+  { id: 'enc_hermit', category: 'encounter', weight: 3, minSec: 120, set: ['lonely', 'weird'], lines: [
+    { dt: 0, text: 'Старатель-отшельник живёт в выдолбленном астероиде. Угостил чаем.' },
+    { dt: 4, text: 'Рассказал байку про живые звёзды. Поверил наполовину.' },
+  ] },
+  { id: 'enc_whale_song', category: 'encounter', weight: 3, set: ['awe'], lines: [
+    { dt: 0, text: 'Планктонный кит запел. Низко, на грани слуха. Мурашки по коже.' },
+  ] },
+  { id: 'enc_lost_probe', category: 'encounter', weight: 4, set: ['lonely'], lines: [
+    { dt: 0, text: 'Старый зонд кружит, передаёт в пустоту. Его база давно молчит.' },
+    { dt: 4, text: 'Послал ему «принято». Пусть думает, что долетело.' },
+  ] },
+  { id: 'enc_cartographers', category: 'encounter', weight: 3, minSec: 120, loot: { gold: 160 }, set: ['loot'], lines: [
+    { dt: 0, text: 'Картографы-кочевники меняют карты на байки. У меня баек навалом.' },
+    { dt: 4, text: 'Сторговал звёздную карту впридачу: +{gold}.' },
+  ] },
+
+  // ── встречи враждебные ──
+  { id: 'combat_ambush2', category: 'encounter', weight: 3, minSec: 180, set: ['combat', 'spooked'], lines: [
+    { dt: 0, text: 'Сигнал тревоги! Из засады бьют по корме.' },
+    { dt: 4, text: 'Кувыркнулся, ответил вслепую. Оторвался.' },
+  ] },
+  { id: 'combat_boarding2', category: 'encounter', weight: 2, minSec: 240, set: ['combat', 'spooked'], lines: [
+    { dt: 0, text: 'Абордажный крюк лязгнул о шлюз! Гости незваные.' },
+    { dt: 4, text: 'Крутанул корабль — крюк сорвался. Фух.' },
+  ] },
+  { id: 'combat_volley', category: 'hazard', weight: 3, minSec: 200, set: ['combat', 'spooked'], lines: [
+    { dt: 0, text: 'Залп по носу из ниоткуда! Турель на астероиде, древняя.' },
+    { dt: 4, text: 'Ушёл из сектора. Автоматика стреляла по призракам.' },
+  ] },
+
+  // ── лут ──
+  { id: 'loot_ancient_cache', category: 'loot', weight: 3, minSec: 240, loot: { gold: 450 }, set: ['loot', 'wreck'], lines: [
+    { dt: 0, text: 'В древнем саркофаге-капсуле — тайник предков.' },
+    { dt: 4, text: 'Золото древних: +{gold}. Извинился перед духами, забрал.' },
+  ] },
+  { id: 'loot_slime_vein', category: 'loot', weight: 5, loot: { serums: {} }, set: ['loot'], lines: [
+    { dt: 0, text: 'Астероид сочится слизью из трещин. Качаю насосом.' },
+    { dt: 4, text: 'В трюм: +{slime} слизи. Липко, зато сытно для базы.' },
+  ] },
+  { id: 'loot_battlefield', category: 'loot', weight: 3, minSec: 180, loot: { gold: 380 }, set: ['loot', 'wreck'], lines: [
+    { dt: 0, text: 'Поле старой битвы усеяно обломками. Собираю ценное.' },
+    { dt: 4, text: 'Металл и электроника: +{gold}. Война кому-то ещё приносит доход.' },
+  ] },
+  { id: 'loot_mutagen_pod', category: 'loot', weight: 2, minSec: 300, loot: { mutagen: 1 }, set: ['loot', 'weird'], lines: [
+    { dt: 0, text: 'Спасательная капсула фонит биоэнергией. Внутри — кокон.' },
+    { dt: 4, text: 'Мутаген, ещё тёплый. В трюм: +{mutagen} 🧬.' },
+  ] },
+
+  // ── лор / дневник ──
+  { id: 'lore_diary_map', category: 'lore', weight: 4, set: ['weird'], lines: [
+    { dt: 0, text: 'Дневник пилота. Закрасил ещё одно белое пятно на карте. Чувствую себя первооткрывателем.' },
+  ] },
+  { id: 'lore_diary_small2', category: 'lore', weight: 4, set: ['awe'], lines: [
+    { dt: 0, text: 'Дневник пилота. Я меньше пылинки на фоне всего этого. И это успокаивает.' },
+  ] },
+  { id: 'lore_old_song', category: 'lore', weight: 3, set: ['lonely'], lines: [
+    { dt: 0, text: 'Напел старую болотную колыбельную. Космос подхватил эхом.' },
+  ] },
+  { id: 'lore_first', category: 'lore', weight: 3, set: ['awe'], lines: [
+    { dt: 0, text: 'Кажется, тут до меня никого не было. Я первый головастик в этом углу вселенной.' },
+  ] },
+  { id: 'lore_fear2', category: 'lore', weight: 3, minSec: 240, set: ['lonely', 'weird'], lines: [
+    { dt: 0, text: 'Темнота за бортом такая густая, что хочется включить все огни. Включил.' },
+  ] },
+  { id: 'lore_proud', category: 'lore', weight: 3, set: ['awe'], lines: [
+    { dt: 0, text: 'Где-то там болото и пруд. А я — здесь, среди звёзд. Кто бы мог подумать.' },
+  ] },
+
+  // ── опасности ──
+  { id: 'hazard_storm', category: 'hazard', weight: 4, minSec: 200, set: ['spooked'], lines: [
+    { dt: 0, text: 'Магнитная буря лупит по приборам. Экраны рябят.' },
+    { dt: 4, text: 'Прошёл по памяти. Приборы потом отойдут.' },
+  ] },
+  { id: 'hazard_iceberg', category: 'hazard', weight: 4, minSec: 180, set: ['spooked'], lines: [
+    { dt: 0, text: 'Ледяная глыба вылетела из тьмы прямо по курсу!' },
+    { dt: 4, text: 'Увернулся в последний миг. Сердце в горле.' },
+  ] },
+  { id: 'hazard_engine', category: 'hazard', weight: 4, minSec: 240, set: ['spooked'], lines: [
+    { dt: 0, text: '⚠ Двигатель захлебнулся, тяга падает. Перезапуск!' },
+    { dt: 4, text: 'Поймал на последних оборотах. Чуть не заглох в пустоте.' },
+  ] },
+  { id: 'hazard_signal_trap', category: 'hazard', weight: 3, minSec: 300, set: ['spooked', 'weird'], lines: [
+    { dt: 0, text: '⚠ Сигнал бедствия... но это ловушка. Сети уже близко.' },
+    { dt: 4, text: 'Дал задний ход. Старый трюк, я не первый день летаю.' },
+  ] },
+
+  // ── реакции (доп.) ──
+  { id: 'react_awe_name2', category: 'lore', weight: 3, needs: 'awe', lines: [{ dt: 0, text: 'Дал увиденному имя. Пусть на карте останется частичка меня.' }] },
+  { id: 'react_loot_plan', category: 'mundane', weight: 3, needs: 'loot', lines: [{ dt: 0, text: 'Прикинул, на сколько хватит добычи. На новый радар точно.' }] },
+  { id: 'react_spooked_lights', category: 'mundane', weight: 3, needs: 'spooked', lines: [{ dt: 0, text: 'Врубил все огни. С освещением и пустота не так страшна.' }] },
+  { id: 'react_lonely_log2', category: 'lore', weight: 3, needs: 'lonely', lines: [{ dt: 0, text: 'Записал в дневник просто чтобы услышать свой голос в голове.' }] },
+  { id: 'react_weird_double', category: 'mundane', weight: 3, needs: 'weird', lines: [{ dt: 0, text: 'Перепроверил показания дважды. Космос любит дурить новичков.' }] },
+  { id: 'react_combat_breathe2', category: 'mundane', weight: 3, needs: 'combat', lines: [{ dt: 0, text: 'Выдохнул. Руки ещё подрагивают, но мы живы.' }] },
+  { id: 'react_wreck_think', category: 'lore', weight: 3, needs: 'wreck', lines: [{ dt: 0, text: 'Долго смотрел на обломки. Каждый — чья-то оборванная история.' }] },
 ]
 
 // ── Return leg: appended once the player recalls the ship. ──
