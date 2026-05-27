@@ -182,6 +182,10 @@ export interface CosmicSlice {
   essence: number
   // Мутаген (🧬) — редкий лут с космических экспедиций, тратится на эволюцию.
   mutagen: number
+  // Звёздные маршруты (🗺️) — лут экспедиций по редкости (common/rare/epic).
+  // Накапливаются; расходуются миссиями. Сервер пишет в cosmic.routes, клиент
+  // обязан их персистить, иначе следующий save затрёт серверный грант.
+  routes: { common: number; rare: number; epic: number }
 
   // Phase 22 Plan 22-05: cosmic shop perma upgrades + purchase counters.
   // Все ×N (raw counter, не процент). Game systems читают и применяют:
@@ -330,6 +334,7 @@ export function makeInitialCosmicSlice(): CosmicSlice {
     ascendedCarriers: [],
     essence: 0,
     mutagen: 0,
+    routes: { common: 0, rare: 0, epic: 0 },
     // Phase 22 Plan 22-05: shop perma upgrades + counters start at 0.
     permaSlotBonus: 0,
     permaShipSpeedBonus: 0,

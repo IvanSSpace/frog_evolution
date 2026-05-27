@@ -5,6 +5,7 @@ import { BottomBar } from './ui/components/BottomBar'
 import { ShopModal } from './ui/components/ShopModal'
 import { FrogShopModal } from './ui/components/FrogShopModal'
 import { ExpeditionModal } from './ui/components/ExpeditionModal'
+import { InventoryModal } from './ui/components/InventoryModal'
 import { startExpedition } from './api/expedition'
 import { WelcomeBackModal } from './ui/components/WelcomeBackModal'
 import { DiscoveryModal } from './ui/components/DiscoveryModal'
@@ -82,6 +83,7 @@ function App() {
   const [cosmicHubOpen, setCosmicHubOpen] = useState(false)
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [expeditionOpen, setExpeditionOpen] = useState(false)
+  const [inventoryOpen, setInventoryOpen] = useState(false)
   const [welcomeBack, setWelcomeBack] = useState<{
     earned: number
     hours: number
@@ -401,6 +403,7 @@ function App() {
             onOpenCosmicHub={() => setCosmicHubOpen(true)}
             onOpenGallery={() => setGalleryOpen(true)}
             onOpenExpedition={() => setExpeditionOpen(true)}
+            onOpenInventory={() => setInventoryOpen(true)}
           />
         </div>
       </div>
@@ -421,6 +424,9 @@ function App() {
       {frogShopOpen && <FrogShopModal onClose={() => setFrogShopOpen(false)} />}
       {expeditionOpen && (
         <ExpeditionModal onClose={() => setExpeditionOpen(false)} />
+      )}
+      {inventoryOpen && (
+        <InventoryModal onClose={() => setInventoryOpen(false)} />
       )}
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       <BarracksUIController />

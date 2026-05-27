@@ -182,7 +182,7 @@ function InvSlot({
           }}
           style={{
             position: 'absolute',
-            bottom: '112%',
+            top: '112%',
             left: '50%',
             transform: 'translateX(-50%)',
             width: 180,

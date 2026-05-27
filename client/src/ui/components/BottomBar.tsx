@@ -23,6 +23,9 @@ type TileSkin = 'mint' | 'green' | 'purple' | 'red' | 'teal' | 'amber' | 'cream'
 
 type TileProps = {
   icon: IconName
+  // Emoji-фолбэк: рисуется вместо Icon, когда в iconRegistry нет подходящей
+  // иконки (напр. инвентарь 🎒). `icon` всё равно обязателен для lock-стейта.
+  emoji?: string
   skin: TileSkin
   size?: 'md' | 'lg'
   // badge: number → показать число (если > 0); boolean → показать "!" если true.
@@ -74,6 +77,7 @@ const SKIN_VARS: Record<TileSkin, React.CSSProperties> = {
 
 function Tile({
   icon,
+  emoji,
   skin,
   size = 'md',
   badge,
@@ -106,11 +110,23 @@ function Tile({
       }}
       className={`ff-tile flex-shrink-0 ${dim}`}
     >
-      <Icon
-        name={disabled ? 'lock' : icon}
-        size={iconPx}
-        style={{ filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))' }}
-      />
+      {emoji && !disabled ? (
+        <span
+          style={{
+            fontSize: iconPx,
+            lineHeight: 1,
+            filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
+          }}
+        >
+          {emoji}
+        </span>
+      ) : (
+        <Icon
+          name={disabled ? 'lock' : icon}
+          size={iconPx}
+          style={{ filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))' }}
+        />
+      )}
       {showBadge && !disabled && <NotifBadge>{badgeContent}</NotifBadge>}
     </button>
   )
@@ -123,6 +139,7 @@ type BottomBarProps = {
   onOpenCosmicHub?: () => void
   onOpenGallery?: () => void
   onOpenExpedition?: () => void
+  onOpenInventory?: () => void
 }
 
 export function BottomBar({
@@ -132,6 +149,7 @@ export function BottomBar({
   onOpenCosmicHub,
   onOpenGallery,
   onOpenExpedition,
+  onOpenInventory,
 }: BottomBarProps) {
   // Phase 11 (COSMIC-HUB-04): badge на 🧬 = число неоткрытых боксов.
   // Реактивен: при addBox/openBox селектор пере-рендерит компонент.
@@ -185,6 +203,15 @@ export function BottomBar({
       <div className="flex gap-2 items-center">
         <Tile icon="upgrade-shop" skin="green" onClick={onOpenShop} />
         <Tile icon="gallery" skin="purple" onClick={onOpenGallery} />
+        {/* 🎒 Инвентарь — космический лут + сыворотки + валюта. Нет иконки в
+            registry → emoji-фолбэк. */}
+        <Tile
+          icon="slime"
+          emoji="🎒"
+          skin="amber"
+          title="Инвентарь"
+          onClick={onOpenInventory}
+        />
         {/* 🛰️ Космическая экспедиция (Fallout-Shelter-style) — отправить
             корабль, читать бортовой журнал, вовремя вернуть. Заперта 🔒 пока
             не открыт Лес (L7): экспедиции доступны только после Леса. */}

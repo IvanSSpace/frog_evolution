@@ -845,6 +845,7 @@ useGameStore.subscribe((state, prev) => {
       ascendedCarriers: state.ascendedCarriers,
       essence: state.essence,
       mutagen: state.mutagen,
+      routes: state.routes,
       // Phase 22 Plan 22-05: persist shop perma upgrades + counters.
       permaSlotBonus: state.permaSlotBonus,
       permaShipSpeedBonus: state.permaShipSpeedBonus,

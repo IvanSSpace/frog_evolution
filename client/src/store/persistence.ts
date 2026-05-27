@@ -512,6 +512,17 @@ export function loadCosmicSlice(): CosmicPersist {
         typeof parsed.mutagen === 'number' && parsed.mutagen >= 0
           ? parsed.mutagen
           : defaults.mutagen,
+      routes:
+        parsed.routes && typeof parsed.routes === 'object'
+          ? {
+              common:
+                Number((parsed.routes as Record<string, unknown>).common) || 0,
+              rare:
+                Number((parsed.routes as Record<string, unknown>).rare) || 0,
+              epic:
+                Number((parsed.routes as Record<string, unknown>).epic) || 0,
+            }
+          : defaults.routes,
       // Phase 22 Plan 22-05: shop perma upgrades + counters whitelist.
       permaSlotBonus:
         typeof parsed.permaSlotBonus === 'number' && parsed.permaSlotBonus >= 0
