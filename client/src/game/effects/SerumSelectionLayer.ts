@@ -14,11 +14,15 @@ export interface FrogLike {
 
 interface HaloEntry {
   frogId: string
-  graphics: Phaser.GameObjects.Graphics
+  body: Phaser.GameObjects.Image
   tween: Phaser.Tweens.Tween | null
+  // Tint тела ДО мигания (carrier/element-лягушки имеют запечённый element-tint
+  // через FrogElementOverlay). Восстанавливаем на hide, чтобы не стереть его.
+  prevTint: number | null
 }
 
 const HALO_COLOR_RED = 0xef4444 // red-500
+const WHITE = Phaser.Display.Color.IntegerToColor(0xffffff)
 
 // Фрог-текстура грузится как 47 * (DPR * 1.5) px высотой; BASE_SCALE = 1/1.5.
 // В локальных координатах контейнера: полувысота = 47 * DPR * 1.5 / 2 ≈ 35 * DPR.
@@ -36,21 +40,49 @@ export class SerumSelectionLayer {
     this.scene = scene
   }
 
-  /** Phase 22: visual halos отключены — carrier'ы достаточно различимы по
-   *  tint лягушки и element aura (ElementAuraOverlay). Логика tap-to-apply
-   *  сохранена в FrogInteraction (handleSerumTap → eligible/mis-tap branching).
-   *  Параметр eligibleFrogs принят для API-совместимости, не используется. */
-  show(_eligibleFrogs: ReadonlyArray<FrogLike>, _color = 0x4ade80): void {
+  /** ТЕСТ (2026-05-28): вместо halo-овала под лягушкой — мигание тела цветом
+   *  сыворотки. Tint на body (НЕ alpha контейнера — даёт «мигание прозрачностью»).
+   *  Пульс white↔color через tint-multiply. Идемпотентен. */
+  show(eligibleFrogs: ReadonlyArray<FrogLike>, color = 0x4ade80): void {
     this.hide()
+    const target = Phaser.Display.Color.IntegerToColor(color)
+    for (const frog of eligibleFrogs) {
+      const prevTint = frog.body.isTinted ? frog.body.tintTopLeft : null
+      const proxy = { t: 0 }
+      const tween = this.scene.tweens.add({
+        targets: proxy,
+        t: 1,
+        duration: 420,
+        ease: 'Sine.easeInOut',
+        repeat: -1,
+        yoyo: true,
+        onUpdate: () => {
+          const c = Phaser.Display.Color.Interpolate.ColorWithColor(
+            WHITE,
+            target,
+            100,
+            proxy.t * 100,
+          )
+          frog.body.setTint(Phaser.Display.Color.GetColor(c.r, c.g, c.b))
+        },
+      })
+      this.halos.set(frog.id, {
+        frogId: frog.id,
+        body: frog.body,
+        tween,
+        prevTint,
+      })
+    }
   }
 
-  /** Скрыть все halos: kill tweens + destroy graphics. */
+  /** Скрыть всё: kill tweens + восстановить прежний tint тела. */
   hide(): void {
     for (const [, entry] of this.halos) {
       if (entry.tween) {
         this.scene.tweens.remove(entry.tween)
       }
-      entry.graphics.destroy()
+      if (entry.prevTint != null) entry.body.setTint(entry.prevTint)
+      else entry.body.clearTint()
     }
     this.halos.clear()
   }
