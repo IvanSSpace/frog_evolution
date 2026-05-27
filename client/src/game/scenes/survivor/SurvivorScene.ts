@@ -34,7 +34,7 @@ const HERO_SPEED = 210 * DPR // px/sec
 const HERO_SIZE = 96 * DPR // целевая ВЫСОТА спрайта (ширина — по пропорции)
 const HERO_HITR = 34 * DPR
 const HERO_HOP_AMP = 13 * DPR // высота подскока при движении
-const HERO_HOP_FREQ = 13 // рад/с — частота хопа
+const HERO_HOP_FREQ = 7 // рад/с — частота хопа (~2.2 прыжка/сек)
 // Squash-stretch как на ферме: в воздухе тянется вверх, у земли сжимается.
 const HERO_HOP_STRETCH_Y = 1.18
 const HERO_HOP_SQUASH_Y = 0.82
@@ -42,7 +42,7 @@ const HERO_HOP_STRETCH_X = 0.92
 const HERO_HOP_SQUASH_X = 1.12
 // Лёгкий idle-бобинг (стоя на месте) — чтобы герой не был статичным.
 const HERO_IDLE_AMP = 4 * DPR
-const HERO_IDLE_FREQ = 4 // рад/с
+const HERO_IDLE_FREQ = 3 // рад/с
 const HERO_IDLE_INTENSITY = 0.35 // доля squash-stretch на idle
 
 const ATTACK_INTERVAL = 560 // ms между выстрелами
