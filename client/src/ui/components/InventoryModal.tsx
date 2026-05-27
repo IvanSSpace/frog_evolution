@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useGameStore } from '../../store/gameStore'
 import { useModalLock } from '../../utils/modalLock'
 import { fmt } from '../../utils/formatting'
@@ -22,7 +22,9 @@ const ROUTE_RARITIES: {
   { key: 'epic', name: 'эпический', tint: '#c084fc' },
 ]
 
-// Слот инвентаря: иконка + бейдж + тултип по клику (всегда раскрывается ВНИЗ).
+// Слот инвентаря: иконка + бейдж + тултип по клику (раскрывается ВНИЗ).
+// Первый клик ВСЕГДА открывает тултип; применение (серум) — кнопкой внутри.
+// Тултип горизонтально сдвигается если слот у края экрана (иначе не виден).
 function InvSlot({
   icon,
   emoji,
@@ -41,9 +43,27 @@ function InvSlot({
   onApply?: () => void
 }) {
   const [tip, setTip] = useState(false)
+  const [shiftX, setShiftX] = useState(0)
+  const slotRef = useRef<HTMLDivElement>(null)
+
+  // При открытии тултипа меряем позицию слота и считаем сдвиг, чтобы тултип
+  // (ширина ≤190 / 60vw) не уезжал за края вьюпорта.
+  useLayoutEffect(() => {
+    if (!tip || !slotRef.current) return
+    const rect = slotRef.current.getBoundingClientRect()
+    const vw = window.innerWidth
+    const tipW = Math.min(190, vw * 0.6)
+    const margin = 8
+    const center = rect.left + rect.width / 2
+    const wantLeft = center - tipW / 2
+    const clampedLeft = Math.max(margin, Math.min(wantLeft, vw - margin - tipW))
+    setShiftX(clampedLeft - wantLeft)
+  }, [tip])
+
   return (
     <div
-      onClick={() => (onApply ? onApply() : setTip((t) => !t))}
+      ref={slotRef}
+      onClick={() => setTip((t) => !t)}
       style={{
         flexShrink: 0,
         width: 52,
@@ -97,7 +117,7 @@ function InvSlot({
             position: 'absolute',
             top: '110%',
             left: '50%',
-            transform: 'translateX(-50%)',
+            transform: `translateX(calc(-50% + ${shiftX}px))`,
             width: 190,
             maxWidth: '60vw',
             background: '#131a2e',
@@ -113,6 +133,30 @@ function InvSlot({
           }}
         >
           {label}
+          {onApply && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setTip(false)
+                onApply()
+              }}
+              style={{
+                marginTop: 7,
+                width: '100%',
+                padding: '5px 0',
+                borderRadius: 6,
+                border: `1px solid ${tint}`,
+                background: tint,
+                color: '#0b1320',
+                fontSize: 11,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Применить
+            </button>
+          )}
         </div>
       )}
     </div>
