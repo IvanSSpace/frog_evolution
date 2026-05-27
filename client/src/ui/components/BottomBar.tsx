@@ -154,6 +154,8 @@ export function BottomBar({
   const barracksUnlocked = useGameStore((s) => s.barracksUnlocked)
   const discoveredLevels = useGameStore((s) => s.discoveredLevels)
   const unlockBarracks = useGameStore((s) => s.unlockBarracks)
+  // Экспедиции (корабли) доступны только после открытия Леса (discovered L7+).
+  const forestUnlocked = discoveredLevels.some((l) => l >= 7)
 
   // Auto-unlock казармы при первом discovered L7+ (Лес). Эффект жил в
   // BarracksButton.tsx, но тот компонент нигде не монтируется → unlock никогда
@@ -184,11 +186,15 @@ export function BottomBar({
         <Tile icon="upgrade-shop" skin="green" onClick={onOpenShop} />
         <Tile icon="gallery" skin="purple" onClick={onOpenGallery} />
         {/* 🛰️ Космическая экспедиция (Fallout-Shelter-style) — отправить
-            корабль, читать бортовой журнал, вовремя вернуть. */}
+            корабль, читать бортовой журнал, вовремя вернуть. Заперта 🔒 пока
+            не открыт Лес (L7): экспедиции доступны только после Леса. */}
         <Tile
           icon="ship"
           skin="teal"
-          title="Космическая экспедиция"
+          title={
+            forestUnlocked ? 'Космическая экспедиция' : 'Откроется после Леса'
+          }
+          disabled={!forestUnlocked}
           onClick={onOpenExpedition}
         />
         {/* ⚔️ — Казарма (PvP raid). Видна после анлока (Лес, L7+).
