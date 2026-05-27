@@ -7,8 +7,8 @@ export interface Upgrades {
   dropSpeed: number
   tractor: number
   magnet: number
-  // 2026-05-23: магниты для L2 и L3 — отдельные апгрейды.
-  // Доступны для покупки после открытия космоса.
+  // 2026-05-23: магниты для L2 (Лес) и L3 (Континент) — отдельные апгрейды.
+  // 2026-05-28: перенесены из косм. магазина в обычные улучшения.
   magnet2: number
   magnet3: number
   crateQuality: number
@@ -86,8 +86,8 @@ export const UPGRADE_CONFIG = {
     ],
   },
   // 2026-05-23: магниты для L2/L3 — те же параметры что L1, но отдельный
-  // upgrade pathway. Доступны для покупки только после открытия космоса
-  // (gate в UI; backend всё равно validate'нет если попытка купить раньше).
+  // upgrade pathway. 2026-05-28: доступны в обычной вкладке «Улучшения»
+  // (раньше гейтились космосом). Backend гейта не имеет.
   magnet2: {
     maxLevel: 6,
     spawnIntervalMs: [Infinity, 10000, 8000, 7000, 6000, 5000, 4000],

@@ -126,11 +126,14 @@ function ShopTabButton({
 }
 
 function UpgradesCards() {
+  // Магниты L2/L3 (Лес/Континент) — обычные улучшения, рядом с базовым магнитом.
   return (
     <div className="flex flex-col gap-3 p-4 overflow-y-auto">
       <DropSpeedCard />
       <CrateQualityCard />
       <MagnetCard />
+      <MagnetCard upgradeKey="magnet2" titleSuffix="Лес" />
+      <MagnetCard upgradeKey="magnet3" titleSuffix="Континент" />
       <RareBoxSpeedCard />
       <TractorCard />
     </div>
@@ -138,16 +141,12 @@ function UpgradesCards() {
 }
 
 function CosmosCards() {
-  // Магниты L2/L3 и косм. магазин — после открытия космоса (L18).
+  // Косм. магазин — после открытия космоса (L18).
   // Корабли — раньше (с Леса), поэтому ShipCard виден всегда.
   const cosmosUnlocked = useCosmosUnlocked()
   return (
     <div className="flex flex-col gap-3 p-4 overflow-y-auto">
       <ShipCard />
-      {cosmosUnlocked && <MagnetCard upgradeKey="magnet2" titleSuffix="Лес" />}
-      {cosmosUnlocked && (
-        <MagnetCard upgradeKey="magnet3" titleSuffix="Континент" />
-      )}
       {cosmosUnlocked && <CosmicShopTab />}
     </div>
   )
