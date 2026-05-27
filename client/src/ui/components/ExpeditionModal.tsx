@@ -710,7 +710,9 @@ export function ExpeditionModal({ onClose }: Props) {
                     )}
                     components={{
                       Header: () => <div style={{ height: 8 }} />,
-                      Footer: () => <div style={{ height: 8 }} />,
+                      // Отступ снизу ≈ высота одного сообщения: новое сообщение
+                      // появляется с воздухом под ним, не впритык к краю.
+                      Footer: () => <div style={{ height: 28 }} />,
                     }}
                     itemContent={(_i, l) => (
                       <div
