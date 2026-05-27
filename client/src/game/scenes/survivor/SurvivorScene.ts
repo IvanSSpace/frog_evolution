@@ -40,6 +40,10 @@ const HERO_HOP_STRETCH_Y = 1.18
 const HERO_HOP_SQUASH_Y = 0.82
 const HERO_HOP_STRETCH_X = 0.92
 const HERO_HOP_SQUASH_X = 1.12
+// Лёгкий idle-бобинг (стоя на месте) — чтобы герой не был статичным.
+const HERO_IDLE_AMP = 4 * DPR
+const HERO_IDLE_FREQ = 4 // рад/с
+const HERO_IDLE_INTENSITY = 0.35 // доля squash-stretch на idle
 
 const ATTACK_INTERVAL = 560 // ms между выстрелами
 const ATTACK_DMG = 22 // КОНСТАНТНЫЙ урон отряда (не зависит от текущей «жизни»)
@@ -170,7 +174,9 @@ export class SurvivorScene extends Phaser.Scene {
       maxHp: heroMaxHpForLevel(lvl),
       level: lvl,
     }
-    this.cameras.main.startFollow(sprite, true, 0.12, 0.12)
+    // Камера центрируется на ЛОГИЧЕСКОЙ позиции (см. moveHero) — не на спрайте.
+    // startFollow(sprite) следил бы за прыгающим спрайтом и гасил бы хоп на экране.
+    this.cameras.main.centerOn(cx, cy)
 
     // Joystick + input.
     this.joystick = new VirtualJoystick(this)
@@ -297,27 +303,26 @@ export class SurvivorScene extends Phaser.Scene {
         0,
         WORLD,
       )
-      this.heroHopT += dt
       if (d.x !== 0) this.hero.sprite.setFlipX(d.x < 0)
-    } else {
-      this.heroHopT = 0 // стоит на земле
     }
-    // s: 0 у земли → 1 в апексе (|sin|). Высота подскока + squash-stretch:
-    // у земли сжат (squash), в воздухе вытянут (stretch) — как на ферме.
-    const s = moving ? Math.abs(Math.sin(this.heroHopT * HERO_HOP_FREQ)) : 0
-    const sx =
-      this.heroBaseScale *
-      (moving
-        ? Phaser.Math.Linear(HERO_HOP_SQUASH_X, HERO_HOP_STRETCH_X, s)
-        : 1)
-    const sy =
-      this.heroBaseScale *
-      (moving
-        ? Phaser.Math.Linear(HERO_HOP_SQUASH_Y, HERO_HOP_STRETCH_Y, s)
-        : 1)
-    this.hero.sprite.setScale(sx, sy)
+    // Хоп идёт ВСЕГДА: движется — полный прыжок; стоит — лёгкий бобинг (герой
+    // никогда не статичен). s: 0 у земли → 1 в апексе (|sin|), squash у земли,
+    // stretch в воздухе — как на ферме.
+    this.heroHopT += dt
+    const freq = moving ? HERO_HOP_FREQ : HERO_IDLE_FREQ
+    const amp = moving ? HERO_HOP_AMP : HERO_IDLE_AMP
+    const k = moving ? 1 : HERO_IDLE_INTENSITY
+    const s = Math.abs(Math.sin(this.heroHopT * freq))
+    const fx =
+      1 + (Phaser.Math.Linear(HERO_HOP_SQUASH_X, HERO_HOP_STRETCH_X, s) - 1) * k
+    const fy =
+      1 + (Phaser.Math.Linear(HERO_HOP_SQUASH_Y, HERO_HOP_STRETCH_Y, s) - 1) * k
+    this.hero.sprite.setScale(this.heroBaseScale * fx, this.heroBaseScale * fy)
     this.hero.sprite.x = this.hero.x
-    this.hero.sprite.y = this.hero.y - s * HERO_HOP_AMP
+    this.hero.sprite.y = this.hero.y - s * amp
+    // Камера держит ЛОГИЧЕСКУЮ позицию в центре — хоп спрайта виден на экране
+    // (startFollow за спрайтом гасил бы подскок).
+    this.cameras.main.centerOn(this.hero.x, this.hero.y)
   }
 
   private nearestMob(): Mob | null {
