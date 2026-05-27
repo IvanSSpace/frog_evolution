@@ -14,15 +14,13 @@ export interface FrogLike {
 
 interface HaloEntry {
   frogId: string
-  body: Phaser.GameObjects.Image
+  // Отдельный child-sprite поверх лягушки (силуэт цвета архетипа). Пульсируем
+  // его alpha — НЕ трогаем body tint и НЕ alpha контейнера (см. feedback_frog_container_alpha).
+  flash: Phaser.GameObjects.Image
   tween: Phaser.Tweens.Tween | null
-  // Tint тела ДО мигания (carrier/element-лягушки имеют запечённый element-tint
-  // через FrogElementOverlay). Восстанавливаем на hide, чтобы не стереть его.
-  prevTint: number | null
 }
 
 const HALO_COLOR_RED = 0xef4444 // red-500
-const WHITE = Phaser.Display.Color.IntegerToColor(0xffffff)
 
 // Фрог-текстура грузится как 47 * (DPR * 1.5) px высотой; BASE_SCALE = 1/1.5.
 // В локальных координатах контейнера: полувысота = 47 * DPR * 1.5 / 2 ≈ 35 * DPR.
@@ -40,49 +38,43 @@ export class SerumSelectionLayer {
     this.scene = scene
   }
 
-  /** ТЕСТ (2026-05-28): вместо halo-овала под лягушкой — мигание тела цветом
-   *  сыворотки. Tint на body (НЕ alpha контейнера — даёт «мигание прозрачностью»).
-   *  Пульс white↔color через tint-multiply. Идемпотентен. */
+  /** Мигание eligible-лягушек цветом архетипа сыворотки. Поверх каждой лягушки
+   *  кладём child-sprite (копия текстуры тела) с setTintFill(color) — сплошной
+   *  цветной силуэт — и пульсируем его alpha 0↔0.7. Ярко видно, не трогает
+   *  body tint / container alpha. Идемпотентен. */
   show(eligibleFrogs: ReadonlyArray<FrogLike>, color = 0x4ade80): void {
     this.hide()
-    const target = Phaser.Display.Color.IntegerToColor(color)
     for (const frog of eligibleFrogs) {
-      const prevTint = frog.body.isTinted ? frog.body.tintTopLeft : null
-      const proxy = { t: 0 }
+      const flash = this.scene.add.image(
+        frog.body.x,
+        frog.body.y,
+        frog.body.texture.key,
+      )
+      flash.setOrigin(frog.body.originX, frog.body.originY)
+      flash.setScale(frog.body.scaleX, frog.body.scaleY)
+      flash.setTintFill(color) // весь силуэт = цвет архетипа
+      flash.setAlpha(0)
+      // Поверх тела (container.add аппендит наверх). Инпут не перехватывает.
+      frog.container.add(flash)
       const tween = this.scene.tweens.add({
-        targets: proxy,
-        t: 1,
+        targets: flash,
+        alpha: 0.7,
         duration: 420,
         ease: 'Sine.easeInOut',
         repeat: -1,
         yoyo: true,
-        onUpdate: () => {
-          const c = Phaser.Display.Color.Interpolate.ColorWithColor(
-            WHITE,
-            target,
-            100,
-            proxy.t * 100,
-          )
-          frog.body.setTint(Phaser.Display.Color.GetColor(c.r, c.g, c.b))
-        },
       })
-      this.halos.set(frog.id, {
-        frogId: frog.id,
-        body: frog.body,
-        tween,
-        prevTint,
-      })
+      this.halos.set(frog.id, { frogId: frog.id, flash, tween })
     }
   }
 
-  /** Скрыть всё: kill tweens + восстановить прежний tint тела. */
+  /** Скрыть всё: kill tweens + destroy flash-спрайты. */
   hide(): void {
     for (const [, entry] of this.halos) {
       if (entry.tween) {
         this.scene.tweens.remove(entry.tween)
       }
-      if (entry.prevTint != null) entry.body.setTint(entry.prevTint)
-      else entry.body.clearTint()
+      entry.flash.destroy()
     }
     this.halos.clear()
   }
