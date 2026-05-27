@@ -389,6 +389,7 @@ function EvolveCard({
   const { t } = useTranslation()
   const gold = useGameStore((s) => s.gold)
   const essence = useGameStore((s) => s.essence)
+  const mutagen = useGameStore((s) => s.mutagen)
   const tier = useGameStore((s) => s.frogTiers[level - 1] ?? 0)
   const cooldownEnd = useGameStore((s) => s.frogTierCooldowns[level - 1] ?? 0)
   const upgradeFrogTier = useGameStore((s) => s.upgradeFrogTier)
@@ -396,7 +397,11 @@ function EvolveCard({
   const frogName = t(`frogs.${level}`)
   const isMax = tier >= 2
   const nextTier = Math.min(2, tier + 1)
-  const { gold: goldCost, essence: essenceCost } = getEvolutionCost(level, tier)
+  const {
+    gold: goldCost,
+    essence: essenceCost,
+    mutagen: mutagenCost,
+  } = getEvolutionCost(level, tier)
   const bonusPct = getEvolutionBonusPercent(level, nextTier)
   const currentPath = getFrogPath(level, tier)
   const nextPath = getFrogPath(level, nextTier)
@@ -413,7 +418,8 @@ function EvolveCard({
   const onCooldown = cdRemaining > 0
   const canAffordGold = gold >= goldCost
   const canAffordEssence = essence >= essenceCost
-  const canAfford = canAffordGold && canAffordEssence
+  const canAffordMutagen = mutagen >= mutagenCost
+  const canAfford = canAffordGold && canAffordEssence && canAffordMutagen
   const disabled = isMax || onCooldown || !canAfford
 
   const handleEvolve = () => {
@@ -435,6 +441,7 @@ function EvolveCard({
       hapticNotification('error')
       if (r.reason === 'noGold') onResult('Недостаточно слизи')
       else if (r.reason === 'noEssence') onResult('Недостаточно 💠')
+      else if (r.reason === 'noMutagen') onResult('Недостаточно 🧬 мутагена')
       else if (r.reason === 'maxTier') onResult('Максимальный уровень')
       else if (r.reason === 'cooldown') onResult('Кулдаун ещё активен')
       else if (r.reason === 'locked') onResult('Локация эволюции закрыта')
@@ -550,6 +557,11 @@ function EvolveCard({
               />
             </span>
             {essenceCost > 0 && <span>💠 {essenceCost}</span>}
+            {mutagenCost > 0 && (
+              <span style={{ color: canAffordMutagen ? undefined : '#dc2626' }}>
+                🧬 {mutagenCost}
+              </span>
+            )}
           </span>
         )}
       </button>

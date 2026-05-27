@@ -102,8 +102,7 @@ export function getEvolutionCost(
   level: number,
   currentTier: number,
 ): { gold: number; essence: number; mutagen: number } {
-  if (level < 1 || level > MAX_LEVEL)
-    return { gold: 0, essence: 0, mutagen: 0 }
+  if (level < 1 || level > MAX_LEVEL) return { gold: 0, essence: 0, mutagen: 0 }
   if (currentTier < 0 || currentTier >= 2)
     return { gold: 0, essence: 0, mutagen: 0 }
   const targetTier = currentTier + 1

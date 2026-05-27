@@ -175,6 +175,7 @@ interface GameStateBase {
       | 'maxTier'
       | 'noGold'
       | 'noEssence'
+      | 'noMutagen'
       | 'cooldown'
       | 'locked'
       | 'invalid'
@@ -569,13 +570,17 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
     const current = state.frogTiers[level - 1] ?? 0
     if (current >= 2) return { ok: false, reason: 'maxTier' }
-    const { gold: goldCost, essence: essenceCost } = getEvolutionCost(
-      level,
-      current,
-    )
+    const {
+      gold: goldCost,
+      essence: essenceCost,
+      mutagen: mutagenCost,
+    } = getEvolutionCost(level, current)
     if (state.gold < goldCost) return { ok: false, reason: 'noGold' }
     if (state.essence < essenceCost) {
       return { ok: false, reason: 'noEssence' }
+    }
+    if (state.mutagen < mutagenCost) {
+      return { ok: false, reason: 'noMutagen' }
     }
     const nextTiers = [...state.frogTiers]
     nextTiers[level - 1] = current + 1
@@ -586,6 +591,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({
       gold: state.gold - goldCost,
       essence: state.essence - essenceCost,
+      mutagen: state.mutagen - mutagenCost,
       frogTiers: nextTiers,
       frogTierCooldowns: nextCooldowns,
     })
@@ -838,6 +844,7 @@ useGameStore.subscribe((state, prev) => {
       // Phase 22 Plan 22-03: persist ascension pool + essence.
       ascendedCarriers: state.ascendedCarriers,
       essence: state.essence,
+      mutagen: state.mutagen,
       // Phase 22 Plan 22-05: persist shop perma upgrades + counters.
       permaSlotBonus: state.permaSlotBonus,
       permaShipSpeedBonus: state.permaShipSpeedBonus,

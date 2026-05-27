@@ -180,6 +180,8 @@ export interface CosmicSlice {
   // Phase 22 Plan 22-03: meta-currency, выдаётся по +1 при каждом ascension (placeholder).
   // Balance — Plan 22-07.
   essence: number
+  // Мутаген (🧬) — редкий лут с космических экспедиций, тратится на эволюцию.
+  mutagen: number
 
   // Phase 22 Plan 22-05: cosmic shop perma upgrades + purchase counters.
   // Все ×N (raw counter, не процент). Game systems читают и применяют:
@@ -327,6 +329,7 @@ export function makeInitialCosmicSlice(): CosmicSlice {
     // Phase 22 Plan 22-03: ascended pool + essence start empty.
     ascendedCarriers: [],
     essence: 0,
+    mutagen: 0,
     // Phase 22 Plan 22-05: shop perma upgrades + counters start at 0.
     permaSlotBonus: 0,
     permaShipSpeedBonus: 0,

@@ -508,6 +508,10 @@ export function loadCosmicSlice(): CosmicPersist {
         typeof parsed.essence === 'number' && parsed.essence >= 0
           ? parsed.essence
           : defaults.essence,
+      mutagen:
+        typeof parsed.mutagen === 'number' && parsed.mutagen >= 0
+          ? parsed.mutagen
+          : defaults.mutagen,
       // Phase 22 Plan 22-05: shop perma upgrades + counters whitelist.
       permaSlotBonus:
         typeof parsed.permaSlotBonus === 'number' && parsed.permaSlotBonus >= 0

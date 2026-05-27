@@ -98,6 +98,7 @@ function snapshotForSave() {
       // login lost all ascended carriers + essence (irreversible save loss).
       ascendedCarriers: s.ascendedCarriers,
       essence: s.essence,
+      mutagen: s.mutagen,
       // Phase 22 Plan 22-05: cosmic shop perma upgrades + per-item purchase
       // history (used for cost scaling).
       // 2026-05-18 audit fix: WAS missing from snapshotForSave → cross-device
@@ -228,6 +229,7 @@ export async function loadGameState(): Promise<boolean> {
       if ('ascendedCarriers' in c)
         cosmicUpdate.ascendedCarriers = c.ascendedCarriers
       if ('essence' in c) cosmicUpdate.essence = c.essence
+      if ('mutagen' in c) cosmicUpdate.mutagen = c.mutagen
       // Phase 22 Plan 22-05: hydrate shop perma upgrades + purchase counters.
       if ('permaSlotBonus' in c) cosmicUpdate.permaSlotBonus = c.permaSlotBonus
       if ('permaShipSpeedBonus' in c)

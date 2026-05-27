@@ -25,7 +25,7 @@ export interface ExpeditionView {
   maxHp: number
   canRecall: boolean
   canClaim: boolean
-  loot: { gold: number; serums: Record<string, number> }
+  loot: { gold: number; serums: Record<string, number>; mutagen: number }
   journal: JournalLine[]
 }
 
@@ -58,7 +58,7 @@ interface ListResp {
 interface ClaimResp {
   ok: true
   shipLost: boolean
-  loot: { gold: number; serums: Record<string, number> }
+  loot: { gold: number; serums: Record<string, number>; mutagen: number }
 }
 
 // demo=true → minute-scale tempo (instant rich log) for testing the feature.

@@ -102,11 +102,13 @@ function highlightLoot(text: string): ReactNode[] {
 // Компактный слот инвентаря: иконка + бейдж-счётчик.
 function InvSlot({
   icon,
+  emoji,
   count,
   tint,
   filter,
 }: {
-  icon: string
+  icon?: string
+  emoji?: string
   count: number
   tint: string
   filter?: string
@@ -146,11 +148,15 @@ function InvSlot({
       >
         {fmt(count)}
       </span>
-      <img
-        src={icon}
-        alt=""
-        style={{ height: 24, width: 'auto', filter, pointerEvents: 'none' }}
-      />
+      {emoji ? (
+        <span style={{ fontSize: 22 }}>{emoji}</span>
+      ) : (
+        <img
+          src={icon}
+          alt=""
+          style={{ height: 24, width: 'auto', filter, pointerEvents: 'none' }}
+        />
+      )}
     </div>
   )
 }
@@ -160,6 +166,9 @@ function ShipInventory({ loot }: { loot: ExpeditionView['loot'] }) {
   return (
     <div className="flex gap-1.5 overflow-x-auto flex-shrink-0">
       <InvSlot icon="/goo.svg" count={loot.gold} tint="#d9a441" />
+      {loot.mutagen > 0 && (
+        <InvSlot emoji="🧬" count={loot.mutagen} tint="#a855f7" />
+      )}
       {serumSlots.map((e: Element) => (
         <InvSlot
           key={e}
@@ -337,10 +346,11 @@ export function ExpeditionModal({ onClose }: Props) {
       const serums = Object.entries(res.loot.serums)
         .map(([k, v]) => `${k}×${v}`)
         .join(', ')
+      const mut = res.loot.mutagen > 0 ? `, 🧬×${res.loot.mutagen}` : ''
       setClaimMsg(
         res.shipLost
           ? 'Корабль потерян — лут не доставлен.'
-          : `Доставлено: ${res.loot.gold} золота${serums ? ', слизь: ' + serums : ''}.`,
+          : `Доставлено: ${res.loot.gold} золота${serums ? ', слизь: ' + serums : ''}${mut}.`,
       )
       await refresh()
     } catch (e) {
@@ -518,7 +528,7 @@ export function ExpeditionModal({ onClose }: Props) {
           </div>
 
           {/* Body */}
-          <div className="flex-1 flex flex-col min-h-0 px-3 py-3 gap-3">
+          <div className="flex-1 flex flex-col min-h-0 px-3 py-2 gap-2">
             {loading && (
               <p className="text-center text-[#3a5214]">Связь с базой…</p>
             )}
@@ -760,7 +770,7 @@ export function ExpeditionModal({ onClose }: Props) {
                 {/* Actions */}
                 <div
                   className="flex gap-2 flex-shrink-0"
-                  style={{ marginTop: -6 }}
+                  style={{ marginTop: -2 }}
                 >
                   {activeExp.canRecall && (
                     <button
