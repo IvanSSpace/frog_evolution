@@ -99,6 +99,7 @@ function highlightLoot(text: string): ReactNode[] {
   )
 }
 
+// Компактный слот инвентаря: иконка + бейдж-счётчик.
 function InvSlot({
   icon,
   count,
@@ -114,9 +115,9 @@ function InvSlot({
     <div
       style={{
         flexShrink: 0,
-        width: 52,
-        height: 60,
-        borderRadius: 10,
+        width: 40,
+        height: 44,
+        borderRadius: 8,
         border: `2px solid ${tint}`,
         background: 'rgba(10,10,15,0.75)',
         display: 'flex',
@@ -128,19 +129,19 @@ function InvSlot({
       <span
         style={{
           position: 'absolute',
-          top: -6,
-          right: -6,
+          top: -5,
+          right: -5,
           background: '#10b981',
           color: '#fff',
-          fontSize: 10,
+          fontSize: 9,
           fontWeight: 700,
           borderRadius: 99,
-          minWidth: 18,
-          height: 18,
+          minWidth: 16,
+          height: 16,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '0 4px',
+          padding: '0 3px',
         }}
       >
         {fmt(count)}
@@ -148,7 +149,7 @@ function InvSlot({
       <img
         src={icon}
         alt=""
-        style={{ height: 30, width: 'auto', filter, pointerEvents: 'none' }}
+        style={{ height: 24, width: 'auto', filter, pointerEvents: 'none' }}
       />
     </div>
   )
@@ -157,20 +158,17 @@ function InvSlot({
 function ShipInventory({ loot }: { loot: ExpeditionView['loot'] }) {
   const serumSlots = ELEMENTS.filter((e) => (loot.serums[e] ?? 0) > 0)
   return (
-    <div className="flex-shrink-0">
-      <div className="text-[11px] text-[#5a7a2a] mb-1">🎒 Инвентарь</div>
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        <InvSlot icon="/goo.svg" count={loot.gold} tint="#d9a441" />
-        {serumSlots.map((e: Element) => (
-          <InvSlot
-            key={e}
-            icon="/genBottle.svg"
-            count={loot.serums[e]}
-            tint={ELEMENT_TINT[e]}
-            filter={ELEMENT_BOTTLE_FILTER[e]}
-          />
-        ))}
-      </div>
+    <div className="flex gap-1.5 overflow-x-auto flex-shrink-0">
+      <InvSlot icon="/goo.svg" count={loot.gold} tint="#d9a441" />
+      {serumSlots.map((e: Element) => (
+        <InvSlot
+          key={e}
+          icon="/genBottle.svg"
+          count={loot.serums[e]}
+          tint={ELEMENT_TINT[e]}
+          filter={ELEMENT_BOTTLE_FILTER[e]}
+        />
+      ))}
     </div>
   )
 }
@@ -641,42 +639,40 @@ export function ExpeditionModal({ onClose }: Props) {
                   </p>
                 )}
 
-                {/* HP */}
-                <div className="flex-shrink-0">
-                  <div className="flex justify-between text-[11px] text-[#5a7a2a] mb-1">
-                    <span>❤️ Здоровье корабля</span>
-                    <span>
-                      {activeExp.hp}/{activeExp.maxHp}
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      height: 10,
-                      borderRadius: 5,
-                      background: '#cbe0a0',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: `${hpPct}%`,
-                        height: '100%',
-                        transition: 'width .3s',
-                        background: hpColor,
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between text-sm flex-shrink-0">
-                  <span className="font-semibold text-[#3a5214]">
+                {/* Компактная шапка: фаза · таймер · HP, ниже — HP-бар + лут */}
+                <div className="flex items-center justify-between flex-shrink-0">
+                  <span className="font-semibold text-sm text-[#3a5214]">
                     {PHASE_LABEL[activeExp.phase]}
                   </span>
-                  <span className="text-[#5a7a2a] tabular-nums">
-                    ⏱ {fmtCountdown(flightSec * 1000)}
+                  <span className="flex items-center gap-3 text-xs text-[#5a7a2a] tabular-nums">
+                    <span>⏱ {fmtCountdown(flightSec * 1000)}</span>
+                    <span>
+                      ❤️ {activeExp.hp}/{activeExp.maxHp}
+                    </span>
                   </span>
                 </div>
 
+                {/* HP бар */}
+                <div
+                  className="flex-shrink-0"
+                  style={{
+                    height: 8,
+                    borderRadius: 4,
+                    background: '#cbe0a0',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${hpPct}%`,
+                      height: '100%',
+                      transition: 'width .3s',
+                      background: hpColor,
+                    }}
+                  />
+                </div>
+
+                {/* Инвентарь — компактная строка тайлов */}
                 <ShipInventory loot={activeExp.loot} />
 
                 {/* Journal — виртуализирован (react-virtuoso) */}
@@ -762,10 +758,13 @@ export function ExpeditionModal({ onClose }: Props) {
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2 flex-shrink-0">
+                <div
+                  className="flex gap-2 flex-shrink-0"
+                  style={{ marginTop: -6 }}
+                >
                   {activeExp.canRecall && (
                     <button
-                      className="ff-btn ff-btn-grey flex-1 py-3"
+                      className="ff-btn ff-btn-grey flex-1 py-2 text-sm"
                       onClick={() => onRecall()}
                     >
                       ↩︎ Вернуться
@@ -773,7 +772,7 @@ export function ExpeditionModal({ onClose }: Props) {
                   )}
                   {activeExp.phase === 'returning' && !activeExp.canClaim && (
                     <button
-                      className="ff-btn ff-btn-green flex-1 py-3"
+                      className="ff-btn ff-btn-green flex-1 py-2 text-sm"
                       onClick={() => onContinue()}
                       title="Отменить возврат и лететь дальше"
                     >
@@ -782,7 +781,7 @@ export function ExpeditionModal({ onClose }: Props) {
                   )}
                   {(activeExp.canClaim || activeExp.phase === 'lost') && (
                     <button
-                      className="ff-btn ff-btn-green flex-1 py-3"
+                      className="ff-btn ff-btn-green flex-1 py-2 text-sm"
                       disabled={busy}
                       onClick={() => void onClaim()}
                     >
