@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { eventBus } from '../../store/eventBus'
 import { hapticImpact } from '../../utils/telegram'
+import { useModalLock } from '../../utils/modalLock'
 
 type Choice = {
   id: string
@@ -45,6 +46,10 @@ export function SurvivorUpgradeModal() {
       eventBus.off('survivor:exit', onExit)
     }
   }, [])
+
+  // Глушит pointer-events у Phaser canvas пока модалка открыта — иначе canvas
+  // перехватывает тапы и кнопки не кликаются (см. body.modal-open в modalLock).
+  useModalLock(data !== null)
 
   if (!data) return null
 
