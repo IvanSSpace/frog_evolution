@@ -37,6 +37,7 @@ export class ShipDeckScene extends Phaser.Scene {
 
   private frogs: number[] = [] // все доступные лягушки (стабильный список)
   private selected = new Set<number>() // индексы выбранных в this.frogs
+  private frogTiers: number[] = [] // tier эволюции per-level (для модельки)
 
   private layer!: Phaser.GameObjects.Container
   private titleText!: Phaser.GameObjects.Text
@@ -73,8 +74,10 @@ export class ShipDeckScene extends Phaser.Scene {
   reset() {
     this.launching = false
     const { location, minL, maxL } = this.params
-    const all = useGameStore.getState().locationFrogs[location - 1] ?? []
+    const store = useGameStore.getState()
+    const all = store.locationFrogs[location - 1] ?? []
     this.frogs = all.filter((lvl) => lvl >= minL && lvl <= maxL)
+    this.frogTiers = store.frogTiers
     this.selected = new Set()
     this.layout()
   }
@@ -186,17 +189,18 @@ export class ShipDeckScene extends Phaser.Scene {
       .setOrigin(0.5)
     this.layer.add(this.hintText)
 
-    // launch button
+    // launch button — в стиле приложения (зелёная ff-btn), серая когда нельзя
     const canLaunch = this.selected.size >= 1
     this.launchBtn = this.add
       .text(w / 2, h - 34 * DPR, canLaunch ? '🚀 Запустить' : 'Выбери экипаж', {
         fontFamily: 'sans-serif',
         fontSize: `${18 * DPR}px`,
-        color: canLaunch ? '#1a1300' : '#5a6a8a',
-        backgroundColor: canLaunch ? '#ffd24a' : '#1f2942',
-        padding: { x: 18 * DPR, y: 10 * DPR },
+        color: '#ffffff',
+        backgroundColor: canLaunch ? '#16a34a' : '#64748b',
+        padding: { x: 22 * DPR, y: 11 * DPR },
         fontStyle: 'bold',
       })
+      .setStroke(canLaunch ? '#0f5132' : '#334155', 3 * DPR)
       .setOrigin(0.5)
     if (canLaunch) {
       this.launchBtn.setInteractive({ useHandCursor: true })
@@ -210,7 +214,8 @@ export class ShipDeckScene extends Phaser.Scene {
     x: number,
     y: number,
   ): Phaser.GameObjects.Image {
-    const key = textureKeyForLevel(level, 0)
+    const tier = this.frogTiers[level - 1] ?? 0 // эволюционировавшая моделька
+    const key = textureKeyForLevel(level, tier)
     const img = this.add.image(x, y, key)
     img.setScale(BASE_SCALE) // тот же размер, что лягушки на поле
     return img
