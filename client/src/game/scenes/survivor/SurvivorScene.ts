@@ -272,6 +272,8 @@ export class SurvivorScene extends Phaser.Scene {
   private heroXpLevel = 1
   private xpNeeded = XP_BASE
   private paused = false // true пока открыто окно апгрейда (логика заморожена)
+  private pausedAt = 0 // Date.now() момента паузы — watchdog от вечного зависания
+  private fatalText?: Phaser.GameObjects.Text // вывод исключения на экран (диагностика)
 
   // HUD
   private hpBarFill!: Phaser.GameObjects.Rectangle
@@ -482,20 +484,55 @@ export class SurvivorScene extends Phaser.Scene {
 
   // === Main loop ===
   override update(_time: number, deltaMs: number) {
-    if (this.over || this.paused) return // окно апгрейда замораживает забег
+    if (this.over) return
+    if (this.paused) {
+      // Watchdog: если выбор апгрейда завис (баг) и не пришёл за 30с — аварийно
+      // выходим из забега, чтобы игрок не залип навсегда. Нормальный выбор
+      // (обычно <30с) сюда не попадает.
+      if (Date.now() - this.pausedAt > 30000) {
+        this.paused = false
+        eventBus.emit('survivor:exit', {})
+      }
+      return
+    }
     const dt = deltaMs / 1000
     this.elapsed += deltaMs
 
-    this.moveHero(dt)
-    this.autoAttack(deltaMs)
-    this.updateProjectiles(deltaMs)
-    this.updateMobs(deltaMs)
-    this.updateOrbs(dt)
-    this.updateCrystals()
-    this.applyRegen(dt)
-    this.handleSpawning(deltaMs)
-    this.maybeSpawnBoss()
-    this.updateHud()
+    // try/catch: исключение в кадре не должно морозить весь игровой цикл.
+    try {
+      this.moveHero(dt)
+      this.autoAttack(deltaMs)
+      this.updateProjectiles(deltaMs)
+      this.updateMobs(deltaMs)
+      this.updateOrbs(dt)
+      this.updateCrystals()
+      this.applyRegen(dt)
+      this.handleSpawning(deltaMs)
+      this.maybeSpawnBoss()
+      this.updateHud()
+    } catch (e) {
+      this.showFatal(e)
+    }
+  }
+
+  private showFatal(e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('[survivor] update error:', e)
+    if (!this.fatalText) {
+      this.fatalText = this.add
+        .text(this.scale.width / 2, 60 * DPR, '', {
+          fontFamily: 'monospace',
+          fontSize: `${11 * DPR}px`,
+          color: '#ff6b6b',
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          align: 'center',
+          wordWrap: { width: this.scale.width - 40 * DPR },
+        })
+        .setOrigin(0.5, 0)
+        .setScrollFactor(0)
+        .setDepth(100030)
+    }
+    this.fatalText.setText(`ERR: ${msg}`)
   }
 
   private applyRegen(dt: number) {
@@ -709,7 +746,10 @@ export class SurvivorScene extends Phaser.Scene {
     if (this.spawnAcc >= interval) {
       this.spawnAcc = 0
       // Толпа растёт со временем: +1 моб за тик каждые SPAWN_BURST_EVERY_MS (кап 4).
-      const burst = Math.min(4, 1 + Math.floor(this.elapsed / SPAWN_BURST_EVERY_MS))
+      const burst = Math.min(
+        4,
+        1 + Math.floor(this.elapsed / SPAWN_BURST_EVERY_MS),
+      )
       for (let i = 0; i < burst; i++) this.spawnMob()
     }
   }
@@ -840,6 +880,7 @@ export class SurvivorScene extends Phaser.Scene {
   private openUpgradePicker() {
     if (this.paused) return
     this.paused = true
+    this.pausedAt = Date.now() // watchdog: не висеть в paused вечно (см. update)
     this.joystick.end()
     hapticNotification('success')
     eventBus.emit('survivor:level-up', {
