@@ -219,7 +219,6 @@ export class FrogSpawner {
       dragMoved = false
       scene.tweens.killTweensOf(frog.container)
       scene.tweens.killTweensOf(frog.body)
-      frog.body.y = 0 // сброс арки прыжка — иначе хват в апексе оставит тело вверху
       frog.isMoving = true
       frog.isDragging = true
       frog.container.setDepth(99999)
@@ -449,18 +448,6 @@ export class FrogSpawner {
         scaleY: 1.2,
         duration: 120,
         ease: 'Power2.easeOut',
-      })
-
-      // Прыжок: тело уходит вверх и возвращается (дуга) синхронно с движением —
-      // лягушка реально подпрыгивает, а не скользит. body.y в локальных
-      // координатах контейнера (масштаб BASE_SCALE), yoyo → симметричная арка.
-      const JUMP_H = 30 * DPR
-      scene.tweens.add({
-        targets: frog.body,
-        y: -JUMP_H,
-        duration: 100,
-        yoyo: true,
-        ease: 'Quad.easeOut',
       })
 
       // Move to target
