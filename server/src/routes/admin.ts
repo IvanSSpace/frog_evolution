@@ -107,6 +107,49 @@ export async function adminRoutes(app: FastifyInstance) {
     },
   )
 
+  // GET /admin/expedition/scenarios — каталог ВСЕХ событий движка.
+  // Группы (пулы) + счётчики по категориям, чтобы видеть сколько каждых есть.
+  app.get(
+    '/admin/expedition/scenarios',
+    { preHandler: [requireAdmin] },
+    async () => {
+      const pools: { pool: string; items: Scenario[] }[] = [
+        { pool: 'departure', items: DEPARTURE },
+        { pool: 'main', items: SCENARIOS },
+        { pool: 'return', items: RETURN },
+        { pool: 'arrival', items: ARRIVAL },
+        { pool: 'lost', items: [LOST] },
+      ]
+      const flat = pools.flatMap(({ pool, items }) =>
+        items.map((s) => ({
+          pool,
+          id: s.id,
+          category: s.category,
+          weight: s.weight,
+          minSec: s.minSec ?? 0,
+          set: s.set ?? [],
+          needs: s.needs ?? null,
+          loot: s.loot ?? null,
+          lines: s.lines.map((l) => l.text),
+        })),
+      )
+      // Счётчики: по категории и по пулу.
+      const byCategory: Record<string, number> = {}
+      const byPool: Record<string, number> = {}
+      for (const s of flat) {
+        byCategory[s.category] = (byCategory[s.category] ?? 0) + 1
+        byPool[s.pool] = (byPool[s.pool] ?? 0) + 1
+      }
+      return {
+        ok: true,
+        total: flat.length,
+        byCategory,
+        byPool,
+        scenarios: flat,
+      }
+    },
+  )
+
   // POST /admin/login — no auth required
   app.post('/admin/login', async (request, reply) => {
     const body = request.body as { email?: string; password?: string }

@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { label: 'Users', href: '/users' },
   { label: 'Race Chains', href: '/chains' },
   { label: 'Экспедиция', href: '/expedition' },
+  { label: 'События', href: '/scenarios' },
 ]
 
 type AppShellProps = {

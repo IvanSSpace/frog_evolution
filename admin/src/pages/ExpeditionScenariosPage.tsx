@@ -1,0 +1,164 @@
+import { useEffect, useMemo, useState } from 'react'
+import { api } from '@/lib/api'
+
+// Цвета по категориям — зеркало клиентского CAT_COLOR.
+const CAT_COLOR: Record<string, string> = {
+  loot: '#d9a441',
+  hazard: '#ff5d6c',
+  departure: '#6ec1ff',
+  arrival: '#6ec1ff',
+  return: '#6ec1ff',
+  discovery: '#10b981',
+  encounter: '#f59e0b',
+  lore: '#8b5cf6',
+  travel: '#64748b',
+  mundane: '#94a3b8',
+}
+
+interface ScenarioRow {
+  pool: string
+  id: string
+  category: string
+  weight: number
+  minSec: number
+  set: string[]
+  needs: string | null
+  loot: Record<string, unknown> | null
+  lines: string[]
+}
+interface ScenariosResp {
+  ok: true
+  total: number
+  byCategory: Record<string, number>
+  byPool: Record<string, number>
+  scenarios: ScenarioRow[]
+}
+
+export function ExpeditionScenariosPage() {
+  const [data, setData] = useState<ScenariosResp | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+  const [catFilter, setCatFilter] = useState<string | null>(null)
+  const [poolFilter, setPoolFilter] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+
+  useEffect(() => {
+    api
+      .get<ScenariosResp>('/admin/expedition/scenarios')
+      .then((r) => setData(r.data))
+      .catch((e) => setErr(e instanceof Error ? e.message : 'Ошибка'))
+  }, [])
+
+  const rows = useMemo(() => {
+    if (!data) return []
+    const q = search.trim().toLowerCase()
+    return data.scenarios.filter(
+      (s) =>
+        (!catFilter || s.category === catFilter) &&
+        (!poolFilter || s.pool === poolFilter) &&
+        (!q ||
+          s.id.toLowerCase().includes(q) ||
+          s.lines.some((l) => l.toLowerCase().includes(q))),
+    )
+  }, [data, catFilter, poolFilter, search])
+
+  if (err) return <div className="p-6 text-red-600">{err}</div>
+  if (!data) return <div className="p-6">Загрузка…</div>
+
+  const cats = Object.entries(data.byCategory).sort((a, b) => b[1] - a[1])
+  const pools = Object.entries(data.byPool)
+
+  return (
+    <div className="p-6 max-w-4xl">
+      <h1 className="text-2xl font-bold mb-1">Каталог событий</h1>
+      <div className="text-sm text-gray-600 mb-4">
+        Всего сценариев: <b>{data.total}</b> · показано:{' '}
+        <b>{rows.length}</b>
+      </div>
+
+      {/* Счётчики по категориям — клик = фильтр */}
+      <div className="flex flex-wrap gap-2 mb-3">
+        {cats.map(([cat, n]) => (
+          <button
+            key={cat}
+            onClick={() => setCatFilter(catFilter === cat ? null : cat)}
+            className="rounded px-2.5 py-1 text-xs font-semibold border"
+            style={{
+              borderColor: CAT_COLOR[cat] ?? '#999',
+              background: catFilter === cat ? CAT_COLOR[cat] ?? '#999' : '#fff',
+              color: catFilter === cat ? '#fff' : CAT_COLOR[cat] ?? '#333',
+            }}
+          >
+            {cat}: {n}
+          </button>
+        ))}
+      </div>
+
+      {/* Счётчики по пулам + поиск */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        {pools.map(([pool, n]) => (
+          <button
+            key={pool}
+            onClick={() => setPoolFilter(poolFilter === pool ? null : pool)}
+            className={`rounded px-2.5 py-1 text-xs border ${
+              poolFilter === pool
+                ? 'bg-gray-800 text-white border-gray-800'
+                : 'bg-white text-gray-700 border-gray-300'
+            }`}
+          >
+            {pool}: {n}
+          </button>
+        ))}
+        <input
+          className="border rounded px-2 py-1 text-sm ml-auto w-56"
+          placeholder="Поиск по id / тексту…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      {/* Список */}
+      <div className="flex flex-col gap-2">
+        {rows.map((s) => (
+          <div
+            key={`${s.pool}-${s.id}`}
+            className="border rounded p-3"
+            style={{ borderLeft: `4px solid ${CAT_COLOR[s.category] ?? '#999'}` }}
+          >
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs mb-1">
+              <span className="font-mono font-semibold">{s.id}</span>
+              <span
+                className="rounded px-1.5 py-0.5 font-semibold text-white"
+                style={{ background: CAT_COLOR[s.category] ?? '#999' }}
+              >
+                {s.category}
+              </span>
+              <span className="text-gray-500">пул: {s.pool}</span>
+              <span className="text-gray-500">вес: {s.weight}</span>
+              {s.minSec > 0 && (
+                <span className="text-gray-500">
+                  с {(s.minSec / 60).toFixed(0)}мин
+                </span>
+              )}
+              {s.needs && (
+                <span className="text-amber-600">needs: {s.needs}</span>
+              )}
+              {s.set.length > 0 && (
+                <span className="text-blue-600">set: {s.set.join(',')}</span>
+              )}
+              {s.loot && (
+                <span className="text-emerald-700">
+                  лут: {JSON.stringify(s.loot)}
+                </span>
+              )}
+            </div>
+            <div className="text-sm text-gray-800 flex flex-col gap-0.5">
+              {s.lines.map((l, i) => (
+                <div key={i}>· {l}</div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}

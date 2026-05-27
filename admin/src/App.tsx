@@ -9,6 +9,7 @@ import { UserDetailPage } from '@/pages/UserDetailPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { RaceChainsPage } from '@/pages/RaceChainsPage'
 import { ExpeditionPreviewPage } from '@/pages/ExpeditionPreviewPage'
+import { ExpeditionScenariosPage } from '@/pages/ExpeditionScenariosPage'
 import { Toaster } from '@/components/ui/toaster'
 
 export default function App() {
@@ -30,6 +31,10 @@ export default function App() {
                     <Route
                       path="expedition"
                       element={<ExpeditionPreviewPage />}
+                    />
+                    <Route
+                      path="scenarios"
+                      element={<ExpeditionScenariosPage />}
                     />
                   </Routes>
                 </AppShell>

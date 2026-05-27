@@ -78,6 +78,18 @@ export function ExpeditionPreviewPage() {
 
   const fmt = (n: number) => n.toLocaleString('ru-RU')
 
+  // Секунды → «Nд Nч Nм» (опускаем нулевые старшие разряды).
+  const fmtDur = (sec: number) => {
+    const d = Math.floor(sec / 86400)
+    const h = Math.floor((sec % 86400) / 3600)
+    const m = Math.floor((sec % 3600) / 60)
+    const parts: string[] = []
+    if (d) parts.push(`${d}д`)
+    if (h || d) parts.push(`${h}ч`)
+    parts.push(`${m}м`)
+    return parts.join(' ')
+  }
+
   return (
     <div className="p-6 max-w-3xl">
       <h1 className="text-2xl font-bold mb-4">Превью экспедиции (баланс)</h1>
@@ -164,7 +176,11 @@ export function ExpeditionPreviewPage() {
             <span>риск: {Math.round(data.risk * 100)}%</span>
             <span>
               {data.shipLost
-                ? `💀 ПОТЕРЯН на ${data.wreckedAtSec}с`
+                ? `💀 ПОТЕРЯН на ${
+                    data.wreckedAtSec != null
+                      ? fmtDur(data.wreckedAtSec)
+                      : '—'
+                  }`
                 : '✅ цел'}
             </span>
           </div>
