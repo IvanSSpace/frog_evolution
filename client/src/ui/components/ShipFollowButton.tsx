@@ -67,6 +67,7 @@ export function ShipFollowButton() {
     <button
       onClick={handleClick}
       aria-label={label}
+      className="ship-follow-btn"
       style={{
         position: 'fixed',
         top: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad) + 10px)',

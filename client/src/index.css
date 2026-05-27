@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Кнопка «К кораблю» (zIndex 1000) висит поверх любых модалок на космосе.
+   Прячем её пока открыта модалка (body.modal-open ставит useModalLock). */
+body.modal-open .ship-follow-btn {
+  display: none;
+}
+
 .ff-no-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
