@@ -37,7 +37,13 @@ export interface ExpeditionConfig {
   riskFreeSec: number // grace window with zero risk
   riskRampSec: number // after grace, risk climbs to max over this span
   catastrophePerTickMax: number // (legacy) peak per-tick instant-loss chance — больше не используется
-  dmgPerTickMax: number // peak HP-урон за бит при полном риске; HP=0 → корабль потерян
+  dmgPerTickMax: number // (legacy) peak HP-урон за бит — больше не используется (урон теперь только от hazard-событий)
+  // Урон наносят ТОЛЬКО hazard-события. Каждое бьёт на долю maxHp в диапазоне
+  // [hazardHitMinFrac .. hazardHitMaxFrac] × текущий риск (× hull-резист). Кап =
+  // hazardHitMaxFrac гарантирует, что одно событие не убивает целиком (минимум
+  // 1/maxFrac событий до гибели). Корабль гибнет только когда HP=0.
+  hazardHitMinFrac: number
+  hazardHitMaxFrac: number
 }
 
 // Production tempo: hour-scale idle, FS-style.
@@ -61,6 +67,10 @@ export const EXPEDITION_CONFIG: ExpeditionConfig = {
   riskRampSec: 90 * 60,
   catastrophePerTickMax: 0.04,
   dmgPerTickMax: 14,
+  // При полном риске hazard бьёт на 14..30% maxHp → минимум ~4 события до гибели
+  // (с резистом брони — больше). Ваншот невозможен.
+  hazardHitMinFrac: 0.14,
+  hazardHitMaxFrac: 0.3,
 }
 
 // Demo/test tempo: minute-scale so a full arc runs in seconds.

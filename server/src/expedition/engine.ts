@@ -138,6 +138,18 @@ export function simulate(
   let dmg = 0 // накопленный урон
   let wreckedAtSec: number | null = null
 
+  // Урон наносят ТОЛЬКО hazard-события (а не каждый бит по таймеру). Каждое
+  // событие бьёт на долю maxHp ∈ [min..max] × текущий риск, с резистом брони
+  // (hull) и множителем ноги маршрута (factor: туда=1, обратно=returnRiskFactor).
+  // hit ≤ hazardHitMaxFrac×maxHp → ваншот невозможен; гибель только при HP=0.
+  const hazardHit = (riskNow: number, rng: Rng, factor: number): number => {
+    if (riskNow <= 0) return 0
+    const lo = maxHp * cfg.hazardHitMinFrac
+    const hi = maxHp * cfg.hazardHitMaxFrac
+    const raw = lo + rng.float() * (hi - lo)
+    return Math.round(raw * riskNow * (1 - shipStats.hull) * factor)
+  }
+
   // displayBase = journal clock (ЧЧ:ММ); realBase = real seconds since departure
   // for this beat. Lines spread evenly across the beat's real-time window
   // (tickIntervalSec) so 3 lines in one minute reveal ~20s apart, not at once.
@@ -199,23 +211,6 @@ export function simulate(
     const realSec = beatIndex * cfg.tickIntervalSec
     const risk = riskAt(realSec, cfg) // recall-timing tension = real time
 
-    // Урон от опасности копится (броня/hull снижает). Корабль теряется только
-    // когда HP = 0 (dmg достиг порога), а не мгновенным рандом-роллом.
-    if (risk > 0) {
-      const hit = rng.int(
-        Math.round(risk * cfg.dmgPerTickMax * 0.5),
-        Math.round(risk * cfg.dmgPerTickMax),
-      )
-      dmg += Math.round(hit * (1 - shipStats.hull))
-      if (dmg >= lossThreshold) {
-        dmg = lossThreshold
-        wreckedAtSec = realSec
-        emit(LOST, base, realSec, rng)
-        shipLost = true
-        break
-      }
-    }
-
     // Eligible = unlocked by journal progress, not on cooldown, and (reaction
     // beats) only while their trigger mood is still recent.
     let pool = SCENARIOS.filter(
@@ -240,6 +235,19 @@ export function simulate(
     emit(beat, base, realSec, rng)
     remember(beat)
 
+    // Опасное событие наносит урон корпусу. Накапливается; при HP=0 — гибель
+    // (LOST дописывается следом за текстом события, на том же бите).
+    if (beat.category === 'hazard') {
+      dmg += hazardHit(risk, rng, 1)
+      if (dmg >= lossThreshold) {
+        dmg = lossThreshold
+        wreckedAtSec = realSec
+        emit(LOST, base, realSec, rng)
+        shipLost = true
+        break
+      }
+    }
+
     // Passive yield per beat.
     loot.gold += Math.round(cfg.goldPerTickBase * shipStats.speed)
     if (rng.chance(cfg.serumChancePerTick * shipStats.luck)) {
@@ -263,8 +271,14 @@ export function simulate(
     const returnSec = outboundSec / cfg.returnSpeedMultiplier
     const returnBeats = Math.floor(returnSec / cfg.tickIntervalSec)
     const recallRisk = riskAt(outboundSec, cfg)
+    // Обратный путь безопаснее, но не стерилен: редкие hazard'ы (низкий вес)
+    // могут зацепить. Урон — только на них, ×returnRiskFactor (75% мягче).
     const returnPool = SCENARIOS.filter(
-      (s) => !s.needs && (s.category === 'travel' || s.category === 'mundane'),
+      (s) =>
+        !s.needs &&
+        (s.category === 'travel' ||
+          s.category === 'mundane' ||
+          s.category === 'hazard'),
     )
 
     beatIndex++
@@ -279,12 +293,15 @@ export function simulate(
       beatIndex++
       const base = beatBase(beatIndex)
       const rng = new Rng(tickSeed(seed, beatIndex))
-      if (recallRisk > 0) {
-        const hit = rng.int(
-          Math.round(recallRisk * cfg.dmgPerTickMax * 0.5),
-          Math.round(recallRisk * cfg.dmgPerTickMax),
-        )
-        dmg += Math.round(hit * (1 - shipStats.hull) * cfg.returnRiskFactor)
+      // Hazard'ы на обратном пути редки (вес ×0.25): дорога домой спокойнее.
+      const beat = rng.weighted(
+        returnPool.map((s) =>
+          s.category === 'hazard' ? { ...s, weight: s.weight * 0.25 } : s,
+        ),
+      )
+      emit(beat, base, realBaseAt(beatIndex), rng)
+      if (beat.category === 'hazard') {
+        dmg += hazardHit(recallRisk, rng, cfg.returnRiskFactor)
         if (dmg >= lossThreshold) {
           dmg = lossThreshold
           wreckedAtSec = outboundSec
@@ -293,7 +310,6 @@ export function simulate(
           break
         }
       }
-      emit(rng.weighted(returnPool), base, realBaseAt(beatIndex), rng)
     }
 
     if (shipLost) {
