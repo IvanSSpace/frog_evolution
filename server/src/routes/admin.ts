@@ -4,6 +4,13 @@ import { prisma } from '../prisma'
 import { Prisma } from '@prisma/client'
 import { config } from '../config'
 import { CHAINS_RESPONSE } from '../data/chains'
+import { simulate } from '../expedition/engine'
+import { renderJournal, lootSummary } from '../expedition/render'
+import {
+  EXPEDITION_CONFIG,
+  DEMO_CONFIG,
+  DEFAULT_SHIP_STATS,
+} from '../expedition/config'
 
 // ── Admin JWT payload ─────────────────────────────────────────────────────────
 
@@ -53,6 +60,45 @@ function extractEssence(cosmic: unknown): number {
 // ── Route plugin ──────────────────────────────────────────────────────────────
 
 export async function adminRoutes(app: FastifyInstance) {
+  // GET /admin/expedition/preview — прогон экспедиции для баланса.
+  // Возвращает полный журнал (с категориями для цветов) + лут-сводку.
+  app.get(
+    '/admin/expedition/preview',
+    { preHandler: [requireAdmin] },
+    async (request) => {
+      const q = request.query as Record<string, string | undefined>
+      const seed = Number(q.seed) || Math.floor(Math.random() * 2_147_483_647)
+      const outboundSec = Number(q.sec) || 600
+      const recalled = q.recalled === '1' || q.recalled === 'true'
+      const incomePerSec = Number(q.income) || 0
+      const reviveCount = Number(q.revive) || 0
+      const demo = q.demo === '1'
+      const cfg = demo ? DEMO_CONFIG : EXPEDITION_CONFIG
+      const stats = {
+        ...DEFAULT_SHIP_STATS,
+        hull: Number(q.hull) || 0,
+        speed: Number(q.speed) || 1,
+        luck: Number(q.luck) || 1,
+      }
+      const maxHp = Number(q.maxHp) || undefined
+      const result = simulate(
+        { seed, shipStats: stats, outboundSec, recalled, incomePerSec, reviveCount, maxHp },
+        cfg,
+      )
+      return {
+        ok: true,
+        params: { seed, outboundSec, recalled, incomePerSec, reviveCount, demo },
+        journal: renderJournal(result.log),
+        loot: lootSummary(result),
+        shipLost: result.shipLost,
+        wreckedAtSec: result.wreckedAtSec,
+        hp: result.hp,
+        maxHp: result.maxHp,
+        risk: Number(result.risk.toFixed(3)),
+      }
+    },
+  )
+
   // POST /admin/login — no auth required
   app.post('/admin/login', async (request, reply) => {
     const body = request.body as { email?: string; password?: string }
