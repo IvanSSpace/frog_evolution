@@ -1,3 +1,4 @@
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   useGameStore,
@@ -9,6 +10,7 @@ import {
   getRareBoxThreshold,
   UPGRADE_CONFIG,
 } from '../../store/gameStore'
+import { SHIP_UNLOCK, shipUnlocked } from '../../game/config/upgrades'
 import { hapticNotification } from '../../utils/telegram'
 import { fmt } from '../../utils/formatting'
 import { useModalLock } from '../../utils/modalLock'
@@ -16,10 +18,12 @@ import { useCosmosUnlocked } from '../../utils/cosmosGate'
 import { CosmicShopTab } from '../../components/CosmicHub/CosmicShopTab'
 
 type Props = { onClose: () => void }
+type ShopTab = 'upgrades' | 'cosmos'
 
 export function ShopModal({ onClose }: Props) {
   useModalLock()
   const { t } = useTranslation()
+  const [tab, setTab] = useState<ShopTab>('upgrades')
   return (
     <div
       onClick={onClose}
@@ -71,16 +75,57 @@ export function ShopModal({ onClose }: Props) {
           </button>
         </div>
 
-        <ShopCards />
+        <div className="flex gap-2 px-3 pt-2 flex-shrink-0">
+          <ShopTabButton
+            active={tab === 'upgrades'}
+            onClick={() => setTab('upgrades')}
+          >
+            Улучшения
+          </ShopTabButton>
+          <ShopTabButton
+            active={tab === 'cosmos'}
+            onClick={() => setTab('cosmos')}
+          >
+            🚀 Космос
+          </ShopTabButton>
+        </div>
+
+        {tab === 'upgrades' ? <UpgradesCards /> : <CosmosCards />}
       </div>
     </div>
   )
 }
 
-function ShopCards() {
-  // 2026-05-23: магазин один для всех локаций. Карточки видны независимо от
-  // currentLocation. Магниты L2/L3 — gated by cosmosUnlocked.
-  const cosmosUnlocked = useCosmosUnlocked()
+function ShopTabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  children: ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="ff-btn text-sm flex-1"
+      style={{
+        paddingLeft: 12,
+        paddingRight: 12,
+        paddingTop: 6,
+        paddingBottom: 6,
+        opacity: active ? 1 : 0.55,
+        ['--ff-btn-from' as never]: active ? '#4ade80' : '#cbd5e1',
+        ['--ff-btn-to' as never]: active ? '#16a34a' : '#64748b',
+        ['--ff-btn-border' as never]: active ? '#14532d' : '#334155',
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
+function UpgradesCards() {
   return (
     <div className="flex flex-col gap-3 p-4 overflow-y-auto">
       <DropSpeedCard />
@@ -88,14 +133,67 @@ function ShopCards() {
       <MagnetCard />
       <RareBoxSpeedCard />
       <TractorCard />
-      {cosmosUnlocked && (
-        <MagnetCard upgradeKey="magnet2" titleSuffix="Лес" />
-      )}
+    </div>
+  )
+}
+
+function CosmosCards() {
+  // Магниты L2/L3 и косм. магазин — после открытия космоса (L18).
+  // Корабли — раньше (с Леса), поэтому ShipCard виден всегда.
+  const cosmosUnlocked = useCosmosUnlocked()
+  return (
+    <div className="flex flex-col gap-3 p-4 overflow-y-auto">
+      <ShipCard />
+      {cosmosUnlocked && <MagnetCard upgradeKey="magnet2" titleSuffix="Лес" />}
       {cosmosUnlocked && (
         <MagnetCard upgradeKey="magnet3" titleSuffix="Континент" />
       )}
       {cosmosUnlocked && <CosmicShopTab />}
     </div>
+  )
+}
+
+function ShipCard() {
+  const level = useGameStore((s) => s.upgrades.ships)
+  const gold = useGameStore((s) => s.gold)
+  const discovered = useGameStore((s) => s.discoveredLevels)
+  const buyUpgrade = useGameStore((s) => s.buyUpgrade)
+  const cfg = UPGRADE_CONFIG.ships
+  const isMax = level >= cfg.maxLevel
+  const unlocked = !isMax && shipUnlocked(level, discovered)
+  const cost = isMax ? 0 : getUpgradeCost('ships', level)
+  const canAfford = gold >= cost
+  const need = SHIP_UNLOCK[level]
+  const lockLabel =
+    need === 7
+      ? 'Откройте Лес'
+      : need === 13
+        ? 'Откройте Континент'
+        : need === 19
+          ? 'Лягушка L19'
+          : 'Недоступно'
+  return (
+    <UpgradeCard
+      icon="🚀"
+      title="Космический корабль"
+      effect={
+        isMax
+          ? `Кораблей: ${level} (макс)`
+          : `Кораблей: ${level} → ${level + 1}`
+      }
+      level={level}
+      maxLevel={cfg.maxLevel}
+      cost={cost}
+      isMax={isMax}
+      canAfford={canAfford}
+      locked={!isMax && !unlocked}
+      lockLabel={lockLabel}
+      onBuy={() =>
+        void buyUpgrade('ships').then((ok) =>
+          hapticNotification(ok ? 'success' : 'error'),
+        )
+      }
+    />
   )
 }
 
@@ -109,6 +207,9 @@ type GenericCardProps = {
   isMax: boolean
   canAfford: boolean
   onBuy: () => void
+  // Locked: requirement not met yet (progression gate). Shows 🔒 + label.
+  locked?: boolean
+  lockLabel?: string
 }
 
 function UpgradeCard({
@@ -121,6 +222,8 @@ function UpgradeCard({
   isMax,
   canAfford,
   onBuy,
+  locked = false,
+  lockLabel = '',
 }: GenericCardProps) {
   const { t } = useTranslation()
   useGameStore((s) => s.numberFormat) // subscribe to format changes
@@ -153,13 +256,19 @@ function UpgradeCard({
 
       <button
         onClick={onBuy}
-        disabled={isMax || !canAfford}
+        disabled={isMax || locked || !canAfford}
         className={`ff-btn text-sm ${
-          isMax ? 'ff-btn-grey' : canAfford ? 'ff-btn-green' : 'ff-btn-red'
+          isMax || locked
+            ? 'ff-btn-grey'
+            : canAfford
+              ? 'ff-btn-green'
+              : 'ff-btn-red'
         }`}
       >
         {isMax ? (
           t('shop.max')
+        ) : locked ? (
+          <>🔒 {lockLabel}</>
         ) : (
           <>
             {fmt(cost)}{' '}

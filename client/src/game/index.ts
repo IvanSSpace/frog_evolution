@@ -4,7 +4,7 @@ import { StarMapScene } from './scenes/StarMapScene'
 import { BattleScene } from './scenes/battle/BattleScene'
 import { BarracksScene } from './scenes/barracks/BarracksScene'
 import { RaidScoutScene } from './scenes/raid/RaidScoutScene'
-import { ShipScene } from './scenes/ship/ShipScene'
+import { ShipDeckScene } from './scenes/ship/ShipDeckScene'
 import { eventBus } from '../store/eventBus'
 import { useGameStore } from '../store/gameStore'
 
@@ -100,7 +100,7 @@ export function startGame(): Phaser.Game {
       BattleScene,
       BarracksScene,
       RaidScoutScene,
-      ShipScene,
+      ShipDeckScene,
     ],
     physics: {
       default: 'arcade',
@@ -231,7 +231,6 @@ export function startGame(): Phaser.Game {
   // Barracks scene — отдельная локация казармы.
   eventBus.on('barracks:open', () => {
     if (sm().isActive('BarracksScene')) return
-    if (sm().isActive('ShipScene')) sm().sleep('ShipScene')
     sm().sleep('MainScene')
     if (sm().isSleeping('BarracksScene')) {
       sm().wake('BarracksScene')
@@ -248,35 +247,10 @@ export function startGame(): Phaser.Game {
     useGameStore.getState().setBattleSceneActive(false)
   })
 
-  // Ship scene — интерьер корабля с экипажем. Корабль и казарма взаимоисключающие:
-  // открытие одного авто-закрывает другое. Оба возвращают на ферму (MainScene).
-  eventBus.on('ship:open', () => {
-    if (sm().isActive('ShipScene')) return
-    if (sm().isActive('BarracksScene')) sm().sleep('BarracksScene')
-    if (sm().isActive('MainScene')) sm().sleep('MainScene')
-    if (sm().isSleeping('ShipScene')) {
-      sm().wake('ShipScene')
-    } else {
-      sm().start('ShipScene')
-    }
-    useGameStore.getState().setBattleSceneActive(true)
-  })
-
-  eventBus.on('ship:exit', () => {
-    if (!sm().isActive('ShipScene')) return
-    sm().sleep('ShipScene')
-    sm().wake('MainScene')
-    useGameStore.getState().setBattleSceneActive(false)
-  })
-
   // Toggle из футера — повторный клик закрывает. Источник истины = scene manager.
   eventBus.on('barracks:toggle', () => {
     if (sm().isActive('BarracksScene')) eventBus.emit('barracks:exit', {})
     else eventBus.emit('barracks:open', {})
-  })
-  eventBus.on('ship:toggle', () => {
-    if (sm().isActive('ShipScene')) eventBus.emit('ship:exit', {})
-    else eventBus.emit('ship:open', {})
   })
 
   // При старте боя из казармы/скаута — убеждаемся что они закрыты.
@@ -286,9 +260,6 @@ export function startGame(): Phaser.Game {
     }
     if (sm().isActive('RaidScoutScene')) {
       sm().sleep('RaidScoutScene')
-    }
-    if (sm().isActive('ShipScene')) {
-      sm().sleep('ShipScene')
     }
   })
 
@@ -327,6 +298,28 @@ export function startGame(): Phaser.Game {
       useGameStore.getState().setBattleSceneActive(false)
     }
   })
+
+  // Космическая экспедиция — сцена снаряжения корабля (ShipDeckScene).
+  // Открывается из ExpeditionModal (поверх фермы): sleep MainScene → сцена.
+  // launch/cancel → wake MainScene.
+  const closeShipDeck = () => {
+    if (sm().isActive('ShipDeckScene')) sm().sleep('ShipDeckScene')
+    if (sm().isSleeping('MainScene')) sm().wake('MainScene')
+    useGameStore.getState().setBattleSceneActive(false)
+  }
+  eventBus.on('shipdeck:open', (p) => {
+    if (sm().isActive('MainScene')) sm().sleep('MainScene')
+    if (sm().isSleeping('ShipDeckScene')) {
+      sm().wake('ShipDeckScene')
+    } else {
+      sm().start('ShipDeckScene')
+    }
+    const deck = sm().getScene('ShipDeckScene') as ShipDeckScene
+    deck.setParams(p)
+    useGameStore.getState().setBattleSceneActive(true)
+  })
+  eventBus.on('shipdeck:launch', closeShipDeck)
+  eventBus.on('shipdeck:cancel', closeShipDeck)
 
   // Подгоняем размер игры при ресайзе окна
   window.addEventListener('resize', () => {

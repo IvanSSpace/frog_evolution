@@ -40,8 +40,6 @@ import {
   saveUpgrades,
   loadCombatTree,
   saveCombatTree,
-  loadSlime,
-  saveSlime,
   loadFrogPurchases,
   saveFrogPurchases,
   loadFrogTiers,
@@ -82,8 +80,6 @@ import {
   saveBarracksVats,
   loadBarracksUnlocked,
   saveBarracksUnlocked,
-  loadShipCrew,
-  saveShipCrew,
   loadRaidCooldowns,
   saveRaidCooldowns,
 } from './persistence'
@@ -315,22 +311,10 @@ interface GameStateBase {
     } | null,
   ) => void
 
-  // ─── Экипаж корабля (боевой отряд, перемещён из казармы) ───
-  shipCrew: (import('./barracks').BarracksCell | null)[]
-  /** Загрузить воинов из боевой зоны казармы (top deck) в корабль.
-   *  Лягушки ПЕРЕМЕЩАЮТСЯ (клетки казармы пустеют). Возвращает кол-во загруженных. */
-  loadDeckIntoShip: () => number
-  /** Выгрузить экипаж обратно в свободные клетки казармы. */
-  unloadShipToBarracks: () => void
-
-  // ─── Боевая прокачка (combat tree) + slime кошелёк ───
-  /** Spendable slime — начисляется за победы в рейдах, тратится на древо. */
-  slime: number
-  addSlime: (amount: number) => void
-  spendSlime: (amount: number) => boolean
+  // ─── Боевая прокачка (combat tree) ───
   /** Уровни узлов древа по веткам (damage/hp/armor). */
   combatTree: CombatTreeLevels
-  /** Купить следующий узел ветки за slime. false если максимум/не хватает slime. */
+  /** Купить следующий узел ветки за gold (= слизь 💧). false если максимум/не хватает. */
   buyCombatNode: (branch: CombatBranch) => boolean
 }
 
@@ -393,6 +377,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       magnet3: 0,
       crateQuality: 0,
       rareBoxSpeed: 0,
+      ships: 0,
     }
     saveUpgrades(defaults)
     set({ upgrades: defaults })
@@ -767,50 +752,6 @@ export const useGameStore = create<GameState>((set, get) => ({
   battleSceneActive: false,
   setBattleSceneActive: (v) => set({ battleSceneActive: v }),
 
-  // ─── Экипаж корабля ───
-  shipCrew: loadShipCrew(),
-  loadDeckIntoShip: () => {
-    const s = get()
-    const grid = s.barracksGrid.slice()
-    const crew = s.shipCrew.slice()
-    let loaded = 0
-    // Боевая зона казармы = idx 0..BATTLE_DECK_SIZE-1. Переносим в свободные
-    // слоты экипажа (max SHIP_CREW_SIZE), клетки казармы пустеют.
-    for (let i = 0; i < BATTLE_DECK_SIZE; i++) {
-      if (!grid[i]) continue
-      const slot = crew.findIndex((c) => c === null)
-      if (slot === -1) break // корабль полон
-      crew[slot] = grid[i]
-      grid[i] = null
-      loaded++
-    }
-    if (loaded > 0) {
-      saveBarracksGrid(grid)
-      saveShipCrew(crew)
-      set({ barracksGrid: grid, shipCrew: crew })
-    }
-    return loaded
-  },
-  unloadShipToBarracks: () => {
-    const s = get()
-    const grid = s.barracksGrid.slice()
-    const crew = s.shipCrew.slice()
-    let changed = false
-    for (let ci = 0; ci < crew.length; ci++) {
-      if (!crew[ci]) continue
-      const target = grid.findIndex((c) => c === null)
-      if (target === -1) break // казарма полна
-      grid[target] = crew[ci]
-      crew[ci] = null
-      changed = true
-    }
-    if (changed) {
-      saveBarracksGrid(grid)
-      saveShipCrew(crew)
-      set({ barracksGrid: grid, shipCrew: crew })
-    }
-  },
-
   raidMode: false,
   setRaidMode: (v) => set({ raidMode: v }),
   investigatePlanetId: null,
@@ -829,35 +770,17 @@ export const useGameStore = create<GameState>((set, get) => ({
   raidLoot: null,
   setRaidLoot: (loot) => set({ raidLoot: loot }),
 
-  // ─── Боевая прокачка + slime ───
-  slime: loadSlime(),
-  addSlime: (amount) =>
-    set((s) => {
-      const next = Math.max(0, s.slime + amount)
-      saveSlime(next)
-      return { slime: next }
-    }),
-  spendSlime: (amount) => {
-    if (get().slime < amount) return false
-    set((s) => {
-      const next = Math.max(0, s.slime - amount)
-      saveSlime(next)
-      return { slime: next }
-    })
-    return true
-  },
+  // ─── Боевая прокачка (combat tree) — платится gold (= слизь 💧) ───
   combatTree: loadCombatTree(),
   buyCombatNode: (branch) => {
     const state = get()
     const level = state.combatTree[branch]
     const cost = combatNodeCost(branch, level)
     if (cost === null) return false // ветка максимальна
-    if (state.slime < cost) return false
+    if (state.gold < cost) return false
     const nextTree = { ...state.combatTree, [branch]: level + 1 }
-    const nextSlime = Math.max(0, state.slime - cost)
     saveCombatTree(nextTree)
-    saveSlime(nextSlime)
-    set({ combatTree: nextTree, slime: nextSlime })
+    set({ combatTree: nextTree, gold: state.gold - cost })
     return true
   },
 

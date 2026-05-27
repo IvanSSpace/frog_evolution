@@ -1,8 +1,8 @@
 // CombatTreeModal — боевая прокачка (combat tree). 3 вертикальные ветки
 // (Урон / Здоровье / Броня), узлы идут вниз, открываются последовательно.
-// Валюта — slime (боевой кошелёк). Глобальный эффект на всю армию игрока.
+// Валюта — gold (= слизь 💧, единая валюта). Эффект на всю армию игрока.
 //
-// MVP client-прототип: трата валидируется локально (buyCombatNode → spendSlime).
+// MVP client-прототип: трата gold валидируется локально (buyCombatNode).
 
 import { useGameStore } from '../../store/gameStore'
 import { useModalLock } from '../../utils/modalLock'
@@ -20,7 +20,7 @@ type Props = { onClose: () => void }
 
 export function CombatTreeModal({ onClose }: Props) {
   useModalLock()
-  const slime = useGameStore((s) => s.slime)
+  const gold = useGameStore((s) => s.gold)
   const tree = useGameStore((s) => s.combatTree)
   const buyCombatNode = useGameStore((s) => s.buyCombatNode)
 
@@ -66,7 +66,7 @@ export function CombatTreeModal({ onClose }: Props) {
               className="ff-body tabular-nums"
               style={{ fontSize: 15, color: '#15803d', fontWeight: 800 }}
             >
-              💧 {fmt(slime)}
+              💧 {fmt(gold)}
             </div>
             <button
               onClick={onClose}
@@ -99,7 +99,7 @@ export function CombatTreeModal({ onClose }: Props) {
               key={branch}
               branch={branch}
               level={tree[branch]}
-              slime={slime}
+              balance={gold}
               onBuy={() => {
                 const ok = buyCombatNode(branch)
                 if (ok) hapticSelection()
@@ -116,12 +116,12 @@ export function CombatTreeModal({ onClose }: Props) {
 function BranchColumn({
   branch,
   level,
-  slime,
+  balance,
   onBuy,
 }: {
   branch: CombatBranch
   level: number
-  slime: number
+  balance: number
   onBuy: () => void
 }) {
   const cfg = COMBAT_TREE[branch]
@@ -129,7 +129,7 @@ function BranchColumn({
     cfg.unit === 'pct' ? `+${level * cfg.perNode}%` : `+${level * cfg.perNode}`
   const nextCost = combatNodeCost(branch, level)
   const maxed = nextCost === null
-  const affordable = nextCost !== null && slime >= nextCost
+  const affordable = nextCost !== null && balance >= nextCost
 
   return (
     <div

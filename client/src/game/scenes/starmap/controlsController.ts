@@ -61,11 +61,37 @@ export class ControlsController {
     this.scene.input.on('pointerdown', this.onPointerDown, this)
     this.scene.input.on('pointermove', this.onPointerMove, this)
     this.scene.input.on('pointerup', this.onPointerUp, this)
+    // pointerup может прийти ВНЕ канваса (палец ушёл за край) — иначе isDragging
+    // залипает true и фантомный указатель ломает pan.
+    this.scene.input.on('pointerupoutside', this.onPointerUp, this)
     this.scene.input.on('wheel', this.onWheel, this)
+
+    // Возврат из боя в космос: тап планеты (pointerdown) открывает React-модалку
+    // InvestigateModal, которая перехватывает pointerup → Phaser его не получает →
+    // указатель залипает «зажатым». После боя одиночный drag видится как 2 пальца
+    // (activeCount=2) и уходит в pinch-ветку: зум жив, pan мёртв. Сбрасываем стейт.
+    eventBus.on('battle:exit', this.resetInputState)
 
     // Inertia + follow-ship per-frame tick. Регистрируется как метод класса —
     // `this` биндится через 3-й аргумент events.on (Phaser API).
     this.scene.events.on('update', this.onUpdate, this)
+  }
+
+  /** Сброс input-стейта: drag/inertia/pinch + force-release залипших указателей.
+   *  Вызывается при возврате из боя — лечит «камера зумится, но не панится». */
+  // Arrow-свойство — авто-bind this (mitt вызывает handler без контекста).
+  private resetInputState = (): void => {
+    this.isDragging = false
+    this.velX = 0
+    this.velY = 0
+    this.initialPinchDist = null
+    // Force-release указателей, которым потерялся pointerup (DOM-оверлей / смена
+    // сцены). Фантомный isDown иначе держит activeCount=2 и блокирует pan.
+    const pointers = this.scene.input.manager.pointers
+    for (let i = 0; i < pointers.length; i++) {
+      const pt = pointers[i]
+      if (pt && pt.isDown) pt.isDown = false
+    }
   }
 
   private onPointerDown(p: Phaser.Input.Pointer): void {

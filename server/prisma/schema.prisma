@@ -19,8 +19,9 @@ model User {
   banned     Boolean  @default(false)
   devFlags  String[] @default([]) @map("dev_flags")
 
-  gameState GameState?
-  pityState PityState?
+  gameState   GameState?
+  pityState   PityState?
+  expeditions Expedition[]
 
   @@map("users")
 }
@@ -70,4 +71,37 @@ model PityState {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("pity_states")
+}
+
+// Server-authoritative space expedition (Fallout Shelter-style).
+// The journal + loot are NOT stored — they are a pure function of
+// (seed, elapsed travel time, content version), recomputed on read.
+// See src/expedition/.
+enum ExpeditionStatus {
+  OUTBOUND // ship traveling away, accruing log + loot
+  RETURNING // recalled; flying home (return = outbound / 3)
+  CLAIMED // docked, loot collected — terminal
+  LOST // recalled too late, catastrophe — terminal, no loot
+}
+
+model Expedition {
+  id     Int @id @default(autoincrement())
+  userId Int @map("user_id")
+
+  seed            Int // PRNG seed; full journey replays from this
+  status          ExpeditionStatus @default(OUTBOUND)
+  startedAt       DateTime         @default(now()) @map("started_at")
+  recalledAt      DateTime?        @map("recalled_at")
+  arrivalAt       DateTime?        @map("arrival_at")
+  claimedAt       DateTime?        @map("claimed_at")
+  tickIntervalSec Int              @default(60) @map("tick_interval_sec")
+  shipStats       Json?            @map("ship_stats") // speed/luck/cargo/hull
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("expeditions")
 }

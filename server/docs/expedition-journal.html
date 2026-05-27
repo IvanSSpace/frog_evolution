@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Бортовой журнал — экспедиция</title>
+    <style>
+      :root {
+        --bg: #0a0e1a;
+        --panel: #131a2e;
+        --ink: #e8ecf6;
+        --dim: #7d88a8;
+        --line: #1f2942;
+        --loot: #ffd24a;
+        --danger: #ff5d6c;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font: 15px/1.5 -apple-system, system-ui, sans-serif;
+        background: radial-gradient(ellipse at top, #16213e, var(--bg));
+        color: var(--ink);
+        min-height: 100vh;
+      }
+      .wrap { max-width: 560px; margin: 0 auto; padding: 20px; }
+      h1 { font-size: 18px; margin: 0 0 4px; }
+      .sub { color: var(--dim); font-size: 13px; margin-bottom: 16px; }
+      .risk { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; margin: 12px 0; }
+      .risk > i { display: block; height: 100%; background: linear-gradient(90deg, #4ad295, var(--loot), var(--danger)); transition: width .3s; }
+      ul { list-style: none; margin: 0; padding: 0; }
+      li {
+        display: flex; gap: 10px; padding: 9px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .t { color: var(--dim); font-variant-numeric: tabular-nums; flex: 0 0 auto; }
+      .cat-loot { color: var(--loot); }
+      .cat-hazard { color: var(--danger); }
+      .cat-departure, .cat-arrival, .cat-return { color: #6ec1ff; }
+      .bar { display: flex; gap: 10px; margin-top: 18px; }
+      button {
+        flex: 1; padding: 12px; border: 0; border-radius: 10px;
+        font-size: 15px; font-weight: 600; cursor: pointer;
+        background: var(--panel); color: var(--ink);
+      }
+      button.primary { background: var(--loot); color: #1a1300; }
+      button:disabled { opacity: .35; cursor: not-allowed; }
+      .loot { margin-top: 14px; color: var(--loot); font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>🛰️ Корабль «Головастик-1»</h1>
+      <div class="sub" id="phase"></div>
+      <div class="risk"><i id="riskbar"></i></div>
+      <ul id="journal"></ul>
+      <div class="loot" id="loot"></div>
+      <div class="bar">
+        <button id="recall">↩︎ Вернуться</button>
+        <button id="claim" class="primary">📦 Забрать лут</button>
+      </div>
+    </div>
+
+    <script>
+      // ── MOCK: в реальном Mini App это res.expeditions[0] из GET /expedition/active ──
+      const exp = {
+        phase: 'outbound',
+        outboundSec: 300,
+        risk: 0.12,
+        canRecall: true,
+        canClaim: false,
+        loot: { gold: 960, serums: { toxic: 1, fire: 2 } },
+        journal: [
+          { time: '00:00', text: 'Вылетаю с орбиты. Двигатели в норме.', category: 'departure' },
+          { time: '00:30', text: 'Идентифицирована галактика Мерсено.', category: 'travel' },
+          { time: '01:00', text: 'Входим в рукав Персея. Связь с базой стабильна.', category: 'departure' },
+          { time: '01:02', text: 'На радаре чисто, но визуально вижу планету. Странно.', category: 'discovery' },
+          { time: '01:22', text: 'Рядом ещё несколько таких же. Подлетаю ближе.', category: 'discovery' },
+          { time: '01:47', text: 'Это космический мираж — планеты растворились. Записал координаты.', category: 'discovery' },
+          { time: '02:30', text: 'Прямо по курсу — слизевое облако. Сенсоры визжат от слизи.', category: 'loot' },
+          { time: '02:55', text: 'Собрали полный контейнер. Чистейшая сыворотка.', category: 'loot' },
+          { time: '04:10', text: 'Тряхнуло. Поле антивещества ближе, чем казалось.', category: 'hazard' },
+          { time: '04:30', text: 'Обшивка держит. Но датчики нервничают.', category: 'hazard' },
+        ],
+      }
+
+      function render(e) {
+        document.getElementById('phase').textContent =
+          { outbound: 'В полёте — копит лут', returning: 'Возвращается домой', arrived: 'Пришвартовался', lost: 'Корабль потерян' }[e.phase]
+        document.getElementById('riskbar').style.width = Math.round(e.risk * 100) + '%'
+        document.getElementById('journal').innerHTML = e.journal
+          .map((l) => `<li class="cat-${l.category}"><span class="t">${l.time}</span><span>${l.text}</span></li>`)
+          .join('')
+        const serums = Object.entries(e.loot.serums).map(([k, v]) => `${k}×${v}`).join(', ')
+        document.getElementById('loot').textContent =
+          `Собрано: ${e.loot.gold} золота${serums ? ' · ' + serums : ''}`
+        document.getElementById('recall').disabled = !e.canRecall
+        document.getElementById('claim').disabled = !e.canClaim
+      }
+
+      render(exp)
+      // Реальные хендлеры:
+      // recall.onclick = () => POST `/expedition/${id}/recall` → render(res.expedition)
+      // claim.onclick  = () => POST `/expedition/${id}/claim`  → показать лут, убрать карточку
+    </script>
+  </body>
+</html>

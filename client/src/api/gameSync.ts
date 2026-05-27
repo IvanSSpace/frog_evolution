@@ -186,6 +186,7 @@ export async function loadGameState(): Promise<boolean> {
         magnet3: upg?.magnet3 ?? 0,
         crateQuality: upg?.crateQuality ?? 0,
         rareBoxSpeed: upg?.rareBoxSpeed ?? 0,
+        ships: upg?.ships ?? 0,
       },
       frogPurchases: Array.isArray(data.frogPurchases)
         ? data.frogPurchases
@@ -367,9 +368,10 @@ export async function loadGameState(): Promise<boolean> {
         }
         if ('temporaryIncomeBuff' in cosmicUpdate) {
           persistence.saveTemporaryIncomeBuff(
-            cosmicUpdate.temporaryIncomeBuff as
-              | { until: number; percent: number }
-              | null,
+            cosmicUpdate.temporaryIncomeBuff as {
+              until: number
+              percent: number
+            } | null,
           )
         }
       }

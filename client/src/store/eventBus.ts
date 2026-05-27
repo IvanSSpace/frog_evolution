@@ -47,20 +47,27 @@ type Events = {
     deadSlotIdxs: number[]
     planetId: string
     planetElement: import('./cosmic/types').Element | null
+    /** Золото (= слизь 💧), уже начисленное боем. Для сводки лута, без повторного credit. */
+    reward: number
   }
   'battle:exit': Record<string, never>
   'barracks:open': Record<string, never>
   'barracks:exit': Record<string, never>
   // Toggle из футера — index.ts открывает/закрывает по факту активной сцены.
   'barracks:toggle': Record<string, never>
-  // Корабль — интерьер с экипажем (вид как казарма).
-  'ship:open': Record<string, never>
-  'ship:exit': Record<string, never>
-  'ship:toggle': Record<string, never>
-  'barracks:open-raid-pick': Record<string, never>
   'barracks:open-combat-tree': Record<string, never>
   'raid:scout-open': Record<string, never>
   'raid:scout-exit': Record<string, never>
+  // Космическая экспедиция: сцена снаряжения корабля (ShipDeckScene).
+  'shipdeck:open': {
+    shipId: number
+    location: number
+    minL: number
+    maxL: number
+    demo: boolean
+  }
+  'shipdeck:launch': { shipId: number; crew: number[]; demo: boolean }
+  'shipdeck:cancel': Record<string, never>
   // Синхрон React-оверлея кнопок локаций со сценой скаута.
   'raid:scout-changed': { locId: number }
   'raid:scout-set-loc': { locId: number }

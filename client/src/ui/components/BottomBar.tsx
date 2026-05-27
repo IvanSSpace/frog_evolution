@@ -3,6 +3,15 @@ import { useGameStore } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
 // Phase 22 Plan 22-06: cosmos gate — 🧬 Cosmic Hub button disabled до L18+L18.
 import { useCosmosUnlocked } from '../../utils/cosmosGate'
+import { Icon } from '../icons/Icon'
+import type { IconName } from '../icons/iconRegistry'
+
+// Feature-flag: вход в Казарму (PvP raid) скрыт из интерфейса (2026-05-26).
+// Мета-сложность ещё не готова, функционал может вернуться позже — поэтому
+// флаг, а не удаление. Чтобы вернуть кнопку — поставь true.
+// Типизирован как boolean (не литерал), чтобы JSX-гард ниже не был
+// constant-binary-expression для ESLint.
+const BARRACKS_ENTRY_ENABLED: boolean = false
 
 type BadgeProps = { children: React.ReactNode }
 
@@ -13,7 +22,7 @@ function NotifBadge({ children }: BadgeProps) {
 type TileSkin = 'mint' | 'green' | 'purple' | 'red' | 'teal' | 'amber' | 'cream'
 
 type TileProps = {
-  emoji: string
+  icon: IconName
   skin: TileSkin
   size?: 'md' | 'lg'
   // badge: number → показать число (если > 0); boolean → показать "!" если true.
@@ -64,7 +73,7 @@ const SKIN_VARS: Record<TileSkin, React.CSSProperties> = {
 }
 
 function Tile({
-  emoji,
+  icon,
   skin,
   size = 'md',
   badge,
@@ -72,7 +81,8 @@ function Tile({
   disabled = false,
   title,
 }: TileProps) {
-  const dim = size === 'lg' ? 'w-16 h-16 text-3xl' : 'w-12 h-12 text-2xl'
+  const dim = size === 'lg' ? 'w-16 h-16' : 'w-12 h-12'
+  const iconPx = size === 'lg' ? 34 : 28
   const showBadge =
     typeof badge === 'number'
       ? badge > 0
@@ -96,9 +106,11 @@ function Tile({
       }}
       className={`ff-tile flex-shrink-0 ${dim}`}
     >
-      <span style={{ filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))' }}>
-        {disabled ? '🔒' : emoji}
-      </span>
+      <Icon
+        name={disabled ? 'lock' : icon}
+        size={iconPx}
+        style={{ filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))' }}
+      />
       {showBadge && !disabled && <NotifBadge>{badgeContent}</NotifBadge>}
     </button>
   )
@@ -110,6 +122,7 @@ type BottomBarProps = {
   onOpenSettings?: () => void
   onOpenCosmicHub?: () => void
   onOpenGallery?: () => void
+  onOpenExpedition?: () => void
 }
 
 export function BottomBar({
@@ -118,6 +131,7 @@ export function BottomBar({
   onOpenSettings,
   onOpenCosmicHub,
   onOpenGallery,
+  onOpenExpedition,
 }: BottomBarProps) {
   // Phase 11 (COSMIC-HUB-04): badge на 🧬 = число неоткрытых боксов.
   // Реактивен: при addBox/openBox селектор пере-рендерит компонент.
@@ -158,7 +172,7 @@ export function BottomBar({
     >
       {/* Слева — лавка лягушек. Badge = есть новый discoveredLevel, ещё не открытый в shop. */}
       <Tile
-        emoji="🐸"
+        icon="frog-shop"
         skin="mint"
         size="lg"
         badge={hasNewFrogShop}
@@ -167,31 +181,33 @@ export function BottomBar({
 
       {/* Центр — действия */}
       <div className="flex gap-2 items-center">
-        <Tile emoji="⬆️" skin="green" onClick={onOpenShop} />
-        <Tile emoji="📊" skin="purple" onClick={onOpenGallery} />
-        {/* ⚔️ — Казарма (PvP raid). Видна после анлока (Лес, L7+). */}
-        {barracksUnlocked && (
+        <Tile icon="upgrade-shop" skin="green" onClick={onOpenShop} />
+        <Tile icon="gallery" skin="purple" onClick={onOpenGallery} />
+        {/* 🛰️ Космическая экспедиция (Fallout-Shelter-style) — отправить
+            корабль, читать бортовой журнал, вовремя вернуть. */}
+        <Tile
+          icon="ship"
+          skin="teal"
+          title="Космическая экспедиция"
+          onClick={onOpenExpedition}
+        />
+        {/* ⚔️ — Казарма (PvP raid). Видна после анлока (Лес, L7+).
+            СКРЫТА через BARRACKS_ENTRY_ENABLED (см. флаг вверху файла).
+            Логика анлока (barracksUnlocked / unlockBarracks effect выше) намеренно
+            оставлена нетронутой, чтобы возврат был тривиальным. */}
+        {BARRACKS_ENTRY_ENABLED && barracksUnlocked && (
           <Tile
-            emoji="⚔️"
+            icon="barracks"
             skin="amber"
             title="Казарма"
             onClick={() => eventBus.emit('barracks:toggle', {})}
-          />
-        )}
-        {/* 🚀 — Корабль (просмотр экипажа). Видна после анлока казармы. */}
-        {barracksUnlocked && (
-          <Tile
-            emoji="🚀"
-            skin="teal"
-            title="Корабль"
-            onClick={() => eventBus.emit('ship:toggle', {})}
           />
         )}
         {/* 🧪 Серум — перенесён вкладкой в Космический центр (CosmicHubModal). */}
         {/* 🧬 — Cosmic Hub (Phase 11). Badge = число неоткрытых боксов.
             Phase 22 Plan 22-06: disabled до L18+L18 sentinel (cosmos gate). */}
         <Tile
-          emoji="🧬"
+          icon="cosmic-hub"
           skin="teal"
           onClick={onOpenCosmicHub}
           badge={readyBoxCount}
@@ -206,7 +222,7 @@ export function BottomBar({
 
       {/* Справа — журнал. Badge = есть новый discoveredLevel, ещё не показанный в Bestiary tab. */}
       <Tile
-        emoji="📖"
+        icon="bestiary"
         skin="cream"
         size="lg"
         badge={hasNewBestiary}

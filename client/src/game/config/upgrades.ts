@@ -13,6 +13,24 @@ export interface Upgrades {
   magnet3: number
   crateQuality: number
   rareBoxSpeed: number
+  // Космос: число купленных кораблей (0-3). Гейтится прогрессией (SHIP_UNLOCK).
+  ships: number
+}
+
+// Прогрессивный анлок кораблей: чтобы купить корабль №(i+1), max discoveredLevel
+// должен достичь этого значения. 7=Лес, 13=Континент, 19=L19-лягушка.
+// SYNC: дублируется в server/src/config/economy.ts.
+export const SHIP_UNLOCK: readonly number[] = [7, 13, 19]
+
+// Открыт ли для покупки следующий корабль при текущем числе кораблей.
+export function shipUnlocked(
+  currentShips: number,
+  discovered: number[],
+): boolean {
+  const need = SHIP_UNLOCK[currentShips]
+  if (need === undefined) return false
+  const maxDiscovered = discovered.length ? Math.max(...discovered) : 0
+  return maxDiscovered >= need
 }
 
 /** Безопасная конверсия "сырого" upgrades-объекта (например, с сервера) в Upgrades.
@@ -29,6 +47,7 @@ export function toUpgrades(
     magnet3: r.magnet3 ?? 0,
     crateQuality: r.crateQuality ?? 0,
     rareBoxSpeed: r.rareBoxSpeed ?? 0,
+    ships: r.ships ?? 0,
   }
 }
 
@@ -102,6 +121,11 @@ export const UPGRADE_CONFIG = {
       50_000, 150_000, 750_000, 3_800_000, 18_000_000, 90_000_000, 450_000_000,
       1_500_000_000, 6_000_000_000, 20_000_000_000,
     ],
+  },
+  // Космические корабли для экспедиций (покупка в космо-табе магазина прокачки).
+  ships: {
+    maxLevel: 3,
+    costs: [2_000_000, 200_000_000, 20_000_000_000],
   },
 } as const
 

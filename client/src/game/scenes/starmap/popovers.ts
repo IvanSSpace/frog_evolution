@@ -292,7 +292,18 @@ export class PopoverController {
     const cdUntil = useGameStore.getState().raidCooldowns[sys.id] ?? 0
     const raidOnCooldown = cdUntil > Date.now()
 
-    if (isCurrentPlanet && isRacePlanet && raidOnCooldown) {
+    // 2026-05-26: упрощение меты — кнопка «🔬 Изучить» (и её 🛡-таймер) временно
+    // скрыты, чтобы можно было просто лететь к планете. Логика создания кнопки
+    // и setInvestigatePlanetId оставлена в коде за флагом для лёгкого возврата:
+    // вернуть `true` → ветки «Изучить»/таймер снова рендерятся.
+    const INVESTIGATE_ENABLED: boolean = false
+
+    if (
+      INVESTIGATE_ENABLED &&
+      isCurrentPlanet &&
+      isRacePlanet &&
+      raidOnCooldown
+    ) {
       // Неуязвима — нет интерактивной кнопки, показываем таймер.
       const remMin = Math.max(1, Math.ceil((cdUntil - Date.now()) / 60000))
       const remTxt =
@@ -307,7 +318,7 @@ export class PopoverController {
       })
       label.setOrigin(0.5, 0.5)
       container.add(label)
-    } else if (isCurrentPlanet && isRacePlanet) {
+    } else if (INVESTIGATE_ENABLED && isCurrentPlanet && isRacePlanet) {
       // «Изучить» = превью вражеского отряда + «Атаковать / Уйти» (InvestigateModal).
       // Серумный дневной кап убран — атаковать race-планету можно всегда.
       const btnBg = scene.add.graphics()
@@ -438,7 +449,15 @@ export class PopoverController {
     // through to the planet container underneath (which would re-schedule the popup).
     // Zone at index 0 (lowest depth) → receives events AFTER buttons (buttons
     // already call ev.stopPropagation(), so zone only fires for background taps).
-    {
+    //
+    // 2026-05-26: blockZone временно убран («убрать пока что вообще»). Оставлял
+    // ~22px невидимой кликоперехватывающей зоны под капсулой. Закрытие попапа от
+    // этого не зависит: авто-таймер 3.5с и кнопки (свой stopPropagation) работают
+    // без зоны. Тап мимо капсулы теперь штатно ловится onPointerUp в
+    // controlsController (закрывает попап как «тап в пустое место»). Вернуть всё
+    // обратно: установить BLOCK_ZONE_ENABLED = true.
+    const BLOCK_ZONE_ENABLED: boolean = false
+    if (BLOCK_ZONE_ENABLED) {
       const ZONE_TOP = -(h / 2 + PADDING_Y)
       const ZONE_BOTTOM = BTN_Y + BTN_H / 2 + PADDING_Y
       const blockZone = scene.add.zone(

@@ -4,6 +4,8 @@ import { Header } from './ui/components/Header'
 import { BottomBar } from './ui/components/BottomBar'
 import { ShopModal } from './ui/components/ShopModal'
 import { FrogShopModal } from './ui/components/FrogShopModal'
+import { ExpeditionModal } from './ui/components/ExpeditionModal'
+import { startExpedition } from './api/expedition'
 import { WelcomeBackModal } from './ui/components/WelcomeBackModal'
 import { DiscoveryModal } from './ui/components/DiscoveryModal'
 import { RareCrateModal } from './ui/components/RareCrateModal'
@@ -14,7 +16,6 @@ import { StarMapHUD } from './ui/components/StarMapHUD'
 import { MagnetToggle } from './ui/components/MagnetToggle'
 import { BarracksUIController } from './ui/components/BarracksUIController'
 import { BarracksActionButtons } from './ui/components/BarracksActionButtons'
-import { ShipActionButtons } from './ui/components/ShipActionButtons'
 import { ShipFollowButton } from './ui/components/ShipFollowButton'
 import { OrientationLock } from './ui/components/OrientationLock'
 import { LoadingScreen } from './ui/components/LoadingScreen'
@@ -77,6 +78,7 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [cosmicHubOpen, setCosmicHubOpen] = useState(false)
   const [galleryOpen, setGalleryOpen] = useState(false)
+  const [expeditionOpen, setExpeditionOpen] = useState(false)
   const [welcomeBack, setWelcomeBack] = useState<{
     earned: number
     hours: number
@@ -211,6 +213,32 @@ function App() {
   // не задублирует handler (см. captainBirthController.ts internal guard).
   useEffect(() => {
     installCaptainBirthController()
+  }, [])
+
+  // Космическая экспедиция: ShipDeckScene ↔ модалка. На «Снарядить» модалка
+  // закрывается (видна Phaser-сцена). Сцена эмитит launch (старт экспедиции с
+  // экипажем) или cancel → переоткрываем модалку.
+  useEffect(() => {
+    const onLaunch = ({
+      shipId,
+      crew,
+      demo,
+    }: {
+      shipId: number
+      crew: number[]
+      demo: boolean
+    }) => {
+      void startExpedition(demo, shipId, crew)
+        .catch(() => {})
+        .finally(() => setExpeditionOpen(true))
+    }
+    const onCancel = () => setExpeditionOpen(true)
+    eventBus.on('shipdeck:launch', onLaunch)
+    eventBus.on('shipdeck:cancel', onCancel)
+    return () => {
+      eventBus.off('shipdeck:launch', onLaunch)
+      eventBus.off('shipdeck:cancel', onCancel)
+    }
   }, [])
 
   // Phase 16 (REQ UX-09): DEV-mode unlocks all sentinel flags + window dev helpers.
@@ -369,6 +397,7 @@ function App() {
             onOpenSettings={() => setSettingsOpen(true)}
             onOpenCosmicHub={() => setCosmicHubOpen(true)}
             onOpenGallery={() => setGalleryOpen(true)}
+            onOpenExpedition={() => setExpeditionOpen(true)}
           />
         </div>
       </div>
@@ -387,10 +416,12 @@ function App() {
       <GalleryDetailModal />
       {shopOpen && <ShopModal onClose={() => setShopOpen(false)} />}
       {frogShopOpen && <FrogShopModal onClose={() => setFrogShopOpen(false)} />}
+      {expeditionOpen && (
+        <ExpeditionModal onClose={() => setExpeditionOpen(false)} />
+      )}
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       <BarracksUIController />
       <BarracksActionButtons />
-      <ShipActionButtons />
       <Suspense fallback={null}>
         {cosmicHubOpen && (
           <CosmicHubModal onClose={() => setCosmicHubOpen(false)} />

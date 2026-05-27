@@ -33,11 +33,8 @@ import { QUESTS, COMPLETED_QUEST_HISTORY_CAP } from '../game/config/quests'
 // ─── storage keys ────────────────────────────────────────────────────────────
 
 const UPGRADES_KEY = 'frog_evolution_upgrades'
-// Боевая прокачка (combat tree) + spendable slime кошелёк.
+// Боевая прокачка (combat tree). Валюта — gold (= слизь 💧), отдельного кошелька нет.
 const COMBAT_TREE_KEY = 'frog_evolution_combat_tree'
-const SLIME_KEY = 'frog_evolution_slime'
-// Экипаж корабля (боевой отряд, перемещённый из казармы).
-const SHIP_CREW_KEY = 'frog_evolution_ship_crew'
 const PURCHASES_KEY = 'frog_evolution_frog_purchases'
 const FROG_TIERS_KEY = 'frog_evolution_frog_tiers'
 // 2026-05-23: cooldown timestamps per frog level (когда лочится снова можно эволвить).
@@ -86,6 +83,7 @@ export function loadUpgrades(): Upgrades {
     magnet3: 0,
     crateQuality: 0,
     rareBoxSpeed: 0,
+    ships: 0,
   }
   try {
     const raw = localStorage.getItem(UPGRADES_KEY)
@@ -108,6 +106,7 @@ export function loadUpgrades(): Upgrades {
           parsed.rareBoxSpeed ?? 0,
           UPGRADE_CONFIG.rareBoxSpeed.maxLevel,
         ),
+        ships: Math.min(parsed.ships ?? 0, UPGRADE_CONFIG.ships.maxLevel),
       }
     }
   } catch {
@@ -124,7 +123,7 @@ export function saveUpgrades(u: Upgrades) {
   }
 }
 
-// ─── combat tree + slime ───────────────────────────────────────────────────
+// ─── combat tree ────────────────────────────────────────────────────────────
 
 export function loadCombatTree(): CombatTreeLevels {
   const d = defaultCombatTree()
@@ -145,47 +144,6 @@ export function loadCombatTree(): CombatTreeLevels {
 export function saveCombatTree(t: CombatTreeLevels) {
   try {
     localStorage.setItem(COMBAT_TREE_KEY, JSON.stringify(t))
-  } catch {
-    /* ignore */
-  }
-}
-
-export function loadSlime(): number {
-  try {
-    const raw = localStorage.getItem(SLIME_KEY)
-    if (raw) return Math.max(0, Math.floor(Number(JSON.parse(raw)) || 0))
-  } catch {
-    /* ignore */
-  }
-  return 0
-}
-
-export function saveSlime(v: number) {
-  try {
-    localStorage.setItem(SLIME_KEY, JSON.stringify(Math.max(0, Math.floor(v))))
-  } catch {
-    /* ignore */
-  }
-}
-
-// ─── ship crew ─────────────────────────────────────────────────────────────
-
-export function loadShipCrew(): (BarracksCell | null)[] {
-  try {
-    const raw = localStorage.getItem(SHIP_CREW_KEY)
-    if (raw) {
-      const valid = validateShipCrew(JSON.parse(raw))
-      if (valid) return valid
-    }
-  } catch {
-    /* ignore */
-  }
-  return defaultShipCrew()
-}
-
-export function saveShipCrew(crew: (BarracksCell | null)[]) {
-  try {
-    localStorage.setItem(SHIP_CREW_KEY, JSON.stringify(crew))
   } catch {
     /* ignore */
   }
@@ -1156,9 +1114,7 @@ import {
   type Vat,
   defaultBarracksGrid,
   defaultVats,
-  defaultShipCrew,
   validateBarracksGrid,
-  validateShipCrew,
   validateVats,
 } from './barracks'
 

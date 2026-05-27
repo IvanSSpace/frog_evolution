@@ -7,6 +7,13 @@ import { useGameStore } from '../../store/gameStore'
 import { WarriorPoolModal } from './WarriorPoolModal'
 import { CombatTreeModal } from './CombatTreeModal'
 
+// Блок переноса лягушек в казарму (WarriorPoolModal) временно скрыт:
+// мета-сложность управления отрядом убрана из текущего билда.
+// Вся логика (addWarriorToBarracks, событие 'barracks:add-request',
+// drag/swap в BarracksScene) сохранена — чтобы вернуть блок, переключи
+// флаг в true. Скрываем на уровне рендера модалки, сцену не трогаем.
+const WARRIOR_POOL_ENABLED = false
+
 export function BarracksUIController() {
   const [addSlotIdx, setAddSlotIdx] = useState<number | null>(null)
   const [combatTreeOpen, setCombatTreeOpen] = useState(false)
@@ -45,7 +52,7 @@ export function BarracksUIController() {
 
   return (
     <>
-      {addSlotIdx !== null && (
+      {WARRIOR_POOL_ENABLED && addSlotIdx !== null && (
         <WarriorPoolModal
           slotIdx={addSlotIdx}
           onClose={() => setAddSlotIdx(null)}

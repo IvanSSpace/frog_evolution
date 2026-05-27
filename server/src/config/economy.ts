@@ -60,6 +60,7 @@ export type UpgradeKey =
   | 'magnet3'
   | 'crateQuality'
   | 'rareBoxSpeed'
+  | 'ships'
 
 interface UpgradeCfg {
   maxLevel: number
@@ -100,6 +101,24 @@ export const UPGRADE_CONFIG: Readonly<Record<UpgradeKey, UpgradeCfg>> = {
       1_500_000_000, 6_000_000_000, 20_000_000_000,
     ],
   },
+  // Космические корабли для экспедиций. maxLevel 3 = до 3 кораблей.
+  // Покупка каждого гейтится прогрессией (SHIP_UNLOCK + shop.ts).
+  ships: {
+    maxLevel: 3,
+    costs: [2_000_000, 200_000_000, 20_000_000_000],
+  },
+}
+
+// Прогрессивный анлок кораблей: чтобы купить корабль №(i+1), в discoveredLevels
+// должен быть достигнут этот уровень. 7=Лес, 13=Континент, 19=L19-лягушка.
+export const SHIP_UNLOCK: readonly number[] = [7, 13, 19]
+
+// Открыт ли для покупки следующий корабль при текущем числе кораблей.
+export function shipUnlocked(currentShips: number, discovered: number[]): boolean {
+  const need = SHIP_UNLOCK[currentShips]
+  if (need === undefined) return false
+  const maxDiscovered = discovered.length ? Math.max(...discovered) : 0
+  return maxDiscovered >= need
 }
 
 // Returns cost to buy next upgrade level (currentLevel → currentLevel+1).

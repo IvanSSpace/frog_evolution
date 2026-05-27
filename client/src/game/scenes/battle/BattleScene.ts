@@ -97,13 +97,11 @@ export class BattleScene extends Phaser.Scene {
     this.gridLayout = computeGrid(width, height)
     this.gridGfx = drawGridLines(this, this.gridLayout)
 
-    // Спавн юнитов из ЭКИПАЖА КОРАБЛЯ (player) + bot deck (enemy).
-    // Корабль = носитель отряда: в бой идут лягушки, загруженные в корабль
-    // (а не вся казарма). buildPlayerDeck читает первые слоты как deck.
-    const crew = useGameStore.getState().shipCrew
+    // Спавн юнитов из казармы (player) + bot deck (enemy).
+    const barracksGrid = useGameStore.getState().barracksGrid
     this.playerUnits = this.survivorState
       ? this.spawnFromSurvivors()
-      : buildPlayerDeck(this, crew, this.gridLayout)
+      : buildPlayerDeck(this, barracksGrid, this.gridLayout)
     this.enemyUnits = buildBotDeck(
       this,
       this.locationId,
@@ -228,9 +226,9 @@ export class BattleScene extends Phaser.Scene {
       this.starsEarned = Math.min(3, this.starsEarned + 1)
       const reward = this.rewardForLocation(this.locationId)
       if (reward > 0) {
+        // Награда = золото (= слизь 💧, единая валюта). Начисляет ТОЛЬКО бой,
+        // RaidFlowController награду не дублирует (только показывает сводку).
         useGameStore.getState().addGold(reward)
-        // Боевой кошелёк slime — тратится на древо прокачки (combat tree).
-        useGameStore.getState().addSlime(reward)
       }
     }
 
@@ -276,6 +274,7 @@ export class BattleScene extends Phaser.Scene {
         deadSlotIdxs,
         planetId: this.planetId,
         planetElement: null,
+        reward: this.computeTotalReward(),
       })
     }
     this.time.delayedCall(2800, () => {

@@ -7,6 +7,7 @@ import {
   MAX_LEVEL,
   ENTITY_CAP,
   UPGRADE_CONFIG,
+  shipUnlocked,
   type UpgradeKey,
 } from '../config/economy'
 
@@ -96,6 +97,14 @@ export async function shopRoutes(app: FastifyInstance) {
       const cfg = UPGRADE_CONFIG[key]
       if (currentLevel >= cfg.maxLevel) {
         return reply.code(400).send({ error: 'max level reached' })
+      }
+
+      // Ships gate: next ship must be unlocked by progression (Лес/Континент/L19).
+      if (key === 'ships') {
+        const discovered = (state.discoveredLevels as number[]) ?? []
+        if (!shipUnlocked(currentLevel, discovered)) {
+          return reply.code(400).send({ error: 'ship locked' })
+        }
       }
 
       const cost = getUpgradeCost(key, currentLevel)

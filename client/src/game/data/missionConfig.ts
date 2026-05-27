@@ -11,7 +11,9 @@ export const WORLD_SIZE = 7000 // в DPR-units (planetMap.json уже в DPR=1)
 export const WORLD_DIAGONAL = Math.SQRT2 * WORLD_SIZE * 2 // ≈ 19_798
 
 // === Travel time formula (REQ SHIP-03) ===
-export const TRAVEL_MS_FOR_DIAGONAL = 120_000 // 2 минуты для самого далёкого
+// 2026-05-26: откат ускорения ~×12 полётов по космосу — возврат к исходным
+// (медленным) длительностям. Ранее (2026-05-25) было ускорено до 12_000/500.
+export const TRAVEL_MS_FOR_DIAGONAL = 120_000 // 120с для самого далёкого
 export const TRAVEL_MS_MIN = 1_500 // floor для близких полётов
 
 /** Travel time в ms для заданной distance (DPR-units). Линейная интерполяция,

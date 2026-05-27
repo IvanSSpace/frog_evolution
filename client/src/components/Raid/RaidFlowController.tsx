@@ -9,9 +9,7 @@ import { eventBus } from '../../store/eventBus'
 
 export function RaidFlowController() {
   const investigatePlanetId = useGameStore((s) => s.investigatePlanetId)
-  const setInvestigatePlanetId = useGameStore(
-    (s) => s.setInvestigatePlanetId,
-  )
+  const setInvestigatePlanetId = useGameStore((s) => s.setInvestigatePlanetId)
   const setRaidLoot = useGameStore((s) => s.setRaidLoot)
 
   // raid:battle-start → emit battle:start с raid context (enemyDeck сохраняется
@@ -50,6 +48,7 @@ export function RaidFlowController() {
       victory: boolean
       deadSlotIdxs: number[]
       planetId: string
+      reward: number
     }) => {
       const store = useGameStore.getState()
 
@@ -58,18 +57,12 @@ export function RaidFlowController() {
         store.setBarracksCell(slotIdx, null)
       }
 
-      // 2. Compute loot — только слайм (серум как награда отключён).
-      let slime = 0
-      if (e.victory) {
-        // Slime — base + bonus за количество живых юнитов (proxy на performance).
-        const baseSlime = 1500
-        slime = baseSlime + Math.floor(Math.random() * 800)
-        store.addGold(slime)
-      }
+      // 2. Награду НЕ начисляем — её уже начислил бой (addGold по локациям).
+      //    e.reward — суммарное золото боя, только для отображения в сводке.
 
       // 3. Open loot modal — закрытие триггерит auto return.
       setRaidLoot({
-        slime,
+        slime: e.victory ? e.reward : 0,
         element: null,
         serumCount: 0,
         deadCount: e.deadSlotIdxs.length,
