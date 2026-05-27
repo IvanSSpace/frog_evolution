@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useGameStore } from '../../store/gameStore'
 import { useModalLock } from '../../utils/modalLock'
 import { fmt } from '../../utils/formatting'
@@ -200,12 +199,12 @@ export function InventoryModal({ onClose }: Props) {
       />,
     )
   })
-  // Добиваем пустыми слотами до полной сетки (минимум 4 ряда по 5).
-  const MIN_SLOTS = 20
+  // Добиваем пустыми слотами до полной сетки (минимум 8 рядов по 5).
+  const MIN_SLOTS = 40
   const total = Math.max(MIN_SLOTS, Math.ceil(filled.length / 5) * 5)
   const emptyCount = total - filled.length
 
-  return createPortal(
+  return (
     <div
       onClick={handleClose}
       className="ff-backdrop ff-fade"
@@ -274,7 +273,6 @@ export function InventoryModal({ onClose }: Props) {
           </div>
         </div>
       </div>
-    </div>,
-    document.body,
+    </div>
   )
 }
