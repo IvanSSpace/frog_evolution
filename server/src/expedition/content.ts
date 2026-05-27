@@ -1,4 +1,5 @@
 import type { Scenario } from './types'
+import { EXTRA_SCENARIOS } from './content_extra'
 
 // ──────────────────────────────────────────────────────────────────────────
 // Cosmo-setting content for the ship's journal. Voice: a lone frog pilot
@@ -249,7 +250,7 @@ export const DEPARTURE: Scenario[] = [
 ]
 
 // ── Mid-flight pool. ──
-export const SCENARIOS: Scenario[] = [
+const BASE_SCENARIOS: Scenario[] = [
   // ─────────────── navigation / chatter (filler, keeps tempo) ───────────────
   { id: 'nav_1', category: 'travel', weight: 7, lines: [{ dt: 0, text: 'Наверное, пройду ещё в эту сторону.' }] },
   { id: 'nav_2', category: 'travel', weight: 7, lines: [{ dt: 0, text: 'Курс скорректирован. Иду дальше.' }] },
@@ -1244,6 +1245,9 @@ export const SCENARIOS: Scenario[] = [
   { id: 'react_weird_record', category: 'lore', weight: 3, needs: 'weird', lines: [{ dt: 0, text: 'Записал странность отдельной строкой. Учёные на базе любят такое.' }] },
   { id: 'react_combat_proud', category: 'lore', weight: 3, needs: 'combat', lines: [{ dt: 0, text: 'Ещё одна зарубка на пульте. Бывалый пилот.' }] },
 ]
+
+// Основной пул = ручной банк + генеративное расширение (content_extra.ts).
+export const SCENARIOS: Scenario[] = [...BASE_SCENARIOS, ...EXTRA_SCENARIOS]
 
 // ── Return leg: appended once the player recalls the ship. ──
 export const RETURN: Scenario[] = [

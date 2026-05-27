@@ -19,6 +19,7 @@ interface ScenarioRow {
   pool: string
   id: string
   category: string
+  reward: string
   weight: number
   minSec: number
   set: string[]
@@ -31,6 +32,7 @@ interface ScenariosResp {
   total: number
   byCategory: Record<string, number>
   byPool: Record<string, number>
+  byReward: Record<string, number>
   hazardDmg: {
     min: number
     max: number
@@ -40,11 +42,21 @@ interface ScenariosResp {
   scenarios: ScenarioRow[]
 }
 
+// Подписи типов награды.
+const REWARD_LABEL: Record<string, string> = {
+  none: 'без награды',
+  gold: '💰 золото',
+  serum: '🧪 сыворотка',
+  mutagen: '🧬 мутаген',
+  route: '🗺️ маршрут',
+}
+
 export function ExpeditionScenariosPage() {
   const [data, setData] = useState<ScenariosResp | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [catFilter, setCatFilter] = useState<string | null>(null)
   const [poolFilter, setPoolFilter] = useState<string | null>(null)
+  const [rewardFilter, setRewardFilter] = useState<string | null>(null)
   const [search, setSearch] = useState('')
 
   useEffect(() => {
@@ -61,17 +73,19 @@ export function ExpeditionScenariosPage() {
       (s) =>
         (!catFilter || s.category === catFilter) &&
         (!poolFilter || s.pool === poolFilter) &&
+        (!rewardFilter || s.reward === rewardFilter) &&
         (!q ||
           s.id.toLowerCase().includes(q) ||
           s.lines.some((l) => l.toLowerCase().includes(q))),
     )
-  }, [data, catFilter, poolFilter, search])
+  }, [data, catFilter, poolFilter, rewardFilter, search])
 
   if (err) return <div className="p-6 text-red-600">{err}</div>
   if (!data) return <div className="p-6">Загрузка…</div>
 
   const cats = Object.entries(data.byCategory).sort((a, b) => b[1] - a[1])
   const pools = Object.entries(data.byPool)
+  const rewards = Object.entries(data.byReward).sort((a, b) => b[1] - a[1])
 
   return (
     <div className="p-6 max-w-4xl">
@@ -127,6 +141,24 @@ export function ExpeditionScenariosPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+      </div>
+
+      {/* Разбивка по награде — что событие даёт */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <span className="text-xs text-gray-500">Награда:</span>
+        {rewards.map(([rw, n]) => (
+          <button
+            key={rw}
+            onClick={() => setRewardFilter(rewardFilter === rw ? null : rw)}
+            className={`rounded px-2.5 py-1 text-xs border ${
+              rewardFilter === rw
+                ? 'bg-emerald-600 text-white border-emerald-600'
+                : 'bg-white text-gray-700 border-gray-300'
+            }`}
+          >
+            {REWARD_LABEL[rw] ?? rw}: {n}
+          </button>
+        ))}
       </div>
 
       {/* Список */}

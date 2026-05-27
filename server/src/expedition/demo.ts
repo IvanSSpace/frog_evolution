@@ -5,6 +5,7 @@
 import { simulate } from './engine'
 import { DEMO_CONFIG, DEFAULT_SHIP_STATS } from './config'
 import { toPlainText } from './render'
+import { SCENARIOS } from './content'
 import type { SimulateParams } from './types'
 
 let failures = 0
@@ -57,24 +58,29 @@ for (let s = 1; s <= 200 && !lostFound; s++) {
 check('loss: at least one seed triggers catastrophe in deep space', lostFound)
 
 // 6. Continuity: a combat reaction never appears before a combat trigger.
-const TRIGGERS = [
-  'Контакт!',
-  'Засада',
-  'Рой зондов облепил',
-  'рейдер',
-  'Перехватчик',
-  'Абордаж',
-  'Минное поле',
-  'Тройка пиратов',
-  'Щупальце',
-  'Боевой дрон',
-  'Сигнал тревоги',
-  'Абордажный крюк',
-  'Залп по носу',
-  'турели берут на прицел',
-  'Стервятники почуяли',
-]
-const REACTIONS = ['после стычки', 'Перевожу дух', 'пушку — перегрелась', 'Адреналин отпускает', 'вмятины на броне']
+// Маркеры выводятся ИЗ КОНТЕНТА (не хардкод), чтобы генеративные сценарии
+// автоматически учитывались. Берём статический префикс первой строки до
+// первого {токена} — он стабилен после подстановки в лог.
+const staticPrefix = (text: string) => {
+  const head = text.split('{')[0].trim().replace(/[.!?…,]+$/, '')
+  return head
+}
+// Триггеры боя = первые строки сценариев с set:['combat'] (префиксы ≥6 симв.).
+const TRIGGERS = Array.from(
+  new Set(
+    SCENARIOS.filter((s) => (s.set ?? []).includes('combat'))
+      .map((s) => staticPrefix(s.lines[0].text))
+      .filter((p) => p.length >= 6),
+  ),
+)
+// Реакции боя = первые строки сценариев с needs==='combat'.
+const REACTIONS = Array.from(
+  new Set(
+    SCENARIOS.filter((s) => s.needs === 'combat').map((s) =>
+      staticPrefix(s.lines[0].text),
+    ),
+  ),
+)
 let continuityOk = true
 let sawReaction = false
 for (let s = 1; s <= 120; s++) {

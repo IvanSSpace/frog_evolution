@@ -120,11 +120,22 @@ export async function adminRoutes(app: FastifyInstance) {
         { pool: 'arrival', items: ARRIVAL },
         { pool: 'lost', items: [LOST] },
       ]
+      // Тип награды события (для разбивки в каталоге).
+      const rewardOf = (s: Scenario): string => {
+        const l = s.loot
+        if (!l) return 'none'
+        if (l.gold) return 'gold'
+        if (l.mutagen) return 'mutagen'
+        if (l.route) return 'route'
+        if (l.serums) return 'serum'
+        return 'none'
+      }
       const flat = pools.flatMap(({ pool, items }) =>
         items.map((s) => ({
           pool,
           id: s.id,
           category: s.category,
+          reward: rewardOf(s),
           weight: s.weight,
           minSec: s.minSec ?? 0,
           set: s.set ?? [],
@@ -133,18 +144,21 @@ export async function adminRoutes(app: FastifyInstance) {
           lines: s.lines.map((l) => l.text),
         })),
       )
-      // Счётчики: по категории и по пулу.
+      // Счётчики: по категории, пулу и типу награды.
       const byCategory: Record<string, number> = {}
       const byPool: Record<string, number> = {}
+      const byReward: Record<string, number> = {}
       for (const s of flat) {
         byCategory[s.category] = (byCategory[s.category] ?? 0) + 1
         byPool[s.pool] = (byPool[s.pool] ?? 0) + 1
+        byReward[s.reward] = (byReward[s.reward] ?? 0) + 1
       }
       return {
         ok: true,
         total: flat.length,
         byCategory,
         byPool,
+        byReward,
         // Урон наносят только hazard-события: плоский [min..max] HP × риск
         // × резист брони, кап = maxHitFrac×maxHp. Числа из конфига для подписи.
         hazardDmg: {
