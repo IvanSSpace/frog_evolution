@@ -761,8 +761,10 @@ export class SurvivorScene extends Phaser.Scene {
     const ang = Math.random() * Math.PI * 2
     const x = Phaser.Math.Clamp(this.hero.x + Math.cos(ang) * margin, 0, WORLD)
     const y = Phaser.Math.Clamp(this.hero.y + Math.sin(ang) * margin, 0, WORLD)
-    // Лёгкий красный wash (не полная заливка) — детали жабы остаются читаемыми.
-    const sprite = this.makeFrogSprite(x, y, 1, MOB_SIZE, 0xff9d9d)
+    // Разные жабы-враги из набора миссии (визуальное разнообразие) + лёгкий
+    // красный wash (не полная заливка) — детали жабы остаются читаемыми.
+    const lvl = Phaser.Utils.Array.GetRandom(this.mission.mobLevels)
+    const sprite = this.makeFrogSprite(x, y, lvl, MOB_SIZE, 0xff9d9d)
     sprite.setDepth(5)
     const hp = this.enemyHp()
     this.mobs.push({
@@ -784,7 +786,13 @@ export class SurvivorScene extends Phaser.Scene {
     const margin = Math.max(cam.width, cam.height) / (2 * cam.zoom) + 120 * DPR
     const x = Phaser.Math.Clamp(this.hero.x, 0, WORLD)
     const y = Phaser.Math.Clamp(this.hero.y - margin, 0, WORLD)
-    const sprite = this.makeFrogSprite(x, y, 18, BOSS_SIZE, 0xc29dff)
+    const sprite = this.makeFrogSprite(
+      x,
+      y,
+      this.mission.bossLevel,
+      BOSS_SIZE,
+      0xc29dff,
+    )
     sprite.setDepth(8)
     // Босс тоже тянется за уровнем игрока + сложностью миссии.
     const bossHp = Math.round(

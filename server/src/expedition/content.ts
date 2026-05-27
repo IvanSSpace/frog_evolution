@@ -745,6 +745,18 @@ export const SCENARIOS: Scenario[] = [
     { dt: 0, text: 'Кристаллы рифа светятся живым. Внутри — капля мутагена.' },
     { dt: 4, text: 'Аккуратно извлёк: +{mutagen} 🧬. Редкая удача.' },
   ] },
+  { id: 'route_common', category: 'discovery', weight: 3, minSec: 120, loot: { route: 'common' }, set: ['weird'], lines: [
+    { dt: 0, text: 'Сканер поймал стабильный звёздный маршрут. Записал в навигатор.' },
+    { dt: 4, text: '🗺️ Звёздный маршрут (обычный) — на базе пригодится для миссии.' },
+  ] },
+  { id: 'route_rare', category: 'discovery', weight: 2, minSec: 240, loot: { route: 'rare' }, set: ['weird', 'awe'], lines: [
+    { dt: 0, text: 'Нашёл скрытый коридор сквозь аномалию. Опасный, но короткий.' },
+    { dt: 4, text: '🗺️ Звёздный маршрут (редкий) — сложнее, но и куш богаче.' },
+  ] },
+  { id: 'route_epic', category: 'discovery', weight: 1, minSec: 360, loot: { route: 'epic' }, set: ['weird', 'awe'], lines: [
+    { dt: 0, text: 'Древняя карта в обломках ведёт в самое сердце {galaxy}.' },
+    { dt: 4, text: '🗺️ Звёздный маршрут (эпический) — туда мало кто долетал. Большой риск.' },
+  ] },
   { id: 'loot_salvage', category: 'loot', weight: 4, minSec: 120, loot: { gold: 300 }, set: ['loot', 'wreck'], lines: [
     { dt: 0, text: 'Разобрал разбитый зонд на запчасти. Цветмет в цене.' },
     { dt: 4, text: 'Сдам на базе: +{gold}.' },

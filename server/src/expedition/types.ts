@@ -25,11 +25,14 @@ export interface LogLine {
   category: EventCategory
 }
 
+export type RouteRarity = 'common' | 'rare' | 'epic'
+
 // What a scenario hands the ship. Folded into the running loot bag.
 export interface LootDelta {
   gold?: number
   serums?: Partial<Record<Element, number>>
   mutagen?: number // 🧬 редкий лут, тратится на эволюцию лягушек
+  route?: RouteRarity // 🗺️ звёздный маршрут (= миссия), редкость = сложность
 }
 
 // Ship capabilities. Bias the engine's weights and yields.
@@ -70,7 +73,12 @@ export interface ExpeditionResult {
   outboundSec: number // how long the ship traveled outward
   elapsedSec: number // total wall time the journey covers in the log
   log: LogLine[]
-  loot: { gold: number; serums: Record<Element, number>; mutagen: number }
+  loot: {
+    gold: number
+    serums: Record<Element, number>
+    mutagen: number
+    routes: Record<RouteRarity, number>
+  }
   risk: number // 0..1, escalating danger at the moment shown
   shipLost: boolean // true if HP hit 0 (wrecked) — можно воскресить
   hp: number // current ship health (0 if wrecked)

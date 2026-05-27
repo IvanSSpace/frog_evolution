@@ -74,11 +74,17 @@ function beatNums(loot?: LootDelta): {
 
 function applyLoot(
   loot: LootDelta,
-  bag: { gold: number; serums: Record<Element, number>; mutagen: number },
+  bag: {
+    gold: number
+    serums: Record<Element, number>
+    mutagen: number
+    routes: Record<'common' | 'rare' | 'epic', number>
+  },
   rng: Rng,
 ): void {
-  // gold обрабатывается в emit (масштабируется к доходу), здесь — серум + мутаген.
+  // gold обрабатывается в emit (масштабируется к доходу), здесь — остальное.
   if (loot.mutagen) bag.mutagen += loot.mutagen
+  if (loot.route) bag.routes[loot.route] += 1
   if (loot.serums) {
     const entries = Object.entries(loot.serums) as [Element, number][]
     if (entries.length === 0) {
@@ -122,7 +128,12 @@ export function simulate(
   }
 
   const log: LogLine[] = []
-  const loot = { gold: 0, serums: zeroSerums(), mutagen: 0 }
+  const loot = {
+    gold: 0,
+    serums: zeroSerums(),
+    mutagen: 0,
+    routes: { common: 0, rare: 0, epic: 0 },
+  }
   let shipLost = false
   let dmg = 0 // накопленный урон
   let wreckedAtSec: number | null = null
@@ -244,6 +255,7 @@ export function simulate(
     loot.gold = 0
     loot.serums = zeroSerums()
     loot.mutagen = 0
+    loot.routes = { common: 0, rare: 0, epic: 0 }
     phase = 'arrived'
   } else if (recalled) {
     // Return leg: 3× shorter, and far safer — catastrophe chance is scaled by
@@ -288,6 +300,7 @@ export function simulate(
       loot.gold = 0
       loot.serums = zeroSerums()
       loot.mutagen = 0
+    loot.routes = { common: 0, rare: 0, epic: 0 }
     } else {
       beatIndex++
       emit(

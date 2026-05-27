@@ -176,11 +176,17 @@ async function grantLoot(userId: number, result: ExpeditionResult) {
     if (qty > 0) serums = adjustSerum(serums, el as Element, qty)
   }
   const mutagen = (Number(cosmic.mutagen) || 0) + result.loot.mutagen
+  const prevRoutes = (cosmic.routes as Record<string, number> | null) ?? {}
+  const routes = {
+    common: (Number(prevRoutes.common) || 0) + result.loot.routes.common,
+    rare: (Number(prevRoutes.rare) || 0) + result.loot.routes.rare,
+    epic: (Number(prevRoutes.epic) || 0) + result.loot.routes.epic,
+  }
   await prisma.gameState.update({
     where: { userId },
     data: {
       gold: state.gold + BigInt(result.loot.gold),
-      cosmic: { ...cosmic, serums, mutagen } as object,
+      cosmic: { ...cosmic, serums, mutagen, routes } as object,
     },
   })
 }

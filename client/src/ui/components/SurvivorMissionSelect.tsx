@@ -91,10 +91,13 @@ function MissionOverlay({ ctx, onClose }: { ctx: Ctx; onClose: () => void }) {
         style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: 12,
+          gap: 10,
           width: '100%',
           maxWidth: 400,
           marginTop: 6,
+          maxHeight: '62vh',
+          overflowY: 'auto',
+          padding: '2px 2px',
         }}
       >
         {SURVIVOR_MISSIONS.map((m) => (
