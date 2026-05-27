@@ -1041,14 +1041,18 @@ export class SurvivorScene extends Phaser.Scene {
 
     const w = this.scale.width
     const h = this.scale.height
+    const D = 100010
+
     this.add
-      .rectangle(w / 2, h / 2, w, h, 0x000000, 0.55)
+      .rectangle(w / 2, h / 2, w, h, 0x000000, 0.62)
       .setScrollFactor(0)
-      .setDepth(100010)
+      .setDepth(D)
+
+    // Заголовок результата.
     this.add
       .text(
         w / 2,
-        h / 2 - 20 * DPR,
+        h / 2 - 96 * DPR,
         result === 'win' ? '🏆 ПОБЕДА' : '💀 ОТРЯД ПАЛ',
         {
           fontFamily: 'Russo One, sans-serif',
@@ -1060,25 +1064,59 @@ export class SurvivorScene extends Phaser.Scene {
       )
       .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(100011)
+      .setDepth(D + 1)
+
+    // Сводка забега.
+    const survived = Math.max(0, this.crew.length - this.crewIdx)
+    const timeSec = Math.floor(this.elapsed / 1000)
+    const mm = Math.floor(timeSec / 60)
+    const ss = String(timeSec % 60).padStart(2, '0')
+    const summary = [
+      `☠ Убито жаб:  ${this.kills}`,
+      `⏱ Время:  ${mm}:${ss}`,
+      `⭐ Уровень героя:  ${this.heroXpLevel}`,
+      `🐸 Выжило:  ${survived}/${this.crew.length}`,
+      `💧 Награда:  +${reward}`,
+    ].join('\n')
     this.add
-      .text(w / 2, h / 2 + 24 * DPR, `Убито: ${this.kills}   +${reward} 💧`, {
+      .text(w / 2, h / 2 - 56 * DPR, summary, {
         fontFamily: 'Russo One, sans-serif',
         fontSize: `${15 * DPR}px`,
         color: '#eaffd8',
+        align: 'left',
+        lineSpacing: 8 * DPR,
         stroke: '#0b1b0e',
         strokeThickness: 3 * DPR,
       })
+      .setOrigin(0.5, 0)
+      .setScrollFactor(0)
+      .setDepth(D + 1)
+
+    // Кнопка «Продолжить» — экран ждёт тап, не выходит сам.
+    const contBtn = this.add
+      .text(w / 2, h / 2 + 120 * DPR, 'Продолжить ▶', {
+        fontFamily: 'Russo One, sans-serif',
+        fontSize: `${18 * DPR}px`,
+        color: '#ffffff',
+        backgroundColor: '#16a34a',
+        padding: { x: 24 * DPR, y: 11 * DPR },
+      })
+      .setStroke('#0f5132', 3 * DPR)
       .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(100011)
+      .setDepth(D + 1)
+      .setInteractive({ useHandCursor: true })
 
-    hapticNotification(result === 'win' ? 'success' : 'error')
-
-    this.time.delayedCall(2200, () => {
+    let exited = false
+    const finish = () => {
+      if (exited) return
+      exited = true
       eventBus.emit('survivor:complete', { result, reward, kills: this.kills })
       eventBus.emit('survivor:exit', {})
-    })
+    }
+    contBtn.on('pointerup', finish)
+
+    hapticNotification(result === 'win' ? 'success' : 'error')
   }
 
   private cleanup() {

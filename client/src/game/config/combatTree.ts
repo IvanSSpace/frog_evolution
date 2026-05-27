@@ -26,7 +26,9 @@ export interface CombatBranchConfig {
 }
 
 // Общая эскалирующая кривая цен (slime) на 8 узлов.
-const COST_CURVE = [800, 2000, 4500, 9000, 17000, 30000, 50000, 80000] as const
+// 2026-05-28: удешевлено (особенно ранние узлы) — старт прокачки лягушки под
+// миссии должен быть быстрым. Было [800,2000,4500,9000,17000,30000,50000,80000].
+const COST_CURVE = [150, 400, 900, 1800, 3500, 6500, 12000, 20000] as const
 
 export const COMBAT_TREE: Record<CombatBranch, CombatBranchConfig> = {
   damage: {
