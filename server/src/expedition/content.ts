@@ -1,5 +1,10 @@
 import type { Scenario } from './types'
-import { EXTRA_SCENARIOS } from './content_extra'
+import {
+  EXTRA_SCENARIOS,
+  EXTRA_DEPARTURE,
+  EXTRA_RETURN,
+  EXTRA_ARRIVAL,
+} from './content_extra'
 
 // ──────────────────────────────────────────────────────────────────────────
 // Cosmo-setting content for the ship's journal. Voice: a lone frog pilot
@@ -199,7 +204,7 @@ export const DICT = {
 export type DictKey = keyof typeof DICT
 
 // ── Departure: always the first beat. ──
-export const DEPARTURE: Scenario[] = [
+const BASE_DEPARTURE: Scenario[] = [
   {
     id: 'departure_standard',
     category: 'departure',
@@ -248,6 +253,8 @@ export const DEPARTURE: Scenario[] = [
     ],
   },
 ]
+
+export const DEPARTURE: Scenario[] = [...BASE_DEPARTURE, ...EXTRA_DEPARTURE]
 
 // ── Mid-flight pool. ──
 const BASE_SCENARIOS: Scenario[] = [
@@ -1250,7 +1257,7 @@ const BASE_SCENARIOS: Scenario[] = [
 export const SCENARIOS: Scenario[] = [...BASE_SCENARIOS, ...EXTRA_SCENARIOS]
 
 // ── Return leg: appended once the player recalls the ship. ──
-export const RETURN: Scenario[] = [
+const BASE_RETURN: Scenario[] = [
   {
     id: 'return_standard',
     category: 'return',
@@ -1271,7 +1278,9 @@ export const RETURN: Scenario[] = [
   },
 ]
 
-export const ARRIVAL: Scenario[] = [
+export const RETURN: Scenario[] = [...BASE_RETURN, ...EXTRA_RETURN]
+
+const BASE_ARRIVAL: Scenario[] = [
   {
     id: 'arrival_standard',
     category: 'arrival',
@@ -1291,6 +1300,8 @@ export const ARRIVAL: Scenario[] = [
     ],
   },
 ]
+
+export const ARRIVAL: Scenario[] = [...BASE_ARRIVAL, ...EXTRA_ARRIVAL]
 
 // Shown if the ship was lost (recalled too late).
 export const LOST: Scenario = {
