@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { Virtuoso } from 'react-virtuoso'
+import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso'
 import { useGameStore } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
 import { useModalLock } from '../../utils/modalLock'
@@ -186,6 +186,12 @@ export function ExpeditionModal({ onClose }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [claimMsg, setClaimMsg] = useState<string | null>(null)
   const [nowTs, setNowTs] = useState(() => Date.now())
+  // Журнал: авто-скролл только когда внизу; иначе кнопка «↓ новое».
+  const virtuosoRef = useRef<VirtuosoHandle>(null)
+  const [atBottom, setAtBottom] = useState(true)
+  const [hasNew, setHasNew] = useState(false)
+  const prevLenRef = useRef(0)
+  const prevShipRef = useRef<number | null>(null)
 
   const gold = useGameStore((s) => s.gold)
 
@@ -400,6 +406,28 @@ export function ExpeditionModal({ onClose }: Props) {
       ? activeExp.journal
       : activeExp.journal.filter((l) => l.revealSec <= elapsedSec)
     : []
+
+  // Новое сообщение пока листаем вверх → показать «↓ новое». При смене корабля
+  // сбрасываем (другой журнал).
+  const visLen = visibleJournal.length
+  useEffect(() => {
+    if (prevShipRef.current !== selectedShipId) {
+      prevShipRef.current = selectedShipId
+      prevLenRef.current = visLen
+      setHasNew(false)
+      return
+    }
+    if (visLen > prevLenRef.current && !atBottom) setHasNew(true)
+    prevLenRef.current = visLen
+  }, [visLen, selectedShipId, atBottom])
+
+  const jumpToBottom = () => {
+    virtuosoRef.current?.scrollToIndex({
+      index: Math.max(0, visLen - 1),
+      behavior: 'smooth',
+    })
+    setHasNew(false)
+  }
 
   return createPortal(
     <div
@@ -655,6 +683,7 @@ export function ExpeditionModal({ onClose }: Props) {
                 <div
                   className="flex-1 min-h-0"
                   style={{
+                    position: 'relative',
                     background:
                       'radial-gradient(ellipse at top,#0f3d18,#072810)',
                     border: '2px solid #1f5a2a',
@@ -667,9 +696,14 @@ export function ExpeditionModal({ onClose }: Props) {
                 >
                   <Virtuoso
                     key={selectedShipId ?? 0}
+                    ref={virtuosoRef}
                     style={{ height: '100%' }}
                     data={visibleJournal}
                     followOutput="auto"
+                    atBottomStateChange={(b) => {
+                      setAtBottom(b)
+                      if (b) setHasNew(false)
+                    }}
                     initialTopMostItemIndex={Math.max(
                       0,
                       visibleJournal.length - 1,
@@ -700,6 +734,29 @@ export function ExpeditionModal({ onClose }: Props) {
                       </div>
                     )}
                   />
+                  {hasNew && !atBottom && (
+                    <button
+                      onClick={jumpToBottom}
+                      style={{
+                        position: 'absolute',
+                        bottom: 8,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        background: '#4ad295',
+                        color: '#06240f',
+                        border: 'none',
+                        borderRadius: 999,
+                        padding: '5px 12px',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                        cursor: 'pointer',
+                        pointerEvents: 'auto',
+                      }}
+                    >
+                      ↓ Новое сообщение
+                    </button>
+                  )}
                 </div>
 
                 {/* Actions */}
