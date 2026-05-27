@@ -38,11 +38,13 @@ export interface ExpeditionConfig {
   riskRampSec: number // after grace, risk climbs to max over this span
   catastrophePerTickMax: number // (legacy) peak per-tick instant-loss chance — больше не используется
   dmgPerTickMax: number // (legacy) peak HP-урон за бит — больше не используется (урон теперь только от hazard-событий)
-  // Урон наносят ТОЛЬКО hazard-события. Каждое бьёт на долю maxHp в диапазоне
-  // [hazardHitMinFrac .. hazardHitMaxFrac] × текущий риск (× hull-резист). Кап =
-  // hazardHitMaxFrac гарантирует, что одно событие не убивает целиком (минимум
-  // 1/maxFrac событий до гибели). Корабль гибнет только когда HP=0.
-  hazardHitMinFrac: number
+  // Урон наносят ТОЛЬКО hazard-события. Каждое бьёт на ПЛОСКИЙ урон в диапазоне
+  // [hazardDmgMin .. hazardDmgMax] × текущий риск (× hull-резист). Плоский (не
+  // доля maxHp) — поэтому больше HP / экипаж реально продлевают жизнь.
+  // Кап hazardHitMaxFrac×maxHp — анти-ваншот: одно событие не снимает больше
+  // этой доли (минимум 1/maxFrac событий до гибели). Гибель только при HP=0.
+  hazardDmgMin: number
+  hazardDmgMax: number
   hazardHitMaxFrac: number
 }
 
@@ -63,14 +65,16 @@ export const EXPEDITION_CONFIG: ExpeditionConfig = {
   // gold = flat × incomePerSec × 0.16 → событие flat:250 ≈ 40 income-секунд.
   // За полёт ~3-5 событий ≈ 30% дохода за то же время: заметно, но < чистого idle.
   goldIncomeRate: 0.16,
-  riskFreeSec: 30 * 60,
-  riskRampSec: 90 * 60,
+  riskFreeSec: 45 * 60,
+  riskRampSec: 150 * 60,
   catastrophePerTickMax: 0.04,
   dmgPerTickMax: 14,
-  // При полном риске hazard бьёт на 14..30% maxHp → минимум ~4 события до гибели
-  // (с резистом брони — больше). Ваншот невозможен.
-  hazardHitMinFrac: 0.14,
-  hazardHitMaxFrac: 0.3,
+  // При полном риске hazard бьёт на 4..11 HP (плоско). База maxHp=125 (1 лягушка)
+  // → ~16-30 hazard-событий до гибели; с экипажем/корпусом HP больше → дольше.
+  // Кап 0.5×maxHp — анти-ваншот.
+  hazardDmgMin: 4,
+  hazardDmgMax: 11,
+  hazardHitMaxFrac: 0.5,
 }
 
 // Demo/test tempo: minute-scale so a full arc runs in seconds.

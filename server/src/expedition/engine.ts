@@ -144,10 +144,10 @@ export function simulate(
   // hit ≤ hazardHitMaxFrac×maxHp → ваншот невозможен; гибель только при HP=0.
   const hazardHit = (riskNow: number, rng: Rng, factor: number): number => {
     if (riskNow <= 0) return 0
-    const lo = maxHp * cfg.hazardHitMinFrac
-    const hi = maxHp * cfg.hazardHitMaxFrac
-    const raw = lo + rng.float() * (hi - lo)
-    return Math.round(raw * riskNow * (1 - shipStats.hull) * factor)
+    const raw =
+      cfg.hazardDmgMin + rng.float() * (cfg.hazardDmgMax - cfg.hazardDmgMin)
+    const hit = Math.round(raw * riskNow * (1 - shipStats.hull) * factor)
+    return Math.min(hit, Math.round(maxHp * cfg.hazardHitMaxFrac)) // анти-ваншот
   }
   // Дописывает урон к последней строке события: «… 💥 −14 HP» — игрок видит,
   // сколько здоровья сняло именно это событие.
@@ -233,7 +233,7 @@ export function simulate(
     // boosted so a fresh event reliably gets "played out" next.
     const weighted = pool.map((s) => {
       let w = s.weight
-      if (s.category === 'hazard') w *= 1 + risk * 3
+      if (s.category === 'hazard') w *= 1 + risk * 2
       if (s.needs) w *= 3
       return { ...s, weight: w }
     })
