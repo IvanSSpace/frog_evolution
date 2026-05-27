@@ -31,8 +31,10 @@ interface SurvivorInit {
 // === Tuning (DPR-scaled где это пиксели) ===
 const WORLD = 2600 * DPR
 const HERO_SPEED = 210 * DPR // px/sec
-const HERO_SIZE = 88 * DPR
+const HERO_SIZE = 96 * DPR // целевая ВЫСОТА спрайта (ширина — по пропорции)
 const HERO_HITR = 34 * DPR
+const HERO_HOP_AMP = 13 * DPR // высота подскока при движении
+const HERO_HOP_FREQ = 13 // рад/с — частота хопа
 
 const ATTACK_INTERVAL = 560 // ms между выстрелами
 const ATTACK_DMG = 22 // КОНСТАНТНЫЙ урон отряда (не зависит от текущей «жизни»)
@@ -61,6 +63,10 @@ const RESPAWN_INVULN = 1500 // ms неуязвимости после смены
 
 interface Hero {
   sprite: Phaser.GameObjects.Image
+  // Логическая позиция (для движения/коллизий). Спрайт рендерится в (x, y-hop),
+  // чтобы вертикальный подскок не «уносил» героя и не плыли расчёты дистанций.
+  x: number
+  y: number
   hp: number
   maxHp: number
   level: number
@@ -102,6 +108,7 @@ export class SurvivorScene extends Phaser.Scene {
   private bossSpawned = false
   private invulnUntil = 0
   private over = false
+  private heroHopT = 0 // накопитель фазы хопа (растёт пока герой движется)
 
   // HUD
   private hpBarFill!: Phaser.GameObjects.Rectangle
@@ -150,6 +157,8 @@ export class SurvivorScene extends Phaser.Scene {
     sprite.setDepth(10)
     this.hero = {
       sprite,
+      x: cx,
+      y: cy,
       hp: heroMaxHpForLevel(lvl),
       maxHp: heroMaxHpForLevel(lvl),
       level: lvl,
@@ -183,7 +192,9 @@ export class SurvivorScene extends Phaser.Scene {
     const key = textureKeyForLevel(level)
     if (this.textures.exists(key)) {
       const img = this.add.image(x, y, key)
-      img.setDisplaySize(size, size)
+      // size = целевая ВЫСОТА; масштаб равномерный → пропорции жабы сохранены
+      // (setDisplaySize(size,size) форсил квадрат и сплющивал спрайт).
+      img.setScale(size / img.height)
       if (tint !== undefined) img.setTint(tint)
       return img
     }
@@ -267,18 +278,36 @@ export class SurvivorScene extends Phaser.Scene {
 
   private moveHero(dt: number) {
     const d = this.joystick.dir
-    if (d.x === 0 && d.y === 0) return
-    const s = this.hero.sprite
-    s.x = Phaser.Math.Clamp(s.x + d.x * HERO_SPEED * dt, 0, WORLD)
-    s.y = Phaser.Math.Clamp(s.y + d.y * HERO_SPEED * dt, 0, WORLD)
-    if (d.x !== 0) s.setFlipX(d.x < 0)
+    const moving = d.x !== 0 || d.y !== 0
+    if (moving) {
+      this.hero.x = Phaser.Math.Clamp(
+        this.hero.x + d.x * HERO_SPEED * dt,
+        0,
+        WORLD,
+      )
+      this.hero.y = Phaser.Math.Clamp(
+        this.hero.y + d.y * HERO_SPEED * dt,
+        0,
+        WORLD,
+      )
+      this.heroHopT += dt
+      if (d.x !== 0) this.hero.sprite.setFlipX(d.x < 0)
+    } else {
+      this.heroHopT = 0 // стоит на земле
+    }
+    // Спрайт = логическая позиция минус подскок (|sin| → серия прыжков).
+    const hop = moving
+      ? Math.abs(Math.sin(this.heroHopT * HERO_HOP_FREQ)) * HERO_HOP_AMP
+      : 0
+    this.hero.sprite.x = this.hero.x
+    this.hero.sprite.y = this.hero.y - hop
   }
 
   private nearestMob(): Mob | null {
     let best: Mob | null = null
     let bestD = Infinity
-    const hx = this.hero.sprite.x
-    const hy = this.hero.sprite.y
+    const hx = this.hero.x
+    const hy = this.hero.y
     for (const m of this.mobs) {
       const dd = (m.sprite.x - hx) ** 2 + (m.sprite.y - hy) ** 2
       if (dd < bestD) {
@@ -298,8 +327,8 @@ export class SurvivorScene extends Phaser.Scene {
       return
     }
     this.attackAcc = 0
-    const hx = this.hero.sprite.x
-    const hy = this.hero.sprite.y
+    const hx = this.hero.x
+    const hy = this.hero.y
     const ang = Math.atan2(target.sprite.y - hy, target.sprite.x - hx)
     const proj = this.add.circle(hx, hy, PROJ_R, 0xfff3a0, 1)
     proj.setStrokeStyle(2 * DPR, 0xffae42, 0.9)
@@ -344,8 +373,8 @@ export class SurvivorScene extends Phaser.Scene {
 
   private updateMobs(deltaMs: number) {
     const dt = deltaMs / 1000
-    const hx = this.hero.sprite.x
-    const hy = this.hero.sprite.y
+    const hx = this.hero.x
+    const hy = this.hero.y
     const invuln = this.elapsed < this.invulnUntil
     for (const m of this.mobs) {
       const ang = Math.atan2(hy - m.sprite.y, hx - m.sprite.x)
@@ -383,16 +412,8 @@ export class SurvivorScene extends Phaser.Scene {
     const cam = this.cameras.main
     const margin = Math.max(cam.width, cam.height) / (2 * cam.zoom) + 80 * DPR
     const ang = Math.random() * Math.PI * 2
-    const x = Phaser.Math.Clamp(
-      this.hero.sprite.x + Math.cos(ang) * margin,
-      0,
-      WORLD,
-    )
-    const y = Phaser.Math.Clamp(
-      this.hero.sprite.y + Math.sin(ang) * margin,
-      0,
-      WORLD,
-    )
+    const x = Phaser.Math.Clamp(this.hero.x + Math.cos(ang) * margin, 0, WORLD)
+    const y = Phaser.Math.Clamp(this.hero.y + Math.sin(ang) * margin, 0, WORLD)
     const sprite = this.makeFrogSprite(x, y, 1, MOB_SIZE, 0xff6b6b)
     sprite.setDepth(5)
     this.mobs.push({
@@ -412,8 +433,8 @@ export class SurvivorScene extends Phaser.Scene {
     hapticNotification('warning')
     const cam = this.cameras.main
     const margin = Math.max(cam.width, cam.height) / (2 * cam.zoom) + 120 * DPR
-    const x = Phaser.Math.Clamp(this.hero.sprite.x, 0, WORLD)
-    const y = Phaser.Math.Clamp(this.hero.sprite.y - margin, 0, WORLD)
+    const x = Phaser.Math.Clamp(this.hero.x, 0, WORLD)
+    const y = Phaser.Math.Clamp(this.hero.y - margin, 0, WORLD)
     const sprite = this.makeFrogSprite(x, y, 18, BOSS_SIZE, 0x9b30ff)
     sprite.setDepth(8)
     this.mobs.push({
@@ -490,7 +511,7 @@ export class SurvivorScene extends Phaser.Scene {
     const key = textureKeyForLevel(lvl)
     if (this.textures.exists(key)) {
       this.hero.sprite.setTexture(key)
-      this.hero.sprite.setDisplaySize(HERO_SIZE, HERO_SIZE)
+      this.hero.sprite.setScale(HERO_SIZE / this.hero.sprite.height)
     }
     this.hero.sprite.clearTint()
     this.invulnUntil = this.elapsed + RESPAWN_INVULN
