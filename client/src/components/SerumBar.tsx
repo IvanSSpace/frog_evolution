@@ -19,6 +19,9 @@ export function SerumBar() {
   const serumDragActive = useGameStore((s) => s.serumDragActive)
   // Серум applies только на L1 frogs (которые живут только на 1-й локации — Болото).
   const currentLocation = useGameStore((s) => s.currentLocation)
+  // ShipDeck/VS-арена усыпляют MainScene и ставят этот флаг — серум-бар не должен
+  // висеть поверх снаряжения экипажа / боя.
+  const battleSceneActive = useGameStore((s) => s.battleSceneActive)
 
   const [starMapActive, setStarMapActive] = useState(false)
 
@@ -42,6 +45,7 @@ export function SerumBar() {
 
   if (!unlocked) return null // Phase 22 Plan 22-06: cosmos gate
   if (starMapActive) return null
+  if (battleSceneActive) return null // ShipDeck / VS-арена активны
   if (currentLocation !== 1) return null // серум applies только на L1 frogs (только Болото id=1)
   if (slots.length === 0) return null
 
