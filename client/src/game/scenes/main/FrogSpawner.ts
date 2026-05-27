@@ -158,6 +158,7 @@ export class FrogSpawner {
       isAttracted: false,
       level,
       poopTimer: null,
+      dashTimer: null,
       // Phase 12: stable id для match с CarrierData.frogId.
       id: `frog-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
     }
@@ -219,6 +220,10 @@ export class FrogSpawner {
       dragMoved = false
       scene.tweens.killTweensOf(frog.container)
       scene.tweens.killTweensOf(frog.body)
+      // Отменяем запланированный прыжок (пауза перед dash или следующий dash) —
+      // иначе он сработает после отпускания и лягушка прыгнет к устаревшей цели.
+      frog.dashTimer?.remove(false)
+      frog.dashTimer = null
       frog.isMoving = true
       frog.isDragging = true
       frog.container.setDepth(99999)
@@ -278,18 +283,6 @@ export class FrogSpawner {
       // Phase 14 (SERUM-06): drop-merge заблокирован во время serum selection.
       // Tap-as-drag-end остаётся (handler ниже route'ит через onFrogTapped → handleSerumTap).
       const serumActive = useGameStore.getState().serumDragActive
-
-      // Ворота казармы — если лягушку реально тащили и бросили в открытые
-      // ворота, она уходит в казарму (приоритет над merge). Tap (без move) не
-      // рекрутит — только осознанный drag.
-      if (
-        !serumActive &&
-        dragMoved &&
-        scene.tryGateDrop(frog, pointer.x, pointer.y)
-      ) {
-        eventBus.emit('frog:drop', { level: frog.level, merged: false })
-        return
-      }
 
       // Сначала проверяем мердж в позиции отпускания пальца.
       // L18+L18 разрешён — MergeController обрабатывает special cosmos sentinel path
@@ -383,7 +376,7 @@ export class FrogSpawner {
   }
 
   scheduleNextDash(frog: FrogData) {
-    this.scene.time.addEvent({
+    frog.dashTimer = this.scene.time.addEvent({
       delay: Phaser.Math.Between(2000, 4000),
       callback: () => this.performDash(frog),
     })
@@ -435,7 +428,7 @@ export class FrogSpawner {
     // Какашки идут по своему таймеру (frog.poopTimer), независимо от прыжка
 
     // Короткая пауза перед прыжком
-    scene.time.delayedCall(350, () => {
+    frog.dashTimer = scene.time.delayedCall(350, () => {
       // Лягушку взяли пока шла пауза — отменяем прыжок
       if (frog.isDragging) {
         frog.isMoving = false

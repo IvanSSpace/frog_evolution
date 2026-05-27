@@ -56,38 +56,6 @@ export const mapKeyForLocation = (locId: number): string => {
   return 'map'
 }
 
-/** Огненный вариант карты локации (raid-режим: scout + бой). */
-export const fireMapKeyForLocation = (locId: number): string => {
-  if (locId === 1) return 'fire_map'
-  if (locId === 2) return 'fire_map2'
-  if (locId === 3) return 'fire_map3'
-  return 'fire_map'
-}
-
-// Биомы планет с raid-фонами (ассеты <biome>_map[N].png в public/maps/).
-export const RAID_BIOMES = ['fire', 'ice', 'desert', 'toxic'] as const
-
-// Tint вражеских лягушек по биому планеты (MULTIPLY поверх baked level-tint).
-export const BIOME_FROG_TINT: Record<string, number> = {
-  fire: 0xff5555, // красно-оранжевый
-  ice: 0x8ad4ff, // голубой
-  desert: 0xf0c060, // песочно-жёлтый
-  toxic: 0x9be36b, // ядовито-зелёный
-}
-export const biomeFrogTint = (biome: string): number =>
-  BIOME_FROG_TINT[biome] ?? BIOME_FROG_TINT.fire
-
-// Raid-фон локации по биому планеты. id=1→<biome>_map, 2→_map2, 3→_map3.
-// Неизвестный биом → fire (дефолтный raid-фон).
-export const biomeMapKeyForLocation = (
-  biome: string,
-  locId: number,
-): string => {
-  const b = (RAID_BIOMES as readonly string[]).includes(biome) ? biome : 'fire'
-  const suffix = locId <= 1 ? '' : String(locId)
-  return `${b}_map${suffix}`
-}
-
 export interface BoxData {
   img: Phaser.GameObjects.Image
   isLanding: boolean
@@ -121,6 +89,10 @@ export interface FrogData {
   isAttracted: boolean
   level: number
   poopTimer: Phaser.Time.TimerEvent | null
+  // Отложенный прыжок (scheduleNextDash addEvent + пауза 350мс перед прыжком в
+  // performDash). Храним, чтобы отменить при pickup — иначе прыжок к устаревшей
+  // цели срабатывает после переноса и лягушка «упрыгивает далеко».
+  dashTimer: Phaser.Time.TimerEvent | null
   // Phase 12: stable cross-session id для match с CarrierData.frogId.
   id: string
   // Магнит-иммунитет до этого момента (Date.now() ms). Ставится на лягушек,
