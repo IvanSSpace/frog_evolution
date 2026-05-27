@@ -290,6 +290,20 @@ type Events = {
     questId: string
     activeQuestId: string
   }
+  // Phase Evolution — Pokemon-style evolution ceremony trigger.
+  // Эмитит FrogShopModal.handleEvolve после успешного upgradeFrogTier(level).
+  // Subscribers:
+  //   - EvolutionCeremony (DOM overlay): old→flash→new + «Эволюция!» + бонус.
+  // oldPath/newPath — SVG-пути тиров (getFrogPath), tint — цвет уровня.
+  'frog:evolution-ceremony': {
+    level: number
+    newTier: number
+    oldPath: string
+    newPath: string
+    tint: number
+    name: string
+    bonusPct: number
+  }
 }
 
 export const eventBus = mitt<Events>()

@@ -34,6 +34,7 @@ import { InvestigateModalController } from './components/Raid/InvestigateModal'
 import { RaidLootModalController } from './components/Raid/RaidLootModal'
 import { RaidFlowController } from './components/Raid/RaidFlowController'
 import { CaptainBirthModal } from './components/Captain/CaptainBirthModal'
+import { EvolutionCeremony } from './components/Evolution/EvolutionCeremony'
 import { installCaptainBirthController } from './components/Captain/captainBirthController'
 import { FirstContactController } from './components/FirstContact/firstContactController'
 import { EventToastController } from './components/Contacts/eventToastController'
@@ -448,6 +449,10 @@ function App() {
           eventBus 'captain:birth-effect-complete' (Plan 24-02), null-render'ит
           когда invisible. Cinematic trigger — MergeController L18+L18 branch. */}
       <CaptainBirthModal />
+      {/* Phase Evolution: Pokemon-style evolution ceremony — self-subscribes к
+          eventBus 'frog:evolution-ceremony' (эмитит FrogShopModal после
+          успешного upgradeFrogTier), null-render'ит когда invisible. */}
+      <EvolutionCeremony />
       {/* Phase 26 Plan 26-05: first-contact event flow coordinator —
           listens starmap:planet-tapped → gate firstContactsSeen → emits
           cosmos:first-contact → Phaser cinematic → on completion mounts

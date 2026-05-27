@@ -16,6 +16,7 @@ import {
   LOCATION_GATE_THRESHOLD,
 } from '../../game/config/evolution'
 import { hapticNotification } from '../../utils/telegram'
+import { eventBus } from '../../store/eventBus'
 import { fmt } from '../../utils/formatting'
 import { useModalLock } from '../../utils/modalLock'
 import { useCosmosUnlocked } from '../../utils/cosmosGate'
@@ -294,8 +295,8 @@ function EvolveTab({ onResult }: { onResult: (msg: string) => void }) {
           Эволюция закрыта
         </div>
         <div className="ff-body text-sm" style={{ color: '#4d7c0f' }}>
-          Откроется после первого слияния двух лягушек 18-го уровня
-          (открытие космоса).
+          Откроется после первого слияния двух лягушек 18-го уровня (открытие
+          космоса).
         </div>
       </div>
     )
@@ -325,9 +326,9 @@ function EvolveGroupSection({
   onResult: (msg: string) => void
 }) {
   const unlocked = isEvolutionUnlockedForLocation(frogTiers, groupIdx)
-  const groupLevels = [1, 2, 3].map((n) => groupIdx * 6 + n).concat(
-    [4, 5, 6].map((n) => groupIdx * 6 + n),
-  )
+  const groupLevels = [1, 2, 3]
+    .map((n) => groupIdx * 6 + n)
+    .concat([4, 5, 6].map((n) => groupIdx * 6 + n))
   const locName = ['Болото', 'Лес', 'Континент'][groupIdx] ?? ''
 
   if (!unlocked) {
@@ -346,8 +347,8 @@ function EvolveGroupSection({
         <div className="ff-body text-xs mt-1" style={{ color: '#4d7c0f' }}>
           {prevUnlocked ? (
             <>
-              Нужно {LOCATION_GATE_THRESHOLD} эволюций на локации «{prevLocName}»
-              {' '}(сделано {prevDone}/{LOCATION_GATE_THRESHOLD}).
+              Нужно {LOCATION_GATE_THRESHOLD} эволюций на локации «{prevLocName}
+              » (сделано {prevDone}/{LOCATION_GATE_THRESHOLD}).
             </>
           ) : (
             <>Сначала разблокируйте эволюцию на «{prevLocName}».</>
@@ -389,9 +390,7 @@ function EvolveCard({
   const gold = useGameStore((s) => s.gold)
   const essence = useGameStore((s) => s.essence)
   const tier = useGameStore((s) => s.frogTiers[level - 1] ?? 0)
-  const cooldownEnd = useGameStore(
-    (s) => s.frogTierCooldowns[level - 1] ?? 0,
-  )
+  const cooldownEnd = useGameStore((s) => s.frogTierCooldowns[level - 1] ?? 0)
   const upgradeFrogTier = useGameStore((s) => s.upgradeFrogTier)
   const cfg = FROG_LEVELS[level - 1]
   const frogName = t(`frogs.${level}`)
@@ -421,6 +420,17 @@ function EvolveCard({
     const r = upgradeFrogTier(level)
     if (r.ok) {
       hapticNotification('success')
+      // Pokemon-style церемония: старая форма → вспышка → новая (tier до апгрейда
+      // = `tier`, после = `nextTier`; пути/бонус захвачены на этом рендере).
+      eventBus.emit('frog:evolution-ceremony', {
+        level,
+        newTier: nextTier,
+        oldPath: currentPath,
+        newPath: nextPath,
+        tint: cfg.tint,
+        name: frogName,
+        bonusPct,
+      })
     } else {
       hapticNotification('error')
       if (r.reason === 'noGold') onResult('Недостаточно слизи')
@@ -485,7 +495,9 @@ function EvolveCard({
           Тир {tier}
           {isMax ? ' (MAX)' : ` → ${nextTier}`}
           {!isMax && (
-            <span style={{ color: '#15803d', marginLeft: 4 }}>+{bonusPct}%</span>
+            <span style={{ color: '#15803d', marginLeft: 4 }}>
+              +{bonusPct}%
+            </span>
           )}
         </div>
         {onCooldown && (
