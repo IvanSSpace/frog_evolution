@@ -40,13 +40,20 @@ interface PreviewResp {
 
 export function ExpeditionPreviewPage() {
   const [seed, setSeed] = useState('')
-  const [sec, setSec] = useState('600')
+  const [days, setDays] = useState('0')
+  const [hours, setHours] = useState('0')
+  const [minutes, setMinutes] = useState('10')
   const [income, setIncome] = useState('100000')
   const [revive, setRevive] = useState('0')
   const [recalled, setRecalled] = useState(false)
   const [data, setData] = useState<PreviewResp | null>(null)
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+
+  // дни:часы:минуты → секунды для движка.
+  const totalSec =
+    ((Number(days) || 0) * 24 + (Number(hours) || 0)) * 3600 +
+    (Number(minutes) || 0) * 60
 
   const run = async () => {
     setLoading(true)
@@ -55,7 +62,7 @@ export function ExpeditionPreviewPage() {
       const res = await api.get<PreviewResp>('/admin/expedition/preview', {
         params: {
           seed: seed || undefined,
-          sec,
+          sec: totalSec,
           income,
           revive,
           recalled: recalled ? 1 : 0,
@@ -84,13 +91,36 @@ export function ExpeditionPreviewPage() {
             placeholder="random"
           />
         </Field>
-        <Field label="Время полёта, сек">
+        <Field label="Дни">
           <input
-            className="border rounded px-2 py-1 w-24"
-            value={sec}
-            onChange={(e) => setSec(e.target.value)}
+            className="border rounded px-2 py-1 w-16"
+            type="number"
+            min="0"
+            value={days}
+            onChange={(e) => setDays(e.target.value)}
           />
         </Field>
+        <Field label="Часы">
+          <input
+            className="border rounded px-2 py-1 w-16"
+            type="number"
+            min="0"
+            value={hours}
+            onChange={(e) => setHours(e.target.value)}
+          />
+        </Field>
+        <Field label="Минуты">
+          <input
+            className="border rounded px-2 py-1 w-16"
+            type="number"
+            min="0"
+            value={minutes}
+            onChange={(e) => setMinutes(e.target.value)}
+          />
+        </Field>
+        <span className="text-xs text-gray-500 self-end pb-1.5">
+          = {totalSec.toLocaleString('ru-RU')} сек
+        </span>
         <Field label="Доход/сек">
           <input
             className="border rounded px-2 py-1 w-28"
