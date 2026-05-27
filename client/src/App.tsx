@@ -16,6 +16,7 @@ import { StarMapHUD } from './ui/components/StarMapHUD'
 import { MagnetToggle } from './ui/components/MagnetToggle'
 import { BarracksUIController } from './ui/components/BarracksUIController'
 import { BarracksActionButtons } from './ui/components/BarracksActionButtons'
+import { SurvivorUpgradeModal } from './ui/components/SurvivorUpgradeModal'
 import { ShipFollowButton } from './ui/components/ShipFollowButton'
 import { OrientationLock } from './ui/components/OrientationLock'
 import { LoadingScreen } from './ui/components/LoadingScreen'
@@ -423,6 +424,7 @@ function App() {
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       <BarracksUIController />
       <BarracksActionButtons />
+      <SurvivorUpgradeModal />
       <Suspense fallback={null}>
         {cosmicHubOpen && (
           <CosmicHubModal onClose={() => setCosmicHubOpen(false)} />

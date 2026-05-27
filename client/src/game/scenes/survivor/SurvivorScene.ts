@@ -81,17 +81,109 @@ const XP_BASE = 4 // кристаллов на 1→2 уровень
 const XP_PER_LEVEL = 2 // +N к порогу за каждый следующий уровень
 const ATK_INTERVAL_MIN = 150 // пол скорострельности (апгрейд не опустит ниже)
 
-// Пул апгрейдов (выбор 3 случайных на левелапе). apply — в applyUpgrade().
-const UPGRADE_POOL: { id: string; label: string }[] = [
-  { id: 'hp', label: '❤️ +30 макс. HP' },
-  { id: 'dmg', label: '🗡 +8 урон' },
-  { id: 'atkspd', label: '⚡ Скорострельность +15%' },
-  { id: 'speed', label: '🥾 +12% скорость' },
-  { id: 'magnet', label: '🧲 +35% радиус сбора' },
+// Орбитальные сферы (защитный апгрейд): крутятся вокруг героя, бьют врага при
+// касании, после удара «гаснут» и через ORB_CD восстанавливаются.
+const ORB_RADIUS = 96 * DPR
+const ORB_SPEED = 2.6 // рад/с вращение
+const ORB_R = 11 * DPR
+const ORB_HITR = 16 * DPR
+const ORB_DMG = 16
+const ORB_CD = 1400 // ms восстановления после удара
+
+// Капы апгрейдов (run-local).
+const MAX_TARGETS = 4
+const MAX_MULTISHOT = 4
+const MAX_PIERCE = 5
+const MAX_ORBS = 6
+const MAX_ARMOR = 0.6
+const MULTISHOT_SPREAD = 0.22 // рад между снарядами залпа
+
+type UpgradeKind = 'attack' | 'defense'
+interface UpgradeDef {
+  id: string
+  icon: string
+  title: string
+  desc: string
+  kind: UpgradeKind
+}
+
+// Пул апгрейдов. На левелапе показываем 2 атакующих + 1 защитный.
+const ATTACK_UPGRADES: UpgradeDef[] = [
+  {
+    id: 'dmg',
+    icon: '🗡',
+    title: 'Острый язык',
+    desc: '+8 урона',
+    kind: 'attack',
+  },
+  {
+    id: 'atkspd',
+    icon: '⚡',
+    title: 'Хлёсткий язык',
+    desc: 'Атака на 15% чаще',
+    kind: 'attack',
+  },
+  {
+    id: 'targets',
+    icon: '🎯',
+    title: 'Раздвоение',
+    desc: '+1 цель за залп',
+    kind: 'attack',
+  },
+  {
+    id: 'multishot',
+    icon: '🔱',
+    title: 'Залп',
+    desc: '+1 снаряд по цели',
+    kind: 'attack',
+  },
+  {
+    id: 'pierce',
+    icon: '🪡',
+    title: 'Пробитие',
+    desc: 'Снаряд пробивает +1 врага',
+    kind: 'attack',
+  },
+]
+const DEFENSE_UPGRADES: UpgradeDef[] = [
+  {
+    id: 'hp',
+    icon: '❤️',
+    title: 'Толстая кожа',
+    desc: '+30 макс. HP',
+    kind: 'defense',
+  },
+  {
+    id: 'orb',
+    icon: '🟢',
+    title: 'Сфера-спутник',
+    desc: '+1 сфера: бьёт врагов, восстанавливается',
+    kind: 'defense',
+  },
+  {
+    id: 'regen',
+    icon: '💧',
+    title: 'Регенерация',
+    desc: '+2 HP/сек',
+    kind: 'defense',
+  },
+  {
+    id: 'armor',
+    icon: '🪨',
+    title: 'Панцирь',
+    desc: '−12% входящего урона',
+    kind: 'defense',
+  },
 ]
 
 interface Crystal {
   sprite: Phaser.GameObjects.Arc
+}
+
+interface Orb {
+  sprite: Phaser.GameObjects.Arc
+  alive: boolean
+  cdUntil: number
 }
 
 interface Hero {
@@ -119,6 +211,8 @@ interface Projectile {
   vy: number
   born: number
   dmg: number
+  pierce: number // сколько ещё врагов может пробить (0 = гибнет на первом)
+  hit: Set<Mob> // уже задетые мобы (чтобы не бить одного дважды)
 }
 
 function heroMaxHpForLevel(level: number): number {
@@ -148,8 +242,15 @@ export class SurvivorScene extends Phaser.Scene {
   // Run-local статы (апгрейды их меняют; сброс в init каждый забег).
   private dmg = ATTACK_DMG
   private atkInterval = ATTACK_INTERVAL
-  private moveMult = 1
+  private moveMult = 1 // апгрейда скорости нет — остаётся 1
   private pickupR = CRYSTAL_PICKUP_R
+  private maxTargets = 1 // целей за залп (апгрейд «раздвоение»)
+  private multishot = 1 // снарядов по каждой цели (апгрейд «залп»)
+  private pierce = 0 // пробитие снаряда
+  private regen = 0 // HP/сек
+  private armor = 0 // доля снижения входящего урона (0..MAX_ARMOR)
+  private orbs: Orb[] = []
+  private orbAngle = 0
 
   // Прокачка через кристаллы.
   private crystals: Crystal[] = []
@@ -157,7 +258,6 @@ export class SurvivorScene extends Phaser.Scene {
   private heroXpLevel = 1
   private xpNeeded = XP_BASE
   private paused = false // true пока открыто окно апгрейда (логика заморожена)
-  private pickerLayer?: Phaser.GameObjects.Container
 
   // HUD
   private hpBarFill!: Phaser.GameObjects.Rectangle
@@ -188,12 +288,18 @@ export class SurvivorScene extends Phaser.Scene {
     this.atkInterval = ATTACK_INTERVAL
     this.moveMult = 1
     this.pickupR = CRYSTAL_PICKUP_R
+    this.maxTargets = 1
+    this.multishot = 1
+    this.pierce = 0
+    this.regen = 0
+    this.armor = 0
+    this.orbs = []
+    this.orbAngle = 0
     this.crystals = []
     this.xp = 0
     this.heroXpLevel = 1
     this.xpNeeded = XP_BASE
     this.paused = false
-    this.pickerLayer = undefined
   }
 
   create() {
@@ -242,9 +348,19 @@ export class SurvivorScene extends Phaser.Scene {
     this.input.on('pointerup', () => this.joystick.end())
     this.input.on('pointerupoutside', () => this.joystick.end())
 
+    // Выбор апгрейда приходит из React-оверлея (SurvivorUpgradeModal).
+    eventBus.on('survivor:pick-upgrade', this.onPickUpgrade)
+
     this.buildHud()
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanup())
+  }
+
+  private onPickUpgrade = (p: { id: string }) => {
+    if (!this.paused || this.over) return
+    this.applyUpgrade(p.id)
+    this.joystick.end()
+    this.paused = false
   }
 
   // === Sprite helpers ===
@@ -356,10 +472,61 @@ export class SurvivorScene extends Phaser.Scene {
     this.autoAttack(deltaMs)
     this.updateProjectiles(deltaMs)
     this.updateMobs(deltaMs)
+    this.updateOrbs(dt)
     this.updateCrystals()
+    this.applyRegen(dt)
     this.handleSpawning(deltaMs)
     this.maybeSpawnBoss()
     this.updateHud()
+  }
+
+  private applyRegen(dt: number) {
+    if (this.regen <= 0 || this.hero.hp >= this.hero.maxHp) return
+    this.hero.hp = Math.min(this.hero.maxHp, this.hero.hp + this.regen * dt)
+  }
+
+  private addOrb() {
+    if (this.orbs.length >= MAX_ORBS) return
+    const sprite = this.add
+      .circle(this.hero.x, this.hero.y, ORB_R, 0x7cfc7c, 0.9)
+      .setStrokeStyle(2 * DPR, 0xffffff, 0.7)
+      .setDepth(9)
+    this.orbs.push({ sprite, alive: true, cdUntil: 0 })
+  }
+
+  private updateOrbs(dt: number) {
+    if (this.orbs.length === 0) return
+    this.orbAngle += ORB_SPEED * dt
+    const n = this.orbs.length
+    const hx = this.hero.x
+    const hy = this.hero.y
+    this.orbs.forEach((o, i) => {
+      const ang = this.orbAngle + (i * Math.PI * 2) / n
+      const ox = hx + Math.cos(ang) * ORB_RADIUS
+      const oy = hy + Math.sin(ang) * ORB_RADIUS
+      o.sprite.x = ox
+      o.sprite.y = oy
+      if (!o.alive) {
+        // Восстановление после удара.
+        if (this.elapsed >= o.cdUntil) {
+          o.alive = true
+          o.sprite.setVisible(true).setAlpha(0.9)
+        }
+        return
+      }
+      for (const m of this.mobs) {
+        const r = ORB_HITR + m.hitr
+        if ((m.sprite.x - ox) ** 2 + (m.sprite.y - oy) ** 2 <= r * r) {
+          m.hp -= ORB_DMG
+          this.hitFlash(m.sprite)
+          if (m.hp <= 0) this.killMob(m)
+          o.alive = false
+          o.cdUntil = this.elapsed + ORB_CD
+          o.sprite.setVisible(false)
+          break
+        }
+      }
+    })
   }
 
   private moveHero(dt: number) {
@@ -391,34 +558,43 @@ export class SurvivorScene extends Phaser.Scene {
     this.cameras.main.centerOn(this.hero.x, this.hero.y)
   }
 
-  private nearestMob(): Mob | null {
-    let best: Mob | null = null
-    let bestD = Infinity
+  private nearestMobs(n: number): Mob[] {
+    if (this.mobs.length === 0) return []
     const hx = this.hero.x
     const hy = this.hero.y
-    for (const m of this.mobs) {
-      const dd = (m.sprite.x - hx) ** 2 + (m.sprite.y - hy) ** 2
-      if (dd < bestD) {
-        bestD = dd
-        best = m
-      }
-    }
-    return best
+    return [...this.mobs]
+      .sort(
+        (a, b) =>
+          (a.sprite.x - hx) ** 2 +
+          (a.sprite.y - hy) ** 2 -
+          ((b.sprite.x - hx) ** 2 + (b.sprite.y - hy) ** 2),
+      )
+      .slice(0, n)
   }
 
   private autoAttack(deltaMs: number) {
     this.attackAcc += deltaMs
     if (this.attackAcc < this.atkInterval) return
-    const target = this.nearestMob()
-    if (!target) {
+    const targets = this.nearestMobs(this.maxTargets)
+    if (targets.length === 0) {
       this.attackAcc = this.atkInterval // готов выстрелить как только появится цель
       return
     }
     this.attackAcc = 0
     const hx = this.hero.x
     const hy = this.hero.y
-    const ang = Math.atan2(target.sprite.y - hy, target.sprite.x - hx)
-    const proj = this.add.circle(hx, hy, PROJ_R, 0xfff3a0, 1)
+    for (const t of targets) {
+      const base = Math.atan2(t.sprite.y - hy, t.sprite.x - hx)
+      // Залп (multishot): веер снарядов вокруг направления на цель.
+      const start = base - ((this.multishot - 1) / 2) * MULTISHOT_SPREAD
+      for (let i = 0; i < this.multishot; i++) {
+        this.fireProjectile(hx, hy, start + i * MULTISHOT_SPREAD)
+      }
+    }
+  }
+
+  private fireProjectile(x: number, y: number, ang: number) {
+    const proj = this.add.circle(x, y, PROJ_R, 0xfff3a0, 1)
     proj.setStrokeStyle(2 * DPR, 0xffae42, 0.9)
     proj.setDepth(20)
     this.projectiles.push({
@@ -427,6 +603,8 @@ export class SurvivorScene extends Phaser.Scene {
       vy: Math.sin(ang) * PROJ_SPEED,
       born: this.elapsed,
       dmg: this.dmg,
+      pierce: this.pierce,
+      hit: new Set(),
     })
   }
 
@@ -439,16 +617,19 @@ export class SurvivorScene extends Phaser.Scene {
         this.destroyProjectile(p)
         continue
       }
-      // Коллизия с мобами.
+      // Коллизия с мобами (один удар по мобу за снаряд; pierce = сквозь N врагов).
       for (const m of this.mobs) {
+        if (p.hit.has(m)) continue
         const r = m.hitr + PROJ_R
         const dd =
           (m.sprite.x - p.sprite.x) ** 2 + (m.sprite.y - p.sprite.y) ** 2
         if (dd <= r * r) {
           m.hp -= p.dmg
+          p.hit.add(m)
           this.hitFlash(m.sprite)
-          this.destroyProjectile(p)
           if (m.hp <= 0) this.killMob(m)
+          if (p.pierce > 0) p.pierce -= 1
+          else this.destroyProjectile(p)
           break
         }
       }
@@ -610,80 +791,91 @@ export class SurvivorScene extends Phaser.Scene {
     }
   }
 
-  /** Модалка выбора 1 из 3 апгрейдов поверх игры — забег заморожен (paused). */
+  /** Левелап: замораживаем забег и шлём 3 варианта в React-оверлей. */
   private openUpgradePicker() {
-    if (this.pickerLayer) return
+    if (this.paused) return
     this.paused = true
     this.joystick.end()
     hapticNotification('success')
-
-    const w = this.scale.width
-    const h = this.scale.height
-    const layer = this.add.container(0, 0).setScrollFactor(0).setDepth(100020)
-
-    layer.add(this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.62))
-    layer.add(
-      this.add
-        .text(w / 2, h * 0.28, `Уровень ${this.heroXpLevel}!\nВыбери апгрейд`, {
-          fontFamily: 'Russo One, sans-serif',
-          fontSize: `${20 * DPR}px`,
-          color: '#ffe27a',
-          align: 'center',
-          stroke: '#0b1b0e',
-          strokeThickness: 4 * DPR,
-        })
-        .setOrigin(0.5),
-    )
-
-    const pool = Phaser.Utils.Array.Shuffle([...UPGRADE_POOL]).slice(0, 3)
-    pool.forEach((u, i) => {
-      const cy = h * 0.44 + i * 74 * DPR
-      const card = this.add
-        .text(w / 2, cy, u.label, {
-          fontFamily: 'sans-serif',
-          fontSize: `${17 * DPR}px`,
-          color: '#ffffff',
-          backgroundColor: '#16a34a',
-          padding: { x: 26 * DPR, y: 14 * DPR },
-          fontStyle: 'bold',
-          align: 'center',
-          fixedWidth: w * 0.7,
-        })
-        .setStroke('#0f5132', 3 * DPR)
-        .setOrigin(0.5)
-        .setInteractive({ useHandCursor: true })
-      card.on('pointerup', () => this.chooseUpgrade(u.id))
-      layer.add(card)
+    eventBus.emit('survivor:level-up', {
+      level: this.heroXpLevel,
+      choices: this.rollUpgradeChoices(),
     })
-
-    this.pickerLayer = layer
   }
 
-  private chooseUpgrade(id: string) {
-    this.applyUpgrade(id)
-    this.pickerLayer?.destroy()
-    this.pickerLayer = undefined
-    this.joystick.end()
-    this.paused = false
+  /** 2 атакующих + 1 защитный (с учётом капов). */
+  private rollUpgradeChoices() {
+    const atk = Phaser.Utils.Array.Shuffle(
+      ATTACK_UPGRADES.filter((u) => this.isUpgradeAvailable(u.id)),
+    ).slice(0, 2)
+    const def = Phaser.Utils.Array.Shuffle(
+      DEFENSE_UPGRADES.filter((u) => this.isUpgradeAvailable(u.id)),
+    ).slice(0, 1)
+    const picks: UpgradeDef[] = [...atk, ...def]
+    // Если пул закаплен и не хватило до 3 — добиваем из остального доступного.
+    if (picks.length < 3) {
+      const rest = Phaser.Utils.Array.Shuffle(
+        [...ATTACK_UPGRADES, ...DEFENSE_UPGRADES].filter(
+          (u) => this.isUpgradeAvailable(u.id) && !picks.includes(u),
+        ),
+      )
+      while (picks.length < 3 && rest.length > 0) picks.push(rest.shift()!)
+    }
+    return picks.map((u) => ({
+      id: u.id,
+      icon: u.icon,
+      title: u.title,
+      desc: u.desc,
+      kind: u.kind,
+    }))
+  }
+
+  private isUpgradeAvailable(id: string): boolean {
+    switch (id) {
+      case 'targets':
+        return this.maxTargets < MAX_TARGETS
+      case 'multishot':
+        return this.multishot < MAX_MULTISHOT
+      case 'pierce':
+        return this.pierce < MAX_PIERCE
+      case 'orb':
+        return this.orbs.length < MAX_ORBS
+      case 'armor':
+        return this.armor < MAX_ARMOR
+      default:
+        return true // dmg/atkspd/hp/regen — без капа
+    }
   }
 
   private applyUpgrade(id: string) {
     switch (id) {
-      case 'hp':
-        this.hero.maxHp += 30
-        this.hero.hp += 30
-        break
       case 'dmg':
         this.dmg += 8
         break
       case 'atkspd':
         this.atkInterval = Math.max(ATK_INTERVAL_MIN, this.atkInterval * 0.85)
         break
-      case 'speed':
-        this.moveMult *= 1.12
+      case 'targets':
+        this.maxTargets = Math.min(MAX_TARGETS, this.maxTargets + 1)
         break
-      case 'magnet':
-        this.pickupR *= 1.35
+      case 'multishot':
+        this.multishot = Math.min(MAX_MULTISHOT, this.multishot + 1)
+        break
+      case 'pierce':
+        this.pierce = Math.min(MAX_PIERCE, this.pierce + 1)
+        break
+      case 'hp':
+        this.hero.maxHp += 30
+        this.hero.hp += 30
+        break
+      case 'orb':
+        this.addOrb()
+        break
+      case 'regen':
+        this.regen += 2
+        break
+      case 'armor':
+        this.armor = Math.min(MAX_ARMOR, this.armor + 0.12)
         break
     }
   }
@@ -699,7 +891,7 @@ export class SurvivorScene extends Phaser.Scene {
   }
 
   private damageHero(dmg: number) {
-    this.hero.hp -= dmg
+    this.hero.hp -= dmg * (1 - this.armor) // апгрейд «панцирь» режет урон
     hapticImpact('light')
     this.cameras.main.shake(80, 0.004)
     this.hero.sprite.setTint(0xff7777)
@@ -791,14 +983,15 @@ export class SurvivorScene extends Phaser.Scene {
 
   private cleanup() {
     this.input.removeAllListeners()
+    eventBus.off('survivor:pick-upgrade', this.onPickUpgrade)
     this.joystick?.destroy()
-    this.pickerLayer?.destroy()
-    this.pickerLayer = undefined
     for (const m of this.mobs) m.sprite.destroy()
     for (const p of this.projectiles) p.sprite.destroy()
     for (const c of this.crystals) c.sprite.destroy()
+    for (const o of this.orbs) o.sprite.destroy()
     this.mobs = []
     this.projectiles = []
     this.crystals = []
+    this.orbs = []
   }
 }

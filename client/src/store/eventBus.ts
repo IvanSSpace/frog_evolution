@@ -74,6 +74,19 @@ type Events = {
   'survivor:start': { crew: number[]; shipId: number; planetId?: string }
   'survivor:complete': { result: 'win' | 'lose'; reward: number; kills: number }
   'survivor:exit': Record<string, never>
+  // Левелап: сцена замирает и шлёт 3 варианта апгрейда (2 атака + 1 защита) в
+  // React-оверлей (SurvivorUpgradeModal). Игрок выбирает → survivor:pick-upgrade.
+  'survivor:level-up': {
+    level: number
+    choices: {
+      id: string
+      icon: string
+      title: string
+      desc: string
+      kind: 'attack' | 'defense'
+    }[]
+  }
+  'survivor:pick-upgrade': { id: string }
   // Синхрон React-оверлея кнопок локаций со сценой скаута.
   'raid:scout-changed': { locId: number }
   'raid:scout-set-loc': { locId: number }
