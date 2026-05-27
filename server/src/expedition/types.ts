@@ -86,4 +86,5 @@ export interface SimulateParams {
   fleet?: number // лягушек во флоте → поднимает maxHp (legacy, v1: 0)
   maxHp?: number // explicit max HP (from ship upgrades); overrides fleet calc
   reviveCount?: number // сколько раз воскрешали — каждое даёт +1 «жизнь» (maxHp буфер)
+  incomePerSec?: number // доход игрока на момент старта — масштабирует gold-награду
 }

@@ -28,6 +28,10 @@ export interface ExpeditionConfig {
   // Loot yields, applied per tick (scaled by ship stats + scenario rolls).
   goldPerTickBase: number
   serumChancePerTick: number // base chance a tick drops a serum
+  // Авто-левелинг золота к доходу: gold события = flat × incomePerSec × этот коэф.
+  // Так награда растёт с прогрессом игрока, но за полёт суммарно меньше чистого idle.
+  // flat-числа сценариев трактуются как «вес» (≈ income-секунды × 100).
+  goldIncomeRate: number
 
   // Risk model — "recall in time". No danger early; risk ramps after.
   riskFreeSec: number // grace window with zero risk
@@ -50,6 +54,9 @@ export const EXPEDITION_CONFIG: ExpeditionConfig = {
   // чтобы каждое пополнение инвентаря сопровождалось строкой «+N» в рапорте.
   goldPerTickBase: 0,
   serumChancePerTick: 0,
+  // gold = flat × incomePerSec × 0.16 → событие flat:250 ≈ 40 income-секунд.
+  // За полёт ~3-5 событий ≈ 30% дохода за то же время: заметно, но < чистого idle.
+  goldIncomeRate: 0.16,
   riskFreeSec: 30 * 60,
   riskRampSec: 90 * 60,
   catastrophePerTickMax: 0.04,

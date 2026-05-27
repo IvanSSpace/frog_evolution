@@ -66,6 +66,7 @@ type StoredStats = ShipStats & {
   maxHp?: number
   shipId?: number
   reviveCount?: number
+  income?: number // доход игрока на момент старта (масштабирует gold-награду)
 }
 
 // Воскрешение: стоимость в золоте, растёт с каждым воскрешением экспедиции.
@@ -85,6 +86,11 @@ function maxHpFor(exp: ExpeditionRow): number | undefined {
 function reviveCountFor(exp: ExpeditionRow): number {
   const s = exp.shipStats as StoredStats | null
   return Number(s?.reviveCount) || 0
+}
+
+function incomeFor(exp: ExpeditionRow): number {
+  const s = exp.shipStats as StoredStats | null
+  return Number(s?.income) || 0
 }
 
 function shipIdFor(exp: ExpeditionRow): number | undefined {
@@ -121,6 +127,7 @@ function computeView(exp: ExpeditionRow, now: Date) {
       recalled,
       maxHp: maxHpFor(exp),
       reviveCount: reviveCountFor(exp),
+      incomePerSec: incomeFor(exp),
     },
     cfg,
   )
@@ -231,7 +238,13 @@ export async function expeditionRoutes(app: FastifyInstance) {
         seed: Math.floor(Math.random() * 2_147_483_647),
         status: 'OUTBOUND',
         tickIntervalSec: body.demo ? 2 : EXPEDITION_CONFIG.tickIntervalSec,
-        shipStats: { ...stats, maxHp: maxHp + crewHp, shipId: target.id, crew } as object,
+        shipStats: {
+          ...stats,
+          maxHp: maxHp + crewHp,
+          shipId: target.id,
+          crew,
+          income: gs?.incomePerSec ?? 0,
+        } as object,
       },
     })
     return { ok: true, expedition: viewPayload(exp as ExpeditionRow, new Date()) }

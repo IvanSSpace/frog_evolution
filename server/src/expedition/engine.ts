@@ -77,7 +77,7 @@ function applyLoot(
   bag: { gold: number; serums: Record<Element, number>; mutagen: number },
   rng: Rng,
 ): void {
-  if (loot.gold) bag.gold += loot.gold
+  // gold обрабатывается в emit (масштабируется к доходу), здесь — серум + мутаген.
   if (loot.mutagen) bag.mutagen += loot.mutagen
   if (loot.serums) {
     const entries = Object.entries(loot.serums) as [Element, number][]
@@ -102,8 +102,15 @@ export function simulate(
     recalled,
     fleet = 0,
     reviveCount = 0,
+    incomePerSec = 0,
   } = params
   const maxHp = params.maxHp ?? cfg.baseHp + cfg.hpPerFrog * fleet
+  // Золото с событий масштабируется к доходу игрока (авто-левелинг). Если дохода
+  // ещё нет (ранняя игра) — плоское значение из сценария.
+  const scaleGold = (flat: number) =>
+    incomePerSec > 0
+      ? Math.round(flat * incomePerSec * cfg.goldIncomeRate)
+      : flat
   // Каждое воскрешение даёт ещё один буфер maxHp. Корабль потерян когда суммарный
   // урон превысит порог; HP-бар = остаток текущей «жизни».
   const lossThreshold = maxHp * (reviveCount + 1)
@@ -125,16 +132,20 @@ export function simulate(
   // (tickIntervalSec) so 3 lines in one minute reveal ~20s apart, not at once.
   const emit = (s: Scenario, displayBase: number, realBase: number, rng: Rng) => {
     const nums = beatNums(s.loot)
+    const scaledGold = scaleGold(nums.gold) // {gold} токен и лут — к доходу
     const n = s.lines.length
     s.lines.forEach((line, i) => {
       log.push({
         t: displayBase + line.dt,
         revealSec: realBase + (n > 1 ? (i * cfg.tickIntervalSec) / n : 0),
-        text: fill(line.text, ctx, rng, nums),
+        text: fill(line.text, ctx, rng, { ...nums, gold: scaledGold }),
         category: s.category,
       })
     })
-    if (s.loot) applyLoot(s.loot, loot, rng)
+    if (s.loot) {
+      if (scaledGold) loot.gold += scaledGold
+      applyLoot(s.loot, loot, rng)
+    }
   }
 
   // One beat = one journal-minute. Beat N is stamped at minute N, so the clock
