@@ -55,7 +55,7 @@ export function LocationButton({
       {isCurrent && (
         <svg
           width="22"
-          height="30"
+          height="38"
           viewBox="0 0 20 16"
           style={{
             position: 'absolute',
