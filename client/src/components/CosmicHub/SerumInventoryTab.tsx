@@ -68,14 +68,28 @@ export function SerumInventoryTab({ onClose }: Props) {
   const [selected, setSelected] = useState<Element | null>(null)
   const [activeBox, setActiveBox] = useState<BoxData | null>(null)
   // При открытии меню скроллим блок в самый низ (описания серумов внизу).
-  // Sentinel + scrollIntoView — скроллит реальный скроллируемый контейнер
-  // (он в CosmicHubModal, выше этого таба), rAF — чтобы layout успел.
+  // Идём вверх от sentinel до первого реально переполненного предка и ставим
+  // scrollTop = scrollHeight. Двойной rAF — чтобы layout/картинки успели.
   const bottomRef = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
-    const id = requestAnimationFrame(() => {
-      bottomRef.current?.scrollIntoView({ block: 'end' })
+    let raf2 = 0
+    const scrollToBottom = () => {
+      let el: HTMLElement | null = bottomRef.current?.parentElement ?? null
+      while (el) {
+        if (el.scrollHeight > el.clientHeight + 1) {
+          el.scrollTop = el.scrollHeight
+          return
+        }
+        el = el.parentElement
+      }
+    }
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(scrollToBottom)
     })
-    return () => cancelAnimationFrame(id)
+    return () => {
+      cancelAnimationFrame(raf1)
+      cancelAnimationFrame(raf2)
+    }
   }, [])
 
   // Носителей на поле по стихиям (лягушка под сывороткой = «серум есть»).
