@@ -8,6 +8,12 @@ body.modal-open .ship-follow-btn {
   display: none !important;
 }
 
+/* Тряска корабля в ExpeditionModal перед взлётом (фаза shaking). */
+@keyframes ff-ship-shake {
+  0% { transform: translateX(-5px); }
+  100% { transform: translateX(5px); }
+}
+
 .ff-no-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
