@@ -686,11 +686,11 @@ export function ExpeditionModal({ onClose }: Props) {
                 {/* Инвентарь — компактная строка тайлов */}
                 <ShipInventory loot={activeExp.loot} />
 
-                {/* Journal — виртуализирован (react-virtuoso) */}
+                {/* Journal — виртуализирован (react-virtuoso). 2026-05-28:
+                    ff-scanlines добавляет ЭЛТ-полосы на фон терминала. */}
                 <div
-                  className="flex-1 min-h-0"
+                  className="ff-scanlines flex-1 min-h-0"
                   style={{
-                    position: 'relative',
                     background:
                       'radial-gradient(ellipse at top,#0f3d18,#072810)',
                     border: '2px solid #1f5a2a',

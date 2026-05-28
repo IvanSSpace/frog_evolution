@@ -257,3 +257,31 @@ body.modal-open .ship-follow-btn {
 .ff-panel .text-emerald-50 {
   color: #eef3ea !important;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   2026-05-28: ЭЛТ-сканлайны — тонкие горизонтальные зелёные полосы поверх
+   терминал-блоков (лог экспедиции, чат клана). Очень слабые (0.05 alpha),
+   не мешают читать. Реализация через ::before — контент должен быть на
+   z-index:1, контейнер — position:relative.
+   ══════════════════════════════════════════════════════════════════════════ */
+.ff-scanlines {
+  position: relative;
+}
+.ff-scanlines::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(95, 216, 58, 0) 0px,
+    rgba(95, 216, 58, 0) 2px,
+    rgba(95, 216, 58, 0.05) 3px,
+    rgba(95, 216, 58, 0.05) 4px
+  );
+}
+.ff-scanlines > * {
+  position: relative;
+  z-index: 1;
+}

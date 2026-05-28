@@ -68,7 +68,7 @@ export function StarUnionsModal({ onClose }: { onClose: () => void }) {
           {/* Header */}
           <div
             className="flex items-center gap-1.5 px-3 pt-4 pb-3 flex-shrink-0"
-            style={{ borderBottom: '3px dashed rgba(77,107,31,0.4)' }}
+            style={{ borderBottom: '1px solid rgba(95,216,58,0.18)' }}
           >
             <span
               className="ff-display flex-1"

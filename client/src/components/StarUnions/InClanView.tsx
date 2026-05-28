@@ -97,9 +97,9 @@ export function InClanView() {
         />
       )}
 
-      {/* Chat scroll */}
+      {/* Chat scroll. 2026-05-28: ff-scanlines — ЭЛТ-полосы на фон чата. */}
       <div
-        className="flex-1 overflow-y-auto ff-no-scrollbar px-2 py-2"
+        className="ff-scanlines flex-1 overflow-y-auto ff-no-scrollbar px-2 py-2"
         style={{ minHeight: 0, WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
       >
         {items.map((item) =>
