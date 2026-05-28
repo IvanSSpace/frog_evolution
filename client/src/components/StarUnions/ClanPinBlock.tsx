@@ -30,21 +30,22 @@ export function ClanPinBlock({ pin, canDelete, onDelete }: Props) {
   return (
     <div
       className="mx-3 mt-2 rounded-lg px-3 py-2 text-sm relative"
-      style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)' }}
+      style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)' }}
     >
       {canDelete && (
         <button
           onClick={() => {
             if (window.confirm('Удалить маршрут?')) onDelete?.()
           }}
-          className="absolute top-1.5 right-1.5 text-white/40 hover:text-white/80 text-xs leading-none px-1"
+          className="absolute top-1.5 right-1.5 text-xs leading-none px-1"
+          style={{ color: '#6b7280' }}
           title="Удалить маршрут"
         >
           ✕
         </button>
       )}
-      <div className="font-semibold text-white/90">🗺️ Маршрут союза: {pin.text}</div>
-      <div className="text-xs text-white/50 mt-0.5">
+      <div className="font-semibold" style={{ color: '#1f2937' }}>🗺️ Маршрут союза: {pin.text}</div>
+      <div className="text-xs mt-0.5" style={{ color: '#6b7280' }}>
         Истекает через {formatTimeLeft(pin.expiresAt)}
       </div>
     </div>

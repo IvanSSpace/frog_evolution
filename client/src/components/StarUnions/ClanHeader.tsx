@@ -8,7 +8,7 @@ interface Props {
 
 export function ClanHeader({ clan, memberCount, onOpenRoster }: Props) {
   return (
-    <div className="flex items-center gap-3 p-3 border-b border-white/10">
+    <div className="flex items-center gap-3 p-3" style={{ borderBottom: '1px solid rgba(77,107,31,0.3)' }}>
       <div
         className="flex-shrink-0 flex items-center justify-center rounded-lg text-xl"
         style={{
@@ -20,13 +20,14 @@ export function ClanHeader({ clan, memberCount, onOpenRoster }: Props) {
         {clan.emblemIcon}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="font-bold text-white truncate">{clan.name}</div>
-        <div className="text-xs text-white/50">Участников: {memberCount}/30</div>
+        <div className="font-bold truncate" style={{ color: '#1f2937' }}>{clan.name}</div>
+        <div className="text-xs" style={{ color: '#6b7280' }}>Участников: {memberCount}/30</div>
       </div>
       <button
         onClick={onOpenRoster}
         title="Участники союза"
-        className="flex-shrink-0 text-lg text-white/60 hover:text-white transition-colors"
+        className="flex-shrink-0 text-lg transition-colors"
+        style={{ color: '#4b5563' }}
       >
         ⚙
       </button>

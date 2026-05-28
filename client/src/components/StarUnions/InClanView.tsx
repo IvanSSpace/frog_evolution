@@ -112,13 +112,13 @@ export function InClanView() {
       </div>
 
       <div
-        className="flex-shrink-0 flex items-center gap-1.5 px-2 py-2 border-t border-white/10"
-        style={{ background: 'rgba(0,0,0,0.2)' }}
+        className="flex-shrink-0 flex items-center gap-1.5 px-2 py-2"
+        style={{ borderTop: '1px solid rgba(77,107,31,0.3)', background: 'rgba(0,0,0,0.05)' }}
       >
         <button
           onClick={() => setCreateRequestOpen(true)}
           className="flex-shrink-0 text-base px-2 py-1.5 rounded"
-          style={{ background: 'rgba(255,255,255,0.08)' }}
+          style={{ background: 'rgba(0,0,0,0.08)' }}
           title="Обмен"
         >
           📦
@@ -128,7 +128,7 @@ export function InClanView() {
           disabled={snapshot.me.role !== 'LEADER' && snapshot.me.role !== 'COLEADER'}
           className="flex-shrink-0 text-base px-2 py-1.5 rounded transition-opacity"
           style={{
-            background: 'rgba(255,255,255,0.08)',
+            background: 'rgba(0,0,0,0.08)',
             opacity: snapshot.me.role !== 'LEADER' && snapshot.me.role !== 'COLEADER' ? 0.35 : 1,
           }}
           title={
@@ -142,7 +142,7 @@ export function InClanView() {
         <button
           onClick={() => inputRef.current?.focus()}
           className="flex-shrink-0 text-base px-2 py-1.5 rounded"
-          style={{ background: 'rgba(255,255,255,0.08)' }}
+          style={{ background: 'rgba(0,0,0,0.08)' }}
           title="Написать"
         >
           💬
@@ -154,7 +154,8 @@ export function InClanView() {
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Сообщение..."
-          className="flex-1 rounded px-2 py-1.5 text-sm bg-white/10 border border-white/20 text-white placeholder-white/30 focus:outline-none focus:border-white/40"
+          className="flex-1 rounded px-2 py-1.5 text-sm focus:outline-none"
+          style={{ background: 'rgba(0,0,0,0.07)', border: '1px solid rgba(0,0,0,0.15)', color: '#1f2937' }}
           disabled={sending}
         />
         <button
@@ -162,8 +163,8 @@ export function InClanView() {
           disabled={!inputText.trim() || sending}
           className="flex-shrink-0 px-3 py-1.5 rounded text-sm font-semibold transition-opacity"
           style={{
-            background: 'rgba(99,102,241,0.5)',
-            color: '#e0e7ff',
+            background: '#16a34a',
+            color: '#fff',
             opacity: !inputText.trim() || sending ? 0.4 : 1,
           }}
         >

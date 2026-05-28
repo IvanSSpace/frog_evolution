@@ -71,7 +71,7 @@ export function ClanListItem({ item, disabled, disabledReason }: Props) {
   }
 
   return (
-    <div className="flex items-center gap-3 py-2 px-1 border-b border-white/10">
+    <div className="flex items-center gap-3 py-2 px-1" style={{ borderBottom: '1px solid rgba(77,107,31,0.15)' }}>
       <div
         className="flex-shrink-0 flex items-center justify-center rounded text-2xl"
         style={{
@@ -84,12 +84,12 @@ export function ClanListItem({ item, disabled, disabledReason }: Props) {
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="font-semibold text-sm truncate">{item.name}</div>
-        <div className="text-xs text-white/60">
+        <div className="font-semibold text-sm truncate" style={{ color: '#1f2937' }}>{item.name}</div>
+        <div className="text-xs" style={{ color: '#6b7280' }}>
           👥 {item.memberCount}/30
           {item.minEssence > 0 && <span className="ml-2">💎 ≥{item.minEssence}</span>}
         </div>
-        {error && <div className="text-xs text-red-400 mt-0.5">{error}</div>}
+        {error && <div className="text-xs text-red-500 mt-0.5">{error}</div>}
       </div>
 
       <button
@@ -97,8 +97,8 @@ export function ClanListItem({ item, disabled, disabledReason }: Props) {
         disabled={disabled || loading}
         className="flex-shrink-0 text-xs px-3 py-1.5 rounded font-semibold transition-opacity"
         style={{
-          background: disabled ? 'rgba(255,255,255,0.1)' : '#16a34a',
-          color: disabled ? 'rgba(255,255,255,0.4)' : '#fff',
+          background: disabled ? 'rgba(0,0,0,0.1)' : '#16a34a',
+          color: disabled ? '#9ca3af' : '#fff',
           cursor: disabled ? 'not-allowed' : 'pointer',
         }}
       >

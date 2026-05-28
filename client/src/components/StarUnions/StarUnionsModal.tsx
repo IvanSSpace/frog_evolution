@@ -34,21 +34,45 @@ export function StarUnionsModal({ onClose }: { onClose: () => void }) {
   useClanPolling(!!snapshot)
 
   return (
-    <div className="ff-backdrop ff-fade" onClick={onClose}>
+    <div
+      className="ff-backdrop ff-fade"
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 150,
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+        pointerEvents: 'auto',
+        padding: '0 16px 4px',
+      }}
+    >
       <div
         className="ff-panel ff-pop"
         onClick={(e) => e.stopPropagation()}
-        style={{ width: 'min(560px, 96vw)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+        style={{
+          width: '100%',
+          maxWidth: 560,
+          height: '88vh',
+          display: 'flex',
+          flexDirection: 'column',
+          background: '#E8F5D2',
+          borderRadius: '16px 16px 0 0',
+          boxShadow: '0 -8px 24px rgba(0,0,0,0.35)',
+        }}
       >
-        <div className="flex items-center justify-between p-3 border-b border-white/10">
-          <div className="text-lg font-semibold">Звёздные союзы</div>
-          <button onClick={onClose} className="text-white/70 hover:text-white">
+        <div className="flex items-center justify-between p-3" style={{ borderBottom: '1px solid rgba(77,107,31,0.3)' }}>
+          <div className="text-lg font-semibold" style={{ color: '#1f2937' }}>Звёздные союзы</div>
+          <button onClick={onClose} style={{ color: '#4b5563' }}>
             ✕
           </button>
         </div>
         <div
-          className="text-sm text-white/80"
-          style={snapshot ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' } : { padding: '1rem' }}
+          className="text-sm"
+          style={snapshot
+            ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', color: '#1f2937' }
+            : { padding: '1rem', color: '#1f2937' }}
         >
           {snapshot ? <InClanView /> : <NoClanView />}
         </div>

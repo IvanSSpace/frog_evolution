@@ -79,93 +79,116 @@ export function DonateDialog({ req, onClose, onDonated }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.6)' }}
+      className="ff-backdrop ff-fade"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 200,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+        background: 'rgba(0,0,0,0.35)',
+      }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
-        className="w-full max-w-sm rounded-xl p-4 flex flex-col gap-3"
-        style={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.15)' }}
+        className="ff-panel ff-pop"
+        style={{
+          width: '100%',
+          maxWidth: 440,
+          maxHeight: '85vh',
+          display: 'flex',
+          flexDirection: 'column',
+          background: '#E8F5D2',
+          borderRadius: 14,
+          boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+          overflowY: 'auto',
+        }}
+        onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between">
-          <span className="text-white font-semibold text-base">Пожертвовать в запрос</span>
-          <button onClick={onClose} className="text-white/50 hover:text-white text-lg leading-none">✕</button>
+        <div className="flex items-center justify-between p-3" style={{ borderBottom: '1px solid rgba(77,107,31,0.3)' }}>
+          <span className="font-semibold text-base" style={{ color: '#1f2937' }}>Пожертвовать в запрос</span>
+          <button onClick={onClose} className="text-lg leading-none" style={{ color: '#4b5563' }}>✕</button>
         </div>
 
-        <div
-          className="rounded-lg px-3 py-2 text-sm"
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
-        >
-          <div className="text-white/70 mb-0.5">Нужно: {label}</div>
-          <div className="text-white/50 text-xs">
-            Осталось собрать: {remaining.toLocaleString()} / {target.toLocaleString()}
-          </div>
-          <div className="text-white/50 text-xs mt-0.5">
-            У вас: {available.toLocaleString()}
-          </div>
-        </div>
-
-        {noAvailable ? (
-          <div className="text-yellow-400/80 text-sm text-center py-2">Нет в наличии</div>
-        ) : (
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs text-white/50">Количество</span>
-              <span className="text-xs text-white/40">Максимум: {maxAmount.toLocaleString()}</span>
+        <div className="p-4 flex flex-col gap-3">
+          <div
+            className="rounded-lg px-3 py-2 text-sm"
+            style={{ background: 'rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.1)' }}
+          >
+            <div className="mb-0.5" style={{ color: '#374151' }}>Нужно: {label}</div>
+            <div className="text-xs" style={{ color: '#6b7280' }}>
+              Осталось собрать: {remaining.toLocaleString()} / {target.toLocaleString()}
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setAmount((a) => clamp(a - 1))}
-                disabled={amount <= 1}
-                className="w-8 h-8 rounded text-white text-base font-bold transition-opacity"
-                style={{ background: 'rgba(255,255,255,0.08)', opacity: amount <= 1 ? 0.3 : 1 }}
-              >
-                −
-              </button>
-              <input
-                type="number"
-                min={1}
-                max={maxAmount}
-                value={amount}
-                onChange={(e) => setAmount(clamp(Number(e.target.value)))}
-                className="flex-1 rounded px-2 py-1.5 text-sm text-center bg-white/10 border border-white/20 text-white focus:outline-none focus:border-white/40"
-              />
-              <button
-                onClick={() => setAmount((a) => clamp(a + 1))}
-                disabled={amount >= maxAmount}
-                className="w-8 h-8 rounded text-white text-base font-bold transition-opacity"
-                style={{ background: 'rgba(255,255,255,0.08)', opacity: amount >= maxAmount ? 0.3 : 1 }}
-              >
-                +
-              </button>
+            <div className="text-xs mt-0.5" style={{ color: '#6b7280' }}>
+              У вас: {available.toLocaleString()}
             </div>
           </div>
-        )}
 
-        {error && (
-          <div className="text-red-400 text-xs px-1">{error}</div>
-        )}
+          {noAvailable ? (
+            <div className="text-sm text-center py-2" style={{ color: '#92400e' }}>Нет в наличии</div>
+          ) : (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs" style={{ color: '#6b7280' }}>Количество</span>
+                <span className="text-xs" style={{ color: '#6b7280' }}>Максимум: {maxAmount.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setAmount((a) => clamp(a - 1))}
+                  disabled={amount <= 1}
+                  className="w-8 h-8 rounded text-base font-bold transition-opacity"
+                  style={{ background: 'rgba(0,0,0,0.08)', color: '#1f2937', opacity: amount <= 1 ? 0.3 : 1 }}
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  max={maxAmount}
+                  value={amount}
+                  onChange={(e) => setAmount(clamp(Number(e.target.value)))}
+                  className="flex-1 rounded px-2 py-1.5 text-sm text-center focus:outline-none"
+                  style={{ background: 'rgba(0,0,0,0.07)', border: '1px solid rgba(0,0,0,0.15)', color: '#1f2937' }}
+                />
+                <button
+                  onClick={() => setAmount((a) => clamp(a + 1))}
+                  disabled={amount >= maxAmount}
+                  className="w-8 h-8 rounded text-base font-bold transition-opacity"
+                  style={{ background: 'rgba(0,0,0,0.08)', color: '#1f2937', opacity: amount >= maxAmount ? 0.3 : 1 }}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          )}
 
-        <div className="flex gap-2 pt-1">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2 rounded text-sm text-white/60 transition-opacity"
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
-          >
-            Отмена
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={loading || noAvailable}
-            className="flex-1 py-2 rounded text-sm font-semibold transition-opacity"
-            style={{
-              background: 'rgba(99,102,241,0.5)',
-              color: '#e0e7ff',
-              opacity: loading || noAvailable ? 0.4 : 1,
-            }}
-          >
-            {loading ? 'Отправка...' : 'Пожертвовать'}
-          </button>
+          {error && (
+            <div className="text-red-500 text-xs px-1">{error}</div>
+          )}
+
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2 rounded text-sm transition-opacity"
+              style={{ background: 'rgba(0,0,0,0.08)', border: '1px solid rgba(0,0,0,0.1)', color: '#374151' }}
+            >
+              Отмена
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading || noAvailable}
+              className="flex-1 py-2 rounded text-sm font-semibold transition-opacity"
+              style={{
+                background: '#16a34a',
+                color: '#fff',
+                opacity: loading || noAvailable ? 0.4 : 1,
+              }}
+            >
+              {loading ? 'Отправка...' : 'Пожертвовать'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

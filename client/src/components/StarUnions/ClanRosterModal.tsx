@@ -111,16 +111,34 @@ export function ClanRosterModal({ onClose }: Props) {
     <div
       className="ff-backdrop ff-fade"
       onClick={onClose}
-      style={{ zIndex: 60 }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 200,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+        background: 'rgba(0,0,0,0.35)',
+      }}
     >
       <div
         className="ff-panel ff-pop"
         onClick={(e) => e.stopPropagation()}
-        style={{ width: 'min(400px, 94vw)', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
+        style={{
+          width: '100%',
+          maxWidth: 440,
+          maxHeight: '85vh',
+          display: 'flex',
+          flexDirection: 'column',
+          background: '#E8F5D2',
+          borderRadius: 14,
+          boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+        }}
       >
-        <div className="flex items-center justify-between p-3 border-b border-white/10 flex-shrink-0">
-          <div className="font-semibold text-white">Участники союза</div>
-          <button onClick={onClose} className="text-white/60 hover:text-white">✕</button>
+        <div className="flex items-center justify-between p-3 flex-shrink-0" style={{ borderBottom: '1px solid rgba(77,107,31,0.3)' }}>
+          <div className="font-semibold" style={{ color: '#1f2937' }}>Участники союза</div>
+          <button onClick={onClose} style={{ color: '#4b5563' }}>✕</button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-2">
@@ -131,18 +149,18 @@ export function ClanRosterModal({ onClose }: Props) {
               <div
                 key={member.userId}
                 className="flex items-center gap-2 px-2 py-2 rounded-lg mb-1"
-                style={{ background: 'rgba(255,255,255,0.04)' }}
+                style={{ background: 'rgba(0,0,0,0.05)' }}
               >
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-white truncate">{name}</div>
-                  <div className="text-xs text-white/40">{ROLE_BADGE[member.role]} · {days} дн. с нами</div>
+                  <div className="text-sm font-semibold truncate" style={{ color: '#1f2937' }}>{name}</div>
+                  <div className="text-xs" style={{ color: '#6b7280' }}>{ROLE_BADGE[member.role]} · {days} дн. с нами</div>
                 </div>
                 <div className="flex gap-1 flex-shrink-0">
                   {myRole === 'LEADER' && member.role === 'MEMBER' && (
                     <button
                       onClick={() => handlePromote(member)}
                       className="text-xs px-2 py-1 rounded"
-                      style={{ background: 'rgba(99,102,241,0.3)', color: '#c7d2fe' }}
+                      style={{ background: 'rgba(99,102,241,0.2)', color: '#4338ca' }}
                     >
                       ↑
                     </button>
@@ -152,14 +170,14 @@ export function ClanRosterModal({ onClose }: Props) {
                       <button
                         onClick={() => handleDemote(member)}
                         className="text-xs px-2 py-1 rounded"
-                        style={{ background: 'rgba(245,158,11,0.3)', color: '#fde68a' }}
+                        style={{ background: 'rgba(245,158,11,0.2)', color: '#92400e' }}
                       >
                         ↓
                       </button>
                       <button
                         onClick={() => handleTransfer(member)}
                         className="text-xs px-2 py-1 rounded"
-                        style={{ background: 'rgba(168,85,247,0.3)', color: '#e9d5ff' }}
+                        style={{ background: 'rgba(168,85,247,0.2)', color: '#6b21a8' }}
                       >
                         👑
                       </button>
@@ -172,7 +190,7 @@ export function ClanRosterModal({ onClose }: Props) {
                     <button
                       onClick={() => handleKick(member)}
                       className="text-xs px-2 py-1 rounded"
-                      style={{ background: 'rgba(239,68,68,0.3)', color: '#fca5a5' }}
+                      style={{ background: 'rgba(239,68,68,0.2)', color: '#b91c1c' }}
                     >
                       ✕
                     </button>
@@ -183,16 +201,16 @@ export function ClanRosterModal({ onClose }: Props) {
           })}
         </div>
 
-        <div className="p-3 border-t border-white/10 flex-shrink-0">
+        <div className="p-3 flex-shrink-0" style={{ borderTop: '1px solid rgba(77,107,31,0.3)' }}>
           <button
             onClick={handleLeave}
             className="w-full py-2 rounded-lg text-sm font-semibold"
-            style={{ background: 'rgba(239,68,68,0.2)', color: '#fca5a5', border: '1px solid rgba(239,68,68,0.3)' }}
+            style={{ background: 'rgba(239,68,68,0.15)', color: '#b91c1c', border: '1px solid rgba(239,68,68,0.3)' }}
           >
             🚪 Покинуть союз
           </button>
           {myRole === 'LEADER' && (
-            <div className="text-xs text-white/30 text-center mt-1">
+            <div className="text-xs text-center mt-1" style={{ color: '#6b7280' }}>
               Лидерство автоматически передастся старшему
             </div>
           )}

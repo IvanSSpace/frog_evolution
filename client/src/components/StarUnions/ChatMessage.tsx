@@ -24,9 +24,9 @@ export function ChatMessage({ msg, mine }: Props) {
     <div className="flex justify-start mb-2">
       <div
         className="max-w-[70%] rounded-lg px-3 py-2 text-sm"
-        style={{ background: 'rgba(59,130,246,0.25)', color: '#e0e7ff' }}
+        style={{ background: 'rgba(59,130,246,0.15)', color: '#1e3a5f' }}
       >
-        <div className="text-xs font-semibold mb-0.5" style={{ color: '#93c5fd' }}>
+        <div className="text-xs font-semibold mb-0.5" style={{ color: '#1d4ed8' }}>
           {msg.username ?? `User#${msg.userId}`}
         </div>
         <div>{msg.text}</div>

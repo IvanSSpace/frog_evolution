@@ -78,8 +78,8 @@ export function NoClanView() {
       {/* Cooldown banner */}
       {cooldownActive && cooldownDate && (
         <div
-          className="rounded px-3 py-2 text-xs text-white/80"
-          style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)' }}
+          className="rounded px-3 py-2 text-xs"
+          style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#b91c1c' }}
         >
           Смена клана недоступна до {formatCountdown(cooldownDate)}
         </div>
@@ -92,7 +92,8 @@ export function NoClanView() {
           value={search}
           onChange={(e) => handleSearchChange(e.target.value)}
           placeholder="Поиск союза..."
-          className="flex-1 rounded px-3 py-1.5 text-sm bg-white/10 border border-white/20 text-white placeholder-white/30 focus:outline-none focus:border-white/40"
+          className="flex-1 rounded px-3 py-1.5 text-sm focus:outline-none"
+          style={{ background: 'rgba(0,0,0,0.07)', border: '1px solid rgba(0,0,0,0.15)', color: '#1f2937' }}
         />
         <button
           onClick={() => setShowCreate(true)}
@@ -106,7 +107,7 @@ export function NoClanView() {
       {/* List */}
       <div style={{ maxHeight: 340, overflowY: 'auto' }}>
         {list.length === 0 ? (
-          <div className="text-center text-white/40 py-6">Союзов не найдено</div>
+          <div className="text-center py-6" style={{ color: '#9ca3af' }}>Союзов не найдено</div>
         ) : (
           list.map((item) => {
             const isFull = item.memberCount >= 30
@@ -137,20 +138,20 @@ export function NoClanView() {
             disabled={page === 0}
             className="px-3 py-1 rounded text-xs"
             style={{
-              background: page === 0 ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.12)',
-              color: page === 0 ? 'rgba(255,255,255,0.3)' : '#fff',
+              background: page === 0 ? 'rgba(0,0,0,0.05)' : 'rgba(0,0,0,0.1)',
+              color: page === 0 ? '#9ca3af' : '#374151',
             }}
           >
             {'<'}
           </button>
-          <span className="text-xs text-white/60">Стр. {page + 1}/{totalPages}</span>
+          <span className="text-xs" style={{ color: '#6b7280' }}>Стр. {page + 1}/{totalPages}</span>
           <button
             onClick={() => handlePage(1)}
             disabled={(page + 1) * PAGE_SIZE >= listTotal}
             className="px-3 py-1 rounded text-xs"
             style={{
-              background: (page + 1) * PAGE_SIZE >= listTotal ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.12)',
-              color: (page + 1) * PAGE_SIZE >= listTotal ? 'rgba(255,255,255,0.3)' : '#fff',
+              background: (page + 1) * PAGE_SIZE >= listTotal ? 'rgba(0,0,0,0.05)' : 'rgba(0,0,0,0.1)',
+              color: (page + 1) * PAGE_SIZE >= listTotal ? '#9ca3af' : '#374151',
             }}
           >
             {'>'}
