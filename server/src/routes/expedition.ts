@@ -26,6 +26,25 @@ interface ShipEntity {
   upg: ShipUpg
 }
 
+// Пул коротких лягушачье-космических имён кораблей. Имя детерминировано по id
+// (корабль всегда называется одинаково). Раньше было «Головастик-${id}».
+const SHIP_NAMES = [
+  'Квакета',
+  'Квазар',
+  'Жабокат',
+  'Ква-лёт',
+  'Лупоглаз',
+  'Прудолёт',
+  'Жабонавт',
+  'Икролёт',
+  'Болотон',
+  'Квантик',
+] as const
+
+function shipName(id: number): string {
+  return SHIP_NAMES[(((id - 1) % SHIP_NAMES.length) + SHIP_NAMES.length) % SHIP_NAMES.length]
+}
+
 function readShips(cosmic: Record<string, unknown> | null | undefined): ShipEntity[] {
   const raw = (cosmic?.ships as ShipEntity[] | undefined) ?? []
   return raw.map((s) => ({ id: s.id, upg: { ...emptyShipUpg(), ...s.upg } }))
@@ -279,7 +298,7 @@ export async function expeditionRoutes(app: FastifyInstance) {
         const { stats, maxHp } = deriveShip(s.upg)
         return {
           id: s.id,
-          name: `Головастик-${s.id}`,
+          name: shipName(s.id),
           upg: s.upg,
           stats,
           maxHp,
