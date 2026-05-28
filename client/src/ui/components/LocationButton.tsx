@@ -45,33 +45,8 @@ export function LocationButton({
     <div
       style={{ position: 'relative', display: 'flex', alignItems: 'center' }}
     >
-      {/* Стрелка-указатель текущей локации — внутри круга справа, смотрит влево. */}
-      {isCurrent && (
-        <svg
-          width="26"
-          height="28"
-          viewBox="0 0 30 32"
-          style={{
-            position: 'absolute',
-            right: -6,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))',
-            pointerEvents: 'none',
-            zIndex: 2,
-          }}
-        >
-          <path
-            d="M 2 16 L 16 3 L 16 11 L 28 11 L 28 21 L 16 21 L 16 29 Z"
-            fill="#D558D7"
-            stroke="#5A1F5C"
-            strokeWidth="6"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            paintOrder="stroke"
-          />
-        </svg>
-      )}
+      {/* Стрелка-указатель текущей локации — рендерится в LocationStack как
+          одна общая, чтобы плавно перелетать между кнопками. */}
       <button
         type="button"
         onClick={onClick}

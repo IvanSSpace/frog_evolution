@@ -187,20 +187,62 @@ export function LocationStack() {
         }}
       >
         {!collapsed ? (
-          ordered.map((loc) => (
-            <LocationButton
-              key={loc.id}
-              loc={loc}
-              isCurrent={
-                loc.id === STAR_MAP_PROTOTYPE_ID
-                  ? starMapActive
-                  : !starMapActive && loc.id === currentLocation
-              }
-              isPulsing={loc.id === pulsingLocationId}
-              disabled={transitioning && loc.id !== STAR_MAP_PROTOTYPE_ID}
-              onClick={() => handleSelect(loc.id)}
-            />
-          ))
+          <>
+            {/* Общая стрелка-указатель: плавно перелетает между кнопками.
+                Top = padding.top(8) + idx*(btn46+gap4) + btn/2 − arrow/2. */}
+            {(() => {
+              const currentLocId = starMapActive
+                ? STAR_MAP_PROTOTYPE_ID
+                : currentLocation
+              const idx = ordered.findIndex((l) => l.id === currentLocId)
+              if (idx < 0) return null
+              const BTN = 46
+              const GAP = 4
+              const PAD_TOP = 8
+              const ARROW_H = 28
+              const top = PAD_TOP + idx * (BTN + GAP) + BTN / 2 - ARROW_H / 2
+              return (
+                <svg
+                  width="26"
+                  height="28"
+                  viewBox="0 0 30 32"
+                  style={{
+                    position: 'absolute',
+                    right: -6,
+                    top,
+                    filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))',
+                    pointerEvents: 'none',
+                    zIndex: 2,
+                    transition: 'top 300ms cubic-bezier(.4,0,.2,1)',
+                  }}
+                >
+                  <path
+                    d="M 2 16 L 16 3 L 16 11 L 28 11 L 28 21 L 16 21 L 16 29 Z"
+                    fill="#D558D7"
+                    stroke="#5A1F5C"
+                    strokeWidth="6"
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                    paintOrder="stroke"
+                  />
+                </svg>
+              )
+            })()}
+            {ordered.map((loc) => (
+              <LocationButton
+                key={loc.id}
+                loc={loc}
+                isCurrent={
+                  loc.id === STAR_MAP_PROTOTYPE_ID
+                    ? starMapActive
+                    : !starMapActive && loc.id === currentLocation
+                }
+                isPulsing={loc.id === pulsingLocationId}
+                disabled={transitioning && loc.id !== STAR_MAP_PROTOTYPE_ID}
+                onClick={() => handleSelect(loc.id)}
+              />
+            ))}
+          </>
         ) : (
           <>
             {starMapActive ? (
