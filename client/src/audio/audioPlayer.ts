@@ -53,6 +53,7 @@ class AudioPlayer {
   private volume: number = loadVolumeDb()
   private vizEnabled: boolean = loadVizEnabled()
   private autoResume: boolean = loadAutoResume()
+  private bootPlayDone = false
   private sectionIdx = 0
 
   private baseTime = 0
@@ -163,6 +164,35 @@ class AudioPlayer {
 
   init(): void {
     this.setupVisibility()
+    this.setupBootAutoplay()
+  }
+
+  /**
+   * 2026-05-28: autoResume = «при включённом тумблере музыка играет».
+   * При первом user-gesture в сессии, если autoResume && status === 'idle',
+   * стартуем пластинку (TRACK_ORDER[0] или последний выбранный через
+   * loadSelectedTrack). Gesture обязателен для AudioContext.start() на
+   * mobile/Telegram (autoplay policy). Listener self-removes после первого
+   * срабатывания через bootPlayDone flag.
+   */
+  private setupBootAutoplay(): void {
+    if (typeof window === 'undefined') return
+    const start = (): void => {
+      if (this.bootPlayDone) return
+      this.bootPlayDone = true
+      window.removeEventListener('pointerdown', start)
+      window.removeEventListener('touchstart', start)
+      window.removeEventListener('click', start)
+      window.removeEventListener('keydown', start)
+      if (this.autoResume && this.status === 'idle') {
+        void this.playTrack()
+      }
+    }
+    const passiveOpts: AddEventListenerOptions = { passive: true }
+    window.addEventListener('pointerdown', start, passiveOpts)
+    window.addEventListener('touchstart', start, passiveOpts)
+    window.addEventListener('click', start, passiveOpts)
+    window.addEventListener('keydown', start)
   }
 
   on(event: PlayerEvent, cb: () => void): () => void {
@@ -194,6 +224,13 @@ class AudioPlayer {
     this.autoResume = v
     saveAutoResume(v)
     this.emit('state')
+    // 2026-05-28: включили тумблер и музыка не играет — запускаем пластинку.
+    // setAutoResume зовётся из PlayerPanel button click = user gesture → safe
+    // для AudioContext start. Если уже playing/paused — не трогаем (юзер сам
+    // управляет через play/pause кнопки).
+    if (v && this.status === 'idle') {
+      void this.playTrack()
+    }
   }
 
   getAnalyser(): import('tone').Analyser | null {
