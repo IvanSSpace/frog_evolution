@@ -524,16 +524,14 @@ export function ExpeditionModal({ onClose }: Props) {
         }}
       >
         <div
-          className={closing ? 'ff-slide-up' : 'ff-slide-down'}
+          className={`ff-panel ${closing ? 'ff-slide-up' : 'ff-slide-down'}`}
           style={{
             position: 'absolute',
             inset: 0,
             pointerEvents: 'auto',
             display: 'flex',
             flexDirection: 'column',
-            background: '#E8F5D2',
-            border: '4px solid #4d6b1f',
-            boxShadow: '0 0 0 3px #f7ffe0 inset',
+            borderRadius: 0,
           }}
         >
           {/* Header — табы кораблей слева + закрыть справа (без заголовка). */}

@@ -75,17 +75,14 @@ export function StarUnionsModal({ onClose }: { onClose: () => void }) {
         }}
       >
         <div
-          className={closing ? 'ff-slide-up' : 'ff-slide-down'}
+          className={`ff-panel ${closing ? 'ff-slide-up' : 'ff-slide-down'}`}
           style={{
             position: 'absolute',
             inset: 0,
             pointerEvents: 'auto',
             display: 'flex',
             flexDirection: 'column',
-            background: 'linear-gradient(180deg, #f5fbe9 0%, #d9eeb6 100%)',
-            border: '4px solid #4d6b1f',
             borderRadius: 0,
-            boxShadow: '0 0 0 3px #f7ffe0 inset',
           }}
         >
           {/* Header */}
