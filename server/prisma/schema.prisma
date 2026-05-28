@@ -22,6 +22,9 @@ model User {
   gameState   GameState?
   pityState   PityState?
   expeditions Expedition[]
+  clanMembership   ClanMember?
+  clanCooldown     UserClanCooldown?
+  clanMessages     ClanMessage[]
 
   @@map("users")
 }
@@ -104,4 +107,120 @@ model Expedition {
 
   @@index([userId, status])
   @@map("expeditions")
+}
+
+model Clan {
+  id              Int      @id @default(autoincrement())
+  name            String   @unique
+  emblemIcon      String   @map("emblem_icon")
+  emblemColor     String   @map("emblem_color")
+  minEssence      Int      @default(0) @map("min_essence")
+  leaderId        Int      @map("leader_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  lastActivityAt  DateTime @default(now()) @map("last_activity_at")
+
+  members  ClanMember[]
+  messages ClanMessage[]
+  requests ClanRequest[]
+  pins     ClanPin[]
+
+  @@index([lastActivityAt])
+  @@map("clans")
+}
+
+enum ClanRole {
+  LEADER
+  COLEADER
+  MEMBER
+}
+
+model ClanMember {
+  id       Int      @id @default(autoincrement())
+  clanId   Int      @map("clan_id")
+  userId   Int      @unique @map("user_id")
+  role     ClanRole @default(MEMBER)
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  clan Clan @relation(fields: [clanId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([clanId])
+  @@map("clan_members")
+}
+
+model ClanMessage {
+  id        Int      @id @default(autoincrement())
+  clanId    Int      @map("clan_id")
+  userId    Int      @map("user_id")
+  text      String   @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  clan Clan @relation(fields: [clanId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([clanId, createdAt])
+  @@map("clan_messages")
+}
+
+enum ClanRequestType {
+  SLIME
+  ESSENCE
+  SERUM
+}
+
+model ClanRequest {
+  id            Int             @id @default(autoincrement())
+  clanId        Int             @map("clan_id")
+  requesterId   Int             @map("requester_id")
+  type          ClanRequestType
+  element       String?
+  targetAmount  BigInt          @map("target_amount")
+  currentAmount BigInt          @default(0) @map("current_amount")
+  completed     Boolean         @default(false)
+  createdAt     DateTime        @default(now()) @map("created_at")
+  expiresAt     DateTime        @map("expires_at")
+
+  clan      Clan            @relation(fields: [clanId], references: [id], onDelete: Cascade)
+  donations ClanDonation[]
+
+  @@index([clanId, createdAt])
+  @@index([expiresAt])
+  @@map("clan_requests")
+}
+
+model ClanDonation {
+  id         Int      @id @default(autoincrement())
+  requestId  Int      @map("request_id")
+  donorId    Int      @map("donor_id")
+  amount     BigInt
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  request ClanRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@map("clan_donations")
+}
+
+model ClanPin {
+  id          Int      @id @default(autoincrement())
+  clanId      Int      @map("clan_id")
+  authorId    Int      @map("author_id")
+  text        String   @db.VarChar(300)
+  missionRef  String?  @map("mission_ref")
+  createdAt   DateTime @default(now()) @map("created_at")
+  expiresAt   DateTime @map("expires_at")
+
+  clan Clan @relation(fields: [clanId], references: [id], onDelete: Cascade)
+
+  @@index([clanId, expiresAt])
+  @@map("clan_pins")
+}
+
+model UserClanCooldown {
+  userId Int      @id @map("user_id")
+  until  DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_clan_cooldowns")
 }

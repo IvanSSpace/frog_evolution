@@ -9,6 +9,7 @@ import { mergeRoutes } from './merge'
 import { cosmicRoutes } from './cosmic'
 import { expeditionRoutes } from './expedition'
 import { adminRoutes } from './admin'
+import { clanRoutes } from './clan'
 
 export async function registerRoutes(app: FastifyInstance) {
   await app.register(healthRoutes)
@@ -21,4 +22,5 @@ export async function registerRoutes(app: FastifyInstance) {
   await app.register(cosmicRoutes)
   await app.register(expeditionRoutes)
   await app.register(adminRoutes)
+  await app.register(clanRoutes)
 }
