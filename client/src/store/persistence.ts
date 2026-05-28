@@ -786,42 +786,24 @@ export function saveBoxOpenCount(n: number): void {
 
 // ─── field boxes (коробки на земле Болота) ──────────────────────────────────
 // Раньше field-боксы не персистились: на перезаходе исчезали (offline-fill
-// триггерился только при offline > 60с). Сохраняем позиции, восстанавливаем
-// на возврате в Болото.
+// триггерился только при offline > 60с). Сохраняем СЧЁТЧИК коробок (не позиции:
+// при другом размере окна/DPR старые координаты уезжают за зону). На загрузке
+// счётчик заливается в pendingBoxCount → существующий drain спавнит коробки в
+// валидных случайных позициях (на Болоте), либо ждёт входа на Болото.
 
-export interface FieldBoxSnap {
-  x: number
-  y: number
-  r: boolean // isRare
-}
+const FIELD_BOXES_KEY = 'frog_evolution_field_box_count'
 
-const FIELD_BOXES_KEY = 'frog_evolution_field_boxes'
-
-export function loadFieldBoxes(): FieldBoxSnap[] {
-  if (typeof localStorage === 'undefined') return []
+export function loadFieldBoxCount(): number {
+  if (typeof localStorage === 'undefined') return 0
   const raw = localStorage.getItem(FIELD_BOXES_KEY)
-  if (!raw) return []
-  try {
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed
-      .filter(
-        (b) =>
-          b &&
-          typeof b.x === 'number' &&
-          typeof b.y === 'number' &&
-          Number.isFinite(b.x) &&
-          Number.isFinite(b.y),
-      )
-      .map((b) => ({ x: b.x, y: b.y, r: !!b.r }))
-  } catch {
-    return []
-  }
+  if (!raw) return 0
+  const n = parseInt(raw, 10)
+  return Number.isFinite(n) && n >= 0 ? n : 0
 }
 
-export function saveFieldBoxes(boxes: FieldBoxSnap[]): void {
+export function saveFieldBoxCount(n: number): void {
   if (typeof localStorage === 'undefined') return
-  localStorage.setItem(FIELD_BOXES_KEY, JSON.stringify(boxes))
+  localStorage.setItem(FIELD_BOXES_KEY, String(Math.max(0, Math.floor(n))))
 }
 
 // ─── cosmos unlock flag (Phase 22 Plan 22-06) ───────────────────────────────

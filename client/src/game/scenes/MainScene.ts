@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import { useGameStore, getDropIntervalMs } from '../../store/gameStore'
 import { magnetKeyForLocation } from '../config/upgrades'
 import { eventBus } from '../../store/eventBus'
-import { loadFieldBoxes } from '../../store/persistence'
+import { loadFieldBoxCount } from '../../store/persistence'
 import {
   FROG_LEVELS,
   textureKeyForLevel,
@@ -355,11 +355,11 @@ export class MainScene extends Phaser.Scene {
 
     this.spawnLocationFrogs()
 
-    // Восстанавливаем коробки, лежавшие на земле Болота до перезахода
-    // (раньше field-боксы не персистились и пропадали). До offline-fill.
-    if (useGameStore.getState().currentLocation === 1) {
-      this.box.restoreFieldBoxes(loadFieldBoxes())
-    }
+    // Восстанавливаем коробки, лежавшие на земле Болота до перезахода (раньше
+    // field-боксы не персистились и пропадали). Заливаем сохранённый счётчик в
+    // pendingBoxCount — drain в update() заспавнит их в валидных позициях на
+    // Болоте, либо они дождутся входа на Болото (если reload был на др. локации).
+    this.pendingBoxCount += loadFieldBoxCount()
 
     // Дренируем offline-drop буфер: боксы которые должны были упасть пока
     // игрок был away (count пришёл в _offlineBoxBuffer через модульный listener).
