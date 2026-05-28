@@ -12,6 +12,20 @@ import { hapticImpact } from '../../utils/telegram'
 
 type Props = { onClose: () => void }
 
+const SERUM_INFO: Record<Element, { name: string; farm: string; ascend: string; expedition: string; mission: string }> = {
+  fire:    { name: 'Огонь',    farm: 'ускоряет появление боксов', ascend: 'мгновенно выдаёт запас слизи (~30 минут дохода)', expedition: 'экспедиция завершается быстрее — корабль раньше возвращается с лутом', mission: 'повышает урон отряда' },
+  plasma:  { name: 'Плазма',   farm: 'ускоряет появление боксов', ascend: 'мгновенно несколько боксов', expedition: 'повышает шанс редких находок', mission: 'увеличивает скорость атаки' },
+  water:   { name: 'Вода',     farm: 'повышает доход трактора', ascend: 'небольшой постоянный бонус к доходу локации', expedition: '+золото в добыче', mission: 'регенерация здоровья' },
+  forest:  { name: 'Лес',      farm: 'повышает доход трактора', ascend: 'пачка слизи', expedition: 'больше редкого лута (серумы, мутаген)', mission: 'дополнительная жизнь' },
+  gas:     { name: 'Газ',      farm: 'повышает доход трактора', ascend: 'добавляет событие в текущую экспедицию', expedition: 'экипаж дольше держится → больше событий', mission: 'урон по площади' },
+  crystal: { name: 'Кристалл', farm: 'увеличивает запас offline-дохода', ascend: 'шанс получить эссенцию', expedition: 'гарантированный минимум лута даже при неудаче', mission: 'щит на старте' },
+  ring:    { name: 'Кольцо',   farm: 'увеличивает запас offline-дохода', ascend: 'навсегда повышает предел offline-дохода', expedition: 'снижает потери от опасных событий', mission: 'броня — меньше входящего урона' },
+  binary:  { name: 'Бинар',    farm: 'повышает шанс дропа сыворотки', ascend: 'ролл на редкое: мутаген, эссенция или редкий бокс', expedition: 'больше редких событий и серума в добыче', mission: 'удача (лучше дроп) и шанс двойной награды' },
+  ice:     { name: 'Лёд',      farm: '+базовый доход слизи', ascend: 'сбрасывает кулдауны (эволюция, корабль)', expedition: 'снижает кулдаун повторной отправки корабля', mission: 'замедляет врагов' },
+  toxic:   { name: 'Яд',       farm: '+базовый доход слизи', ascend: 'бонусный дроп', expedition: 'отпугивает опасные события (меньше потерь)', mission: 'урон ядом по площади' },
+  desert:  { name: 'Пустыня',  farm: '+базовый доход слизи', ascend: 'временный бонус к дальности корабля', expedition: 'открывает дальние планеты / +находка', mission: 'увеличивает радиус подбора лута' },
+}
+
 const ROUTE_RARITIES: {
   key: 'common' | 'rare' | 'epic'
   name: string
@@ -33,6 +47,8 @@ function InvSlot({
   filter,
   label,
   onApply,
+  isOpen,
+  onToggle,
 }: {
   icon?: string
   emoji?: string
@@ -41,15 +57,16 @@ function InvSlot({
   filter?: string
   label: string
   onApply?: () => void
+  isOpen: boolean
+  onToggle: () => void
 }) {
-  const [tip, setTip] = useState(false)
   const [shiftX, setShiftX] = useState(0)
   const slotRef = useRef<HTMLDivElement>(null)
 
   // При открытии тултипа меряем позицию слота и считаем сдвиг, чтобы тултип
   // (ширина ≤190 / 60vw) не уезжал за края вьюпорта.
   useLayoutEffect(() => {
-    if (!tip || !slotRef.current) return
+    if (!isOpen || !slotRef.current) return
     const rect = slotRef.current.getBoundingClientRect()
     const vw = window.innerWidth
     const tipW = Math.min(190, vw * 0.6)
@@ -58,24 +75,27 @@ function InvSlot({
     const wantLeft = center - tipW / 2
     const clampedLeft = Math.max(margin, Math.min(wantLeft, vw - margin - tipW))
     setShiftX(clampedLeft - wantLeft)
-  }, [tip])
+  }, [isOpen])
 
   return (
     <div
       ref={slotRef}
-      onClick={() => setTip((t) => !t)}
+      onClick={() => onToggle()}
       style={{
         flexShrink: 0,
         width: 52,
         height: 56,
         borderRadius: 10,
         border: `2px solid ${tint}`,
-        background: 'rgba(10,10,15,0.75)',
+        background: isOpen ? 'rgba(40,40,55,0.9)' : 'rgba(10,10,15,0.75)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         position: 'relative',
         cursor: 'pointer',
+        boxShadow: isOpen ? `0 0 0 2px ${tint}, 0 0 10px ${tint}aa` : undefined,
+        transform: isOpen ? 'translateY(-2px)' : undefined,
+        transition: 'box-shadow .15s, background .15s, transform .15s',
       }}
     >
       <span
@@ -107,11 +127,11 @@ function InvSlot({
           style={{ height: 30, width: 'auto', filter, pointerEvents: 'none' }}
         />
       )}
-      {tip && (
+      {isOpen && (
         <div
           onClick={(e) => {
             e.stopPropagation()
-            setTip(false)
+            onToggle()
           }}
           style={{
             position: 'absolute',
@@ -138,7 +158,7 @@ function InvSlot({
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
-                setTip(false)
+                onToggle()
                 onApply()
               }}
               style={{
@@ -182,6 +202,22 @@ function EmptySlot() {
 export function InventoryModal({ onClose }: Props) {
   useModalLock()
 
+  const [showSerums, setShowSerums] = useState(false)
+  const [openTip, setOpenTip] = useState<string | null>(null)
+
+  // При раскрытии «Про сыворотки» скроллим тело модалки в самый низ —
+  // блок справки появляется под сеткой слотов. rAF — чтобы блок успел отрисоваться.
+  const bodyRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    if (!showSerums) return
+    const el = bodyRef.current
+    if (!el) return
+    const id = requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight
+    })
+    return () => cancelAnimationFrame(id)
+  }, [showSerums])
+
   const gold = useGameStore((s) => s.gold)
   const serums = useGameStore((s) => s.serums)
   const mutagen = useGameStore((s) => s.mutagen)
@@ -201,6 +237,8 @@ export function InventoryModal({ onClose }: Props) {
       count={Number(gold)}
       tint="#d9a441"
       label="💰 Золото (слизь) — основная валюта. Тратится в магазинах и на прокачку."
+      isOpen={openTip === 'gold'}
+      onToggle={() => setOpenTip((prev) => (prev === 'gold' ? null : 'gold'))}
     />,
   ]
   if (mutagen > 0) {
@@ -211,29 +249,37 @@ export function InventoryModal({ onClose }: Props) {
         count={mutagen}
         tint="#a855f7"
         label="🧬 Мутаген — редкий космо-лут. Нужен для эволюции лягушек (вместе с эссенцией)."
+        isOpen={openTip === 'mutagen'}
+        onToggle={() => setOpenTip((prev) => (prev === 'mutagen' ? null : 'mutagen'))}
       />,
     )
   }
   routeSlots.forEach((r) => {
+    const id = `route-${r.key}`
     filled.push(
       <InvSlot
-        key={`route-${r.key}`}
+        key={id}
         emoji="🗺️"
         count={routes[r.key]}
         tint={r.tint}
         label={`🗺️ Звёздный маршрут (${r.name}) — это миссия. Редкость = сложность прохождения.`}
+        isOpen={openTip === id}
+        onToggle={() => setOpenTip((prev) => (prev === id ? null : id))}
       />,
     )
   })
   serumSlots.forEach((e: Element) => {
+    const id = `serum-${e}`
     filled.push(
       <InvSlot
-        key={`serum-${e}`}
+        key={id}
         icon="/genBottle.svg"
         count={serums[e]}
         tint={ELEMENT_TINT[e]}
         filter={ELEMENT_BOTTLE_FILTER[e]}
         label={`🧪 Сыворотка «${e}» — превращает лягушку в носителя стихии «${e}».`}
+        isOpen={openTip === id}
+        onToggle={() => setOpenTip((prev) => (prev === id ? null : id))}
         onApply={() => {
           hapticImpact('light')
           setSerumDragActive(true, { element: e })
@@ -243,8 +289,8 @@ export function InventoryModal({ onClose }: Props) {
       />,
     )
   })
-  // Добиваем пустыми слотами до полной сетки (минимум 8 рядов по 5).
-  const MIN_SLOTS = 40
+  // Добиваем пустыми слотами до полной сетки (минимум 7 рядов по 5).
+  const MIN_SLOTS = 35
   const total = Math.max(MIN_SLOTS, Math.ceil(filled.length / 5) * 5)
   const emptyCount = total - filled.length
 
@@ -300,8 +346,8 @@ export function InventoryModal({ onClose }: Props) {
           </button>
         </div>
 
-        {/* Body — единая сетка слотов (как ячейки инвентаря). */}
-        <div className="flex-1 overflow-y-auto px-4 py-4">
+        {/* Body — сетка слотов всегда, справка по сывороткам раскрывается снизу. */}
+        <div ref={bodyRef} className="flex-1 overflow-y-auto px-4 py-4">
           <div
             style={{
               display: 'flex',
@@ -315,6 +361,80 @@ export function InventoryModal({ onClose }: Props) {
               <EmptySlot key={`empty-${i}`} />
             ))}
           </div>
+          {showSerums && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+                marginTop: 14,
+                borderTop: '2px dashed rgba(77,107,31,0.3)',
+                paddingTop: 12,
+              }}
+            >
+              <p style={{ fontSize: 12, color: '#365314', lineHeight: 1.5, margin: 0 }}>
+                Сыворотка применяется на лягушку 1 уровня → она становится носителем стихии.
+                Баф работает пока лягушка на ферме, а также когда берёшь её в экипаж экспедиции или миссии.
+              </p>
+              {ELEMENTS.filter((e) => (serums[e] ?? 0) > 0).length === 0 ? (
+                <p style={{ fontSize: 13, color: '#365314', textAlign: 'center', marginTop: 12 }}>
+                  У тебя пока нет сывороток. Открывай космо-боксы и выполняй квесты.
+                </p>
+              ) : (
+                ELEMENTS.filter((e) => (serums[e] ?? 0) > 0).map((e) => (
+                  <div
+                    key={e}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '8px 10px',
+                      borderRadius: 10,
+                      border: `2px solid ${ELEMENT_TINT[e]}`,
+                      background: `${ELEMENT_TINT[e]}18`,
+                    }}
+                  >
+                    <img
+                      src="/genBottle.svg"
+                      alt=""
+                      style={{ height: 32, width: 'auto', filter: ELEMENT_BOTTLE_FILTER[e], flexShrink: 0 }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: '#15803d' }}>
+                        {SERUM_INFO[e].name}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 4 }}>
+                        <div style={{ fontSize: 11, color: '#365314' }}>
+                          <span style={{ fontWeight: 700, color: '#15803d' }}>🌱 Ферма: </span>{SERUM_INFO[e].farm}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#365314' }}>
+                          <span style={{ fontWeight: 700, color: '#15803d' }}>🧬 Соединение 18+18: </span>{SERUM_INFO[e].ascend}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#365314' }}>
+                          <span style={{ fontWeight: 700, color: '#15803d' }}>🚀 Экспедиция: </span>{SERUM_INFO[e].expedition}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#365314' }}>
+                          <span style={{ fontWeight: 700, color: '#15803d' }}>🎮 Миссия: </span>{SERUM_INFO[e].mission}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Кнопка справки по сывороткам — тоглит аккордеон снизу */}
+        <div style={{ padding: '0 16px 12px' }}>
+          <button
+            type="button"
+            className="ff-btn"
+            style={{ width: '100%' }}
+            onClick={() => setShowSerums((v) => !v)}
+          >
+            {showSerums ? '🧪 Про сыворотки ▴' : '🧪 Про сыворотки ▾'}
+          </button>
         </div>
       </div>
     </div>
