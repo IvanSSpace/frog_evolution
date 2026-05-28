@@ -1047,7 +1047,8 @@ function ShipDeckBlock(props: ShipDeckBlockProps) {
               }}
             >
               {/* Tinted SVG: replace #ffffff → level_tint (× element_tint multiply
-                  если носитель). Сохраняет внутренние детали (короны/узоры/маски). */}
+                  если носитель). Сохраняет внутренние детали (короны/узоры/маски).
+                  drop-shadow повторяет силуэт SVG, сдвинут влево-вниз. */}
               <TintedFrog
                 path={getFrogPath(entry.level, 0)}
                 tint={
@@ -1059,7 +1060,12 @@ function ShipDeckBlock(props: ShipDeckBlockProps) {
                     : configForLevel(entry.level).tint
                 }
                 alt={`L${entry.level}`}
-                style={{ height: 40, width: 'auto', pointerEvents: 'none' }}
+                style={{
+                  height: 40,
+                  width: 'auto',
+                  pointerEvents: 'none',
+                  filter: 'drop-shadow(-3px 4px 2px rgba(0,0,0,0.45))',
+                }}
               />
             </div>
           )
