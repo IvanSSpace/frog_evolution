@@ -3,10 +3,10 @@ import { useClanStore } from '../../store/clan/slice'
 import { useClanPolling } from '../../hooks/useClanPolling'
 import { fetchClanMe } from '../../api/clan'
 import type { ClanSnapshot } from '../../api/clan'
+import { NoClanView } from './NoClanView'
 
 export function StarUnionsModal({ onClose }: { onClose: () => void }) {
   const snapshot = useClanStore((s) => s.snapshot)
-  const cooldownUntil = useClanStore((s) => s.cooldownUntil)
   const setSnapshot = useClanStore((s) => s.setSnapshot)
   const setCooldown = useClanStore((s) => s.setCooldown)
 
@@ -47,13 +47,9 @@ export function StarUnionsModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="p-4 text-sm text-white/80">
           {snapshot ? (
-            <div>
-              В клане: <b>{snapshot.clan.name}</b>. Полный UI — P3-P6.
-            </div>
-          ) : cooldownUntil && new Date(cooldownUntil) > new Date() ? (
-            <div>Кулдаун до {new Date(cooldownUntil).toLocaleTimeString()}.</div>
+            <div>В клане: <b>{snapshot.clan.name}</b>. Полный UI — P4.</div>
           ) : (
-            <div>Клана нет. Полный UI выбора/создания — P3.</div>
+            <NoClanView />
           )}
         </div>
       </div>
