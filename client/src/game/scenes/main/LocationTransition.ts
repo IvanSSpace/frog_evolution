@@ -279,7 +279,7 @@ export class LocationTransition {
     // Свежий фон для новой локации
     const newBg = scene.add.image(0, 0, mapKeyForLocation(newLoc))
     newBg.setDisplaySize(width, height)
-    newBg.setTint(0x9aa39a) // SYNC с MainScene.create — затемнение фона
+    newBg.setTint(0xc4c8c4) // SYNC с MainScene.create — затемнение фона
     newContainer.add(newBg)
 
     const state = useGameStore.getState()
@@ -633,7 +633,7 @@ export class LocationTransition {
       newContainer.setAlpha(0)
       const newBg = scene.add.image(0, 0, mapKeyForLocation(targetLocId))
       newBg.setDisplaySize(width, height)
-      newBg.setTint(0x9aa39a) // SYNC с MainScene — затемнение фона
+      newBg.setTint(0xc4c8c4) // SYNC с MainScene — затемнение фона
       newContainer.add(newBg)
 
       const state = useGameStore.getState()
