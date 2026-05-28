@@ -22,123 +22,153 @@ body.modal-open .ship-follow-btn {
   display: none;
 }
 
-/* ──────────────────────────────────────────────────────────────────────────
-   2026-05-28: Глобальные визуальные патчи модалок.
-   1) Текстура (subtle SVG noise) — убирает «плоский салат» background'а.
-   2) Виньетка (radial darkening) — добавляет объём, окно перестаёт быть
-      плоским листом бумаги.
-   3) Чистый заголовок с glow вместо двойной обводки.
-   Реализация через ::before/::after на .ff-panel — НЕ трогаем inline
-   background компонентов (gradient остаётся), накладываемся сверху.
-   ────────────────────────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════════
+   2026-05-28: Тёмная тема модалок. Центральная точка истины для .ff-panel,
+   .ff-card, .ff-display, .ff-rarity-*. Header/Footer (.ff-bar) живут в
+   client/index.html и имеют свой dark patch — палитра общая (vars в :root).
+
+   Принципы:
+   - solid тёмный фон + лёгкие radial-подсветки (без backdrop-filter blur).
+   - мягкая зелёная рамка inset 0 0 0 1.5px rgba(...,0.22) — БЕЗ ярких
+     неоновых glow по периметру (уже проходили — режут глаз).
+   - grain через ::after (feTurbulence, opacity 0.095, overlay).
+   - radial-подсветки через ::before (top-green + bottom-purple, ~8%).
+   - Контент панели поднят на z-index:1.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --ff-glass-dark-1: #070d11;
+  --ff-glass-dark-2: #0c1414;
+  --ff-card: #192828;
+  --ff-card-2: #203434;
+  --ff-line: #2f4a49;
+  --ff-neon-green: #5fd83a;
+  --ff-neon-green-soft: #86f25a;
+  --ff-accent-purple: #b15cf0;
+  --ff-accent-gold: #ffcb4a;
+  --ff-text-light: #eef3ea;
+  --ff-text-dim: #8fb0ac;
+}
+
+/* ────────── PANEL ────────── */
 
 .ff-panel {
   position: relative;
-  /* Pseudo-overlays clip'аются по границе панели. */
   overflow: hidden;
+  background:
+    radial-gradient(
+      ellipse 80% 50% at 50% 0%,
+      rgba(95, 216, 58, 0.09) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 70% 45% at 50% 100%,
+      rgba(177, 92, 240, 0.08) 0%,
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      var(--ff-glass-dark-2) 0%,
+      var(--ff-glass-dark-1) 100%
+    );
+  box-shadow:
+    inset 0 0 0 1.5px rgba(95, 216, 58, 0.22),
+    0 18px 44px rgba(0, 0, 0, 0.6);
+  color: var(--ff-text-light);
 }
 
-/* Texture layer — eдва заметный grain через inline SVG turbulence. */
-.ff-panel::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='4' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.22 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-  background-size: 200px 200px;
-  mix-blend-mode: multiply;
-  opacity: 0.6;
-}
-
-/* Vignette layer — radial darkening от центра к краям. */
+/* Grain layer — мелкий шум через inline SVG fractalNoise. */
 .ff-panel::after {
   content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 2;
-  background: radial-gradient(
-    ellipse at center,
-    transparent 40%,
-    rgba(0, 0, 0, 0.18) 75%,
-    rgba(0, 0, 0, 0.38) 100%
-  );
+  z-index: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='5' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-size: 160px 160px;
+  opacity: 0.095;
+  mix-blend-mode: overlay;
 }
 
-/* Контент панели должен сидеть ПОВЕРХ pseudo-overlays. */
+/* Контент панели поверх grain. */
 .ff-panel > * {
   position: relative;
-  z-index: 3;
+  z-index: 1;
 }
 
-/* Чистый заголовок: жирный шрифт + subtle glow + crisp drop.
-   Заменяет визуальный «двойной stroke» — теперь читаемо на текстуре. */
+/* ────────── CARD ────────── */
+
+.ff-card {
+  background: linear-gradient(180deg, var(--ff-card-2) 0%, var(--ff-card) 100%);
+  border: 1px solid var(--ff-line);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  color: var(--ff-text-light);
+}
+
+/* ────────── DISPLAY (заголовки) ────────── */
+
 .ff-display {
   font-weight: 800;
   letter-spacing: 0.5px;
+  color: #e6ffd0;
   text-shadow:
-    0 0 8px rgba(255, 255, 255, 0.4),
-    0 2px 0 rgba(0, 0, 0, 0.28),
-    0 0 1px rgba(0, 0, 0, 0.6);
+    0 2px 0 rgba(0, 0, 0, 0.3),
+    0 0 16px rgba(95, 216, 58, 0.3);
 }
 
-/* ff-stroke-white раньше визуально читалась как двойная обводка —
-   теперь noop (стили лежат на .ff-display выше). Класс оставлен
-   для обратной совместимости с компонентами. */
+/* Двойная обводка убрана — оставлен noop для обратной совместимости. */
 .ff-stroke-white {
   /* intentionally empty — see .ff-display */
 }
 
-/* ──────────────────────────────────────────────────────────────────────────
-   2026-05-28: Rarity-кольца + glow для frog-карточек.
+/* ────────── RARITY (карточки лягушек / предметов) ──────────
    Применяется через util src/utils/frogRarity.ts (rarityClass()).
-   Box-shadow поверх существующих border'ов карточек — не ломает inline стили.
-   --ff-rarity-glow читается ::before на иконке для подложки-glow.
-   ────────────────────────────────────────────────────────────────────────── */
+   Цвета — по запросу: common #6f928a / rare #5fd83a / epic #b15cf0 /
+   legendary #ffcb4a. Очень мягкое свечение карточки через color-mix. */
 
 .ff-rarity-common {
-  box-shadow:
-    0 0 0 1px rgba(148, 163, 184, 0.45),
-    0 0 6px rgba(148, 163, 184, 0.15);
-  --ff-rarity-glow: rgba(148, 163, 184, 0.18);
+  --rar: #6f928a;
+  box-shadow: 0 0 0 1px rgba(111, 146, 138, 0.5);
+  --ff-rarity-glow: rgba(111, 146, 138, 0.2);
 }
 .ff-rarity-rare {
+  --rar: #5fd83a;
   box-shadow:
-    0 0 0 2px #60a5fa,
-    0 0 14px rgba(96, 165, 250, 0.42);
-  --ff-rarity-glow: rgba(96, 165, 250, 0.45);
+    0 0 0 1.5px var(--rar),
+    0 0 14px color-mix(in srgb, var(--rar) 18%, transparent);
+  --ff-rarity-glow: rgba(95, 216, 58, 0.4);
 }
 .ff-rarity-epic {
+  --rar: #b15cf0;
   box-shadow:
-    0 0 0 2px #c084fc,
-    0 0 16px rgba(192, 132, 252, 0.48);
-  --ff-rarity-glow: rgba(192, 132, 252, 0.55);
+    0 0 0 1.5px var(--rar),
+    0 0 14px color-mix(in srgb, var(--rar) 18%, transparent);
+  --ff-rarity-glow: rgba(177, 92, 240, 0.45);
 }
 .ff-rarity-legendary {
+  --rar: #ffcb4a;
   box-shadow:
-    0 0 0 2px #fbbf24,
-    0 0 18px rgba(251, 191, 36, 0.55);
-  --ff-rarity-glow: rgba(251, 191, 36, 0.65);
+    0 0 0 1.5px var(--rar),
+    0 0 14px color-mix(in srgb, var(--rar) 18%, transparent);
+  --ff-rarity-glow: rgba(255, 203, 74, 0.5);
   animation: ff-legendary-pulse 2.4s ease-in-out infinite;
 }
 @keyframes ff-legendary-pulse {
   0%,
   100% {
     box-shadow:
-      0 0 0 2px #fbbf24,
-      0 0 14px rgba(251, 191, 36, 0.5);
+      0 0 0 1.5px #ffcb4a,
+      0 0 12px color-mix(in srgb, #ffcb4a 18%, transparent);
   }
   50% {
     box-shadow:
-      0 0 0 2px #fde047,
-      0 0 24px rgba(251, 191, 36, 0.78);
+      0 0 0 1.5px #ffe082,
+      0 0 22px color-mix(in srgb, #ffcb4a 32%, transparent);
   }
 }
 
-/* Иконочный glow — radial backdrop через ::before. Применяется на
-   div-обёртку TintedFrog внутри карточки. Inline background-gradient
-   обёртки не страдает (мы лежим в pseudo). */
+/* Иконочный glow — radial backdrop через ::before на обёртке иконки. */
 .ff-rarity-icon {
   position: relative;
 }
@@ -154,4 +184,26 @@ body.modal-open .ship-follow-btn {
     transparent 65%
   );
   border-radius: 50%;
+}
+
+/* ────────── PROGRESS BARS внутри модалок ──────────
+   Подложка — тёмная, заливка — зелёный gradient. */
+.ff-progress-track {
+  background: rgba(7, 13, 17, 0.7);
+  border: 1px solid var(--ff-line);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.ff-progress-fill {
+  background: linear-gradient(
+    180deg,
+    var(--ff-neon-green-soft) 0%,
+    var(--ff-neon-green) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 0 8px rgba(95, 216, 58, 0.4);
+}
+.ff-progress-fill.waiting {
+  background: linear-gradient(180deg, #fca5a5 0%, #dc2626 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
