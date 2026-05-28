@@ -2,8 +2,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useClanStore } from '../../store/clan/slice'
 import { useClanPolling } from '../../hooks/useClanPolling'
-import { fetchClanMe } from '../../api/clan'
-import type { ClanSnapshot } from '../../api/clan'
 import { NoClanView } from './NoClanView'
 import { InClanView } from './InClanView'
 import { useModalLock } from '../../utils/modalLock'
@@ -11,13 +9,10 @@ import { useModalLock } from '../../utils/modalLock'
 export function StarUnionsModal({ onClose }: { onClose: () => void }) {
   useModalLock()
   const snapshot = useClanStore((s) => s.snapshot)
-  const setSnapshot = useClanStore((s) => s.setSnapshot)
-  const setCooldown = useClanStore((s) => s.setCooldown)
+  const fetchClanMeAction = useClanStore((s) => s.fetchClanMe)
   const [closing, setClosing] = useState(false)
-  // 2026-05-28: показываем loading пока first fetchClanMe не вернулся —
-  // иначе на первом открытии в сессии (snapshot=null) мелькает NoClanView
-  // даже у тех кто в клане. Если snapshot уже есть из прошлого открытия,
-  // сразу считаем готово.
+  // Показываем loading только если store пустой (preload ещё не успел).
+  // Если snapshot уже есть — рендерим сразу, refresh идёт в фоне без блокировки UI.
   const [initialFetchDone, setInitialFetchDone] = useState(snapshot !== null)
 
   const handleClose = useCallback(() => {
@@ -27,25 +22,10 @@ export function StarUnionsModal({ onClose }: { onClose: () => void }) {
   }, [closing, onClose])
 
   useEffect(() => {
-    fetchClanMe()
-      .then((r) => {
-        if (r.clan) {
-          setSnapshot({
-            clan: r.clan,
-            me: r.me!,
-            members: r.members!,
-            messages: r.messages!,
-            requests: r.requests!,
-            pin: r.pin ?? null,
-          } as ClanSnapshot)
-        } else {
-          setSnapshot(null)
-        }
-        setCooldown(r.cooldownUntil)
-      })
+    fetchClanMeAction()
       .catch(console.error)
       .finally(() => setInitialFetchDone(true))
-  }, [setSnapshot, setCooldown])
+  }, [fetchClanMeAction])
 
   useClanPolling(!!snapshot)
 

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { ClanSnapshot, ClanListItem } from '../../api/clan'
+import { fetchClanMe } from '../../api/clan'
 
 export interface ClanState {
   snapshot: ClanSnapshot | null
@@ -15,6 +16,7 @@ export interface ClanState {
   setListQuery(search: string, page: number): void
   setLoading(v: boolean): void
   reset(): void
+  fetchClanMe(): Promise<void>
 }
 
 export const useClanStore = create<ClanState>((set) => ({
@@ -41,4 +43,27 @@ export const useClanStore = create<ClanState>((set) => ({
       listPage: 0,
       isLoading: false,
     }),
+
+  fetchClanMe: async () => {
+    try {
+      const r = await fetchClanMe()
+      if (r.clan) {
+        set({
+          snapshot: {
+            clan: r.clan,
+            me: r.me!,
+            members: r.members!,
+            messages: r.messages!,
+            requests: r.requests!,
+            pin: r.pin ?? null,
+          } as ClanSnapshot,
+          cooldownUntil: r.cooldownUntil,
+        })
+      } else {
+        set({ snapshot: null, cooldownUntil: r.cooldownUntil })
+      }
+    } catch (e) {
+      console.error('[clan] fetchClanMe failed', e)
+    }
+  },
 }))

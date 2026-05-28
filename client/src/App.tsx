@@ -51,6 +51,8 @@ import { pingHealth } from './api/client'
 import { ensureLogin } from './api/auth'
 import { loadGameState, startSync, stopSync } from './api/gameSync'
 import { startGame } from './game/index'
+import { useClanStore } from './store/clan/slice'
+import { useShipsStore } from './store/ships/slice'
 
 const queryClient = new QueryClient()
 
@@ -137,6 +139,12 @@ function App() {
 
       // 5. Start auto-sync subscribers
       startSync()
+
+      // 6. Background preload clan + ships — не блокируем boot, fire-and-forget
+      void Promise.allSettled([
+        useClanStore.getState().fetchClanMe(),
+        useShipsStore.getState().fetchShips(),
+      ])
     }
 
     boot()

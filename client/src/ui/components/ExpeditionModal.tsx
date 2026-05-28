@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { createPortal } from 'react-dom'
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso'
 import { useGameStore } from '../../store/gameStore'
+import { useShipsStore } from '../../store/ships/slice'
 import { eventBus } from '../../store/eventBus'
 import { useModalLock } from '../../utils/modalLock'
 import { fmt } from '../../utils/formatting'
@@ -245,10 +246,14 @@ function ShipInventory({ loot }: { loot: ExpeditionView['loot'] }) {
 export function ExpeditionModal({ onClose }: Props) {
   useModalLock()
   const [closing, setClosing] = useState(false)
-  const [ships, setShips] = useState<ShipView[]>([])
+  const storedShips = useShipsStore((s) => s.ships)
+  const [ships, setShips] = useState<ShipView[]>(storedShips ?? [])
   const [exps, setExps] = useState<ExpeditionView[]>([])
-  const [selectedShipId, setSelectedShipId] = useState<number | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [selectedShipId, setSelectedShipId] = useState<number | null>(
+    storedShips && storedShips.length > 0 ? storedShips[0].id : null,
+  )
+  // loading только если store пуст — иначе сразу рендерим stale данные
+  const [loading, setLoading] = useState(storedShips === null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [claimMsg, setClaimMsg] = useState<string | null>(null)
@@ -294,6 +299,7 @@ export function ExpeditionModal({ onClose }: Props) {
         getActiveExpeditions(),
       ])
       setShips(shipsRes.ships)
+      useShipsStore.getState().setShips(shipsRes.ships)
       setExps(expsRes.expeditions)
       setSelectedShipId((prev) =>
         prev && shipsRes.ships.some((s) => s.id === prev)
@@ -310,7 +316,8 @@ export function ExpeditionModal({ onClose }: Props) {
 
   useEffect(() => {
     void refresh()
-  }, [refresh])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Poll + tick while any ship is in motion.
   useEffect(() => {
