@@ -172,18 +172,18 @@ export function LocationStack() {
           position: 'fixed',
           top: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad) + 8px)',
           right: 8,
-          left: 'auto',
           zIndex: 50,
           pointerEvents: 'none',
-          display: 'inline-flex',
+          display: 'flex',
           flexDirection: 'column',
           alignItems: 'flex-end',
           gap: 4,
-          // Чёрный фон-обёртка вокруг кнопок локаций. height auto по контенту.
+          // Чёрный фон-обёртка вокруг кнопок локаций.
+          width: 'max-content',
+          height: 'max-content',
           background: '#000',
           padding: '8px 10px',
           borderRadius: 16,
-          height: 'fit-content',
         }}
       >
         {!collapsed ? (
