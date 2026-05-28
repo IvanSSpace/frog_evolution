@@ -134,7 +134,7 @@ function App() {
       // Расчёт: offlineMs с сервера / dropInterval = сколько боксов «должно было» упасть.
       // Реальное распределение по полю делает MainScene через pendingBoxCount —
       // с учётом ENTITY_CAP / MAX_PENDING_BOXES.
-      // Tractor offline income теперь server-authoritative — см. gameSync.ts.
+      // Goo Collector offline income теперь server-authoritative — см. gameSync.ts.
 
       // 5. Start auto-sync subscribers
       startSync()

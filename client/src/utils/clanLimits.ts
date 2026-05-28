@@ -3,7 +3,7 @@ import { useGameStore } from '../store/gameStore'
 export const ESSENCE_REQUEST_CAP = 1
 export const SERUM_REQUEST_CAP = 2
 
-/** 2 часа дохода трактора игрока, в slime (number). */
+/** 2 часа дохода дрона сборщика игрока, в slime (number). */
 export function getSlimeCap(): number {
   const incomePerSec = useGameStore.getState().incomePerSec ?? 0
   const raw = incomePerSec * 7200

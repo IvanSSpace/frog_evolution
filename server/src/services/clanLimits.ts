@@ -1,6 +1,6 @@
 import { prisma } from '../prisma'
 
-/** 2 часа дохода трактора игрока, в slime (BigInt). */
+/** 2 часа дохода дрона сборщика игрока, в slime (BigInt). */
 export async function slimeRequestCap(userId: number): Promise<bigint> {
   const gs = await prisma.gameState.findUnique({
     where: { userId },

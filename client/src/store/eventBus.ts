@@ -108,7 +108,7 @@ type Events = {
   'box:offline-pending': { count: number }
   // Тап по боксу на поле (раз на жест, не per-box) → лёгкий boxPop sfx.
   'box:tapOpened': Record<string, never>
-  // Server-authoritative tractor offline income (boot-time).
+  // Server-authoritative goo collector offline income (boot-time).
   'server:welcome-back': { earned: number; durationMs: number }
   // Gallery — open detail panel for a specific archetype/rarity (UI-only, legacy rarity)
   'gallery:open-detail': { archetype: Element; rarity: LegacyRarity }
