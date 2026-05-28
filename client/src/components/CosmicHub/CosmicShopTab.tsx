@@ -15,11 +15,15 @@ import {
   type ShopItemId,
 } from '../../config/cosmicShop'
 
-const PURPLE_ICON_BG = 'linear-gradient(180deg, #ede9fe 0%, #c4b5fd 100%)'
-const PURPLE_BORDER = '#6d28d9'
-const PURPLE_TITLE = '#581c87'
-const PURPLE_TEXT = '#6b21a8'
-const PURPLE_DIM = '#7c3aed'
+// 2026-05-28: палитра адаптирована под тёмную тему — светлые/яркие
+// purples, читаемые на чёрном фоне (раньше #581c87/#6b21a8 — тёмные,
+// сливались с панелью).
+const PURPLE_ICON_BG =
+  'linear-gradient(180deg, rgba(60,30,90,0.85) 0%, rgba(30,15,50,0.9) 100%)'
+const PURPLE_BORDER = 'rgba(177, 92, 240, 0.55)'
+const PURPLE_TITLE = '#d8b4fe'
+const PURPLE_TEXT = '#c4b5fd'
+const PURPLE_DIM = '#b15cf0'
 
 const ITEM_ICON: Record<ShopItemId, string> = {
   cosmic_box: '📦',
