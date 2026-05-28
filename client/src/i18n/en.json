@@ -68,8 +68,8 @@
     "drop_speed": {
       "name": "Drop Speed"
     },
-    "tractor": {
-      "name": "Tractor",
+    "gooCollector": {
+      "name": "Goo Collector",
       "not_bought": "not purchased",
       "offline": "{{hours}} h offline"
     },
@@ -94,7 +94,7 @@
   },
   "welcome_back": {
     "title": "WELCOME BACK!",
-    "worked": "Tractor worked {{hours}} h",
+    "worked": "Goo Collector worked {{hours}} h",
     "claim": "CLAIM"
   },
   "magnet": {
@@ -1005,7 +1005,7 @@
       "mini_hint": "Reach L18 to unlock the full bonus (×10)",
       "close": "Close",
       "gold": "gold",
-      "tractorGold": "tractor gold",
+      "tractorGold": "goo collector gold",
       "boxSpeed": "box speed",
       "offlineCap": "offline cap",
       "serumDrop": "serum drop",

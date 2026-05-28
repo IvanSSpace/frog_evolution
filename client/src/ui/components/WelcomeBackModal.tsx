@@ -34,13 +34,12 @@ export function WelcomeBackModal({ earned, hours, onClose }: Props) {
       >
         <div className="flex flex-col items-center px-6 py-6 text-center">
           <div
-            className="text-7xl"
             style={{
               filter: 'drop-shadow(0 6px 0 rgba(0,0,0,0.25))',
               animation: 'discFloat 2.2s ease-in-out infinite',
             }}
           >
-            🚜
+            <img src="/goo_collector.png" alt="" style={{ width: 72, height: 72, objectFit: 'contain' }} />
           </div>
 
           <h2

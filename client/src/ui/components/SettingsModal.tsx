@@ -680,7 +680,7 @@ function MechanicsTab() {
       <MechanicsSection title="🪙 Доход">
         <MechanicsItem name="Мерджи" desc="соединяй одинаковых лягушек → уровень выше → больше дохода. Основа игры." />
         <MechanicsItem name="Эволюция" desc="прокачка лягушки за слизь + эссенцию + мутаген. Даёт % бонус к доходу." />
-        <MechanicsItem name="Магнит / Трактор" desc="авто-сбор слизи с поля." />
+        <MechanicsItem name="Магнит / Дрон сборщик" desc="авто-сбор слизи с поля." />
         <MechanicsItem name="Оффлайн-доход" desc="копится слизь пока тебя нет, начисляется при возврате." />
       </MechanicsSection>
 

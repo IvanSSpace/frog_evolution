@@ -76,7 +76,7 @@ export function CreateRequestDialog({ clanId, onClose, onCreated }: Props) {
 
     if (type === 'SLIME') {
       if (slimeCap === 0) {
-        setError('Нет дохода слизи — нужен трактор')
+        setError('Нет дохода слизи — нужен дрон сборщик')
         return
       }
       if (slimePreset === null || slimeAmount < 1) {
@@ -251,7 +251,7 @@ export function CreateRequestDialog({ clanId, onClose, onCreated }: Props) {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs" style={{ color: '#7a5a2f' }}>Количество</span>
                     {slimeCap === 0 ? (
-                      <span className="text-xs" style={{ color: '#92400e' }}>Нужен трактор-доход</span>
+                      <span className="text-xs" style={{ color: '#92400e' }}>Нужен доход дрона сборщика</span>
                     ) : (
                       <span className="text-xs" style={{ color: '#7a5a2f' }}>
                         Макс: {slimeCap.toLocaleString()}

@@ -154,7 +154,7 @@ function UpgradesCards() {
       <MagnetCard upgradeKey="magnet2" titleSuffix="Лес" />
       <MagnetCard upgradeKey="magnet3" titleSuffix="Континент" />
       <RareBoxSpeedCard />
-      <TractorCard />
+      <GooCollectorCard />
     </div>
   )
 }
@@ -348,26 +348,37 @@ function DropSpeedCard() {
   )
 }
 
-function TractorCard() {
+function GooCollectorCard() {
   const { t } = useTranslation()
-  const level = useGameStore((s) => s.upgrades.tractor)
+  const level = useGameStore((s) => s.upgrades.gooCollector)
   const gold = useGameStore((s) => s.gold)
   const buyUpgrade = useGameStore((s) => s.buyUpgrade)
-  const cfg = UPGRADE_CONFIG.tractor
+  const cfg = UPGRADE_CONFIG.gooCollector
   const isMax = level >= cfg.maxLevel
-  const cost = isMax ? 0 : getUpgradeCost('tractor', level)
+  const cost = isMax ? 0 : getUpgradeCost('gooCollector', level)
   const canAfford = gold >= cost
   const hours = cfg.capHours[level]
   const nextHours = isMax ? hours : cfg.capHours[level + 1]
   const cur =
     level === 0
-      ? t('shop.tractor.not_bought')
-      : t('shop.tractor.offline', { hours })
+      ? t('shop.gooCollector.not_bought')
+      : t('shop.gooCollector.offline', { hours })
   const next = isMax ? '' : `${nextHours}h`
   return (
     <UpgradeCard
-      icon="🚜"
-      title={t('shop.tractor.name')}
+      icon={
+        <img
+          src="/goo_collector.png"
+          alt=""
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
+          }}
+        />
+      }
+      title={t('shop.gooCollector.name')}
       effect={isMax ? cur : `${cur} → ${next}`}
       level={level}
       maxLevel={cfg.maxLevel}
@@ -375,7 +386,7 @@ function TractorCard() {
       isMax={isMax}
       canAfford={canAfford}
       onBuy={() =>
-        void buyUpgrade('tractor').then((ok) =>
+        void buyUpgrade('gooCollector').then((ok) =>
           hapticNotification(ok ? 'success' : 'error'),
         )
       }

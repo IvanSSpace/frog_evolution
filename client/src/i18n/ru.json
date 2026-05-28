@@ -68,8 +68,8 @@
     "drop_speed": {
       "name": "Скорость дропа"
     },
-    "tractor": {
-      "name": "Трактор",
+    "gooCollector": {
+      "name": "Дрон сборщик",
       "not_bought": "не куплен",
       "offline": "{{hours}} ч офлайн"
     },
@@ -94,7 +94,7 @@
   },
   "welcome_back": {
     "title": "С ВОЗВРАЩЕНИЕМ!",
-    "worked": "Трактор работал {{hours}} ч",
+    "worked": "Дрон сборщик работал {{hours}} ч",
     "claim": "ЗАБРАТЬ"
   },
   "magnet": {
@@ -1005,7 +1005,7 @@
       "mini_hint": "Доведи carrier до L18 чтобы бонус раскрылся полностью (×10)",
       "close": "Закрыть",
       "gold": "к слизи",
-      "tractorGold": "к трактору",
+      "tractorGold": "к дрону сборщику",
       "boxSpeed": "к скорости боксов",
       "offlineCap": "к offline-капу",
       "serumDrop": "к дропу серума",

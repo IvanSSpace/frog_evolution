@@ -68,8 +68,8 @@
     "drop_speed": {
       "name": "Velocidad de caída"
     },
-    "tractor": {
-      "name": "Tractor",
+    "gooCollector": {
+      "name": "Recolector",
       "not_bought": "no comprado",
       "offline": "{{hours}} h sin conexión"
     },
@@ -94,7 +94,7 @@
   },
   "welcome_back": {
     "title": "¡BIENVENIDO!",
-    "worked": "El tractor trabajó {{hours}} h",
+    "worked": "El recolector trabajó {{hours}} h",
     "claim": "RECLAMAR"
   },
   "magnet": {
@@ -1005,7 +1005,7 @@
       "mini_hint": "Llega a L18 para revelar el bono completo (×10)",
       "close": "Cerrar",
       "gold": "oro",
-      "tractorGold": "oro tractor",
+      "tractorGold": "oro recolector",
       "boxSpeed": "velocidad cajas",
       "offlineCap": "límite offline",
       "serumDrop": "drop suero",
