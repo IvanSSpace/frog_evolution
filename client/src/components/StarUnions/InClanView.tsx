@@ -242,8 +242,8 @@ export function InClanView() {
         <CreateRequestDialog
           clanId={snapshot.clan.id}
           onClose={() => setCreateRequestOpen(false)}
-          onCreated={(req) => {
-            setSnapshot({ ...snapshot, requests: [...snapshot.requests, req] })
+          onCreated={(reqs) => {
+            setSnapshot({ ...snapshot, requests: [...snapshot.requests, ...reqs] })
             setCreateRequestOpen(false)
           }}
         />
