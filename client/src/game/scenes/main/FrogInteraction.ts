@@ -77,6 +77,10 @@ export class FrogInteraction {
       this.unsubSerum()
       this.unsubSerum = null
     }
+    // Прошлая активная стихия — чтобы НЕ перезапускать show() на каждый
+    // store-tick (доход капает каждую секунду → gold меняется). Иначе flash
+    // пересоздаётся и tween сбрасывается на alpha 0 → подсветку не видно.
+    let prevSelectedEl: string | null = null
     this.unsubSerum = useGameStore.subscribe((state) => {
       const active = state.serumDragActive
       const dragChanged = active !== scene.cachedSerumDragActive
@@ -86,8 +90,13 @@ export class FrogInteraction {
         const sel = state.selectedSerum
         if (!sel) {
           scene.selectionLayer?.hide()
+          prevSelectedEl = null
           return
         }
+        // Re-show только если drag только что включился ИЛИ сменилась стихия —
+        // иначе оставляем уже играющую подсветку (не дёргаем на каждый тик).
+        if (!dragChanged && sel.element === prevSelectedEl) return
+        prevSelectedEl = sel.element
         // Phase 22: eligible = any non-carrier frog (any level)
         const eligible = scene.frogs.filter((f) =>
           isEligible({ id: f.id, level: f.level }, state.carriers),
@@ -104,6 +113,7 @@ export class FrogInteraction {
         // Just deactivated — hide halos.
         scene.selectionLayer?.hide()
         scene.lastHaptiHover = false
+        prevSelectedEl = null
       }
     })
   }
