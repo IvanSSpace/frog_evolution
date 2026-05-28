@@ -1,16 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso'
-import { useGameStore } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
 import { useModalLock } from '../../utils/modalLock'
+import { setPhaserInputEnabled } from '../../game'
 import { fmt } from '../../utils/formatting'
 import { ELEMENTS, type Element } from '../../store/cosmic/types'
 import {
   ELEMENT_TINT,
   ELEMENT_BOTTLE_FILTER,
 } from '../../components/CosmicHub/ElementGrid'
-import { getFrogPath } from '../../game/config/frogs'
 import {
   getActiveExpeditions,
   recallExpedition,
@@ -243,32 +242,50 @@ export function ExpeditionModal({ onClose }: Props) {
   const prevLenRef = useRef(0)
   const prevShipRef = useRef<number | null>(null)
 
-  // Снаряжение экипажа (React-блок в idle-ангаре): лягушки + анимация запуска.
-  const locationFrogs = useGameStore((s) => s.locationFrogs)
-  const carriers = useGameStore((s) => s.carriers)
-  const [selectedCrew, setSelectedCrew] = useState<Set<number>>(new Set())
-  const [launchPhase, setLaunchPhase] = useState<
-    'idle' | 'boarding' | 'shaking' | 'liftoff'
-  >('idle')
-  const [launchKind, setLaunchKind] = useState<'mission' | 'cosmos' | null>(null)
-
-  // Сброс выбора при смене корабля.
-  useEffect(() => {
-    setSelectedCrew(new Set())
-    setLaunchPhase('idle')
-    setLaunchKind(null)
-  }, [selectedShipId])
-
   const selectedShip = ships.find((s) => s.id === selectedShipId) ?? null
   const activeExp = selectedShip?.activeExpeditionId
     ? (exps.find((e) => e.id === selectedShip.activeExpeditionId) ?? null)
     : null
+  // Idle = выбранный корабль в ангаре (не в полёте). В этом режиме React-панель
+  // сворачивается до шапки, остальное — Phaser ShipDeck снизу.
+  const idleMode = !loading && !!selectedShip && !activeExp
 
-  const handleClose = useCallback(() => {
-    if (closing) return
-    setClosing(true)
-    window.setTimeout(onClose, 280)
-  }, [closing, onClose])
+  // useModalLock выключает Phaser input (setPhaserInputEnabled(false)) → лягушки
+  // в Phaser ShipDeck под модалкой не кликаются. Перебиваем: в idle-режиме
+  // принудительно включаем обратно. На unmount modalLock release сам выставит true.
+  useEffect(() => {
+    if (idleMode) setPhaserInputEnabled(true)
+  }, [idleMode])
+
+  const closingRef = useRef(false)
+  const handleClose = useCallback(
+    (emitCancel = true) => {
+      if (closingRef.current) return
+      closingRef.current = true
+      // Закрываем Phaser ShipDeck (открыт под модалкой) — только если закрываемся
+      // не в ответ на его собственное событие, иначе зацикливание.
+      if (emitCancel) eventBus.emit('shipdeck:cancel', {})
+      setClosing(true)
+      window.setTimeout(onClose, 280)
+    },
+    [onClose],
+  )
+
+  // Phaser ✕ / launch / mission-start — закрывают ShipDeck. Синхронизируем
+  // закрытие React-модалки (без повторного emit cancel).
+  useEffect(() => {
+    const onCancel = () => handleClose(false)
+    const onLaunch = () => handleClose(false)
+    const onSurvivorStart = () => handleClose(false)
+    eventBus.on('shipdeck:cancel', onCancel)
+    eventBus.on('shipdeck:launch', onLaunch)
+    eventBus.on('survivor:start', onSurvivorStart)
+    return () => {
+      eventBus.off('shipdeck:cancel', onCancel)
+      eventBus.off('shipdeck:launch', onLaunch)
+      eventBus.off('survivor:start', onSurvivorStart)
+    }
+  }, [handleClose])
 
   const refresh = useCallback(async () => {
     try {
@@ -317,6 +334,28 @@ export function ExpeditionModal({ onClose }: Props) {
     }
   }, [activeExp, nowTs, refresh])
 
+  // Эмитим shipdeck:open без закрытия React-модалки — Phaser ShipDeck виден
+  // под модалкой (шапка с табами сверху, Phaser снизу).
+  const emitShipDeck = (ship: ShipView) => {
+    const minL = (ship.id - 1) * 6 + 1
+    const maxL = ship.id * 6
+    eventBus.emit('shipdeck:open', {
+      shipId: ship.id,
+      location: ship.id,
+      minL,
+      maxL,
+      demo: DEMO_TEMPO,
+    })
+  }
+
+  // Авто-открытие ShipDeck при mount + при смене выбранного корабля (если он
+  // в ангаре, не в полёте).
+  useEffect(() => {
+    if (loading || !selectedShip) return
+    if (selectedShip.activeExpeditionId) return
+    emitShipDeck(selectedShip)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, selectedShipId])
 
   // Оптимистично: мгновенно меняем фазу локально, сервер подтверждает/откат.
   const onRecall = () => {
@@ -469,10 +508,14 @@ export function ExpeditionModal({ onClose }: Props) {
         position: 'fixed',
         inset: 0,
         zIndex: 150,
-        pointerEvents: 'auto',
+        // В idle-режиме (Phaser ShipDeck виден под модалкой) overlay пропускает
+        // события → тапы по лягушкам/кнопкам Phaser-сцены работают. Только
+        // header панель ловит тапы (pointerEvents:'auto' на ней).
+        pointerEvents: idleMode ? 'none' : 'auto',
         background: 'transparent',
       }}
       onClick={(e) => {
+        if (idleMode) return
         if (e.target === e.currentTarget) handleClose()
       }}
     >
@@ -492,12 +535,18 @@ export function ExpeditionModal({ onClose }: Props) {
           className={closing ? 'ff-slide-up' : 'ff-slide-down'}
           style={{
             position: 'absolute',
-            inset: 0,
+            // В idle-режиме (selected ship в ангаре) панель = только шапка
+            // сверху, снизу прозрачно — виден Phaser ShipDeck.
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: idleMode ? 'auto' : 0,
             pointerEvents: 'auto',
             display: 'flex',
             flexDirection: 'column',
             background: 'linear-gradient(180deg, #f5fbe9 0%, #d9eeb6 100%)',
             border: '4px solid #4d6b1f',
+            borderBottom: idleMode ? '4px solid #4d6b1f' : '4px solid #4d6b1f',
             boxShadow: '0 0 0 3px #f7ffe0 inset',
           }}
         >
@@ -539,7 +588,7 @@ export function ExpeditionModal({ onClose }: Props) {
             </div>
             <button
               type="button"
-              onClick={handleClose}
+              onClick={() => handleClose()}
               aria-label="Закрыть"
               className="ff-tile w-10 h-10 text-xl flex-shrink-0"
               style={{
@@ -584,22 +633,8 @@ export function ExpeditionModal({ onClose }: Props) {
               </div>
             )}
 
-            {/* Idle ангар — React-блок: корабль + лягушки + запуск (с анимацией). */}
-            {!loading && selectedShip && !activeExp && (
-              <ShipDeckBlock
-                ship={selectedShip}
-                locationFrogs={locationFrogs}
-                carriers={carriers}
-                selectedCrew={selectedCrew}
-                setSelectedCrew={setSelectedCrew}
-                launchPhase={launchPhase}
-                setLaunchPhase={setLaunchPhase}
-                launchKind={launchKind}
-                setLaunchKind={setLaunchKind}
-                onClose={handleClose}
-                busy={busy}
-              />
-            )}
+            {/* Idle режим — body не рендерим: Phaser ShipDeck виден под модалкой
+                (через прозрачный низ панели). Phaser owns корабль + лягушки + ✕ + запуск. */}
 
             {/* Flying ship → expedition view */}
             {!loading && selectedShip && activeExp && (
@@ -787,261 +822,5 @@ export function ExpeditionModal({ onClose }: Props) {
 
     </>,
     document.body,
-  )
-}
-
-// ─── Снаряжение экипажа: корабль + сетка лягушек + анимация запуска ─────────
-
-interface ShipDeckBlockProps {
-  ship: ShipView
-  locationFrogs: number[][]
-  carriers: ReadonlyArray<{ frogId: string; element: Element; level: number }>
-  selectedCrew: Set<number>
-  setSelectedCrew: (next: Set<number>) => void
-  launchPhase: 'idle' | 'boarding' | 'shaking' | 'liftoff'
-  setLaunchPhase: (p: 'idle' | 'boarding' | 'shaking' | 'liftoff') => void
-  launchKind: 'mission' | 'cosmos' | null
-  setLaunchKind: (k: 'mission' | 'cosmos' | null) => void
-  onClose: () => void
-  busy: boolean
-}
-
-const MAX_CREW = 6
-
-function ShipDeckBlock(props: ShipDeckBlockProps) {
-  const {
-    ship,
-    locationFrogs,
-    carriers,
-    selectedCrew,
-    setSelectedCrew,
-    launchPhase,
-    setLaunchPhase,
-    launchKind,
-    setLaunchKind,
-    onClose,
-    busy,
-  } = props
-
-  // Лягушки текущего корабля + jitter раскладки (стабильный per-frog seed).
-  const frogList = useMemo(() => {
-    const minL = (ship.id - 1) * 6 + 1
-    const maxL = ship.id * 6
-    const all = locationFrogs[ship.id - 1] ?? []
-    const poolByLevel = new Map<number, Element[]>()
-    for (const c of carriers) {
-      const lvl = c.level ?? 1
-      if (lvl < minL || lvl > maxL) continue
-      const arr = poolByLevel.get(lvl) ?? []
-      arr.push(c.element)
-      poolByLevel.set(lvl, arr)
-    }
-    return all
-      .filter((lvl) => lvl >= minL && lvl <= maxL)
-      .map((lvl, i) => {
-        const pool = poolByLevel.get(lvl)
-        const element = pool && pool.length ? pool.shift() : undefined
-        // Псевдо-рандом jitter (детерминирован per-index).
-        const h = Math.sin(i * 1.7) * 43758.5
-        const jx = ((h - Math.floor(h)) - 0.5) * 14
-        const jy = ((Math.sin(i * 3.3 + 1) * 43758.5 - Math.floor(Math.sin(i * 3.3 + 1) * 43758.5)) - 0.5) * 10
-        return { level: lvl, element, jx, jy }
-      })
-  }, [ship.id, locationFrogs, carriers])
-
-  // Refs на DOM лягушек и корабль — для анимации «запрыгивания».
-  const shipRef = useRef<HTMLDivElement>(null)
-  const frogRefs = useRef<Map<number, HTMLDivElement>>(new Map())
-
-  const canLaunch = selectedCrew.size >= 1 && launchPhase === 'idle' && !busy
-
-  const toggle = (idx: number) => {
-    if (launchPhase !== 'idle') return
-    const next = new Set(selectedCrew)
-    if (next.has(idx)) next.delete(idx)
-    else if (next.size < MAX_CREW) next.add(idx)
-    setSelectedCrew(next)
-  }
-
-  const startLaunch = (kind: 'mission' | 'cosmos') => {
-    if (!canLaunch) return
-    setLaunchKind(kind)
-    setLaunchPhase('boarding')
-  }
-
-  // Анимация запуска: boarding (350мс на лягушку с интервалом) → shake (360мс) → liftoff (750мс).
-  useEffect(() => {
-    if (launchPhase !== 'boarding') return
-    const ids = [...selectedCrew]
-    const totalBoardMs = ids.length * 160 + 350
-    const t = window.setTimeout(() => setLaunchPhase('shaking'), totalBoardMs)
-    return () => window.clearTimeout(t)
-  }, [launchPhase, selectedCrew])
-
-  useEffect(() => {
-    if (launchPhase !== 'shaking') return
-    const t = window.setTimeout(() => setLaunchPhase('liftoff'), 360)
-    return () => window.clearTimeout(t)
-  }, [launchPhase, setLaunchPhase])
-
-  useEffect(() => {
-    if (launchPhase !== 'liftoff') return
-    const t = window.setTimeout(() => {
-      // Эмитим событие запуска и закрываем модалку.
-      const crew = [...selectedCrew].map((i) => frogList[i].level)
-      if (launchKind === 'mission') {
-        eventBus.emit('survivor:choose-mission', { crew, shipId: ship.id })
-      } else if (launchKind === 'cosmos') {
-        eventBus.emit('shipdeck:launch', { shipId: ship.id, crew, demo: DEMO_TEMPO })
-      }
-      onClose()
-    }, 750)
-    return () => window.clearTimeout(t)
-  }, [launchPhase, selectedCrew, launchKind, frogList, ship.id, onClose])
-
-  // Стиль корабля по фазе (тряска / взлёт).
-  const shipAnim =
-    launchPhase === 'shaking'
-      ? 'ff-ship-shake 60ms linear 6 alternate'
-      : undefined
-  const shipTransform =
-    launchPhase === 'liftoff' ? 'translateY(-120vh) scale(1.18)' : undefined
-
-  return (
-    <div
-      className="flex-1 flex flex-col gap-2 px-3 py-3 overflow-hidden"
-      style={{ position: 'relative' }}
-    >
-      <div className="flex items-center justify-between text-sm flex-shrink-0">
-        <span className="font-semibold text-[#3a5214]">
-          🛠 {ship.name} — в ангаре
-        </span>
-        <span className="text-[#5a7a2a]">❤️ {ship.maxHp} HP</span>
-      </div>
-
-      {/* Корабль в центре. */}
-      <div
-        ref={shipRef}
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          marginTop: 8,
-          transition:
-            launchPhase === 'liftoff'
-              ? 'transform 750ms cubic-bezier(.55,.06,.68,.19)'
-              : undefined,
-          transform: shipTransform,
-          animation: shipAnim,
-        }}
-      >
-        <img
-          src="/spaceShip.webp"
-          alt="ship"
-          style={{ width: 'min(40vw, 160px)', height: 'auto', pointerEvents: 'none' }}
-        />
-      </div>
-
-      <div className="text-center text-xs text-[#5a7a2a] flex-shrink-0">
-        Экипаж: {selectedCrew.size}/{MAX_CREW}
-      </div>
-
-      {/* Сетка лягушек (с jitter). Скрываем после liftoff. */}
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 8,
-          justifyContent: 'center',
-          alignContent: 'flex-start',
-          padding: 6,
-          overflow: 'hidden',
-          opacity: launchPhase === 'liftoff' ? 0 : 1,
-          transition: 'opacity 250ms',
-        }}
-      >
-        {frogList.length === 0 && (
-          <div className="text-xs text-[#5a7a2a] py-4 self-center">
-            Нет лягушек L{(ship.id - 1) * 6 + 1}–L{ship.id * 6} для этого корабля
-          </div>
-        )}
-        {frogList.map((entry, idx) => {
-          const sel = selectedCrew.has(idx)
-          const tint = entry.element ? ELEMENT_TINT[entry.element] : 'transparent'
-          // boarding: летим к кораблю. delay по порядку выбора.
-          let boardStyle: React.CSSProperties = {}
-          if (sel && launchPhase !== 'idle') {
-            const order = [...selectedCrew].indexOf(idx)
-            // Вычисляем смещение к кораблю.
-            const frogEl = frogRefs.current.get(idx)
-            const shipEl = shipRef.current
-            if (frogEl && shipEl) {
-              const fr = frogEl.getBoundingClientRect()
-              const sr = shipEl.getBoundingClientRect()
-              const dx = sr.left + sr.width / 2 - (fr.left + fr.width / 2)
-              const dy = sr.top + sr.height / 2 - (fr.top + fr.height / 2)
-              boardStyle = {
-                transform: `translate(${dx}px, ${dy}px) scale(0.1)`,
-                opacity: 0,
-                transition: `transform 320ms cubic-bezier(.55,.06,.68,.19) ${order * 160}ms, opacity 200ms ${order * 160 + 120}ms`,
-              }
-            }
-          }
-          return (
-            <div
-              key={idx}
-              ref={(el) => {
-                if (el) frogRefs.current.set(idx, el)
-                else frogRefs.current.delete(idx)
-              }}
-              onClick={() => toggle(idx)}
-              style={{
-                width: 52,
-                height: 60,
-                borderRadius: 10,
-                border: sel
-                  ? '3px solid #16a34a'
-                  : entry.element
-                    ? `3px solid ${tint}`
-                    : '2px solid rgba(77,107,31,0.4)',
-                background: entry.element ? `${tint}22` : 'rgba(255,255,255,0.4)',
-                transform: `translate(${entry.jx}px, ${entry.jy}px)${sel ? ' scale(1.05)' : ''}`,
-                transition: 'border-color .12s, transform .12s',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: launchPhase === 'idle' ? 'pointer' : 'default',
-                padding: 4,
-                ...boardStyle,
-              }}
-            >
-              <img
-                src={getFrogPath(entry.level, 0)}
-                alt={`L${entry.level}`}
-                style={{ height: 40, width: 'auto', pointerEvents: 'none' }}
-              />
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Кнопки запуска. */}
-      <div className="flex gap-2 flex-shrink-0">
-        <button
-          className={`ff-btn flex-1 py-3 text-sm ${canLaunch ? 'ff-btn-red' : 'ff-btn-grey'}`}
-          disabled={!canLaunch}
-          onClick={() => startLaunch('mission')}
-        >
-          ⚔️ На миссию
-        </button>
-        <button
-          className={`ff-btn flex-1 py-3 text-sm ${canLaunch ? 'ff-btn-green' : 'ff-btn-grey'}`}
-          disabled={!canLaunch}
-          onClick={() => startLaunch('cosmos')}
-        >
-          🚀 В космос
-        </button>
-      </div>
-    </div>
   )
 }
