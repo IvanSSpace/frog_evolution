@@ -135,9 +135,14 @@ export class FrogSpawner {
         ? Math.max(0, Math.min(2, Math.floor(tierOverride)))
         : (useGameStore.getState().frogTiers[level - 1] ?? 0)
     const body = scene.add.image(0, 0, textureKeyForLevel(level, 0))
+    // Drop-shadow: дубль body, сплошной чёрный силуэт, под body, сдвинут влево-вниз.
+    const shadow = scene.add.image(-5, 6, textureKeyForLevel(level, 0))
+    shadow.setTintFill(0x000000).setAlpha(0.4)
     if (tier > 0) {
       scene.ensureFrogTextureLoaded(level, tier, () => {
-        body.setTexture(textureKeyForLevel(level, tier))
+        const key = textureKeyForLevel(level, tier)
+        body.setTexture(key)
+        shadow.setTexture(key)
       })
     }
     body.scaleY = 1.0
@@ -146,6 +151,7 @@ export class FrogSpawner {
     body.setInteractive({ useHandCursor: true })
     scene.input.setDraggable(body)
 
+    container.add(shadow) // сначала тень — она под body в z-order
     container.add(body)
 
     const frog: FrogData = {
