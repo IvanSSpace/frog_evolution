@@ -21,10 +21,6 @@ export function Header({ onOpenIncome }: { onOpenIncome?: () => void }) {
   const { t } = useTranslation()
   const gold = useGameStore((s) => s.gold)
   const incomePerSec = useGameStore((s) => s.incomePerSec)
-  // Badge «новая лягушка в лавке» — перенесён сюда с убранного frog-shop таба.
-  const hasNewFrogShop = useGameStore((s) =>
-    s.discoveredLevels.some((l) => !s.frogShopSeenLevels.includes(l)),
-  )
   const boxProgress = useGameStore((s) => s.boxProgress)
   const boxWaiting = useGameStore((s) => s.boxWaiting)
   const boxOpenCount = useGameStore((s) => s.boxOpenCount)
@@ -116,20 +112,6 @@ export function Header({ onOpenIncome }: { onOpenIncome?: () => void }) {
               alt=""
             />
             <span className="tabular-nums text-base">{fmt(gold)}</span>
-            {hasNewFrogShop && (
-              <span
-                style={{
-                  position: 'absolute',
-                  top: -4,
-                  right: -10,
-                  width: 9,
-                  height: 9,
-                  borderRadius: 99,
-                  background: '#ef4444',
-                  boxShadow: '0 0 0 2px rgba(0,0,0,0.35)',
-                }}
-              />
-            )}
           </div>
           <div
             className="ff-display tabular-nums"

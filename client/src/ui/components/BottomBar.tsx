@@ -125,7 +125,7 @@ function Tile({
 }
 
 type BottomBarProps = {
-  onOpenShop?: () => void
+  onOpenFrogShop?: () => void
   onOpenSettings?: () => void
   onOpenCosmicHub?: () => void
   onOpenGallery?: () => void
@@ -134,7 +134,7 @@ type BottomBarProps = {
 }
 
 export function BottomBar({
-  onOpenShop,
+  onOpenFrogShop,
   onOpenSettings,
   onOpenCosmicHub,
   onOpenGallery,
@@ -149,9 +149,11 @@ export function BottomBar({
   // Phase 22 Plan 22-06: cosmos gate — 🧬 button disabled до L18+L18 sentinel.
   const cosmosUnlocked = useCosmosUnlocked()
 
-  // Badge «новый контент» на 📖. true когда есть discoveredLevel,
-  // которого ещё нет в bestiarySeenLevels. (frog-shop badge перенесён в Header —
-  // лавка лягушек теперь открывается кликом по сумме дохода.)
+  // Badge «новый контент» на 🐸 и 📖. true когда есть discoveredLevel,
+  // которого ещё нет в соответствующем seenLevels массиве.
+  const hasNewFrogShop = useGameStore((s) =>
+    s.discoveredLevels.some((l) => !s.frogShopSeenLevels.includes(l)),
+  )
   const hasNewBestiary = useGameStore((s) =>
     s.discoveredLevels.some((l) => !s.bestiarySeenLevels.includes(l)),
   )
@@ -164,11 +166,18 @@ export function BottomBar({
       className="ff-bar bottom w-full h-full flex items-center justify-between px-3 py-2"
       style={{ pointerEvents: 'auto' }}
     >
-      {/* Лавка лягушек (доход) перенесена в Header — открывается кликом по сумме. */}
+      {/* Слева — лавка лягушек. Badge = есть новый discoveredLevel, ещё не открытый в shop. */}
+      <Tile
+        icon="frog-shop"
+        skin="mint"
+        size="lg"
+        badge={hasNewFrogShop}
+        onClick={onOpenFrogShop}
+      />
 
-      {/* Центр — действия */}
+      {/* Центр — действия. Прокачка (upgrade-shop) перенесена в Header —
+          открывается кликом по сумме дохода. */}
       <div className="flex gap-2 items-center">
-        <Tile icon="upgrade-shop" skin="green" onClick={onOpenShop} />
         <Tile icon="gallery" skin="purple" onClick={onOpenGallery} />
         {/* 🎒 Инвентарь — космический лут + сыворотки + валюта. Нет иконки в
             registry → emoji-фолбэк. */}

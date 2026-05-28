@@ -386,12 +386,12 @@ function App() {
             height: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad))',
           }}
         >
-          <Header onOpenIncome={() => setFrogShopOpen(true)} />
+          <Header onOpenIncome={() => setShopOpen(true)} />
         </div>
         <div className="flex-1" />
         <div style={{ height: '13%' }}>
           <BottomBar
-            onOpenShop={() => setShopOpen(true)}
+            onOpenFrogShop={() => setFrogShopOpen(true)}
             onOpenSettings={() => setSettingsOpen(true)}
             onOpenCosmicHub={() => setCosmicHubOpen(true)}
             onOpenGallery={() => setGalleryOpen(true)}
