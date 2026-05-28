@@ -125,19 +125,19 @@ function Tile({
 }
 
 type BottomBarProps = {
+  onOpenShop?: () => void
   onOpenFrogShop?: () => void
   onOpenSettings?: () => void
   onOpenCosmicHub?: () => void
-  onOpenGallery?: () => void
   onOpenExpedition?: () => void
   onOpenInventory?: () => void
 }
 
 export function BottomBar({
+  onOpenShop,
   onOpenFrogShop,
   onOpenSettings,
   onOpenCosmicHub,
-  onOpenGallery,
   onOpenExpedition,
   onOpenInventory,
 }: BottomBarProps) {
@@ -175,10 +175,10 @@ export function BottomBar({
         onClick={onOpenFrogShop}
       />
 
-      {/* Центр — действия. Прокачка (upgrade-shop) перенесена в Header —
-          открывается кликом по сумме дохода. */}
+      {/* Центр — действия */}
       <div className="flex gap-2 items-center">
-        <Tile icon="gallery" skin="purple" onClick={onOpenGallery} />
+        <Tile icon="upgrade-shop" skin="green" onClick={onOpenShop} />
+        {/* 📊 Доходы (gallery) перенесён в Header — открывается кликом по сумме. */}
         {/* 🎒 Инвентарь — космический лут + сыворотки + валюта. Нет иконки в
             registry → emoji-фолбэк. */}
         <Tile
