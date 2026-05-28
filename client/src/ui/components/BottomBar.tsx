@@ -169,11 +169,9 @@ export function BottomBar({
       <div className="flex gap-2 items-center">
         <Tile icon="upgrade-shop" skin="green" onClick={onOpenShop} />
         {/* 📊 Доходы (gallery) перенесён в Header — открывается кликом по сумме. */}
-        {/* 🎒 Инвентарь — космический лут + сыворотки + валюта. Нет иконки в
-            registry → emoji-фолбэк. */}
+        {/* 🎒 Инвентарь — иконка-рюкзак из /footer_icons/. */}
         <Tile
-          icon="slime"
-          emoji="🎒"
+          icon="inventory"
           skin="amber"
           title="Инвентарь"
           onClick={onOpenInventory}

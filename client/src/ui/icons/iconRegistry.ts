@@ -15,6 +15,7 @@ export type IconName =
   | 'ship'
   | 'cosmic-hub'
   | 'bestiary'
+  | 'inventory'
   // Кнопки корабля
   | 'recall'
   | 'in-transit'
@@ -46,6 +47,7 @@ export const ICON_EMOJI: Record<IconName, string> = {
   ship: '🚀',
   'cosmic-hub': '🧬',
   bestiary: '📖',
+  inventory: '🎒',
   recall: '↩',
   'in-transit': '🛸',
   unload: '🛬',
@@ -65,7 +67,18 @@ export const ICON_EMOJI: Record<IconName, string> = {
   lock: '🔒',
 }
 
+// 2026-05-28: footer-иконки лежат в public/footer_icons/ как PNG.
+// Override маппит ключи на свои пути; остальные ищутся в /icons/<name>.svg.
+const FOOTER_OVERRIDE: Partial<Record<IconName, string>> = {
+  'frog-shop': '/footer_icons/icon_frog.png',
+  'upgrade-shop': '/footer_icons/icon_upgrade.png',
+  ship: '/footer_icons/icon_rocket.png',
+  'cosmic-hub': '/footer_icons/icon_shield.png',
+  bestiary: '/footer_icons/icon_book.png',
+  inventory: '/footer_icons/icon_backpack.png',
+}
+
 /** Путь к SVG/PNG-ассету иконки в public/icons/. */
 export function iconSrc(name: IconName): string {
-  return `/icons/${name}.svg`
+  return FOOTER_OVERRIDE[name] ?? `/icons/${name}.svg`
 }
