@@ -55,11 +55,11 @@ export function LocationButton({
       {isCurrent && (
         <svg
           width="22"
-          height="24"
+          height="30"
           viewBox="0 0 20 16"
           style={{
             position: 'absolute',
-            right: 3,
+            right: 0,
             top: '50%',
             transform: 'translateY(-50%)',
             filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.5))',
