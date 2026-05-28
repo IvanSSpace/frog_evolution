@@ -146,8 +146,8 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
 
   // ─── Болото (L7-12) — продолжение жёлто-оливковой палитры локации 1 ───
   {
-    path: '/frogs_svg/frog7_t0.svg',
-    name: 'Глазастик',
+    path: '/frogs_svg/frog8_t0.svg', // 2026-05-28: swap L7↔L8 модельки/имена
+    name: 'Громозека',
     size: 1.4,
     basePrice: 269_859,  /* formula: 560 × 2.8^6 */
     growthRate: 1.15,
@@ -157,8 +157,8 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
     poopChances: HUGE_CHANCES,
   },
   {
-    path: '/frogs_svg/frog8_t0.svg',
-    name: 'Громозека',
+    path: '/frogs_svg/frog7_t0.svg', // 2026-05-28: swap L7↔L8 модельки/имена
+    name: 'Глазастик',
     size: 1.6,
     basePrice: 755_604,  /* formula: 560 × 2.8^7 */
     growthRate: 1.15,
