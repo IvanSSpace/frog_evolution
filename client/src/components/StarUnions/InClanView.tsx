@@ -37,6 +37,9 @@ export function InClanView() {
       items.push({ kind: 'message', data: m, createdAt: m.createdAt })
     }
     for (const r of snapshot.requests) {
+      // 2026-05-28: передача слизи временно выключена — пропускаем SLIME-запросы.
+      // Серверная генерация остаётся, но в UI клана они не показываются.
+      if (r.type === 'SLIME') continue
       items.push({ kind: 'request', data: r, createdAt: r.createdAt })
     }
     items.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
