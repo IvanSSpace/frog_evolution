@@ -64,7 +64,7 @@ export function LocationButton({
           height: 46,
           borderRadius: '50%',
           background: `linear-gradient(180deg, ${v.from} 0%, ${v.to} 100%)`,
-          border: '1px solid ' + v.border,
+          border: '2px solid ' + v.border,
           boxShadow,
           fontSize: 22,
           lineHeight: 1,
@@ -72,15 +72,9 @@ export function LocationButton({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          // Pulse bobble (1.2s loop, infinite) перебивает isCurrent scale.
-          // Если ни pulse ни isCurrent — обычный 1.0 без анимации.
-          // transition только когда нет infinite animation — иначе мерцает.
-          transform:
-            isPulsing || isCurrent
-              ? isCurrent && !isPulsing
-                ? 'scale(1.05)'
-                : undefined
-              : 'scale(1)',
+          // 2026-05-28: isCurrent больше не увеличивается (убрали scale 1.05).
+          // Pulse bobble (1.2s loop, infinite) — только при unlock.
+          transform: isPulsing ? undefined : 'scale(1)',
           transition: isPulsing ? undefined : 'transform 120ms',
           animation: isPulsing
             ? 'onb-loc-bobble 1200ms ease-in-out infinite'
