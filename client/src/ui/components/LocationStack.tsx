@@ -213,7 +213,10 @@ export function LocationStack() {
                     filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))',
                     pointerEvents: 'none',
                     zIndex: 2,
-                    transition: 'top 300ms cubic-bezier(.4,0,.2,1)',
+                    // Быстрая ease-out: при дальнем переходе стрелка визуально
+                    // ускоряется (та же длительность на бОльшую дистанцию) и
+                    // прилетает раньше, чем locationTransition завершится.
+                    transition: 'top 220ms cubic-bezier(.2,.85,.25,1)',
                   }}
                 >
                   <path
