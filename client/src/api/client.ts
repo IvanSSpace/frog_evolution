@@ -18,14 +18,14 @@ export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY)
 }
 
-async function doFetch(
-  path: string,
-  options: RequestInit,
-): Promise<Response> {
+async function doFetch(path: string, options: RequestInit): Promise<Response> {
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...((options.headers as Record<string, string> | undefined) ?? {}),
   }
+  // Content-Type только когда реально шлём body — иначе Fastify ругается
+  // «Body cannot be empty when content-type is set to 'application/json'»
+  // на POST без тела (например /clan/:id/join).
+  if (options.body) headers['Content-Type'] = 'application/json'
   const token = getToken()
   if (token) headers.Authorization = `Bearer ${token}`
   return fetch(`${API_URL}${path}`, { ...options, headers })
