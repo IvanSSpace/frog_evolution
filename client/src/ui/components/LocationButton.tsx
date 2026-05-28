@@ -104,9 +104,23 @@ export function LocationButton({
             : undefined,
         }}
       >
-        <span style={{ filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))' }}>
-          {v.emoji}
-        </span>
+        {loc.id === 6 ? (
+          <img
+            src="/locations/galaxyIcon4.png"
+            alt=""
+            style={{
+              width: 30,
+              height: 30,
+              objectFit: 'contain',
+              pointerEvents: 'none',
+              filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
+            }}
+          />
+        ) : (
+          <span style={{ filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))' }}>
+            {v.emoji}
+          </span>
+        )}
       </button>
     </div>
   )
