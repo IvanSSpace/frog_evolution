@@ -592,7 +592,15 @@ export function ExpeditionModal({ onClose }: Props) {
                   return (
                     <button
                       key={s.id}
-                      onClick={() => setSelectedShipId(s.id)}
+                      onClick={() => {
+                        // Первый тап — выбрать (показать ангар). Повторный тап по
+                        // выбранному кораблю-в-ангаре → сразу снаряжение экипажа.
+                        if (s.id !== selectedShipId) {
+                          setSelectedShipId(s.id)
+                          return
+                        }
+                        if (!s.activeExpeditionId && !busy) openDeck(s)
+                      }}
                       className={`ff-btn text-xs py-2 px-3 flex-shrink-0 ${
                         s.id === selectedShipId ? 'ff-btn-green' : 'ff-btn-grey'
                       }`}
@@ -674,13 +682,11 @@ export function ExpeditionModal({ onClose }: Props) {
                   ⚙️ Прокачка корабля
                 </button>
 
-                <button
-                  className="ff-btn ff-btn-green py-3 text-base flex-shrink-0 mt-1"
-                  disabled={busy}
-                  onClick={() => openDeck(selectedShip)}
-                >
-                  {busy ? 'Запуск…' : '🚀 Снарядить экипаж'}
-                </button>
+                {/* Снаряжение экипажа — без отдельной кнопки: повторный тап по
+                    кораблю (табу сверху) открывает выбор экипажа + запуск. */}
+                <p className="text-center text-[11px] text-[#5a7a2a] flex-shrink-0 mt-1">
+                  Нажми на корабль ещё раз, чтобы снарядить экипаж и запустить
+                </p>
               </div>
             )}
 
