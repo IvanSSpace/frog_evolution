@@ -500,10 +500,14 @@ export function ExpeditionModal({ onClose }: Props) {
         position: 'fixed',
         inset: 0,
         zIndex: 150,
-        pointerEvents: 'auto',
+        // В idle-режиме (Phaser ShipDeck виден под модалкой) overlay пропускает
+        // события → тапы по лягушкам/кнопкам Phaser-сцены работают. Только
+        // header панель ловит тапы (pointerEvents:'auto' на ней).
+        pointerEvents: idleMode ? 'none' : 'auto',
         background: 'transparent',
       }}
       onClick={(e) => {
+        if (idleMode) return
         if (e.target === e.currentTarget) handleClose()
       }}
     >
