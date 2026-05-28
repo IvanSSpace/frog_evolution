@@ -133,7 +133,18 @@ export function CosmicShopTab() {
                 afford ? 'ff-btn-purple' : 'ff-btn-grey'
               }`}
             >
-              💠 {cost}
+              <img
+                src="/essence.png"
+                alt=""
+                style={{
+                  width: '1.1em',
+                  height: '1.1em',
+                  display: 'inline-block',
+                  verticalAlign: 'middle',
+                  marginRight: 3,
+                }}
+              />
+              {cost}
             </button>
           </div>
         )

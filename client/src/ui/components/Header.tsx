@@ -84,7 +84,18 @@ export function Header({ onOpenIncome }: { onOpenIncome?: () => void }) {
                 }}
                 title="Эссенция"
               >
-                💠 {fmt(essence)}
+                <img
+                  src="/essence.png"
+                  alt=""
+                  style={{
+                    width: '1.2em',
+                    height: '1.2em',
+                    display: 'inline-block',
+                    verticalAlign: 'middle',
+                    marginRight: 2,
+                  }}
+                />
+                {fmt(essence)}
               </div>
             </>
           )}

@@ -449,7 +449,7 @@ function EvolveCard({
     } else {
       hapticNotification('error')
       if (r.reason === 'noGold') onResult('Недостаточно слизи')
-      else if (r.reason === 'noEssence') onResult('Недостаточно 💠')
+      else if (r.reason === 'noEssence') onResult('Недостаточно эссенции')
       else if (r.reason === 'noMutagen') onResult('Недостаточно 🧬 мутагена')
       else if (r.reason === 'maxTier') onResult('Максимальный уровень')
       else if (r.reason === 'cooldown') onResult('Кулдаун ещё активен')
@@ -569,7 +569,22 @@ function EvolveCard({
                 alt=""
               />
             </span>
-            {essenceCost > 0 && <span>💠 {essenceCost}</span>}
+            {essenceCost > 0 && (
+              <span>
+                <img
+                  src="/essence.png"
+                  style={{
+                    width: '1em',
+                    height: '1em',
+                    display: 'inline-block',
+                    verticalAlign: 'middle',
+                    marginRight: 2,
+                  }}
+                  alt=""
+                />
+                {essenceCost}
+              </span>
+            )}
             {mutagenCost > 0 && (
               <span style={{ color: canAffordMutagen ? undefined : '#dc2626' }}>
                 🧬 {mutagenCost}
