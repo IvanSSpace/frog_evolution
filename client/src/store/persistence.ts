@@ -12,18 +12,6 @@ import { makeInitialCosmicSlice, type BoxData } from './cosmic/types'
 import { migratePhase22 } from './migrations/phase22'
 // Phase 23 Plan 23-01: onboarding flow per-device state.
 import type { OnboardingState } from './onboarding/types'
-// Phase 26 Plan 26-01: per-race first contact tracker (defensive load).
-import type { RaceId } from '../game/config/races'
-// Phase 27 Plan 27-01: pending engine types + relationship clamp bounds.
-import type { PendingItem, ChainItem } from '../game/config/raceChains'
-import { RELATIONSHIP_MIN, RELATIONSHIP_MAX } from '../game/config/raceChains'
-// Phase 28 Plan 28-01: quest state types + cap + skeleton lookup для defensive load.
-import type {
-  ActiveQuest,
-  CompletedQuest,
-  QuestType,
-} from '../game/config/quests'
-import { QUESTS, COMPLETED_QUEST_HISTORY_CAP } from '../game/config/quests'
 
 // ─── storage keys ────────────────────────────────────────────────────────────
 
@@ -524,16 +512,10 @@ export function loadCosmicSlice(): CosmicPersist {
       lastActiveTab:
         parsed.lastActiveTab === 'scouts' ||
         parsed.lastActiveTab === 'boxes' ||
-        parsed.lastActiveTab === 'bestiary' ||
         parsed.lastActiveTab === 'carriers' ||
-        parsed.lastActiveTab === 'shop' ||
-        parsed.lastActiveTab === 'inventory' ||
-        parsed.lastActiveTab === 'contacts' ||
-        // Phase 28 Plan 28-01: accept 'quests' as new 8-й tab literal.
-        parsed.lastActiveTab === 'quests'
+        parsed.lastActiveTab === 'shop'
           ? parsed.lastActiveTab
           : 'scouts',
-      crew: parsed.crew ?? defaults.crew,
       // transient UI state — всегда defaults на load.
       serumDragActive: false,
       selectedSerum: null,
@@ -573,188 +555,6 @@ export function loadCosmicSlice(): CosmicPersist {
       },
       // latestShipPos НЕ persisted — всегда null на load.
       latestShipPos: null,
-      // Phase 26 Plan 26-01: defensive load firstContactsSeen.
-      // T-26-01-01 / T-26-01-02 mitigation:
-      //   - iterate over known raceIds (defaults.firstContactsSeen keys) — unknown
-      //     server-side raceIds игнорируются (forward-compat: future Phase 27+ races
-      //     не сломают current client).
-      //   - accept ONLY v === true (any other shape/value → дефолт false).
-      //   - Поломанный/missing parsed.firstContactsSeen → defaults all-false.
-      firstContactsSeen: (() => {
-        const fcs = { ...defaults.firstContactsSeen }
-        const raw = parsed.firstContactsSeen
-        if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-          const rawRec = raw as Record<string, unknown>
-          for (const id of Object.keys(fcs) as RaceId[]) {
-            if (rawRec[id] === true) fcs[id] = true
-          }
-        }
-        return fcs
-      })(),
-      // Phase 27 Plan 27-01: defensive load raceRelationships.
-      // T-27-01-01 / T-27-01-02 mitigation:
-      //   - iterate over known raceIds (defaults.raceRelationships keys) — unknown
-      //     server-side raceIds silently dropped (forward-compat).
-      //   - accept ONLY finite number, clamp to [RELATIONSHIP_MIN, RELATIONSHIP_MAX]
-      //     через Math.floor + min/max. Any other shape → default INITIAL_RELATIONSHIP.
-      raceRelationships: (() => {
-        const result = { ...defaults.raceRelationships }
-        const raw = parsed.raceRelationships
-        if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-          const rawRec = raw as Record<string, unknown>
-          for (const id of Object.keys(result) as RaceId[]) {
-            const v = rawRec[id]
-            if (typeof v === 'number' && Number.isFinite(v)) {
-              result[id] = Math.max(
-                RELATIONSHIP_MIN,
-                Math.min(RELATIONSHIP_MAX, Math.floor(v)),
-              )
-            }
-          }
-        }
-        return result
-      })(),
-      // Phase 27 Plan 27-01: defensive load chainProgress.
-      // Accept ONLY non-negative finite number; floor дробные; default 0.
-      chainProgress: (() => {
-        const result = { ...defaults.chainProgress }
-        const raw = parsed.chainProgress
-        if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-          const rawRec = raw as Record<string, unknown>
-          for (const id of Object.keys(result) as RaceId[]) {
-            const v = rawRec[id]
-            if (typeof v === 'number' && Number.isFinite(v) && v >= 0) {
-              result[id] = Math.floor(v)
-            }
-          }
-        }
-        return result
-      })(),
-      // Phase 27 Plan 27-01: defensive load pendingItems.
-      // T-27-01-01 mitigation — strip entries with invalid shape:
-      //   - missing id/raceId/chainStep
-      //   - raceId not in known set
-      //   - chainStep negative
-      //   - item.type not in 4 known variants
-      // createdAt missing/non-number → Date.now() fallback (acceptable; ordering used
-      // только for UI sort, not gameplay).
-      pendingItems: (() => {
-        const raw = parsed.pendingItems
-        if (!Array.isArray(raw)) return defaults.pendingItems
-        const knownRaceIds = new Set(Object.keys(defaults.raceRelationships))
-        const knownTypes = new Set(['msg', 'dialog', 'quest_hook', 'event'])
-        const out: PendingItem[] = []
-        for (const e of raw) {
-          if (!e || typeof e !== 'object') continue
-          const r = e as Record<string, unknown>
-          if (typeof r.id !== 'string') continue
-          if (typeof r.raceId !== 'string' || !knownRaceIds.has(r.raceId))
-            continue
-          if (typeof r.chainStep !== 'number' || r.chainStep < 0) continue
-          if (!r.item || typeof r.item !== 'object') continue
-          const item = r.item as Record<string, unknown>
-          if (typeof item.type !== 'string' || !knownTypes.has(item.type))
-            continue
-          out.push({
-            id: r.id,
-            raceId: r.raceId as RaceId,
-            chainStep: Math.floor(r.chainStep),
-            item: r.item as ChainItem,
-            createdAt:
-              typeof r.createdAt === 'number' ? r.createdAt : Date.now(),
-          })
-        }
-        return out
-      })(),
-      // Phase 28 Plan 28-01: defensive load activeQuests.
-      // Strip entries with invalid shape:
-      //   - missing id/questId/raceId/type
-      //   - questId not present в QUESTS lookup (forward-compat: drops removed/renamed quests)
-      //   - raceId not in known set
-      //   - type not in 4 known QuestType variants
-      //   - progress not non-negative finite number → floored to integer
-      //   - startedAt non-number → Date.now() fallback (display ordering only)
-      //   - target field shape NOT validated here (trusted from QUESTS lookup) — engine в
-      //     Plan 28-03 validates on activation путём шаблона из QUESTS[questId].target.
-      // NOT enforce ACTIVE_QUEST_CAP=5 — forward-compat (mirror CHAIN_PENDING_CAP pattern).
-      activeQuests: (() => {
-        const raw = parsed.activeQuests
-        if (!Array.isArray(raw)) return defaults.activeQuests
-        const knownRaceIds = new Set(Object.keys(defaults.raceRelationships))
-        const knownTypes = new Set<QuestType>([
-          'delivery',
-          'exploration',
-          'merge',
-          'diplomacy',
-        ])
-        const out: ActiveQuest[] = []
-        for (const e of raw) {
-          if (!e || typeof e !== 'object') continue
-          const r = e as Record<string, unknown>
-          if (typeof r.id !== 'string') continue
-          if (typeof r.questId !== 'string') continue
-          // Drop entries pointing at unknown questIds — QUESTS skeleton fills в Plan 28-02;
-          // before then ALL persisted activeQuests get cleaned out here (acceptable: no
-          // production data exists for Plan 28-01 wave).
-          if (!(r.questId in QUESTS)) continue
-          if (typeof r.raceId !== 'string' || !knownRaceIds.has(r.raceId))
-            continue
-          if (
-            typeof r.type !== 'string' ||
-            !knownTypes.has(r.type as QuestType)
-          )
-            continue
-          if (!r.target || typeof r.target !== 'object') continue
-          const progress =
-            typeof r.progress === 'number' &&
-            Number.isFinite(r.progress) &&
-            r.progress >= 0
-              ? Math.floor(r.progress)
-              : 0
-          const startedAt =
-            typeof r.startedAt === 'number' ? r.startedAt : Date.now()
-          out.push({
-            id: r.id,
-            questId: r.questId,
-            raceId: r.raceId as RaceId,
-            type: r.type as QuestType,
-            target: r.target as ActiveQuest['target'],
-            progress,
-            startedAt,
-          })
-        }
-        return out
-      })(),
-      // Phase 28 Plan 28-01: defensive load completedQuests.
-      // Strip entries with invalid shape (same pattern as activeQuests). FIFO trim
-      // at COMPLETED_QUEST_HISTORY_CAP=100 newest by completedAt desc.
-      // rewardClaimed field shape NOT deep-validated — kept opaque (engine wrote it).
-      completedQuests: (() => {
-        const raw = parsed.completedQuests
-        if (!Array.isArray(raw)) return defaults.completedQuests
-        const knownRaceIds = new Set(Object.keys(defaults.raceRelationships))
-        const out: CompletedQuest[] = []
-        for (const e of raw) {
-          if (!e || typeof e !== 'object') continue
-          const r = e as Record<string, unknown>
-          if (typeof r.id !== 'string') continue
-          if (typeof r.questId !== 'string') continue
-          if (typeof r.raceId !== 'string' || !knownRaceIds.has(r.raceId))
-            continue
-          if (typeof r.completedAt !== 'number') continue
-          if (!r.rewardClaimed || typeof r.rewardClaimed !== 'object') continue
-          out.push({
-            id: r.id,
-            questId: r.questId,
-            raceId: r.raceId as RaceId,
-            completedAt: r.completedAt,
-            rewardClaimed: r.rewardClaimed as CompletedQuest['rewardClaimed'],
-          })
-        }
-        // FIFO trim: sort desc by completedAt, keep newest CAP entries.
-        out.sort((a, b) => b.completedAt - a.completedAt)
-        return out.slice(0, COMPLETED_QUEST_HISTORY_CAP)
-      })(),
     }
   } catch {
     return defaults

@@ -3,12 +3,9 @@
 // Источник истины: useGameStore.hasCosmosUnlocked (top-level boolean, persisted
 // под отдельным ключом COSMOS_UNLOCKED_KEY в persistence.ts).
 //
-// Все серум-связанные UI компоненты (SerumBar, CarrierBonusesPanel, Cosmic
-// Hub button, Star Map controls, серум tabs) используют useCosmosUnlocked
-// для conditional rendering. Триггер unlock'а — MergeController L18+L18
-// normal sentinel вызывает markCosmosUnlocked().
-// (Note: ActiveBonusesBar removed 2026-05-19 — bonuses переехали в
-// CarriersTab → CarrierBonusesPanel.)
+// Все серум-связанные UI компоненты (SerumBar, Cosmic Hub button, Star Map
+// controls, серум tabs) используют useCosmosUnlocked для conditional rendering.
+// Триггер unlock'а — MergeController L18+L18 normal sentinel вызывает markCosmosUnlocked().
 //
 // Реактивно: Zustand selector → mass re-render всех gated компонентов БЕЗ reload.
 //

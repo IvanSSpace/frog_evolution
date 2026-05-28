@@ -65,14 +65,6 @@ type Events = {
     }[]
   }
   'survivor:pick-upgrade': { id: string }
-  'starmap:planet-selected': {
-    raceId: string
-    raceName: string
-    raceType: string
-    domX: number
-    domY: number
-    placement: 'below' | 'above'
-  }
   'starmap:planet-select': { planetId: string; name: string; archetype: string }
   'starmap:request-fly': { planetId: string }
   'starmap:planet-tapped': {
@@ -81,13 +73,6 @@ type Events = {
     archetype?: string
     durationMs: number
     seed: number
-  }
-  'starmap:planet-moved': {
-    raceId: string
-    bottomX: number
-    bottomY: number
-    topX: number
-    topY: number
   }
   'starmap:popover-close': void
   'starmap:centerHome': void
@@ -200,90 +185,6 @@ type Events = {
   //   - Plan 24-04 hook: spawn L1 frog (Beat 4) + eventBus.emit('starmap:open') (Beat 5).
   // Idempotent: повторные emit'ы no-op для subscribers (modal one-shot).
   'captain:birth-cta': void
-  // Phase 26 Plan 26-01 — first contact narrative trigger.
-  // Эмитит FirstContactController (Plan 26-05) после user visit'а habitable
-  // planet (inhabitant.role === 'home' OR 'colony') если
-  // firstContactsSeen[raceId] === false. x, y — экранные координаты planet'ы
-  // (anchor для Phaser cinematic light burst, per CONTEXT.md First Contact Event).
-  // raceId: string а не `RaceId` намеренно — eventBus.ts избегает импорта RaceId
-  // чтобы не создать цикл eventBus → cosmic/slice → races → cosmic/types → eventBus.
-  // Consumer (Plan 26-05 FirstContactController) делает narrow cast.
-  // Pattern consistent с LegacyRarity (локальный type в eventBus.ts).
-  'cosmos:first-contact': { raceId: string; x: number; y: number }
-  // Phase 26 Plan 26-05 — first contact Phaser cinematic completion.
-  // Эмитит FirstContactEffect (Plan 26-05) после ~2s cinematic'а закончился.
-  // Subscribers:
-  //   - FirstContactController (mount'ит DOM FirstContactModal с race lore).
-  // Безопасно если scene отсутствует — emitter эмитит next-tick fallback чтобы
-  // controller не залип в pending state.
-  'cosmos:first-contact-effect-complete': void
-  // Phase 27 Plan 27-03 — relationship change broadcast.
-  // Emitted by slice actions resolveAccept / resolveRefuse and by triggerPendingPull
-  // when event ChainItem changes a relationship. Subscribers:
-  //   - RelationshipBar (Plan 27-04): pulse animation if tier changed.
-  //   - Phase 28/29 may add analytics.
-  // raceId: string (not RaceId) — mirror 'cosmos:first-contact' pattern to avoid the
-  // eventBus → slice → races → types → eventBus cycle.
-  'contacts:relationship-delta': {
-    raceId: string
-    oldValue: number
-    newValue: number
-    delta: number
-  }
-  // Phase 27 Plan 27-03 — event ChainItem auto-applied at pull time.
-  // Emitted by triggerPendingPull when pendingEngineTick returns eventToasts.
-  // Subscribers:
-  //   - EventToast (Plan 27-05): mount top-screen banner with auto-dismiss 3s.
-  'contacts:event-applied': {
-    raceId: string
-    targetRaceId: string
-    delta: number
-    textKey: string
-  }
-  // Phase 28 Plan 28-03 — quest activation broadcast.
-  // Emitted by slice action activateQuestFromHook after successful activation
-  // (cap not reached + questId known).
-  // Subscribers:
-  //   - Plan 28-04 QuestsTab (re-render active quest list with new entry).
-  //   - Phase 29 may add analytics.
-  // questId/raceId/activeQuestId typed as `string` (not QuestId/RaceId) — mirrors
-  // Phase 27 pattern to avoid the eventBus → slice → races/quests → types → eventBus
-  // dependency cycle. Subscribers narrow-cast on consumption.
-  'quests:activated': {
-    raceId: string
-    questId: string
-    activeQuestId: string
-  }
-  // Phase 28 Plan 28-03 — quest activation rejected due to cap.
-  // Emitted by activateQuestFromHook when activeQuests.length >= ACTIVE_QUEST_CAP=5.
-  // The quest_hook relationship +1 IS still applied (per CONTEXT D-Quest activation
-  // cap path) — only the quest push is skipped.
-  // Subscribers:
-  //   - Plan 28-04 QuestsTab (toast «Лимит активных квестов»).
-  'quests:cap-reached': { raceId: string; questId: string }
-  // Phase 28 Plan 28-03 — quest completion + reward applied.
-  // Emitted by markQuestProgress per quest reaching its target this tick.
-  // Subscribers:
-  //   - Plan 28-05 QuestRewardPopup (modal mount with reward summary).
-  //   - Plan 28-04 QuestsTab (re-render: quest moves to completed history).
-  // reward: imported QuestReward type — subscriber narrow-casts on consumption.
-  // The `import('...')` form keeps the eventBus module free of value-imports from
-  // the quests config (no top-level cycle risk; types are erased at compile time).
-  'quests:completed': {
-    raceId: string
-    questId: string
-    activeQuestId: string
-    reward: import('../game/config/quests').QuestReward
-  }
-  // Phase 28 Plan 28-03 — quest cancelled by player.
-  // Emitted by cancelQuest after removal + relationship -1 penalty.
-  // Subscribers:
-  //   - Plan 28-04 QuestsTab (re-render without the cancelled row).
-  'quests:cancelled': {
-    raceId: string
-    questId: string
-    activeQuestId: string
-  }
   // Phase Evolution — Pokemon-style evolution ceremony trigger.
   // Эмитит FrogShopModal.handleEvolve после успешного upgradeFrogTier(level).
   // Subscribers:

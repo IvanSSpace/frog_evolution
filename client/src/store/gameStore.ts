@@ -100,9 +100,6 @@ export interface Preferences {
   numberFormat: NumberFormat
   language: string // 'ru' | 'en' | 'es'
   sfxMuted: boolean
-  instantBoxes: boolean
-  calmFarmMode: boolean
-  reducedEffects: boolean
 }
 
 interface GameStateBase {
@@ -618,7 +615,6 @@ useGameStore.subscribe((state, prev) => {
     state.bestiaryBitset !== prev.bestiaryBitset ||
     state.pityCounters !== prev.pityCounters ||
     state.lastActiveTab !== prev.lastActiveTab ||
-    state.crew !== prev.crew ||
     state.hasFirstFeed !== prev.hasFirstFeed ||
     state.hasFirstMission !== prev.hasFirstMission ||
     state.hasOpenedAnyBox !== prev.hasOpenedAnyBox ||
@@ -631,16 +627,7 @@ useGameStore.subscribe((state, prev) => {
     state.permaSlotBonus !== prev.permaSlotBonus ||
     state.permaShipSpeedBonus !== prev.permaShipSpeedBonus ||
     state.permaSerumDropBonus !== prev.permaSerumDropBonus ||
-    state.shopPurchaseCounts !== prev.shopPurchaseCounts ||
-    // Phase 26 Plan 26-01: per-race first contact tracker — persist on change.
-    state.firstContactsSeen !== prev.firstContactsSeen ||
-    // Phase 27 Plan 27-01: relationship/chain/pending state persisted.
-    state.raceRelationships !== prev.raceRelationships ||
-    state.chainProgress !== prev.chainProgress ||
-    state.pendingItems !== prev.pendingItems ||
-    // Phase 28 Plan 28-01: quest state — active + completed history.
-    state.activeQuests !== prev.activeQuests ||
-    state.completedQuests !== prev.completedQuests
+    state.shopPurchaseCounts !== prev.shopPurchaseCounts
   ) {
     saveCosmicSlice({
       serums: state.serums,
@@ -660,7 +647,6 @@ useGameStore.subscribe((state, prev) => {
       bestiaryBitset: state.bestiaryBitset,
       pityCounters: state.pityCounters,
       lastActiveTab: state.lastActiveTab,
-      crew: state.crew,
       // Phase 14: transient UI state — saveCosmicSlice имеет CosmicPersist shape
       // для type compatibility; на load возвращаются defaults (false/null).
       serumDragActive: false,
@@ -675,15 +661,6 @@ useGameStore.subscribe((state, prev) => {
       tutorialState: state.tutorialState,
       // Phase 16: latestShipPos НЕ persisted (transient) — saved as null shape
       latestShipPos: null,
-      // Phase 26 Plan 26-01: per-race first contact tracker persisted.
-      firstContactsSeen: state.firstContactsSeen,
-      // Phase 27 Plan 27-01: relationship/chain/pending state persisted.
-      raceRelationships: state.raceRelationships,
-      chainProgress: state.chainProgress,
-      pendingItems: state.pendingItems,
-      // Phase 28 Plan 28-01: quest state persisted (defensive load в loadCosmicSlice).
-      activeQuests: state.activeQuests,
-      completedQuests: state.completedQuests,
     })
   }
 })

@@ -33,9 +33,6 @@ export function planetDistance(
   return Math.sqrt(dx * dx + dy * dy)
 }
 
-// === Crew (REQ CREW-02) ===
-export const DAILY_CAP = 4 // максимум миссий в день
-
 // === Mission result type ===
 export type MissionResult = 'perfect' | 'good' | 'fail'
 

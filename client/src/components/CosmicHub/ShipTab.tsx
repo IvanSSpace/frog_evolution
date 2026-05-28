@@ -8,12 +8,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useGameStore } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
-import {
-  findPlanetById,
-  DAILY_CAP,
-  msUntilLocalMidnight,
-} from '../../game/data/missionConfig'
-import { CrewIndicator } from './CrewIndicator'
+import { findPlanetById } from '../../game/data/missionConfig'
 import {
   DARK_CARD_STYLE,
   PINK_CTA_STYLE,
@@ -29,9 +24,7 @@ interface Props {
 export function ShipTab({ onClose }: Props) {
   const { t } = useTranslation()
   const ship = useGameStore((s) => s.ship)
-  const crew = useGameStore((s) => s.crew)
   const ensureShipExists = useGameStore((s) => s.ensureShipExists)
-  const resetCrewIfNewDay = useGameStore((s) => s.resetCrewIfNewDay)
 
   // Live tick для transit countdown (1s).
   const [, setTick] = useState(0)
@@ -40,11 +33,10 @@ export function ShipTab({ onClose }: Props) {
     return () => clearInterval(id)
   }, [])
 
-  // На mount: ensure ship exists + reset crew если новый день.
+  // На mount: ensure ship exists.
   useEffect(() => {
     ensureShipExists()
-    resetCrewIfNewDay()
-  }, [ensureShipExists, resetCrewIfNewDay])
+  }, [ensureShipExists])
 
   const handleOpenMap = () => {
     eventBus.emit('starmap:open')
@@ -112,13 +104,6 @@ export function ShipTab({ onClose }: Props) {
         </div>
         {stateDetail}
       </div>
-
-      {/* Crew indicator (REQ CREW-06/07) */}
-      <CrewIndicator
-        used={crew.missionsToday}
-        cap={DAILY_CAP}
-        msUntilReset={msUntilLocalMidnight()}
-      />
 
       {/* Action buttons */}
       <div className="flex flex-col gap-2">

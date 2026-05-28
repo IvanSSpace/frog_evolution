@@ -1,7 +1,5 @@
 import React from 'react'
 import { useGameStore } from '../../store/gameStore'
-// Phase 22 Plan 22-06: cosmos gate — 🧬 Cosmic Hub button disabled до L18+L18.
-import { useCosmosUnlocked } from '../../utils/cosmosGate'
 import { Icon } from '../icons/Icon'
 import type { IconName } from '../icons/iconRegistry'
 
@@ -128,7 +126,6 @@ type BottomBarProps = {
   onOpenShop?: () => void
   onOpenFrogShop?: () => void
   onOpenSettings?: () => void
-  onOpenCosmicHub?: () => void
   onOpenExpedition?: () => void
   onOpenInventory?: () => void
 }
@@ -137,18 +134,9 @@ export function BottomBar({
   onOpenShop,
   onOpenFrogShop,
   onOpenSettings,
-  onOpenCosmicHub,
   onOpenExpedition,
   onOpenInventory,
 }: BottomBarProps) {
-  // Phase 11 (COSMIC-HUB-04): badge на 🧬 = число неоткрытых боксов.
-  // Реактивен: при addBox/openBox селектор пере-рендерит компонент.
-  const readyBoxCount = useGameStore(
-    (s) => s.boxes.filter((b) => !b.opened).length,
-  )
-  // Phase 22 Plan 22-06: cosmos gate — 🧬 button disabled до L18+L18 sentinel.
-  const cosmosUnlocked = useCosmosUnlocked()
-
   // Badge «новый контент» на 🐸 и 📖. true когда есть discoveredLevel,
   // которого ещё нет в соответствующем seenLevels массиве.
   const hasNewFrogShop = useGameStore((s) =>
@@ -163,7 +151,7 @@ export function BottomBar({
 
   return (
     <div
-      className="ff-bar bottom w-full h-full flex items-center justify-between px-3 py-2"
+      className="ff-bar bottom w-full h-full flex items-center justify-between px-3 pt-0 pb-1"
       style={{ pointerEvents: 'auto' }}
     >
       {/* Слева — лавка лягушек. Badge = есть новый discoveredLevel, ещё не открытый в shop. */}
@@ -199,21 +187,6 @@ export function BottomBar({
           }
           disabled={!forestUnlocked}
           onClick={onOpenExpedition}
-        />
-        {/* 🧪 Серум — перенесён вкладкой в Космический центр (CosmicHubModal). */}
-        {/* 🧬 — Cosmic Hub (Phase 11). Badge = число неоткрытых боксов.
-            Phase 22 Plan 22-06: disabled до L18+L18 sentinel (cosmos gate). */}
-        <Tile
-          icon="cosmic-hub"
-          skin="teal"
-          onClick={onOpenCosmicHub}
-          badge={readyBoxCount}
-          disabled={!cosmosUnlocked}
-          title={
-            !cosmosUnlocked
-              ? 'Откройте космос — соедините L18 + L18'
-              : undefined
-          }
         />
       </div>
 

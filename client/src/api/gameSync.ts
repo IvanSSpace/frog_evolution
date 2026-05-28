@@ -17,14 +17,6 @@ import { getServerGameState, putServerGameState } from './gameState'
 import { ApiError } from './client'
 import { devLog, devWarn } from '../utils/devLog'
 import { eventBus } from '../store/eventBus'
-import {
-  getInstantBoxes,
-  setInstantBoxes,
-  getCalmFarmMode,
-  setCalmFarmMode,
-  getReducedEffects,
-  setReducedEffects,
-} from '../utils/cosmicSettings'
 import { sfx } from '../audio/sfx'
 import i18next from 'i18next'
 import { setLang, type Lang } from '../i18n/index'
@@ -112,7 +104,6 @@ function snapshotForSave() {
       bestiaryBitset: s.bestiaryBitset,
       pityCounters: s.pityCounters,
       lastActiveTab: s.lastActiveTab,
-      crew: s.crew,
       hasFirstFeed: s.hasFirstFeed,
       hasFirstMission: s.hasFirstMission,
       hasOpenedAnyBox: s.hasOpenedAnyBox,
@@ -120,15 +111,6 @@ function snapshotForSave() {
       tutorialState: s.tutorialState,
       // Phase 24 Plan 24-01: cross-device sync captain birth milestone.
       captainBirthSeen: s.captainBirthSeen,
-      // Phase 26 Plan 26-01: cross-device sync per-race first contact tracker.
-      firstContactsSeen: s.firstContactsSeen,
-      // Phase 27 Plan 27-01: cross-device sync relationship + chain + pending state.
-      raceRelationships: s.raceRelationships,
-      chainProgress: s.chainProgress,
-      pendingItems: s.pendingItems,
-      // Phase 28 Plan 28-01: cross-device sync quest state (active + completed history).
-      activeQuests: s.activeQuests,
-      completedQuests: s.completedQuests,
       // 2026-05-18 audit fix: toplevel-but-meta state served через cosmic blob
       // (consistent pattern с captainBirthSeen — server schema accepts opaque
       // cosmic JSON, no schema change). All three — per-user permanent progress:
@@ -152,9 +134,6 @@ function snapshotForSave() {
         numberFormat: s.numberFormat,
         language: i18next.language || 'ru',
         sfxMuted: sfx.isMuted(),
-        instantBoxes: getInstantBoxes(),
-        calmFarmMode: getCalmFarmMode(),
-        reducedEffects: getReducedEffects(),
       },
     },
     // Onboarding state — per-user, cross-device. Sync через server так чтобы
@@ -241,7 +220,6 @@ export async function loadGameState(): Promise<boolean> {
       if ('bestiaryBitset' in c) cosmicUpdate.bestiaryBitset = c.bestiaryBitset
       if ('pityCounters' in c) cosmicUpdate.pityCounters = c.pityCounters
       if ('lastActiveTab' in c) cosmicUpdate.lastActiveTab = c.lastActiveTab
-      if ('crew' in c) cosmicUpdate.crew = c.crew
       if ('hasFirstFeed' in c) cosmicUpdate.hasFirstFeed = c.hasFirstFeed
       if ('hasFirstMission' in c)
         cosmicUpdate.hasFirstMission = c.hasFirstMission
@@ -273,26 +251,6 @@ export async function loadGameState(): Promise<boolean> {
       // Phase 24 Plan 24-01: hydrate captain-birth flag from server.
       if ('captainBirthSeen' in c)
         cosmicUpdate.captainBirthSeen = c.captainBirthSeen
-      // Phase 26 Plan 26-01: hydrate per-race first contact tracker from server.
-      // Same defensive pattern как в loadCosmicSlice — `firstContactsSeen` blob
-      // прокладывается через `set` напрямую; defensive filtering сделан на load
-      // (loadCosmicSlice валидирует known raceIds; server-side validation
-      // не блокирует unknown extra raceIds — forward-compat).
-      if ('firstContactsSeen' in c)
-        cosmicUpdate.firstContactsSeen = c.firstContactsSeen
-      // Phase 27 Plan 27-01: hydrate from server. Defensive filtering already runs
-      // в loadCosmicSlice на следующем persistence read; server snapshot trusts
-      // cosmic blob shape для immediate hydrate (unknown raceIds get cleaned out
-      // на next save→load cycle через loadCosmicSlice clamp/strip logic).
-      if ('raceRelationships' in c)
-        cosmicUpdate.raceRelationships = c.raceRelationships
-      if ('chainProgress' in c) cosmicUpdate.chainProgress = c.chainProgress
-      if ('pendingItems' in c) cosmicUpdate.pendingItems = c.pendingItems
-      // Phase 28 Plan 28-01: hydrate quest state from server. Defensive validation
-      // runs в loadCosmicSlice на following persist cycle (clamp/strip/cap).
-      if ('activeQuests' in c) cosmicUpdate.activeQuests = c.activeQuests
-      if ('completedQuests' in c)
-        cosmicUpdate.completedQuests = c.completedQuests
       // 2026-05-23: эволюция лягушек — tier (per-level 0/1/2) + cooldowns (timestamps).
       if ('frogTiers' in c && Array.isArray(c.frogTiers)) {
         cosmicUpdate.frogTiers = c.frogTiers
@@ -396,24 +354,6 @@ export async function loadGameState(): Promise<boolean> {
         }
         if (typeof p.sfxMuted === 'boolean' && p.sfxMuted !== sfx.isMuted()) {
           sfx.setMuted(p.sfxMuted)
-        }
-        if (
-          typeof p.instantBoxes === 'boolean' &&
-          p.instantBoxes !== getInstantBoxes()
-        ) {
-          setInstantBoxes(p.instantBoxes)
-        }
-        if (
-          typeof p.calmFarmMode === 'boolean' &&
-          p.calmFarmMode !== getCalmFarmMode()
-        ) {
-          setCalmFarmMode(p.calmFarmMode)
-        }
-        if (
-          typeof p.reducedEffects === 'boolean' &&
-          p.reducedEffects !== getReducedEffects()
-        ) {
-          setReducedEffects(p.reducedEffects)
         }
       }
     }

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Header } from './ui/components/Header'
 import { BottomBar } from './ui/components/BottomBar'
@@ -33,23 +33,11 @@ import { OnboardingController } from './components/Onboarding/OnboardingControll
 import { CaptainBirthModal } from './components/Captain/CaptainBirthModal'
 import { EvolutionCeremony } from './components/Evolution/EvolutionCeremony'
 import { installCaptainBirthController } from './components/Captain/captainBirthController'
-import { FirstContactController } from './components/FirstContact/firstContactController'
-import { EventToastController } from './components/Contacts/eventToastController'
-// Phase 28 Plan 28-03: quest progress eventBus wiring + boot reconcile.
-import { QuestController } from './game/quests/questController'
-// Phase 28 Plan 28-05: quest reward popup controller — subscribes to
-// 'quests:completed' and renders QuestRewardPopup for head of queue.
-import { QuestRewardController } from './components/Quests/questRewardController'
 import { SerumBar } from './components/SerumBar'
 import { installBestiaryDevHelpers } from './utils/devHelpers'
 import { installFrogTierDevHelpers } from './utils/devFrogTiers'
 import { installOnboardingDevHelpers } from './utils/onboardingDevHelpers'
 import { installCaptainBirthDevHelpers } from './utils/captainBirthDevHelpers'
-import { installRaceDevHelpers } from './utils/devRaces'
-import { installContactsDevHelpers } from './utils/devContacts'
-// Phase 28 Plan 28-03: quest DEV helpers (__activateQuest / __progressQuest /
-// __completeQuest / __resetQuests / __dumpQuests).
-import { installQuestDevHelpers } from './utils/devQuests'
 // Tech-debt 2026-05-19: DEV-only Telegram safe-area visual overlay.
 // Tree-shaken из production через import.meta.env.DEV guard в самом компоненте
 // + mount-site guard ниже. Toggle: window.__toggleTgSafeAreaDebug().
@@ -65,16 +53,10 @@ import { startGame } from './game/index'
 
 const queryClient = new QueryClient()
 
-// Phase 11: Cosmic Hub modal lazy-loaded → отдельный chunk, не утяжеляет main bundle
-const CosmicHubModal = lazy(
-  () => import('./components/CosmicHub/CosmicHubModal'),
-)
-
 function App() {
   const [shopOpen, setShopOpen] = useState(false)
   const [frogShopOpen, setFrogShopOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [cosmicHubOpen, setCosmicHubOpen] = useState(false)
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [expeditionOpen, setExpeditionOpen] = useState(false)
   const [inventoryOpen, setInventoryOpen] = useState(false)
@@ -256,13 +238,6 @@ function App() {
     // Window-exposed dev helpers.
     const w = window as unknown as Record<string, unknown>
 
-    w.__resetCrewToday = () => {
-      useGameStore.setState((s) => ({
-        crew: { ...s.crew, missionsToday: 0 },
-      }))
-      devLog('[dev] crew reset')
-    }
-
     w.__unlockAllTabs = () => {
       const s = useGameStore.getState()
       s.setHasFirstFeed(true)
@@ -311,23 +286,11 @@ function App() {
     // Phase 24 Plan 24-05: captain birth dev helpers
     // (__triggerCaptainBirth / __resetCaptainBirth / __captainBirthState).
     installCaptainBirthDevHelpers()
-    // Phase 26 Plan 26-01: race / first-contact dev helpers
-    // (__listRaces / __markFirstContact / __resetFirstContacts / __firstContactsState).
-    // Returns cleanup function для symmetric uninstall в useEffect return.
-    const raceDevCleanup = installRaceDevHelpers()
-    // Phase 27 Plan 27-03: contacts / relationship / chain dev helpers
-    // (__addPending / __resetRelationships / __advanceChain / __dumpContacts).
-    const contactsDevCleanup = installContactsDevHelpers()
-    // Phase 28 Plan 28-03: quest mechanic dev helpers
-    // (__activateQuest / __progressQuest / __completeQuest / __resetQuests /
-    // __dumpQuests). Tree-shaken from production via import.meta.env.DEV guard.
-    const questDevCleanup = installQuestDevHelpers()
     // Tech-debt 2026-05-19: TG safe-area overlay helper
     // (__toggleTgSafeAreaDebug / __tgSafeAreaDebug). Default OFF.
     const tgSafeAreaDevCleanup = installTelegramSafeAreaDebugHelper()
 
     return () => {
-      delete w.__resetCrewToday
       delete w.__unlockAllTabs
       delete w.__lockAllTabs
       delete w.__unlockAllLocations
@@ -342,12 +305,6 @@ function App() {
       delete w.__triggerCaptainBirth
       delete w.__resetCaptainBirth
       delete w.__captainBirthState
-      // Phase 26 Plan 26-01: race dev helpers cleanup.
-      raceDevCleanup()
-      // Phase 27 Plan 27-03: contacts dev helpers cleanup.
-      contactsDevCleanup()
-      // Phase 28 Plan 28-03: quest dev helpers cleanup.
-      questDevCleanup()
       // Tech-debt 2026-05-19: TG safe-area helper cleanup.
       tgSafeAreaDevCleanup()
     }
@@ -389,12 +346,11 @@ function App() {
           <Header onOpenIncome={() => setGalleryOpen(true)} />
         </div>
         <div className="flex-1" />
-        <div style={{ height: '13%' }}>
+        <div style={{ height: '9%' }}>
           <BottomBar
             onOpenShop={() => setShopOpen(true)}
             onOpenFrogShop={() => setFrogShopOpen(true)}
             onOpenSettings={() => setSettingsOpen(true)}
-            onOpenCosmicHub={() => setCosmicHubOpen(true)}
             onOpenExpedition={() => setExpeditionOpen(true)}
             onOpenInventory={() => setInventoryOpen(true)}
           />
@@ -405,9 +361,6 @@ function App() {
       <StarMapHUD />
       <ShipFollowButton />
       <SerumBar />
-      {/* tech-debt 2026-05-19: ActiveBonusesBar removed from HUD.
-          Bonuses теперь показаны в Cosmic Hub → Carriers tab как
-          CarrierBonusesPanel (display-only section, не интерактивный HUD pill). */}
       <LocationStack />
 
       {galleryOpen && <GalleryModal onClose={() => setGalleryOpen(false)} />}
@@ -423,11 +376,6 @@ function App() {
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       <SurvivorUpgradeModal />
       <SurvivorMissionSelect />
-      <Suspense fallback={null}>
-        {cosmicHubOpen && (
-          <CosmicHubModal onClose={() => setCosmicHubOpen(false)} />
-        )}
-      </Suspense>
       {/* Phase 18 (REQ BESTIARY-07): milestone toast — listens cosmic:bestiary-milestone
           event from cosmicSlice.setBestiaryBit; visible regardless of Cosmic Hub state. */}
       <MilestoneToast />
@@ -450,29 +398,6 @@ function App() {
           eventBus 'frog:evolution-ceremony' (эмитит FrogShopModal после
           успешного upgradeFrogTier), null-render'ит когда invisible. */}
       <EvolutionCeremony />
-      {/* Phase 26 Plan 26-05: first-contact event flow coordinator —
-          listens starmap:planet-tapped → gate firstContactsSeen → emits
-          cosmos:first-contact → Phaser cinematic → on completion mounts
-          FirstContactModal с race lore. Per-race idempotent. */}
-      <FirstContactController />
-      {/* Phase 27 Plan 27-05: event toast coordinator — subscribes to
-          eventBus 'contacts:event-applied' (emitted by pendingEngineTick
-          when inline event ChainItem auto-applies). Renders top-center
-          stack of up to 3 toasts (z-index 150, between hub 100 and modal 200),
-          each auto-dismissing after 3s via CSS keyframes. */}
-      <EventToastController />
-      {/* Phase 28 Plan 28-03: quest progress eventBus → slice wiring +
-          boot-time reconcile (gold/relationship/discoveredLevels polling).
-          Null-render; controller-only. Subscribes to merge:happened,
-          cosmic:box-opened, starmap:planet-select, cosmic:ship-arrived,
-          contacts:relationship-delta and delegates to markQuestProgress. */}
-      <QuestController />
-      {/* Phase 28 Plan 28-05: quest reward popup controller — subscribes to
-          eventBus 'quests:completed' (emitted by markQuestProgress in Plan 28-03)
-          и queue'ит popups для sequential display. Renders QuestRewardPopup
-          для head of queue; auto-pops on dismiss. Null-render when queue empty
-          (peer level с FirstContactController + EventToastController). */}
-      <QuestRewardController />
       {discovered !== null && (
         <DiscoveryModal
           level={discovered}

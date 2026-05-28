@@ -108,15 +108,6 @@ const REQUIRED_COSMIC_SYNC_FIELDS = [
   'tutorialState',
   // Phase 24 captain birth (Phase 24 Plan 24-01).
   'captainBirthSeen',
-  // Phase 26 first contact (Phase 26 Plan 26-01).
-  'firstContactsSeen',
-  // Phase 27 relationship/chain/pending (Phase 27 Plan 27-01).
-  'raceRelationships',
-  'chainProgress',
-  'pendingItems',
-  // Phase 28 quest mechanic (Phase 28 Plan 28-01).
-  'activeQuests',
-  'completedQuests',
 ] as const
 
 // Ephemeral runtime state — NOT persisted, NOT synced. Explicit list keeps

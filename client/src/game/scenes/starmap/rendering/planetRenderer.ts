@@ -23,95 +23,16 @@ import type { Race, BgSystem } from '../types'
 import { mulberry32 } from '../helpers'
 import { createSparkleAt } from '../starfield'
 import { DPR, BG_PLANET_MIN_ZOOM, generatePalette } from '../planetarium'
-// Phase 26 Plan 26-03: race-overlay visuals (glow halo + emoji icon + home pulse)
-// для habitable planets. Только если cosmos unlocked.
-import { RaceGlowController } from '../effects/raceGlow'
-import { HABITABLE_PLANET_IDS } from '../../../data/habitablePlanets'
-import { useGameStore } from '../../../../store/gameStore'
 
 export class PlanetRenderer {
   private scene: StarMapScene
-  // Phase 26 Plan 26-03: race-overlay controller. Создаётся в конструкторе,
-  // destroy() в this.destroy() при scene shutdown.
-  private raceGlow: RaceGlowController
-  // Phase 26 Plan 26-03: reactive subscription на cosmos unlock — overlays
-  // appear/disappear без reload при flag flip. Unsubscribe в destroy().
-  private cosmosUnsubscribe?: () => void
-  // Phase 26 Plan 26-03: tracking previous cosmos flag value для diff inside
-  // subscribe listener (project uses plain useGameStore.subscribe без
-  // subscribeWithSelector middleware).
-  private lastCosmosUnlocked: boolean
 
   constructor(scene: StarMapScene) {
     this.scene = scene
-    // Pass scene.lod.cullableData as the cull-sink — race overlays (glow / icon /
-    // home halo) теперь регистрируются в LOD-pipeline сцены, чтобы скрываться
-    // когда planet вне viewport или при far zoom. Без этого ~70 GameObjects
-    // (30 habitable × 2-3 объекта) обходились Phaser-render каждый кадр.
-    this.raceGlow = new RaceGlowController(scene, scene.lod.cullableData)
-    this.lastCosmosUnlocked = useGameStore.getState().hasCosmosUnlocked === true
-    // Subscribe на full state — diff'им вручную (см. memory `feedback_subagent_gates`
-    // и pattern в gameStore.ts:449 — project использует plain useGameStore.subscribe).
-    this.cosmosUnsubscribe = useGameStore.subscribe((state) => {
-      const next = state.hasCosmosUnlocked === true
-      if (next === this.lastCosmosUnlocked) return
-      this.lastCosmosUnlocked = next
-      if (next) {
-        // 0 → 1: cosmos unlocked во время открытого Star Map. Attach overlays
-        // для всех 30 habitable planets, чьи containers уже отрендерены.
-        this.attachAllHabitable()
-      } else {
-        // 1 → 0: пока gameplay-flow не предусматривает re-lock'а, но defensive
-        // cleanup чтобы overlays исчезли (consistent с D-CosmosGate intent).
-        this.raceGlow.destroy()
-      }
-    })
   }
 
-  /**
-   * Phase 26 Plan 26-03: cosmos-gated race overlay attach для одной planet'ы.
-   * Вызывается из renderMain/renderBg ПОСЛЕ того как container зарегистрирован
-   * в systemSprites. Gate: hasCosmosUnlocked + HABITABLE_PLANET_IDS membership
-   * + planet.id !== 'home' (player home никогда не получает overlay).
-   */
-  private tryAttachRaceOverlay(
-    sys: Race | BgSystem,
-    container: Phaser.GameObjects.Container,
-  ): void {
-    if (!this.lastCosmosUnlocked) return
-    // 2026-05-24: убран race-glow overlay — планеты не маркируются как
-    // принадлежащие расе. Glossary + planetMap.json inhabitant data
-    // сохраняются для квестов / контактов; визуальная связка убрана.
-    if (sys.id === 'home') return
-    if (!HABITABLE_PLANET_IDS.has(sys.id)) return
-    void container
-    return
-  }
-
-  /**
-   * Phase 26 Plan 26-03: reactive attach всех 30 habitable planets, когда
-   * cosmos переключается false → true во время открытого Star Map. Использует
-   * уже отрендеренные containers из scene.systemSprites; если planet не
-   * отрендерена (LOD cull / нет в текущей scene) — skip.
-   */
-  private attachAllHabitable(): void {
-    // 2026-05-25 TEST MODE: race-overlay (glow halo + emoji + мигающий home
-    // pulse) отключён — планеты больше не маркируются как «можно сражаться»
-    // (бой теперь доступен на любой планете, см. popovers.ts TEST MODE).
-    // Чтобы вернуть: восстановить loop с raceGlow.attach + helper resolvePlanetSize.
-  }
-
-  /**
-   * Phase 26 Plan 26-03: cleanup на scene shutdown.
-   * - Unsubscribe Zustand subscriber (T-26-03-04 leak mitigation).
-   * - Destroy RaceGlowController (T-26-03-03 GameObject + tween leak mitigation).
-   */
   destroy(): void {
-    if (this.cosmosUnsubscribe) {
-      this.cosmosUnsubscribe()
-      this.cosmosUnsubscribe = undefined
-    }
-    this.raceGlow.destroy()
+    // nothing to clean up
   }
 
   // Phase 20-04 (Wave 4): package-public — вызывается из starfield.ts (renderSystem dispatcher).
@@ -732,9 +653,6 @@ export class PlanetRenderer {
     this.scene.mainPlanetHits.push({ container, baseR, circle: hitArea })
     // Регистрируем для batch-toggle interactive по zoom (как BG)
     this.scene.lod.bgInteractiveContainers.push(container)
-    // Phase 26 Plan 26-03: race overlay (glow halo + icon) для habitable
-    // main planets. Cosmos-gated. Player home (sys.id === 'home') skipped.
-    this.tryAttachRaceOverlay(sys, container)
   }
 
   // Phase 20-04 (Wave 4): package-public — вызывается из starfield.ts (renderSystem dispatcher).
@@ -1798,15 +1716,6 @@ export class PlanetRenderer {
       })
     }
 
-    // Маркер обитаемости — только жёлтое кольцо вокруг планеты.
-    // Emoji-значки убраны: каждый был отдельным Text = уникальная текстура
-    // = отдельный draw call. 67 обитаемых × 1 draw call = серьёзный налог
-    // на mobile GPU (state switches between unique textures).
-    if (sys.isInhabited) {
-      g.lineStyle(1.5 * DPR, 0xfde047, 0.6)
-      g.strokeCircle(0, 0, sys.size + 4 * DPR)
-    }
-
     // Idle-анимации у фоновых планет ОТКЛЮЧЕНЫ — было 454 активных tween (227 × 2),
     // что создавало просадки FPS при zoom. Только для главных рас оставлены анимации.
     // Исключение: ~4% от 1000 фоновых планет (≈40) получают очень медленное вращение
@@ -1900,8 +1809,5 @@ export class PlanetRenderer {
     })
     // Адаптивный hit-area — растёт при zoom-out, чтобы было удобно тапать
     this.scene.mainPlanetHits.push({ container, baseR, circle: hitArea })
-    // Phase 26 Plan 26-03: race overlay (glow halo + icon) для habitable bg
-    // planets. Cosmos-gated. Большинство 30 habitable planets — bg.
-    this.tryAttachRaceOverlay(sys, container)
   }
 }

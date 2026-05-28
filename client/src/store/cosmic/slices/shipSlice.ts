@@ -10,8 +10,6 @@ import {
   travelTimeMs,
   planetDistance,
   findPlanetById,
-  getLocalDateString,
-  DAILY_CAP,
   planetElementInputs,
 } from '../../../game/data/missionConfig'
 import { elementFromPlanet } from '../../../game/effects/elements/elementMapping'
@@ -25,32 +23,10 @@ export type ShipActions = Pick<
   | 'arriveShipAt'
   | 'setShipPosition'
   | 'investigatePlanet'
-  | 'consumeMissionCredit'
-  | 'resetCrewIfNewDay'
 >
 
 export function createShipSlice(set: SetFn, get: GetFn): ShipActions {
   return {
-    // Phase 16: использует DAILY_CAP константу из missionConfig.ts (было hardcoded 4).
-    // Pity counter (CREW-08) растёт ТОЛЬКО при consume — не при flight.
-    consumeMissionCredit: () => {
-      const state = get()
-      if (state.crew.missionsToday >= DAILY_CAP) return false
-      set({
-        crew: { ...state.crew, missionsToday: state.crew.missionsToday + 1 },
-      })
-      return true
-    },
-
-    // Phase 16 fix CREW-03: ЛОКАЛЬНАЯ дата вместо UTC.
-    resetCrewIfNewDay: () => {
-      const today = getLocalDateString()
-      const state = get()
-      if (state.crew.lastResetDay !== today) {
-        set({ crew: { missionsToday: 0, lastResetDay: today } })
-      }
-    },
-
     // Phase 16: Ship navigation actions
     ensureShipExists: () => {
       const s = get()
@@ -124,15 +100,14 @@ export function createShipSlice(set: SetFn, get: GetFn): ShipActions {
       set({ latestShipPos: { x, y } })
     },
 
-    // Phase 16-04: atomic investigate transaction (REQ MISSION-05/06/07, CREW-04/08).
+    // Phase 16-04: atomic investigate transaction (REQ MISSION-05/06/07).
     // Phase 22: bonusRarity removed — box created without rarity dimension.
     // Phase 22 Plan 22-06: cosmos gate — defensive guard. Star Map UI sкрыт до
     // unlock (LocationStack id=6 hide), но миссии — основной серум-источник,
     // дублируем guard здесь как безопасность.
     // - guard: ship.state !== 'docked' OR ship.planetId !== planetId → no-op (false)
-    // - guard: missionsToday >= DAILY_CAP → no-op (false)
     // - guard: !hasCosmosUnlocked → no-op (false)
-    // - atomic: missionsToday++, addBox с element=elementFromPlanet, hasFirstMission=true
+    // - atomic: addBox с element=elementFromPlanet, hasFirstMission=true
     // - emit 'cosmic:toast' с открытием Боксы
     investigatePlanet: (planetId, _result) => {
       const s = get()
@@ -150,10 +125,6 @@ export function createShipSlice(set: SetFn, get: GetFn): ShipActions {
       ) {
         return false
       }
-      // Guard 2: cap reached? (CREW-04 — pity растёт ТОЛЬКО при consume)
-      if (s.crew.missionsToday >= DAILY_CAP) {
-        return false
-      }
       const planet = findPlanetById(planetId)
       if (!planet) return false
 
@@ -165,7 +136,6 @@ export function createShipSlice(set: SetFn, get: GetFn): ShipActions {
       const newBoxId = `box_${Date.now()}_${Math.floor(Math.random() * 1e6)}`
       const archetypeKey = archetype ?? mainRaceType ?? ''
       set({
-        crew: { ...s.crew, missionsToday: s.crew.missionsToday + 1 },
         boxes: [
           ...s.boxes,
           {

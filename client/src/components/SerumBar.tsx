@@ -64,7 +64,7 @@ export function SerumBar() {
     <div
       style={{
         position: 'fixed',
-        bottom: '13%',
+        bottom: '9%',
         left: 0,
         right: 0,
         height: 76,

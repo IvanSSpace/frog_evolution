@@ -29,7 +29,6 @@ import { PopoverController } from './starmap/popovers'
 // (Phase 20-04, Wave 4: extracted playUniqueAnimation/runAnimComponent/openBgNamePopup).
 // deriveModulations, hashId, effectiveSeed, animRng — теперь только в SeedRefinementEngine.
 import type { Race, BgSystem, PlanetMapEntry } from './starmap/types'
-import { mulberry32 } from './starmap/helpers'
 import { SeedRefinementEngine } from './starmap/seedRefinement/engine'
 // import { setupCosmicDust } from './starmap/ambient/cosmicDust' // отключено
 
@@ -49,9 +48,6 @@ import { devWarn } from '../../utils/devLog'
 // DPR / WORLD_SIZE / SEED / MOON_FADE_* / BG_*_MIN_ZOOM / MAIN_RACES /
 // ARCHETYPE_HUES / hslToHex / generatePalette — extracted в `./starmap/planetarium.ts`
 // (StarMapScene refactor, step 2). Здесь оставлены только сцена-локальные константы.
-
-// Сколько всего обитаемых планет (16 главных + 51 фоновая обитаемая)
-const TOTAL_INHABITED = 67
 
 // NAMES_POOL устарел — теперь имена берутся из BG_NAME_POOL (data/planetNames.ts).
 // Перемешиваются seed-shuffle в generateBackgroundSystems → каждая планета
@@ -92,9 +88,6 @@ export class StarMapScene extends Phaser.Scene {
   // camera.camCenterX/Y, camera.setCenter, camera.getMinZoom, camera.updatePlanetHitAreas,
   // camera.scheduleBoundsUpdate — все внешние call-sites идут через this.camera.
   camera!: CameraController
-  // ID выбранной для popover расы (Phaser-popover в той же scene, в world-coords).
-  // Phase 20-04 (Wave 4): package-public — ControlsController сбрасывает на тап в пустоту.
-  selectedMainRaceId: string | null = null
   private popover?: Phaser.GameObjects.Container
   // bgNamePopup/bgNamePopupTimer мигрировали в PopoverController (Phase 20-04, Wave 4).
   private nebula?: NebulaBackgroundHandle
@@ -263,21 +256,6 @@ export class StarMapScene extends Phaser.Scene {
         }),
       )
 
-    // Помечаем 51 случайную фоновую как обитаемую (16 главных + 51 = 67 всего обитаемых).
-    // Газовые гиганты и кольцевые газовые исключены — на газовых планетах нет
-    // твёрдой поверхности, жизни быть не может.
-    const inhabitedNeeded = Math.max(0, TOTAL_INHABITED - MAIN_RACES.length)
-    const rngI = mulberry32(SEED + 99)
-    const indices = bg
-      .map((_, i) => i)
-      .filter(
-        (i) =>
-          bg[i].archetype !== 'gas_giant' && bg[i].archetype !== 'gas_ringed',
-      )
-      .sort(() => rngI() - 0.5)
-    for (let i = 0; i < Math.min(inhabitedNeeded, indices.length); i++) {
-      bg[indices[i]].isInhabited = true
-    }
     this.allSystems = [...MAIN_RACES, ...bg]
 
     // Phase 7: глобальная уникальность signatures.
@@ -347,10 +325,8 @@ export class StarMapScene extends Phaser.Scene {
     this.camera.setCenter(home.x, home.y)
     this.camera.updatePlanetHitAreas()
 
-    // Сброс выбранной планеты при закрытии popover извне.
     // Handler сохранён как поле — нужен для off() в shutdown().
     this.onEbPopoverClose = () => {
-      this.selectedMainRaceId = null
     }
     eventBus.on('starmap:popover-close', this.onEbPopoverClose)
 

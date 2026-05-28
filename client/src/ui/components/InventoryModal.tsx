@@ -60,26 +60,8 @@ function InvSlot({
   isOpen: boolean
   onToggle: () => void
 }) {
-  const [shiftX, setShiftX] = useState(0)
-  const slotRef = useRef<HTMLDivElement>(null)
-
-  // При открытии тултипа меряем позицию слота и считаем сдвиг, чтобы тултип
-  // (ширина ≤190 / 60vw) не уезжал за края вьюпорта.
-  useLayoutEffect(() => {
-    if (!isOpen || !slotRef.current) return
-    const rect = slotRef.current.getBoundingClientRect()
-    const vw = window.innerWidth
-    const tipW = Math.min(190, vw * 0.6)
-    const margin = 8
-    const center = rect.left + rect.width / 2
-    const wantLeft = center - tipW / 2
-    const clampedLeft = Math.max(margin, Math.min(wantLeft, vw - margin - tipW))
-    setShiftX(clampedLeft - wantLeft)
-  }, [isOpen])
-
   return (
     <div
-      ref={slotRef}
       onClick={() => onToggle()}
       style={{
         flexShrink: 0,
@@ -137,8 +119,8 @@ function InvSlot({
             position: 'absolute',
             top: '110%',
             left: '50%',
-            transform: `translateX(calc(-50% + ${shiftX}px))`,
-            width: 190,
+            transform: 'translateX(-50%)',
+            width: 180,
             maxWidth: '60vw',
             background: '#131a2e',
             color: '#e8ecf6',
@@ -147,7 +129,7 @@ function InvSlot({
             padding: '7px 9px',
             fontSize: 11,
             lineHeight: 1.35,
-            zIndex: 20,
+            zIndex: 30,
             boxShadow: '0 4px 14px rgba(0,0,0,0.5)',
             pointerEvents: 'auto',
           }}
@@ -289,9 +271,9 @@ export function InventoryModal({ onClose }: Props) {
       />,
     )
   })
-  // Добиваем пустыми слотами до полной сетки (минимум 7 рядов по 5).
-  const MIN_SLOTS = 35
-  const total = Math.max(MIN_SLOTS, Math.ceil(filled.length / 5) * 5)
+  // Добиваем пустыми слотами до полной сетки (минимум 7 рядов по 4).
+  const MIN_SLOTS = 28
+  const total = Math.max(MIN_SLOTS, Math.ceil(filled.length / 4) * 4)
   const emptyCount = total - filled.length
 
   return (
@@ -350,8 +332,8 @@ export function InventoryModal({ onClose }: Props) {
         <div ref={bodyRef} className="flex-1 overflow-y-auto px-4 py-4">
           <div
             style={{
-              display: 'flex',
-              flexWrap: 'wrap',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 52px)',
               gap: 10,
               justifyContent: 'center',
             }}

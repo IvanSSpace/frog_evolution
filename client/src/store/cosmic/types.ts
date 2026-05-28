@@ -1,36 +1,6 @@
 // Cosmic Frogs System — типы для Phase 11+
 // Pure types + constants. Не импортирует из gameStore (избегаем циклов).
 // Phase 22: Rarity removed. Carrier развивается через стандартный merge до L18 → ascension.
-// Phase 26: добавлен firstContactsSeen для per-race first contact gating (Plan 26-01).
-// Phase 26 Plan 26-02: добавлен PlanetInhabitant type — race ownership of planet.
-
-import type { RaceId } from '../../game/config/races'
-import type { PendingItem } from '../../game/config/raceChains'
-import { INITIAL_RELATIONSHIP } from '../../game/config/raceChains'
-// Phase 28 Plan 28-01: quest mechanic state types.
-import type { ActiveQuest, CompletedQuest } from '../../game/config/quests'
-
-/**
- * Phase 26 Plan 26-02: race ownership of a habitable planet.
- *
- * Attached к подмножеству planets in `client/src/game/data/planetMap.json`
- * (30 of 350 → 1 home + 2 colonies × 10 races). Read-only — planets с inhabitant
- * визуализируются glow/icon в Star Map (Plan 26-03).
- *
- * Roles:
- *   - 'home'   : communicative leader planet of the race (Phase 28 communications root).
- *   - 'colony' : silent representation, race visible but no chat.
- *
- * **NB:** planetMap.json shape живёт only as JSON-loaded structure (нет общего
- * `Planet` TS типа в репо). Optional поле `inhabitant?: PlanetInhabitant` присутствует
- * на 30 of 350 entries; uninhabited planets просто не имеют этого поля. Closest
- * existing TS shape — `PlanetMapEntry` in `src/game/scenes/starmap/types.ts`;
- * там тоже добавлен optional `inhabitant?: PlanetInhabitant`.
- */
-export interface PlanetInhabitant {
-  raceId: RaceId
-  role: 'home' | 'colony'
-}
 
 // 2026-05-23: серум типов сокращено до 11 — 1:1 с архетипами планет.
 // Удалены: shadow, arcane, mechanical, war, void (не имели planet archetype'ов).
@@ -120,19 +90,7 @@ export interface PityCounters {
   legendary: number
 }
 
-// Phase 17: добавлен carriers tab.
-// Phase 22 Plan 22-05: добавлен shop tab (cosmic shop с двумя валютами).
-// Phase 26 Plan 26-04: добавлен inventory tab (read-only single-view все ресурсы).
-// Phase 27 Plan 27-04: добавлен contacts tab (relationship + chain UI).
-// Phase 28 Plan 28-01: добавлен quests tab (active + completed quest tracker UI in Plan 28-04).
-export type CosmicTab =
-  | 'scouts'
-  | 'boxes'
-  | 'carriers'
-  | 'shop'
-  | 'contacts'
-  | 'quests'
-  | 'serum'
+export type CosmicTab = 'scouts' | 'boxes' | 'carriers' | 'shop' | 'serum'
 
 // Phase 22 Plan 22-05: ShopItemId mirror (импорт из config/cosmicShop вызвал бы
 // циклическую зависимость types <-> config). Источник истины — config/cosmicShop.ts.
@@ -211,12 +169,6 @@ export interface CosmicSlice {
   // UI: последний активный таб (sessionStorage, не persist в localStorage)
   lastActiveTab: CosmicTab
 
-  // Crew (Phase 16)
-  crew: {
-    missionsToday: number
-    lastResetDay: string // ISO date 'YYYY-MM-DD' (LOCAL — Phase 16 fix CREW-03)
-  }
-
   // Phase 14: serum tap-to-select / drag selection mode (transient UI state, НЕ persisted)
   // Phase 22: selectedSerum упрощён до { element } (rarity removed).
   serumDragActive: boolean
@@ -241,50 +193,7 @@ export interface CosmicSlice {
   // НЕ persisted в localStorage (init на null после load → re-derived из planetCoords).
   latestShipPos: { x: number; y: number } | null
 
-  // Phase 26 Plan 26-01: per-race first contact tracker.
-  // Server-syncable (cosmic JSON blob via gameSync.ts).
-  // Default: все 10 false. markFirstContactSeen(raceId) idempotent.
-  firstContactsSeen: Record<RaceId, boolean>
-
-  // Phase 27 Plan 27-01: relationship-driven contacts foundation.
-  // raceRelationships: per-race score 1-10 integer (5 tiers in raceChains.ts).
-  //   Default INITIAL_RELATIONSHIP=2 (low threshold per CONTEXT D-Relationship system).
-  //   Clamped via slice actions (Plan 27-03 applyAccept/applyRefuse/applyEvent).
-  // chainProgress: per-race index into RACE_CHAINS[raceId]. 0 = first item.
-  //   Advanced by Plan 27-03 pending engine after each item consumed.
-  // pendingItems: global queue (cap CHAIN_PENDING_CAP=3 — enforced by engine, NOT slice shape).
-  //   Persisted; cross-device sync via cosmic blob.
-  raceRelationships: Record<RaceId, number>
-  chainProgress: Record<RaceId, number>
-  pendingItems: PendingItem[]
-
-  // Phase 28 Plan 28-01: quest mechanic state.
-  //   activeQuests: cap ACTIVE_QUEST_CAP=5 enforced by engine при activation
-  //     (Plan 28-03 activateQuestFromHook). Defensive load NOT enforce cap —
-  //     forward-compat если cap raised в будущем (mirror CHAIN_PENDING_CAP pattern).
-  //   completedQuests: history list, capped at COMPLETED_QUEST_HISTORY_CAP=100 newest
-  //     (FIFO trim on defensive load by completedAt desc).
-  activeQuests: ActiveQuest[]
-  completedQuests: CompletedQuest[]
 }
-
-// Phase 26 Plan 26-01: canonical race-id array для init `firstContactsSeen` и
-// defensive `loadCosmicSlice` iteration. Hardcoded здесь (НЕ import RACES из
-// config/races.ts) для:
-//   1. Избежать циклической deps types.ts → races.ts → types.ts (race uses Element).
-//   2. Slice init остаётся lightweight (no config-file pull в bootstrap path).
-// Compile-time check через `RaceId[]` ловит drift если RaceId union расширится.
-export const ALL_RACE_IDS: readonly RaceId[] = [
-  'crystalloids',
-  'mechanidons',
-  'fireworms',
-  'liquidoids',
-  'tenebrians',
-  'plasmaspirits',
-  'forestcores',
-  'timeweavers',
-  'cometfolk',
-] as const
 
 export interface CosmicToastPayload {
   type:
@@ -311,20 +220,6 @@ export function makeInitialCosmicSlice(): CosmicSlice {
   for (const el of ELEMENTS) {
     serums[el] = 0
   }
-  // Phase 26 Plan 26-01: per-race first contact tracker — все 10 false at init.
-  const firstContactsSeen = {} as Record<RaceId, boolean>
-  for (const id of ALL_RACE_IDS) {
-    firstContactsSeen[id] = false
-  }
-  // Phase 27 Plan 27-01: per-race relationship + chain progress init.
-  // raceRelationships = INITIAL_RELATIONSHIP (2) per race; chainProgress = 0 per race.
-  // pendingItems = [] (engine fills через Plan 27-03).
-  const raceRelationships = {} as Record<RaceId, number>
-  const chainProgress = {} as Record<RaceId, number>
-  for (const id of ALL_RACE_IDS) {
-    raceRelationships[id] = INITIAL_RELATIONSHIP
-    chainProgress[id] = 0
-  }
   return {
     serums,
     boxes: [],
@@ -343,7 +238,6 @@ export function makeInitialCosmicSlice(): CosmicSlice {
     bestiaryBitset: new Array(144).fill(0), // Phase 20: 1152 bits = 144 bytes (18 levels)
     pityCounters: { common: 0, rare: 0, epic: 0, legendary: 0 },
     lastActiveTab: 'scouts',
-    crew: { missionsToday: 0, lastResetDay: '' },
     // Phase 14: transient UI state — defaults на load, не persisted.
     serumDragActive: false,
     selectedSerum: null,
@@ -362,14 +256,5 @@ export function makeInitialCosmicSlice(): CosmicSlice {
     },
     // Phase 16: transient ship position cache (used for redirect calc)
     latestShipPos: null,
-    // Phase 26 Plan 26-01: per-race first contact (все 10 false initial).
-    firstContactsSeen,
-    // Phase 27 Plan 27-01: relationship/chain/pending foundation.
-    raceRelationships,
-    chainProgress,
-    pendingItems: [],
-    // Phase 28 Plan 28-01: quest state — engine fills через Plan 28-03 activateQuestFromHook.
-    activeQuests: [],
-    completedQuests: [],
   }
 }

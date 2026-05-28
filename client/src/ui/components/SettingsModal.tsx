@@ -3,7 +3,6 @@ import {
   useEffect,
   useRef,
   useCallback,
-  useSyncExternalStore,
   type ReactNode,
 } from 'react'
 import { createPortal } from 'react-dom'
@@ -23,17 +22,6 @@ import { fmtRate } from '../../utils/formatting'
 import { PlayerPanel } from '../../audio/components/PlayerPanel'
 import { sfx } from '../../audio/sfx'
 import { saveGameState } from '../../api/gameSync'
-import {
-  getInstantBoxes,
-  setInstantBoxes,
-  subscribeInstantBoxes,
-  getCalmFarmMode,
-  setCalmFarmMode,
-  subscribeCalmFarmMode,
-  getReducedEffects,
-  setReducedEffects,
-  subscribeReducedEffects,
-} from '../../utils/cosmicSettings'
 import { useModalLock } from '../../utils/modalLock'
 
 type Tab = 'bestiary' | 'settings' | 'player' | 'mechanics'
@@ -536,9 +524,6 @@ function SettingsTab() {
     })
   }
   const addSerum = useGameStore((s) => s.addSerum)
-  const crew = useGameStore((s) => s.crew)
-  const resetCrew = () =>
-    useGameStore.setState((s) => ({ crew: { ...s.crew, missionsToday: 0 } }))
 
   // Phase 22: dev-кнопки делают local mutation + немедленный PUT на сервер
   // (минуя throttle), чтобы изменения сразу видны после reload.
@@ -547,25 +532,8 @@ function SettingsTab() {
     await saveGameState(true)
   }
   const currentLang = i18n.language as Lang
-  const sfxMuted = useSyncExternalStore(sfxSubscribe, getSfxMuted, getSfxMuted)
-  // Phase 15 (UX-06): instant-boxes toggle reactive через cosmicSettings.
-  const instantBoxes = useSyncExternalStore(
-    subscribeInstantBoxes,
-    getInstantBoxes,
-    getInstantBoxes,
-  )
-  // Phase 19-04 (UX-04): calm farm mode toggle (disables aura/idle particles).
-  const calmFarmMode = useSyncExternalStore(
-    subscribeCalmFarmMode,
-    getCalmFarmMode,
-    getCalmFarmMode,
-  )
-  // Phase 19-04 (UX-05): reduced effects toggle — default OFF Locked Decision.
-  const reducedEffects = useSyncExternalStore(
-    subscribeReducedEffects,
-    getReducedEffects,
-    getReducedEffects,
-  )
+  const [sfxMuted, setSfxMuted] = useState(getSfxMuted)
+  useEffect(() => sfxSubscribe(() => setSfxMuted(getSfxMuted())), [])
 
   const handleBugReport = () => {
     const url = 'https://t.me/frog_evolution_support'
@@ -622,51 +590,6 @@ function SettingsTab() {
         </button>
       </SettingsRow>
 
-      {/* Phase 15 (UX-06): Cosmic section header */}
-      <div
-        className="ff-body text-xs font-bold text-center py-1 rounded mt-2"
-        style={{
-          background: '#1e3a8a',
-          color: '#dbeafe',
-          letterSpacing: '0.05em',
-        }}
-      >
-        {t('settings.cosmic')}
-      </div>
-
-      {/* Instant boxes toggle */}
-      <SettingsRow label={t('settings.instant_boxes')}>
-        <button
-          onClick={() => setInstantBoxes(!instantBoxes)}
-          className={`ff-btn text-xs px-3 py-1.5 ${instantBoxes ? 'ff-btn-green' : 'ff-btn-grey'}`}
-          title={t('settings.instant_boxes_desc')}
-        >
-          {instantBoxes ? t('player.on') : t('player.off')}
-        </button>
-      </SettingsRow>
-
-      {/* Phase 19-04 (UX-04): Calm farm mode toggle */}
-      <SettingsRow label={t('settings.calm_farm')}>
-        <button
-          onClick={() => setCalmFarmMode(!calmFarmMode)}
-          className={`ff-btn text-xs px-3 py-1.5 ${calmFarmMode ? 'ff-btn-green' : 'ff-btn-grey'}`}
-          title={t('settings.calm_farm_desc')}
-        >
-          {calmFarmMode ? t('player.on') : t('player.off')}
-        </button>
-      </SettingsRow>
-
-      {/* Phase 19-04 (UX-05): Reduced effects toggle (default OFF Locked Decision) */}
-      <SettingsRow label={t('settings.reduced_effects')}>
-        <button
-          onClick={() => setReducedEffects(!reducedEffects)}
-          className={`ff-btn text-xs px-3 py-1.5 ${reducedEffects ? 'ff-btn-green' : 'ff-btn-grey'}`}
-          title={t('settings.reduced_effects_desc')}
-        >
-          {reducedEffects ? t('player.on') : t('player.off')}
-        </button>
-      </SettingsRow>
-
       {/* Bug report */}
       <button
         onClick={handleBugReport}
@@ -711,12 +634,6 @@ function SettingsTab() {
             className="ff-btn ff-btn-green text-sm w-full"
           >
             +500 000 000
-          </button>
-          <button
-            onClick={devSync(resetCrew)}
-            className="ff-btn ff-btn-green text-sm w-full"
-          >
-            Сбросить усталость экипажа ({crew.missionsToday}/4)
           </button>
           <button
             onClick={devSync(() => {

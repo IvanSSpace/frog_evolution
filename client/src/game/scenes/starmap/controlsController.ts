@@ -12,8 +12,8 @@
 //     camera.centerX/centerY) — все движения камеры идут через него.
 //   - ShipController (ship.followingShip / ship.sprite) — drag отменяет follow,
 //     follow-mode перехватывает камеру в update tick.
-//   - StarMapScene (selectedMainRaceId / popoverController / tapHandledThisFrame /
-//     currentPressedPlanetId / closePhaserPopover) — tap-в-пустоту закрывает popover'ы.
+//   - StarMapScene (popoverController / tapHandledThisFrame /
+//     currentPressedPlanetId) — tap-в-пустоту закрывает popover'ы.
 //
 // Constants:
 //   - VEL_THRESHOLD = 0.005 px/ms — ниже этой скорости считаем что инерция остановилась.
@@ -171,10 +171,6 @@ export class ControlsController {
       // Сбрасываем счётчик нажатий → следующий тап на планету снова
       // запустит уникальную анимацию (как на первом нажатии).
       this.scene.currentPressedPlanetId = null
-      if (this.scene.selectedMainRaceId) {
-        this.scene.selectedMainRaceId = null
-        this.scene.closePhaserPopover()
-      }
       this.scene.popoverController.closeBgNamePopup()
     }
   }

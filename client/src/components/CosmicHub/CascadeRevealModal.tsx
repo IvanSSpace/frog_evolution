@@ -8,7 +8,6 @@ import { useTranslation } from 'react-i18next'
 import type { BoxData, Element } from '../../store/cosmic/types'
 import { useGameStore } from '../../store/gameStore'
 import { ELEMENT_TINT } from './ElementGrid'
-import { getInstantBoxes } from '../../utils/cosmicSettings'
 import { sfx } from '../../audio/sfx'
 import { useModalLock } from '../../utils/modalLock'
 
@@ -51,7 +50,7 @@ export default function CascadeRevealModal({
     rolledRef.current = rollBoxRarity(box.id)
   }
 
-  const [instantMode] = useState(() => getInstantBoxes())
+  const instantMode = false
   const initialPhase: Phase = instantMode ? 'slot-spinning' : 'opening-flash'
   const [phase, setPhase] = useState<Phase>(initialPhase)
   const [skipRequested, setSkipRequested] = useState(false)

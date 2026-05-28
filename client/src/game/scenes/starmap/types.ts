@@ -1,10 +1,5 @@
 // Phase 20-01: types extracted from StarMapScene.ts.
 // Pure type definitions без зависимостей от runtime state класса.
-// Используются как StarMapScene.ts, так и (в будущих волнах) extracted controllers.
-// Phase 26 Plan 26-02: добавлен optional `inhabitant?: PlanetInhabitant` для 30 of 350
-// habitable planets (1 home + 2 colonies × 10 races) — см. habitablePlanets.ts API.
-
-import type { PlanetInhabitant } from '../../../store/cosmic/types'
 
 // Shape of entries in planetMap.json — superset of Race/BgSystem fields.
 export interface PlanetMapEntry {
@@ -17,9 +12,6 @@ export interface PlanetMapEntry {
   color: number
   accent: number
   size: number
-  // Phase 26 Plan 26-02: optional race ownership (30 of 350 entries set this).
-  // Undefined for the remaining 320 uninhabited planets.
-  inhabitant?: PlanetInhabitant
   [key: string]: unknown
 }
 
