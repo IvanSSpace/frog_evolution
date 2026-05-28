@@ -39,6 +39,16 @@ export class LocationTransition {
   private spawner: FrogSpawner
   private magnet: MagnetController
   private box: BoxController
+  // 2026-05-28: in-memory кеш позиций лягушек на локациях. На выходе с
+  // локации снапшотим [level,x,y] всех живых frog'ов, на возврате — если
+  // levels из store совпадают с кешем по длине и порядку, восстанавливаем
+  // те же позиции. Иначе fallback на randomFieldPos. Не персистится (live-
+  // only в рамках сессии); цель — убрать "телепортацию" при быстром
+  // переключении между локациями.
+  private positionCache = new Map<
+    number,
+    Array<{ level: number; x: number; y: number }>
+  >()
 
   constructor(
     scene: MainScene,
@@ -212,6 +222,15 @@ export class LocationTransition {
     oldBg.y = 0
     // Затем лягушки — поверх фона
     const oldFrogs = [...scene.frogs]
+    // Снапшот позиций для возврата на эту локацию (см. positionCache в шапке).
+    this.positionCache.set(
+      oldLoc,
+      oldFrogs.map((f) => ({
+        level: f.level,
+        x: f.container.x,
+        y: f.container.y,
+      })),
+    )
     for (const f of oldFrogs) {
       scene.tweens.killTweensOf(f.container)
       scene.tweens.killTweensOf(f.body)
@@ -264,9 +283,18 @@ export class LocationTransition {
 
     const state = useGameStore.getState()
     const levels = state.locationFrogs[newLoc - 1] ?? []
+    // Используем сохранённые позиции если кеш совпадает с levels по длине
+    // и уровням в том же порядке. Иначе spawn'им в случайные точки.
+    const cached = this.positionCache.get(newLoc)
+    const useCachedPositions =
+      !!cached &&
+      cached.length === levels.length &&
+      cached.every((c, i) => c.level === levels[i])
     if (levels.length > 0) {
-      levels.forEach((lvl) => {
-        const { x: wx, y: wy } = scene.randomFieldPos()
+      levels.forEach((lvl, i) => {
+        const { x: wx, y: wy } = useCachedPositions
+          ? { x: cached![i].x, y: cached![i].y }
+          : scene.randomFieldPos()
         const frog = this.spawner.spawnFrog(wx, wy, lvl)
         // Замораживаем: убиваем idle-tween, паузим какашки.
         // Dash на новых лягушках сам пропустится через флаг isLocationTransitioning.
