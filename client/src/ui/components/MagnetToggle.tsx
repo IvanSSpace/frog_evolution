@@ -44,13 +44,13 @@ export function MagnetToggle() {
       aria-label={magnetEnabled ? t('magnet.off') : t('magnet.on')}
       style={{
         position: 'fixed',
-        top: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad) + 12px)',
+        top: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad) + 6px)',
         left: 4,
         zIndex: 50,
         pointerEvents: 'auto',
-        ['--ff-tile-from' as never]: magnetEnabled ? '#fcd34d' : '#9ca3af',
-        ['--ff-tile-to' as never]: magnetEnabled ? '#d97706' : '#4b5563',
-        ['--ff-tile-border' as never]: magnetEnabled ? '#78350f' : '#1f2937',
+        ['--ff-tile-from' as never]: magnetEnabled ? '#84cc16' : '#9ca3af',
+        ['--ff-tile-to' as never]: magnetEnabled ? '#4d7c0f' : '#4b5563',
+        ['--ff-tile-border' as never]: magnetEnabled ? '#166534' : '#1f2937',
         opacity: magnetEnabled ? 1 : 0.92,
       }}
       className="ff-tile w-12 h-12 text-2xl"
