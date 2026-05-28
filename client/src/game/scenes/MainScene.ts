@@ -84,8 +84,6 @@ export class MainScene extends Phaser.Scene {
   prevLocation = 1
   isLocationTransitioning = false
   bg!: Phaser.GameObjects.Image
-  // 2026-05-28: Континент (loc 3) — зелёный туманный шлейф над вулканом.
-  private volcanoFogTimer: Phaser.Time.TimerEvent | null = null
   // Аккумулятор для фонового дохода с лягушек неактивных локаций
   // (на текущей локации монеты приходят через настоящие какашки visible-лягушек)
   private bgIncomeAccum = 0
@@ -713,9 +711,6 @@ export class MainScene extends Phaser.Scene {
     // 2026-05-18: l18AbsoluteBonusPerSec (от first L18+L18 merge) тикает здесь
     // как ghost-frog income (см. gameStore). Multiplier applies через addGold.
     const currentLocId = store.currentLocation
-    // Континент → запускаем туманный шлейф вулкана; ушли → останавливаем.
-    if (currentLocId === 3 && !this.volcanoFogTimer) this.startVolcanoFog()
-    else if (currentLocId !== 3 && this.volcanoFogTimer) this.stopVolcanoFog()
     let bgIncomePerSec = store.l18AbsoluteBonusPerSec
     store.locationFrogs.forEach((arr, idx) => {
       const locId = idx + 1
@@ -898,51 +893,4 @@ export class MainScene extends Phaser.Scene {
     devLog('[debug] spawned 16 carrier frogs on each of 4 locations (64 total)')
   }
 
-  // ─── Туманный шлейф вулкана (локация 3 — Континент) ─────────────────────
-  // Зелёные эллипсы поднимаются вверх зиг-загом (sin-волна) с волкан-точки,
-  // alpha 0→peak→0, lifetime ~3.5s. Спавн каждые 400мс пока loc=3.
-  startVolcanoFog(): void {
-    if (this.volcanoFogTimer) return
-    this.volcanoFogTimer = this.time.addEvent({
-      delay: 120, // плотный поток струйки
-      loop: true,
-      callback: () => this.spawnVolcanoFogParticle(),
-    })
-  }
-
-  stopVolcanoFog(): void {
-    if (!this.volcanoFogTimer) return
-    this.volcanoFogTimer.remove(false)
-    this.volcanoFogTimer = null
-  }
-
-  private spawnVolcanoFogParticle(): void {
-    // Струйка: тонкая вертикальная капля, не кружок. Множество частиц с малым
-    // интервалом → виден непрерывный поток. Зиг-заг по X, подъём вверх.
-    const volcanoX = this.scale.width * 0.5
-    const volcanoY = this.scale.height * 0.18
-    const particle = this.add
-      .ellipse(volcanoX, volcanoY, 7 * DPR, 22 * DPR, 0x4ade80, 0.75)
-      .setDepth(5)
-    const startX = volcanoX
-    const startY = volcanoY
-    const rise = 260 * DPR
-    const zigAmp = 22 * DPR
-    const zigFreq = 5 // волн на траектории
-    this.tweens.add({
-      targets: { t: 0 },
-      t: 1,
-      duration: 2800,
-      ease: 'Sine.easeOut',
-      onUpdate: (tween) => {
-        const t = tween.progress
-        particle.x = startX + Math.sin(t * Math.PI * zigFreq) * zigAmp
-        particle.y = startY - t * rise
-        particle.alpha = Math.sin(t * Math.PI) * 0.75
-        // Лёгкое утолщение вверх — туман развеивается.
-        particle.setScale(1 + t * 0.4)
-      },
-      onComplete: () => particle.destroy(),
-    })
-  }
 }
