@@ -248,11 +248,23 @@ function RareBoxProgress({ progress }: { progress: number }) {
           right: 0,
           top: '50%',
           transform: 'translate(50%, -50%)',
-          fontSize: 18,
+          width: 26,
+          height: 26,
           pointerEvents: 'none',
         }}
       >
-        🎁
+        {/* box.webp с золотым tint (SYNC с RARE_BOX_TINT 0xffd700 в Phaser). */}
+        <img
+          src="/box.webp"
+          alt=""
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            filter:
+              'brightness(1.15) sepia(0.85) saturate(2.6) hue-rotate(-12deg) drop-shadow(0 1px 1px rgba(0,0,0,0.45))',
+          }}
+        />
       </div>
     </div>
   )
