@@ -55,15 +55,18 @@ export function MagnetToggle() {
       }}
       className="ff-tile w-12 h-12 text-2xl"
     >
-      <span
+      <img
+        src="/magnet.png"
+        alt=""
         style={{
+          width: '70%',
+          height: '70%',
+          objectFit: 'contain',
           filter: magnetEnabled
             ? 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))'
             : 'grayscale(0.7)',
         }}
-      >
-        🧲
-      </span>
+      />
       {!magnetEnabled && (
         <span
           style={{
