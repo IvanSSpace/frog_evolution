@@ -165,8 +165,8 @@ export function BottomBar({
         onClick={onOpenFrogShop}
       />
 
-      {/* Центр — действия */}
-      <div className="flex gap-2 items-center">
+      {/* Центр — действия. marginTop сдвигает 4 центральные tiles выше остальных. */}
+      <div className="flex gap-2 items-center" style={{ marginTop: -10 }}>
         <Tile icon="upgrade-shop" skin="green" onClick={onOpenShop} />
         {/* 📊 Доходы (gallery) перенесён в Header — открывается кликом по сумме. */}
         {/* 🎒 Инвентарь — иконка-рюкзак из /footer_icons/. */}
