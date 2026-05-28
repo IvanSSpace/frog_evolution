@@ -33,19 +33,13 @@ export function LocationButton({
   const locName = t(`locations.${loc.id}`)
   const v = LOCATION_VISUAL[loc.id] ?? LOCATION_VISUAL[1]
 
-  // Box shadow assembly — pulse-glow override'ит обычный isCurrent ring (pink
-  // glow #ec4899 более яркий, чем isCurrent's solid pink ring). Pulse > Current.
+  // Pulse-glow на unlock новой локации. isCurrent ring убран — текущую
+  // локацию теперь показывает стрелка-указатель внутри круга.
   const baseShadow =
     'inset 0 1px 0 rgba(255,255,255,0.5), 0 2px 0 rgba(0,0,0,0.25)'
-  let boxShadow: string
-  if (isPulsing) {
-    // 16px glow + 4px spread #ec4899 → видимый pulse-ring «новая локация».
-    boxShadow = `${baseShadow}, 0 0 16px 4px #ec4899`
-  } else if (isCurrent) {
-    boxShadow = `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 2px #D558D7, 0 2px 0 rgba(0,0,0,0.25)`
-  } else {
-    boxShadow = baseShadow
-  }
+  const boxShadow = isPulsing
+    ? `${baseShadow}, 0 0 16px 4px #ec4899`
+    : baseShadow
 
   return (
     <div
@@ -71,7 +65,7 @@ export function LocationButton({
             d="M 2 16 L 16 3 L 16 11 L 28 11 L 28 21 L 16 21 L 16 29 Z"
             fill="#D558D7"
             stroke="#5A1F5C"
-            strokeWidth="4"
+            strokeWidth="6"
             strokeLinejoin="round"
             strokeLinecap="round"
             paintOrder="stroke"
