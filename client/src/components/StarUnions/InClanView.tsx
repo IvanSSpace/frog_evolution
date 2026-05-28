@@ -27,6 +27,7 @@ export function InClanView() {
   const [donateReq, setDonateReq] = useState<ClanRequestDto | null>(null)
   const [inputText, setInputText] = useState('')
   const [sending, setSending] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -111,10 +112,69 @@ export function InClanView() {
         <div ref={chatEndRef} />
       </div>
 
+      {chatOpen && (
+        <div
+          className="flex-shrink-0 flex items-center gap-1.5 px-2 py-2"
+          style={{ borderTop: '1px solid rgba(77,107,31,0.3)', background: 'rgba(0,0,0,0.05)' }}
+        >
+          <input
+            ref={inputRef}
+            autoFocus
+            type="text"
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Сообщение..."
+            className="flex-1 rounded px-2 py-1.5 text-sm focus:outline-none"
+            style={{ background: 'rgba(0,0,0,0.07)', border: '1px solid rgba(0,0,0,0.15)', color: '#1f2937' }}
+            disabled={sending}
+          />
+          <button
+            onClick={handleSend}
+            disabled={!inputText.trim() || sending}
+            className="flex-shrink-0 px-3 py-1.5 rounded text-sm font-semibold transition-opacity"
+            style={{
+              background: '#16a34a',
+              color: '#fff',
+              opacity: !inputText.trim() || sending ? 0.4 : 1,
+            }}
+          >
+            Отправить
+          </button>
+          <button
+            onClick={() => setChatOpen(false)}
+            className="flex-shrink-0 px-2 py-1.5 rounded text-sm"
+            style={{ background: 'rgba(0,0,0,0.08)' }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       <div
         className="flex-shrink-0 flex items-center gap-1.5 px-2 py-2"
         style={{ borderTop: '1px solid rgba(77,107,31,0.3)', background: 'rgba(0,0,0,0.05)' }}
       >
+        <button
+          onClick={() => setChatOpen((v) => !v)}
+          title="Чат"
+          style={{
+            flexShrink: 0,
+            width: 36,
+            height: 36,
+            borderRadius: 12,
+            border: '2px solid #6e8a3a',
+            background: 'linear-gradient(180deg, #d6e6b8, #b8d090)',
+            boxShadow: '0 2px 0 #6e8a3a',
+            fontSize: 20,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+          }}
+        >
+          💬
+        </button>
         <button
           onClick={() => setCreateRequestOpen(true)}
           className="flex-shrink-0 text-base px-2 py-1.5 rounded"
@@ -138,37 +198,6 @@ export function InClanView() {
           }
         >
           🗺️
-        </button>
-        <button
-          onClick={() => inputRef.current?.focus()}
-          className="flex-shrink-0 text-base px-2 py-1.5 rounded"
-          style={{ background: 'rgba(0,0,0,0.08)' }}
-          title="Написать"
-        >
-          💬
-        </button>
-        <input
-          ref={inputRef}
-          type="text"
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Сообщение..."
-          className="flex-1 rounded px-2 py-1.5 text-sm focus:outline-none"
-          style={{ background: 'rgba(0,0,0,0.07)', border: '1px solid rgba(0,0,0,0.15)', color: '#1f2937' }}
-          disabled={sending}
-        />
-        <button
-          onClick={handleSend}
-          disabled={!inputText.trim() || sending}
-          className="flex-shrink-0 px-3 py-1.5 rounded text-sm font-semibold transition-opacity"
-          style={{
-            background: '#16a34a',
-            color: '#fff',
-            opacity: !inputText.trim() || sending ? 0.4 : 1,
-          }}
-        >
-          &gt;
         </button>
       </div>
 
