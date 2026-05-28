@@ -76,7 +76,7 @@ function Tile({
   title,
 }: TileProps) {
   const dim = size === 'lg' ? 'w-16 h-16' : 'w-12 h-12'
-  const iconPx = size === 'lg' ? 56 : 38
+  const iconPx = size === 'lg' ? 48 : 38
   const showBadge =
     typeof badge === 'number'
       ? badge > 0
