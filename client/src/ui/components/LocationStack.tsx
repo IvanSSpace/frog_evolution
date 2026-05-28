@@ -175,15 +175,15 @@ export function LocationStack() {
           left: 'auto',
           zIndex: 50,
           pointerEvents: 'none',
-          display: 'flex',
+          display: 'inline-flex',
           flexDirection: 'column',
           alignItems: 'flex-end',
           gap: 4,
-          // Чёрный фон-обёртка вокруг кнопок локаций.
-          width: 'fit-content',
+          // Чёрный фон-обёртка вокруг кнопок локаций. height auto по контенту.
           background: '#000',
           padding: '8px 10px',
           borderRadius: 16,
+          height: 'fit-content',
         }}
       >
         {!collapsed ? (
