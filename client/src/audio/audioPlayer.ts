@@ -272,6 +272,12 @@ class AudioPlayer {
 
   async resume(): Promise<void> {
     if (this.status !== 'paused' || !this.current || !this.Tone) return
+    // Будим AudioContext: браузер суспендит его при сворачивании вкладки
+    // (mobile/Telegram). Без этого scheduler играет в спящий контекст = тишина,
+    // из-за чего авто-возобновление «не работало». Симметрично playTrack().
+    if (this.Tone.context.state !== 'running') {
+      await this.Tone.start()
+    }
     this.realStart = Date.now()
     if (this.trackOut) {
       this.trackOut.volume.cancelScheduledValues(this.Tone.now())
