@@ -137,7 +137,10 @@ export class FrogSpawner {
     const body = scene.add.image(0, 0, textureKeyForLevel(level, 0))
     // Drop-shadow: дубль body, сплошной чёрный силуэт, под body, сдвинут влево-вниз.
     const shadow = scene.add.image(-5, 6, textureKeyForLevel(level, 0))
-    shadow.setTintFill(0x000000).setAlpha(0.4)
+    // Phaser 4: tintFill — флаг silhouette-режима. Тип не экспонирован, каст.
+    shadow.setTint(0x000000)
+    ;(shadow as unknown as { tintFill: boolean }).tintFill = true
+    shadow.setAlpha(0.4)
     if (tier > 0) {
       scene.ensureFrogTextureLoaded(level, tier, () => {
         const key = textureKeyForLevel(level, tier)
