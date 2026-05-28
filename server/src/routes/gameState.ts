@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import { prisma } from '../prisma'
-import { MAX_INCOME_PER_SEC, getTractorCapMs } from '../config/economy'
+import { MAX_INCOME_PER_SEC, getGooCollectorCapMs } from '../config/economy'
 
 // Anti-cheat threshold для idle income.
 // 100B gold/sec — заведомо больше любого realistic дохода.
@@ -30,9 +30,9 @@ export async function gameStateRoutes(app: FastifyInstance) {
 
       // Compute offline income — server time is authoritative.
       const upgrades = state.upgrades as Record<string, number>
-      const tractorLevel = upgrades.tractor ?? 0
+      const gooCollectorLevel = upgrades.gooCollector ?? upgrades.tractor ?? 0
       const elapsedMs = Date.now() - state.lastSessionAt.getTime()
-      const capMs = getTractorCapMs(tractorLevel)
+      const capMs = getGooCollectorCapMs(gooCollectorLevel)
       const earnedMs = Math.min(Math.max(0, elapsedMs), capMs)
       const earnedSec = Math.floor(earnedMs / 1000)
       const offlineIncome = BigInt(Math.floor(earnedSec * state.incomePerSec))
@@ -51,7 +51,7 @@ export async function gameStateRoutes(app: FastifyInstance) {
         ...state,
         gold: state.gold.toString(),
         offlineIncome: offlineIncome.toString(),
-        offlineMs: earnedMs, // capped по tractor
+        offlineMs: earnedMs, // capped по goo collector
         elapsedMs, // raw — для box drops calc на клиенте
       }
     },

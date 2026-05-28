@@ -51,7 +51,7 @@ const ONBOARDING_KEY = 'frog_evolution_onboarding'
 export function loadUpgrades(): Upgrades {
   const defaults: Upgrades = {
     dropSpeed: 0,
-    tractor: 0,
+    gooCollector: 0,
     magnet: 0,
     magnet2: 0,
     magnet3: 0,
@@ -68,7 +68,10 @@ export function loadUpgrades(): Upgrades {
           parsed.dropSpeed ?? 0,
           UPGRADE_CONFIG.dropSpeed.maxLevel,
         ),
-        tractor: Math.min(parsed.tractor ?? 0, UPGRADE_CONFIG.tractor.maxLevel),
+        gooCollector: Math.min(
+          (parsed as unknown as Record<string, number>).gooCollector ?? (parsed as unknown as Record<string, number>).tractor ?? 0,
+          UPGRADE_CONFIG.gooCollector.maxLevel,
+        ),
         magnet: Math.min(parsed.magnet ?? 0, UPGRADE_CONFIG.magnet.maxLevel),
         magnet2: Math.min(parsed.magnet2 ?? 0, UPGRADE_CONFIG.magnet2.maxLevel),
         magnet3: Math.min(parsed.magnet3 ?? 0, UPGRADE_CONFIG.magnet3.maxLevel),

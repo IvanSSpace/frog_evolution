@@ -54,7 +54,7 @@ export function getFrogPrice(level: number, purchases: number): number {
 // 2026-05-23: добавлены magnet2/magnet3 — магниты для L2/L3 (gate в UI после cosmos).
 export type UpgradeKey =
   | 'dropSpeed'
-  | 'tractor'
+  | 'gooCollector'
   | 'magnet'
   | 'magnet2'
   | 'magnet3'
@@ -74,7 +74,7 @@ export const UPGRADE_CONFIG: Readonly<Record<UpgradeKey, UpgradeCfg>> = {
     maxLevel: 8,
     costs: [99, 3_000, 20_000, 130_000, 900_000, 5_800_000, 58_000_000, 580_000_000],
   },
-  tractor: {
+  gooCollector: {
     maxLevel: 8,
     costs: [550, 3_500, 23_000, 250_000, 2_500_000, 25_000_000, 250_000_000, 2_500_000_000],
   },
@@ -129,21 +129,21 @@ export function getUpgradeCost(key: UpgradeKey, currentLevel: number): number {
   return cfg.costs[currentLevel]
 }
 
-// === Tractor offline income ===
+// === Goo Collector offline income ===
 
 // MAX_INCOME_PER_SEC clamp for incomePerSec stored by client.
 // L18 frog with poop interval ~2s → ~5.4e12 gold/sec at full 16-frog cap.
 // 1e14 gives ~18x headroom — blocks absurd cheat values, doesn't trip legit play.
 export const MAX_INCOME_PER_SEC = 1e14
 
-// Tractor cap per level in milliseconds.
-// Mirrored from client/src/game/config/upgrades.ts UPGRADE_CONFIG.tractor.capHours.
+// Goo Collector cap per level in milliseconds.
+// Mirrored from client/src/game/config/upgrades.ts UPGRADE_CONFIG.gooCollector.capHours.
 // SYNC POINT: coordinate changes with client.
-// capHours: [0, 2, 3, 3.5, 4, 4.5, 5, 5.5, 6] — index = tractor level.
-const TRACTOR_CAP_HOURS = [0, 2, 3, 3.5, 4, 4.5, 5, 5.5, 6] as const
+// capHours: [0, 2, 3, 3.5, 4, 4.5, 5, 5.5, 6] — index = goo collector level.
+const GOO_COLLECTOR_CAP_HOURS = [0, 2, 3, 3.5, 4, 4.5, 5, 5.5, 6] as const
 
-export function getTractorCapMs(level: number): number {
-  const hours = TRACTOR_CAP_HOURS[Math.min(level, TRACTOR_CAP_HOURS.length - 1)]
+export function getGooCollectorCapMs(level: number): number {
+  const hours = GOO_COLLECTOR_CAP_HOURS[Math.min(level, GOO_COLLECTOR_CAP_HOURS.length - 1)]
   return hours * 3600 * 1000
 }
 

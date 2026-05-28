@@ -7,7 +7,7 @@ import {
   ENTITY_CAP,
   getUpgradeCost,
   getDropIntervalMs,
-  getTractorCapMs,
+  getGooCollectorCapMs,
   getMagnetSpawnInterval,
   getMagnetDuration,
   getMagnetMergesPerCycle,
@@ -76,7 +76,7 @@ export {
   ENTITY_CAP,
   getUpgradeCost,
   getDropIntervalMs,
-  getTractorCapMs,
+  getGooCollectorCapMs,
   getMagnetSpawnInterval,
   getMagnetDuration,
   getMagnetMergesPerCycle,
@@ -282,7 +282,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   devResetUpgrades: () => {
     const defaults: Upgrades = {
       dropSpeed: 0,
-      tractor: 0,
+      gooCollector: 0,
       magnet: 0,
       magnet2: 0,
       magnet3: 0,

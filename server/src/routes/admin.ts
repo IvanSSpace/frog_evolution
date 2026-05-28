@@ -664,7 +664,7 @@ export async function adminRoutes(app: FastifyInstance) {
         where: { userId },
         update: {
           gold: 0n,
-          upgrades: { dropSpeed: 0, tractor: 0, magnet: 0, magnet2: 0, magnet3: 0, crateQuality: 0, rareBoxSpeed: 0 },
+          upgrades: { dropSpeed: 0, gooCollector: 0, magnet: 0, magnet2: 0, magnet3: 0, crateQuality: 0, rareBoxSpeed: 0 },
           frogPurchases: [],
           discoveredLevels: [1],
           magnetEnabled: false,

@@ -162,7 +162,7 @@ export async function loadGameState(): Promise<boolean> {
       gold: goldNum,
       upgrades: {
         dropSpeed: upg?.dropSpeed ?? 0,
-        tractor: upg?.tractor ?? 0,
+        gooCollector: upg?.gooCollector ?? upg?.tractor ?? 0,
         magnet: upg?.magnet ?? 0,
         magnet2: upg?.magnet2 ?? 0,
         magnet3: upg?.magnet3 ?? 0,
@@ -362,7 +362,7 @@ export async function loadGameState(): Promise<boolean> {
       }
     }
 
-    // Server compute offline income (tractor) — server-authoritative
+    // Server compute offline income (goo collector) — server-authoritative
     if (data.offlineIncome && typeof data.offlineMs === 'number') {
       const earned = Number(data.offlineIncome)
       if (earned > 0 && data.offlineMs > 0) {

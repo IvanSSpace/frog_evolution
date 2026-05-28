@@ -5,7 +5,7 @@
 
 export interface Upgrades {
   dropSpeed: number
-  tractor: number
+  gooCollector: number
   magnet: number
   // 2026-05-23: магниты для L2 (Лес) и L3 (Континент) — отдельные апгрейды.
   // 2026-05-28: перенесены из косм. магазина в обычные улучшения.
@@ -41,7 +41,7 @@ export function toUpgrades(
   const r = raw ?? {}
   return {
     dropSpeed: r.dropSpeed ?? 0,
-    tractor: r.tractor ?? 0,
+    gooCollector: r.gooCollector ?? r.tractor ?? 0,
     magnet: r.magnet ?? 0,
     magnet2: r.magnet2 ?? 0,
     magnet3: r.magnet3 ?? 0,
@@ -68,7 +68,7 @@ export const UPGRADE_CONFIG = {
       99, 3_000, 20_000, 130_000, 900_000, 5_800_000, 58_000_000, 580_000_000,
     ],
   },
-  tractor: {
+  gooCollector: {
     maxLevel: 8,
     capHours: [0, 2, 3, 3.5, 4, 4.5, 5, 5.5, 6],
     costs: [
@@ -147,8 +147,8 @@ export function getDropIntervalMs(level: number): number {
   return arr[Math.min(level, arr.length - 1)]
 }
 
-export function getTractorCapMs(level: number): number {
-  const arr = UPGRADE_CONFIG.tractor.capHours
+export function getGooCollectorCapMs(level: number): number {
+  const arr = UPGRADE_CONFIG.gooCollector.capHours
   const hours = arr[Math.min(level, arr.length - 1)]
   return hours * 3600 * 1000
 }
