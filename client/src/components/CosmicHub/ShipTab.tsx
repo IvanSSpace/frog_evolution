@@ -14,14 +14,11 @@ import {
   msUntilLocalMidnight,
 } from '../../game/data/missionConfig'
 import { CrewIndicator } from './CrewIndicator'
-import { ELEMENT_TINT } from './ElementGrid'
 import {
   DARK_CARD_STYLE,
   PINK_CTA_STYLE,
-  DISABLED_CTA_OVERRIDES,
   TEXT_DIM,
   TEXT_VERY_DIM,
-  SECTION_HEADER_STYLE,
   EMPTY_STATE_TEXT_STYLE,
 } from './_styles'
 
@@ -33,8 +30,6 @@ export function ShipTab({ onClose }: Props) {
   const { t } = useTranslation()
   const ship = useGameStore((s) => s.ship)
   const crew = useGameStore((s) => s.crew)
-  const allBoxes = useGameStore((s) => s.boxes)
-  const boxes = allBoxes.filter((b) => !b.opened)
   const ensureShipExists = useGameStore((s) => s.ensureShipExists)
   const resetCrewIfNewDay = useGameStore((s) => s.resetCrewIfNewDay)
 
@@ -135,71 +130,6 @@ export function ShipTab({ onClose }: Props) {
           {t('ship.open_map')}
         </button>
       </div>
-
-      {/* Boxes section */}
-      {boxes.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <div style={SECTION_HEADER_STYLE}>📦 Боксы</div>
-          {boxes.map((box) => {
-            const atHome = ship?.state === 'docked' && ship.planetId === 'home'
-            return (
-              <div
-                key={box.id}
-                className="flex items-center gap-2"
-                style={{ ...DARK_CARD_STYLE, padding: '8px 12px' }}
-              >
-                <div
-                  style={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: '50%',
-                    backgroundColor: ELEMENT_TINT[box.element],
-                    flexShrink: 0,
-                  }}
-                />
-                <div className="flex-1 min-w-0">
-                  <div
-                    className="truncate"
-                    style={{ fontSize: 13, color: '#fff' }}
-                  >
-                    {box.planetName || box.planetId}
-                  </div>
-                  <div style={{ fontSize: 11, color: TEXT_VERY_DIM }}>
-                    {box.archetype}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  disabled={!atHome}
-                  title={atHome ? undefined : 'Вернись на HOME'}
-                  onClick={() => {
-                    if (!atHome) return
-                    useGameStore.getState().openBox(box.id)
-                  }}
-                  style={
-                    atHome
-                      ? {
-                          ...PINK_CTA_STYLE,
-                          padding: '6px 12px',
-                          fontSize: 12,
-                          pointerEvents: 'auto',
-                        }
-                      : {
-                          ...PINK_CTA_STYLE,
-                          ...DISABLED_CTA_OVERRIDES,
-                          padding: '6px 12px',
-                          fontSize: 12,
-                          pointerEvents: 'auto',
-                        }
-                  }
-                >
-                  Открыть
-                </button>
-              </div>
-            )
-          })}
-        </div>
-      )}
     </div>
   )
 }
