@@ -73,6 +73,8 @@ export function InClanView() {
 
   if (!snapshot) return null
 
+  const canPin = snapshot.me.role === 'LEADER' || snapshot.me.role === 'COLEADER'
+
   return (
     <div className="flex flex-col" style={{ height: '100%', minHeight: 0 }}>
       <ClanHeader
@@ -84,7 +86,7 @@ export function InClanView() {
       {snapshot.pin && (
         <ClanPinBlock
           pin={snapshot.pin}
-          canDelete={snapshot.me.role === 'LEADER' || snapshot.me.role === 'COLEADER'}
+          canDelete={canPin}
           onDelete={async () => {
             await deletePin(snapshot.clan.id)
             setSnapshot({ ...snapshot, pin: null })
@@ -92,7 +94,11 @@ export function InClanView() {
         />
       )}
 
-      <div className="flex-1 overflow-y-auto px-3 py-2" style={{ minHeight: 0 }}>
+      {/* Chat scroll */}
+      <div
+        className="flex-1 overflow-y-auto ff-no-scrollbar px-2 py-2"
+        style={{ minHeight: 0, WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
+      >
         {items.map((item) =>
           item.kind === 'message' ? (
             <ChatMessage
@@ -112,10 +118,11 @@ export function InClanView() {
         <div ref={chatEndRef} />
       </div>
 
+      {/* Chat input sheet */}
       {chatOpen && (
         <div
-          className="flex-shrink-0 flex items-center gap-1.5 px-2 py-2"
-          style={{ borderTop: '1px solid rgba(77,107,31,0.3)', background: 'rgba(0,0,0,0.05)' }}
+          className="ff-card flex-shrink-0 flex items-center gap-2 flex-shrink-0"
+          style={{ margin: '0', borderRadius: 0, padding: '8px 10px', gap: 6 }}
         >
           <input
             ref={inputRef}
@@ -125,77 +132,93 @@ export function InClanView() {
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Сообщение..."
-            className="flex-1 rounded px-2 py-1.5 text-sm focus:outline-none"
-            style={{ background: 'rgba(0,0,0,0.07)', border: '1px solid rgba(0,0,0,0.15)', color: '#1f2937' }}
+            className="flex-1 text-sm focus:outline-none"
+            style={{
+              border: '2px solid #8b6914',
+              background: 'rgba(255,253,230,0.9)',
+              borderRadius: 999,
+              padding: '6px 12px',
+              color: '#2f1f0e',
+            }}
             disabled={sending}
           />
           <button
             onClick={handleSend}
             disabled={!inputText.trim() || sending}
-            className="flex-shrink-0 px-3 py-1.5 rounded text-sm font-semibold transition-opacity"
-            style={{
-              background: '#16a34a',
-              color: '#fff',
-              opacity: !inputText.trim() || sending ? 0.4 : 1,
-            }}
+            className="ff-btn ff-btn-green text-xs py-1.5 px-3 flex-shrink-0"
           >
             Отправить
           </button>
           <button
             onClick={() => setChatOpen(false)}
-            className="flex-shrink-0 px-2 py-1.5 rounded text-sm"
-            style={{ background: 'rgba(0,0,0,0.08)' }}
+            className="ff-tile flex-shrink-0"
+            style={{
+              width: 32,
+              height: 32,
+              fontSize: 14,
+              ['--ff-tile-from' as never]: '#fca5a5',
+              ['--ff-tile-to' as never]: '#dc2626',
+              ['--ff-tile-border' as never]: '#7f1d1d',
+              color: '#fff',
+            }}
           >
             ✕
           </button>
         </div>
       )}
 
+      {/* Bottom action bar */}
       <div
-        className="flex-shrink-0 flex items-center gap-1.5 px-2 py-2"
-        style={{ borderTop: '1px solid rgba(77,107,31,0.3)', background: 'rgba(0,0,0,0.05)' }}
+        className="flex-shrink-0 flex items-center gap-3 flex-shrink-0"
+        style={{ borderTop: '3px dashed rgba(77,107,31,0.4)', padding: '10px 14px' }}
       >
         <button
           onClick={() => setChatOpen((v) => !v)}
           title="Чат"
+          className="ff-tile"
           style={{
+            width: 44,
+            height: 44,
+            fontSize: 22,
             flexShrink: 0,
-            width: 36,
-            height: 36,
-            borderRadius: 12,
-            border: '2px solid #6e8a3a',
-            background: 'linear-gradient(180deg, #d6e6b8, #b8d090)',
-            boxShadow: '0 2px 0 #6e8a3a',
-            fontSize: 20,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
+            ['--ff-tile-from' as never]: '#a7f3d0',
+            ['--ff-tile-to' as never]: '#34d399',
+            ['--ff-tile-border' as never]: '#065f46',
           }}
         >
           💬
         </button>
         <button
           onClick={() => setCreateRequestOpen(true)}
-          className="flex-shrink-0 text-base px-2 py-1.5 rounded"
-          style={{ background: 'rgba(0,0,0,0.08)' }}
           title="Обмен"
+          className="ff-tile"
+          style={{
+            width: 44,
+            height: 44,
+            fontSize: 22,
+            flexShrink: 0,
+            ['--ff-tile-from' as never]: '#c4b5fd',
+            ['--ff-tile-to' as never]: '#7c3aed',
+            ['--ff-tile-border' as never]: '#3b0764',
+          }}
         >
           📦
         </button>
         <button
           onClick={() => setCreatePinOpen(true)}
-          disabled={snapshot.me.role !== 'LEADER' && snapshot.me.role !== 'COLEADER'}
-          className="flex-shrink-0 text-base px-2 py-1.5 rounded transition-opacity"
+          disabled={!canPin}
+          title={canPin ? 'Маршрут' : 'Только лидер/со-лидер могут закрепить маршрут'}
+          className="ff-tile"
           style={{
-            background: 'rgba(0,0,0,0.08)',
-            opacity: snapshot.me.role !== 'LEADER' && snapshot.me.role !== 'COLEADER' ? 0.35 : 1,
+            width: 44,
+            height: 44,
+            fontSize: 22,
+            flexShrink: 0,
+            opacity: canPin ? 1 : 0.35,
+            ['--ff-tile-from' as never]: '#fcd34d',
+            ['--ff-tile-to' as never]: '#d97706',
+            ['--ff-tile-border' as never]: '#78350f',
           }}
-          title={
-            snapshot.me.role === 'LEADER' || snapshot.me.role === 'COLEADER'
-              ? 'Маршрут'
-              : 'Только лидер/со-лидер могут закрепить маршрут'
-          }
         >
           🗺️
         </button>

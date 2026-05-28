@@ -1,6 +1,9 @@
+import { useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useClanStore } from '../../store/clan/slice'
 import { kickMember, promoteMember, demoteMember, transferLeader, leaveClan, fetchClanMe } from '../../api/clan'
 import type { ClanRole, ClanMemberDto } from '../../api/clan'
+import { useModalLock } from '../../utils/modalLock'
 
 interface Props {
   onClose: () => void
@@ -18,9 +21,17 @@ const ROLE_BADGE: Record<ClanRole, string> = {
 }
 
 export function ClanRosterModal({ onClose }: Props) {
+  useModalLock()
   const snapshot = useClanStore((s) => s.snapshot)
   const setSnapshot = useClanStore((s) => s.setSnapshot)
   const setCooldown = useClanStore((s) => s.setCooldown)
+  const [closing, setClosing] = useState(false)
+
+  const handleClose = useCallback(() => {
+    if (closing) return
+    setClosing(true)
+    window.setTimeout(onClose, 280)
+  }, [closing, onClose])
 
   if (!snapshot) return null
 
@@ -107,115 +118,148 @@ export function ClanRosterModal({ onClose }: Props) {
     return order[a.role] - order[b.role]
   })
 
-  return (
+  return createPortal(
     <div
-      className="ff-backdrop ff-fade"
-      onClick={onClose}
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 200,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 16,
-        background: 'rgba(0,0,0,0.35)',
+        zIndex: 250,
+        pointerEvents: 'auto',
+        background: 'transparent',
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleClose()
       }}
     >
       <div
-        className="ff-panel ff-pop"
-        onClick={(e) => e.stopPropagation()}
         style={{
-          width: '100%',
-          maxWidth: 440,
-          maxHeight: '85vh',
-          display: 'flex',
-          flexDirection: 'column',
-          background: '#E8F5D2',
-          borderRadius: 14,
-          boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+          position: 'absolute',
+          top: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad))',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 251,
+          pointerEvents: 'none',
+          overflow: 'hidden',
         }}
       >
-        <div className="flex items-center justify-between p-3 flex-shrink-0" style={{ borderBottom: '1px solid rgba(77,107,31,0.3)' }}>
-          <div className="font-semibold" style={{ color: '#1f2937' }}>Участники союза</div>
-          <button onClick={onClose} style={{ color: '#4b5563' }}>✕</button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-2">
-          {sorted.map((member) => {
-            const name = member.username ?? `User#${member.userId}`
-            const days = daysSince(member.joinedAt)
-            return (
-              <div
-                key={member.userId}
-                className="flex items-center gap-2 px-2 py-2 rounded-lg mb-1"
-                style={{ background: 'rgba(0,0,0,0.05)' }}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold truncate" style={{ color: '#1f2937' }}>{name}</div>
-                  <div className="text-xs" style={{ color: '#6b7280' }}>{ROLE_BADGE[member.role]} · {days} дн. с нами</div>
-                </div>
-                <div className="flex gap-1 flex-shrink-0">
-                  {myRole === 'LEADER' && member.role === 'MEMBER' && (
-                    <button
-                      onClick={() => handlePromote(member)}
-                      className="text-xs px-2 py-1 rounded"
-                      style={{ background: 'rgba(99,102,241,0.2)', color: '#4338ca' }}
-                    >
-                      ↑
-                    </button>
-                  )}
-                  {myRole === 'LEADER' && member.role === 'COLEADER' && (
-                    <>
-                      <button
-                        onClick={() => handleDemote(member)}
-                        className="text-xs px-2 py-1 rounded"
-                        style={{ background: 'rgba(245,158,11,0.2)', color: '#92400e' }}
-                      >
-                        ↓
-                      </button>
-                      <button
-                        onClick={() => handleTransfer(member)}
-                        className="text-xs px-2 py-1 rounded"
-                        style={{ background: 'rgba(168,85,247,0.2)', color: '#6b21a8' }}
-                      >
-                        👑
-                      </button>
-                    </>
-                  )}
-                  {(
-                    (myRole === 'LEADER' && member.role !== 'LEADER') ||
-                    (myRole === 'COLEADER' && member.role === 'MEMBER')
-                  ) && (
-                    <button
-                      onClick={() => handleKick(member)}
-                      className="text-xs px-2 py-1 rounded"
-                      style={{ background: 'rgba(239,68,68,0.2)', color: '#b91c1c' }}
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        <div className="p-3 flex-shrink-0" style={{ borderTop: '1px solid rgba(77,107,31,0.3)' }}>
-          <button
-            onClick={handleLeave}
-            className="w-full py-2 rounded-lg text-sm font-semibold"
-            style={{ background: 'rgba(239,68,68,0.15)', color: '#b91c1c', border: '1px solid rgba(239,68,68,0.3)' }}
+        <div
+          className={closing ? 'ff-slide-up' : 'ff-slide-down'}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            background: 'linear-gradient(180deg, #f5fbe9 0%, #d9eeb6 100%)',
+            border: '4px solid #4d6b1f',
+            borderRadius: 0,
+            boxShadow: '0 0 0 3px #f7ffe0 inset',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div
+            className="flex items-center gap-1.5 px-3 pt-4 pb-3 flex-shrink-0"
+            style={{ borderBottom: '3px dashed rgba(77,107,31,0.4)' }}
           >
-            🚪 Покинуть союз
-          </button>
-          {myRole === 'LEADER' && (
-            <div className="text-xs text-center mt-1" style={{ color: '#6b7280' }}>
-              Лидерство автоматически передастся старшему
+            <span className="ff-display flex-1" style={{ fontSize: 20, color: '#2f4a1f' }}>
+              Участники союза
+            </span>
+            <button
+              type="button"
+              onClick={handleClose}
+              aria-label="Закрыть"
+              className="ff-tile w-10 h-10 text-xl flex-shrink-0"
+              style={{
+                ['--ff-tile-from' as never]: '#fca5a5',
+                ['--ff-tile-to' as never]: '#dc2626',
+                ['--ff-tile-border' as never]: '#7f1d1d',
+                color: '#fff',
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Members list */}
+          <div
+            className="flex-1 min-h-0 overflow-y-auto ff-no-scrollbar px-4 py-3"
+            style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
+          >
+            <div className="flex flex-col gap-2">
+              {sorted.map((member) => {
+                const name = member.username ?? `User#${member.userId}`
+                const days = daysSince(member.joinedAt)
+                return (
+                  <div key={member.userId} className="ff-card flex items-center gap-2" style={{ padding: '10px 12px' }}>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm ff-display truncate" style={{ color: '#2f1f0e' }}>{name}</div>
+                      <div className="text-xs mt-0.5" style={{ color: '#7a5a2f' }}>{ROLE_BADGE[member.role]} · {days} дн. с нами</div>
+                    </div>
+                    <div className="flex gap-1 flex-shrink-0">
+                      {myRole === 'LEADER' && member.role === 'MEMBER' && (
+                        <button
+                          onClick={() => handlePromote(member)}
+                          className="ff-btn ff-btn-purple text-xs py-1 px-2"
+                        >
+                          ↑
+                        </button>
+                      )}
+                      {myRole === 'LEADER' && member.role === 'COLEADER' && (
+                        <>
+                          <button
+                            onClick={() => handleDemote(member)}
+                            className="ff-btn ff-btn-amber text-xs py-1 px-2"
+                          >
+                            ↓
+                          </button>
+                          <button
+                            onClick={() => handleTransfer(member)}
+                            className="ff-btn ff-btn-yellow text-xs py-1 px-2"
+                          >
+                            👑
+                          </button>
+                        </>
+                      )}
+                      {(
+                        (myRole === 'LEADER' && member.role !== 'LEADER') ||
+                        (myRole === 'COLEADER' && member.role === 'MEMBER')
+                      ) && (
+                        <button
+                          onClick={() => handleKick(member)}
+                          className="ff-btn ff-btn-red text-xs py-1 px-2"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-          )}
+          </div>
+
+          {/* Footer — leave button */}
+          <div
+            className="flex-shrink-0 px-4 py-3"
+            style={{ borderTop: '3px dashed rgba(77,107,31,0.4)' }}
+          >
+            <button
+              onClick={handleLeave}
+              className="ff-btn ff-btn-red w-full py-2 text-sm"
+            >
+              🚪 Покинуть союз
+            </button>
+            {myRole === 'LEADER' && (
+              <div className="text-xs text-center mt-1" style={{ color: '#7a5a2f' }}>
+                Лидерство автоматически передастся старшему
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

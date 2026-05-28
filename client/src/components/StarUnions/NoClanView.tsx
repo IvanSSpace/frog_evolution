@@ -31,7 +31,6 @@ export function NoClanView() {
   const cooldownDate = cooldownUntil ? new Date(cooldownUntil) : null
   const cooldownActive = cooldownDate != null && cooldownDate > new Date()
 
-  // Countdown ticker
   useEffect(() => {
     if (!cooldownActive) return
     const id = setInterval(() => setTick((t) => t + 1), 1000)
@@ -49,7 +48,6 @@ export function NoClanView() {
     [setList],
   )
 
-  // Initial load
   useEffect(() => {
     loadList('', 0)
   }, [loadList])
@@ -74,14 +72,14 @@ export function NoClanView() {
   const totalPages = Math.ceil(listTotal / PAGE_SIZE)
 
   return (
-    <div className="flex flex-col gap-3 text-sm">
+    <div className="flex flex-col gap-3">
       {/* Cooldown banner */}
       {cooldownActive && cooldownDate && (
         <div
-          className="rounded px-3 py-2 text-xs"
-          style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#b91c1c' }}
+          className="ff-card px-3 py-2 text-xs"
+          style={{ color: '#92400e', borderColor: '#b45309' }}
         >
-          Смена клана недоступна до {formatCountdown(cooldownDate)}
+          ⏳ Смена клана недоступна до {formatCountdown(cooldownDate)}
         </div>
       )}
 
@@ -92,22 +90,27 @@ export function NoClanView() {
           value={search}
           onChange={(e) => handleSearchChange(e.target.value)}
           placeholder="Поиск союза..."
-          className="flex-1 rounded px-3 py-1.5 text-sm focus:outline-none"
-          style={{ background: 'rgba(0,0,0,0.07)', border: '1px solid rgba(0,0,0,0.15)', color: '#1f2937' }}
+          className="flex-1 text-sm focus:outline-none"
+          style={{
+            border: '2px solid #8b6914',
+            background: 'rgba(255,253,230,0.9)',
+            borderRadius: 999,
+            padding: '8px 14px',
+            color: '#2f1f0e',
+          }}
         />
         <button
           onClick={() => setShowCreate(true)}
-          className="flex-shrink-0 px-3 py-1.5 rounded text-xs font-semibold"
-          style={{ background: '#16a34a', color: '#fff' }}
+          className="ff-btn ff-btn-amber flex-shrink-0 text-xs py-2 px-3"
         >
           Создать (3💎)
         </button>
       </div>
 
       {/* List */}
-      <div style={{ maxHeight: 340, overflowY: 'auto' }}>
+      <div className="flex flex-col gap-2">
         {list.length === 0 ? (
-          <div className="text-center py-6" style={{ color: '#9ca3af' }}>Союзов не найдено</div>
+          <div className="text-center py-6" style={{ color: '#7a5a2f' }}>Союзов не найдено</div>
         ) : (
           list.map((item) => {
             const isFull = item.memberCount >= 30
@@ -136,23 +139,15 @@ export function NoClanView() {
           <button
             onClick={() => handlePage(-1)}
             disabled={page === 0}
-            className="px-3 py-1 rounded text-xs"
-            style={{
-              background: page === 0 ? 'rgba(0,0,0,0.05)' : 'rgba(0,0,0,0.1)',
-              color: page === 0 ? '#9ca3af' : '#374151',
-            }}
+            className="ff-btn ff-btn-grey text-xs py-1.5 px-3"
           >
             {'<'}
           </button>
-          <span className="text-xs" style={{ color: '#6b7280' }}>Стр. {page + 1}/{totalPages}</span>
+          <span className="text-xs ff-display" style={{ color: '#7a5a2f' }}>Стр. {page + 1}/{totalPages}</span>
           <button
             onClick={() => handlePage(1)}
             disabled={(page + 1) * PAGE_SIZE >= listTotal}
-            className="px-3 py-1 rounded text-xs"
-            style={{
-              background: (page + 1) * PAGE_SIZE >= listTotal ? 'rgba(0,0,0,0.05)' : 'rgba(0,0,0,0.1)',
-              color: (page + 1) * PAGE_SIZE >= listTotal ? '#9ca3af' : '#374151',
-            }}
+            className="ff-btn ff-btn-grey text-xs py-1.5 px-3"
           >
             {'>'}
           </button>

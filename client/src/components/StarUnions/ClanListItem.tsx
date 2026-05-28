@@ -41,6 +41,12 @@ export function ClanListItem({ item, disabled, disabledReason }: Props) {
     }
   }
 
+  function buttonClass(): string {
+    if (disabledReason === 'essence') return 'ff-btn ff-btn-amber text-xs py-1.5 px-3 flex-shrink-0'
+    if (disabled) return 'ff-btn ff-btn-grey text-xs py-1.5 px-3 flex-shrink-0'
+    return 'ff-btn ff-btn-green text-xs py-1.5 px-3 flex-shrink-0'
+  }
+
   function buttonLabel(): string {
     if (disabledReason === 'cooldown') return 'Кулдаун'
     if (disabledReason === 'full') return 'Полно'
@@ -49,7 +55,7 @@ export function ClanListItem({ item, disabled, disabledReason }: Props) {
   }
 
   return (
-    <div className="flex items-center gap-3 py-2 px-1" style={{ borderBottom: '1px solid rgba(77,107,31,0.15)' }}>
+    <div className="ff-card flex items-center gap-3" style={{ padding: '12px 14px' }}>
       <div className="flex-shrink-0">
         <FrogEmblem
           variant={item.emblem.variant}
@@ -58,13 +64,13 @@ export function ClanListItem({ item, disabled, disabledReason }: Props) {
           frog={item.emblem.frog}
           topColor={item.emblem.topColor}
           stripeColor={item.emblem.stripeColor}
-          size={48}
+          size={56}
         />
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="font-semibold text-sm truncate" style={{ color: '#1f2937' }}>{item.name}</div>
-        <div className="text-xs" style={{ color: '#6b7280' }}>
+        <div className="ff-display truncate" style={{ fontSize: 16, color: '#2f1f0e' }}>{item.name}</div>
+        <div className="text-xs mt-0.5" style={{ color: '#7a5a2f' }}>
           👥 {item.memberCount}/30
           {item.minEssence > 0 && <span className="ml-2">💎 ≥{item.minEssence}</span>}
         </div>
@@ -74,12 +80,7 @@ export function ClanListItem({ item, disabled, disabledReason }: Props) {
       <button
         onClick={handleJoin}
         disabled={disabled || loading}
-        className="flex-shrink-0 text-xs px-3 py-1.5 rounded font-semibold transition-opacity"
-        style={{
-          background: disabled ? 'rgba(0,0,0,0.1)' : '#16a34a',
-          color: disabled ? '#9ca3af' : '#fff',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-        }}
+        className={buttonClass()}
       >
         {buttonLabel()}
       </button>

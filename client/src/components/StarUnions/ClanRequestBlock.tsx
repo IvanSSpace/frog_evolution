@@ -44,39 +44,30 @@ export function ClanRequestBlock({ req, canDonate, onDonateClick }: Props) {
   const label = TYPE_LABEL[req.type] + (req.element ? ` (${req.element})` : '')
 
   return (
-    <div
-      className="rounded-lg px-3 py-2 text-sm my-1"
-      style={{ background: 'rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.1)' }}
-    >
+    <div className="ff-card px-3 py-2 text-sm my-1">
       <div className="flex items-center gap-2 mb-1.5">
         <span className="text-base">{TYPE_ICON[req.type]}</span>
-        <span className="flex-1" style={{ color: '#374151' }}>Нужно: {label}</span>
+        <span className="flex-1" style={{ color: '#2f1f0e' }}>Нужно: {label}</span>
         {!req.completed && (
-          <span className="text-xs" style={{ color: '#9ca3af' }}>⏱ {formatTimeLeft(req.expiresAt)}</span>
+          <span className="text-xs" style={{ color: '#7a5a2f' }}>⏱ {formatTimeLeft(req.expiresAt)}</span>
         )}
       </div>
-      <div className="h-1.5 rounded-full mb-2" style={{ background: 'rgba(0,0,0,0.1)' }}>
+      <div className="ff-progress-track h-2 mb-2">
         <div
-          className="h-full rounded-full transition-all"
-          style={{ width: `${pct}%`, background: req.completed ? '#22c55e' : '#6366f1' }}
+          className="ff-progress-fill"
+          style={{ width: `${pct}%` }}
         />
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-xs" style={{ color: '#6b7280' }}>
+        <span className="text-xs" style={{ color: '#7a5a2f' }}>
           {Number(req.currentAmount).toLocaleString()} / {Number(req.targetAmount).toLocaleString()}
         </span>
         <button
           disabled={req.completed || !canDonate}
           onClick={() => onDonateClick(req)}
-          className="px-2 py-1 rounded text-xs font-semibold transition-opacity"
-          style={{
-            background: req.completed ? 'rgba(34,197,94,0.15)' : 'rgba(99,102,241,0.2)',
-            color: req.completed ? '#15803d' : '#3730a3',
-            opacity: req.completed ? 0.7 : 1,
-            cursor: req.completed ? 'default' : 'pointer',
-          }}
+          className={`ff-btn text-xs py-1.5 px-3 ${req.completed ? 'ff-btn-grey' : 'ff-btn-green'}`}
         >
-          {req.completed ? 'Готово' : 'Пожертвовать'}
+          {req.completed ? '✓ Готово' : 'Пожертвовать'}
         </button>
       </div>
     </div>

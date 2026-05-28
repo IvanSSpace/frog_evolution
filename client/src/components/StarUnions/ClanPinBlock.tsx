@@ -29,25 +29,39 @@ export function ClanPinBlock({ pin, canDelete, onDelete }: Props) {
 
   return (
     <div
-      className="mx-3 mt-2 rounded-lg px-3 py-2 text-sm relative"
-      style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)' }}
+      className="ff-card flex-shrink-0 relative"
+      style={{ margin: '0 0 8px', padding: '10px 14px', borderColor: '#b45309' }}
     >
+      <div
+        className="text-xs ff-display mb-1"
+        style={{ color: '#92400e', letterSpacing: 1 }}
+      >
+        🗺️ МАРШРУТ
+      </div>
+      <div className="text-sm pr-6" style={{ color: '#2f1f0e' }}>{pin.text}</div>
+      <div className="text-xs mt-0.5" style={{ color: '#7a5a2f' }}>
+        Истекает через {formatTimeLeft(pin.expiresAt)}
+      </div>
       {canDelete && (
         <button
           onClick={() => {
             if (window.confirm('Удалить маршрут?')) onDelete?.()
           }}
-          className="absolute top-1.5 right-1.5 text-xs leading-none px-1"
-          style={{ color: '#6b7280' }}
+          className="ff-tile absolute top-2 right-2"
+          style={{
+            width: 28,
+            height: 28,
+            fontSize: 14,
+            ['--ff-tile-from' as never]: '#fca5a5',
+            ['--ff-tile-to' as never]: '#dc2626',
+            ['--ff-tile-border' as never]: '#7f1d1d',
+            color: '#fff',
+          }}
           title="Удалить маршрут"
         >
           ✕
         </button>
       )}
-      <div className="font-semibold" style={{ color: '#1f2937' }}>🗺️ Маршрут союза: {pin.text}</div>
-      <div className="text-xs mt-0.5" style={{ color: '#6b7280' }}>
-        Истекает через {formatTimeLeft(pin.expiresAt)}
-      </div>
     </div>
   )
 }
