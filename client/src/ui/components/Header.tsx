@@ -17,10 +17,14 @@ function formatCountdown(remainingMs: number): string {
   return `${pad(h)}:${pad(m)}`
 }
 
-export function Header() {
+export function Header({ onOpenIncome }: { onOpenIncome?: () => void }) {
   const { t } = useTranslation()
   const gold = useGameStore((s) => s.gold)
   const incomePerSec = useGameStore((s) => s.incomePerSec)
+  // Badge «новая лягушка в лавке» — перенесён сюда с убранного frog-shop таба.
+  const hasNewFrogShop = useGameStore((s) =>
+    s.discoveredLevels.some((l) => !s.frogShopSeenLevels.includes(l)),
+  )
   const boxProgress = useGameStore((s) => s.boxProgress)
   const boxWaiting = useGameStore((s) => s.boxWaiting)
   const boxOpenCount = useGameStore((s) => s.boxOpenCount)
@@ -92,7 +96,13 @@ export function Header() {
 
         <div
           className="flex flex-col items-center"
-          style={{ marginTop: 24, gap: 2 }}
+          onClick={onOpenIncome}
+          style={{
+            marginTop: 24,
+            gap: 2,
+            position: 'relative',
+            cursor: onOpenIncome ? 'pointer' : undefined,
+          }}
         >
           <div className="ff-balance">
             <img
@@ -106,6 +116,20 @@ export function Header() {
               alt=""
             />
             <span className="tabular-nums text-base">{fmt(gold)}</span>
+            {hasNewFrogShop && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: -4,
+                  right: -10,
+                  width: 9,
+                  height: 9,
+                  borderRadius: 99,
+                  background: '#ef4444',
+                  boxShadow: '0 0 0 2px rgba(0,0,0,0.35)',
+                }}
+              />
+            )}
           </div>
           <div
             className="ff-display tabular-nums"
