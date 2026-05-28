@@ -42,7 +42,7 @@ export function LocationButton({
     // 16px glow + 4px spread #ec4899 → видимый pulse-ring «новая локация».
     boxShadow = `${baseShadow}, 0 0 16px 4px #ec4899`
   } else if (isCurrent) {
-    boxShadow = `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 2px #503080, 0 2px 0 rgba(0,0,0,0.25)`
+    boxShadow = `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 2px #D558D7, 0 2px 0 rgba(0,0,0,0.25)`
   } else {
     boxShadow = baseShadow
   }
