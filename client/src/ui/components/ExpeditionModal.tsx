@@ -11,6 +11,23 @@ import {
   ELEMENT_BOTTLE_FILTER,
 } from '../../components/CosmicHub/ElementGrid'
 import { getFrogPath, configForLevel } from '../../game/config/frogs'
+import { ELEMENT_TINTS } from '../../game/effects/elements/elementTints'
+import { TintedFrog } from './TintedFrog'
+
+// Phaser-стиль multiply tint: (a * b) / 255 per channel. Для carrier-лягушки
+// финальный цвет = level_tint × element_tint (как Phaser body.setTint MULTIPLY).
+function multiplyTint(a: number, b: number): number {
+  const ar = (a >> 16) & 0xff
+  const ag = (a >> 8) & 0xff
+  const ab = a & 0xff
+  const br = (b >> 16) & 0xff
+  const bg = (b >> 8) & 0xff
+  const bb = b & 0xff
+  const r = Math.floor((ar * br) / 255)
+  const g = Math.floor((ag * bg) / 255)
+  const bl = Math.floor((ab * bb) / 255)
+  return (r << 16) | (g << 8) | bl
+}
 import {
   getActiveExpeditions,
   recallExpedition,
@@ -1011,26 +1028,20 @@ function ShipDeckBlock(props: ShipDeckBlockProps) {
                 ...boardStyle,
               }}
             >
-              {/* CSS-mask: SVG как маска, фон = tint уровня → крашеная лягушка. */}
-              <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  WebkitMaskImage: `url(${getFrogPath(entry.level, 0)})`,
-                  maskImage: `url(${getFrogPath(entry.level, 0)})`,
-                  WebkitMaskSize: 'contain',
-                  maskSize: 'contain',
-                  WebkitMaskRepeat: 'no-repeat',
-                  maskRepeat: 'no-repeat',
-                  WebkitMaskPosition: 'center',
-                  maskPosition: 'center',
-                  background:
-                    '#' +
-                    configForLevel(entry.level)
-                      .tint.toString(16)
-                      .padStart(6, '0'),
-                  pointerEvents: 'none',
-                }}
+              {/* Tinted SVG: replace #ffffff → level_tint (× element_tint multiply
+                  если носитель). Сохраняет внутренние детали (короны/узоры/маски). */}
+              <TintedFrog
+                path={getFrogPath(entry.level, 0)}
+                tint={
+                  entry.element
+                    ? multiplyTint(
+                        configForLevel(entry.level).tint,
+                        ELEMENT_TINTS[entry.element],
+                      )
+                    : configForLevel(entry.level).tint
+                }
+                alt={`L${entry.level}`}
+                style={{ height: 40, width: 'auto', pointerEvents: 'none' }}
               />
             </div>
           )
