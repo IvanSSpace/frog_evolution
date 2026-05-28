@@ -214,8 +214,8 @@ export function LocationStack() {
                     pointerEvents: 'none',
                     zIndex: 2,
                     // SYNC с LocationTransition (450ms) — стрелка приходит
-                    // точно к концу анимации смены локации.
-                    transition: 'top 450ms cubic-bezier(.4,0,.2,1)',
+                    // точно к концу анимации. Linear = постоянная скорость.
+                    transition: 'top 450ms linear',
                   }}
                 >
                   <path
