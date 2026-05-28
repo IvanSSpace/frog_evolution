@@ -52,7 +52,7 @@ export class SerumSelectionLayer {
       )
       flash.setOrigin(frog.body.originX, frog.body.originY)
       flash.setScale(frog.body.scaleX, frog.body.scaleY)
-      flash.setTintFill(color) // весь силуэт = цвет архетипа
+      flash.setTint(color).setTintMode(Phaser.TintModes.FILL) // весь силуэт = цвет архетипа
       flash.setAlpha(0)
       // Поверх тела (container.add аппендит наверх). Инпут не перехватывает.
       frog.container.add(flash)
