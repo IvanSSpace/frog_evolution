@@ -33,7 +33,6 @@ import { OnboardingController } from './components/Onboarding/OnboardingControll
 import { CaptainBirthModal } from './components/Captain/CaptainBirthModal'
 import { EvolutionCeremony } from './components/Evolution/EvolutionCeremony'
 import { installCaptainBirthController } from './components/Captain/captainBirthController'
-import { SerumBar } from './components/SerumBar'
 import { StarUnionsModal } from './components/StarUnions/StarUnionsModal'
 import { installBestiaryDevHelpers } from './utils/devHelpers'
 import { installFrogTierDevHelpers } from './utils/devFrogTiers'
@@ -372,7 +371,8 @@ function App() {
       <MagnetToggle />
       <StarMapHUD />
       <ShipFollowButton />
-      <SerumBar />
+      {/* 2026-05-29: SerumBar убран с поля — серумы теперь применяются только
+         из InventoryModal (см. InvSlot → Применить). */}
       <LocationStack />
 
       {galleryOpen && <GalleryModal onClose={() => setGalleryOpen(false)} />}
