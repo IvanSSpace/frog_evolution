@@ -59,7 +59,7 @@ export function LocationButton({
           viewBox="0 0 30 32"
           style={{
             position: 'absolute',
-            right: 0,
+            right: -6,
             top: '50%',
             transform: 'translateY(-50%)',
             filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))',
