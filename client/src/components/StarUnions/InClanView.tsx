@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
 import { useClanStore } from '../../store/clan/slice'
 import { useGameStore } from '../../store/gameStore'
-import { sendMessage } from '../../api/clan'
-import type { ClanMessageDto, ClanRequestDto } from '../../api/clan'
+import { sendMessage, deletePin } from '../../api/clan'
+import type { ClanMessageDto, ClanRequestDto, ClanPinDto } from '../../api/clan'
 import { ClanHeader } from './ClanHeader'
 import { ClanPinBlock } from './ClanPinBlock'
 import { ChatMessage } from './ChatMessage'
 import { ClanRequestBlock } from './ClanRequestBlock'
 import { ClanRosterModal } from './ClanRosterModal'
 import { CreateRequestDialog } from './CreateRequestDialog'
+import { CreatePinDialog } from './CreatePinDialog'
 import { DonateDialog } from './DonateDialog'
 
 type ChatItem =
@@ -22,6 +23,7 @@ export function InClanView() {
 
   const [rosterOpen, setRosterOpen] = useState(false)
   const [createRequestOpen, setCreateRequestOpen] = useState(false)
+  const [createPinOpen, setCreatePinOpen] = useState(false)
   const [donateReq, setDonateReq] = useState<ClanRequestDto | null>(null)
   const [inputText, setInputText] = useState('')
   const [sending, setSending] = useState(false)
@@ -78,7 +80,16 @@ export function InClanView() {
         onOpenRoster={() => setRosterOpen(true)}
       />
 
-      {snapshot.pin && <ClanPinBlock pin={snapshot.pin} />}
+      {snapshot.pin && (
+        <ClanPinBlock
+          pin={snapshot.pin}
+          canDelete={snapshot.me.role === 'LEADER' || snapshot.me.role === 'COLEADER'}
+          onDelete={async () => {
+            await deletePin(snapshot.clan.id)
+            setSnapshot({ ...snapshot, pin: null })
+          }}
+        />
+      )}
 
       <div className="flex-1 overflow-y-auto px-3 py-2" style={{ minHeight: 0 }}>
         {items.map((item) =>
@@ -113,10 +124,18 @@ export function InClanView() {
           📦
         </button>
         <button
-          onClick={() => alert('P6')}
-          className="flex-shrink-0 text-base px-2 py-1.5 rounded"
-          style={{ background: 'rgba(255,255,255,0.08)' }}
-          title="Маршрут"
+          onClick={() => setCreatePinOpen(true)}
+          disabled={snapshot.me.role !== 'LEADER' && snapshot.me.role !== 'COLEADER'}
+          className="flex-shrink-0 text-base px-2 py-1.5 rounded transition-opacity"
+          style={{
+            background: 'rgba(255,255,255,0.08)',
+            opacity: snapshot.me.role !== 'LEADER' && snapshot.me.role !== 'COLEADER' ? 0.35 : 1,
+          }}
+          title={
+            snapshot.me.role === 'LEADER' || snapshot.me.role === 'COLEADER'
+              ? 'Маршрут'
+              : 'Только лидер/со-лидер могут закрепить маршрут'
+          }
         >
           🗺️
         </button>
@@ -153,6 +172,18 @@ export function InClanView() {
       </div>
 
       {rosterOpen && <ClanRosterModal onClose={() => setRosterOpen(false)} />}
+
+      {createPinOpen && snapshot && (
+        <CreatePinDialog
+          clanId={snapshot.clan.id}
+          existingPin={snapshot.pin}
+          onClose={() => setCreatePinOpen(false)}
+          onCreated={(pin: ClanPinDto) => {
+            setSnapshot({ ...snapshot, pin })
+            setCreatePinOpen(false)
+          }}
+        />
+      )}
 
       {createRequestOpen && snapshot && (
         <CreateRequestDialog
