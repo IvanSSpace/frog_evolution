@@ -96,15 +96,30 @@ const MUTAGEN_COST: ReadonlyArray<readonly [number, number]> = [
   [3, 5], // frog18
 ]
 
+// Тип мутагена (1/2/3) для эволюции данной лягушки — определяется группой
+// локации: L1-6 → gen1, L7-12 → gen2, L13-18 → gen3.
+export function mutagenTierForLevel(level: number): 1 | 2 | 3 {
+  if (level <= 6) return 1
+  if (level <= 12) return 2
+  return 3
+}
+
 // Стоимость эволюции frog level с currentTier до currentTier+1.
-// Возвращает gold + essence + mutagen для следующего апгрейда.
+// Возвращает gold + essence + mutagen + mutagenTier для следующего апгрейда.
 export function getEvolutionCost(
   level: number,
   currentTier: number,
-): { gold: number; essence: number; mutagen: number } {
-  if (level < 1 || level > MAX_LEVEL) return { gold: 0, essence: 0, mutagen: 0 }
+): {
+  gold: number
+  essence: number
+  mutagen: number
+  mutagenTier: 1 | 2 | 3
+} {
+  const mutagenTier = mutagenTierForLevel(level)
+  if (level < 1 || level > MAX_LEVEL)
+    return { gold: 0, essence: 0, mutagen: 0, mutagenTier }
   if (currentTier < 0 || currentTier >= 2)
-    return { gold: 0, essence: 0, mutagen: 0 }
+    return { gold: 0, essence: 0, mutagen: 0, mutagenTier }
   const targetTier = currentTier + 1
   const gold = Math.floor(
     GOLD_BASE *
@@ -113,7 +128,7 @@ export function getEvolutionCost(
   )
   const essence = ESSENCE_COST[level - 1][targetTier - 1]
   const mutagen = MUTAGEN_COST[level - 1][targetTier - 1]
-  return { gold, essence, mutagen }
+  return { gold, essence, mutagen, mutagenTier }
 }
 
 // % бонус к income за конкретную эволюцию.

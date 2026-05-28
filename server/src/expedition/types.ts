@@ -76,7 +76,11 @@ export interface ExpeditionResult {
   loot: {
     gold: number
     serums: Record<Element, number>
-    mutagen: number
+    // Мутаген (🧬) — три уровня: gen1 (для лягушек L1-6), gen2 (L7-12), gen3 (L13-18).
+    // При дропе тип выбирается weighted (50/35/15) — см. applyLoot в engine.ts.
+    mutagen1: number
+    mutagen2: number
+    mutagen3: number
     routes: Record<RouteRarity, number>
   }
   risk: number // 0..1, escalating danger at the moment shown

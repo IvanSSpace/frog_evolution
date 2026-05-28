@@ -398,7 +398,9 @@ function EvolveCard({
   const { t } = useTranslation()
   const gold = useGameStore((s) => s.gold)
   const essence = useGameStore((s) => s.essence)
-  const mutagen = useGameStore((s) => s.mutagen)
+  const mutagen1 = useGameStore((s) => s.mutagen1)
+  const mutagen2 = useGameStore((s) => s.mutagen2)
+  const mutagen3 = useGameStore((s) => s.mutagen3)
   const tier = useGameStore((s) => s.frogTiers[level - 1] ?? 0)
   const cooldownEnd = useGameStore((s) => s.frogTierCooldowns[level - 1] ?? 0)
   const upgradeFrogTier = useGameStore((s) => s.upgradeFrogTier)
@@ -410,7 +412,12 @@ function EvolveCard({
     gold: goldCost,
     essence: essenceCost,
     mutagen: mutagenCost,
+    mutagenTier,
   } = getEvolutionCost(level, tier)
+  // Какой именно мутаген нужен (1/2/3) и сколько его сейчас у игрока.
+  const mutagen =
+    mutagenTier === 1 ? mutagen1 : mutagenTier === 2 ? mutagen2 : mutagen3
+  const mutagenIcon = `/gens/gen${mutagenTier}.png`
   const bonusPct = getEvolutionBonusPercent(level, nextTier)
   const currentPath = getFrogPath(level, tier)
   const nextPath = getFrogPath(level, nextTier)
@@ -587,7 +594,18 @@ function EvolveCard({
             )}
             {mutagenCost > 0 && (
               <span style={{ color: canAffordMutagen ? undefined : '#dc2626' }}>
-                🧬 {mutagenCost}
+                <img
+                  src={mutagenIcon}
+                  alt=""
+                  style={{
+                    width: '1.1em',
+                    height: '1.1em',
+                    display: 'inline-block',
+                    verticalAlign: 'middle',
+                    marginRight: 2,
+                  }}
+                />
+                {mutagenCost}
               </span>
             )}
           </span>

@@ -194,18 +194,32 @@ async function grantLoot(userId: number, result: ExpeditionResult) {
   for (const [el, qty] of Object.entries(result.loot.serums)) {
     if (qty > 0) serums = adjustSerum(serums, el as Element, qty)
   }
-  const mutagen = (Number(cosmic.mutagen) || 0) + result.loot.mutagen
+  // 2026-05-29: мутаген теперь tier'ный (gen1/gen2/gen3). Старое поле
+  // cosmic.mutagen сбрасывается миграцией — игнорируем при чтении (reset to 0).
+  const mutagen1 = (Number(cosmic.mutagen1) || 0) + result.loot.mutagen1
+  const mutagen2 = (Number(cosmic.mutagen2) || 0) + result.loot.mutagen2
+  const mutagen3 = (Number(cosmic.mutagen3) || 0) + result.loot.mutagen3
   const prevRoutes = (cosmic.routes as Record<string, number> | null) ?? {}
   const routes = {
     common: (Number(prevRoutes.common) || 0) + result.loot.routes.common,
     rare: (Number(prevRoutes.rare) || 0) + result.loot.routes.rare,
     epic: (Number(prevRoutes.epic) || 0) + result.loot.routes.epic,
   }
+  // Удаляем легаси-поле mutagen (если было) — чистим JSON blob.
+  const { mutagen: _legacy, ...cosmicRest } = cosmic as Record<string, unknown>
+  void _legacy
   await prisma.gameState.update({
     where: { userId },
     data: {
       gold: state.gold + BigInt(result.loot.gold),
-      cosmic: { ...cosmic, serums, mutagen, routes } as object,
+      cosmic: {
+        ...cosmicRest,
+        serums,
+        mutagen1,
+        mutagen2,
+        mutagen3,
+        routes,
+      } as object,
     },
   })
 }

@@ -486,12 +486,20 @@ export const useGameStore = create<GameState>((set, get) => ({
       gold: goldCost,
       essence: essenceCost,
       mutagen: mutagenCost,
+      mutagenTier,
     } = getEvolutionCost(level, current)
     if (state.gold < goldCost) return { ok: false, reason: 'noGold' }
     if (state.essence < essenceCost) {
       return { ok: false, reason: 'noEssence' }
     }
-    if (state.mutagen < mutagenCost) {
+    // Списываем мутаген конкретного tier'а (1=L1-6, 2=L7-12, 3=L13-18).
+    const currentMutagen =
+      mutagenTier === 1
+        ? state.mutagen1
+        : mutagenTier === 2
+          ? state.mutagen2
+          : state.mutagen3
+    if (currentMutagen < mutagenCost) {
       return { ok: false, reason: 'noMutagen' }
     }
     const nextTiers = [...state.frogTiers]
@@ -500,10 +508,17 @@ export const useGameStore = create<GameState>((set, get) => ({
     nextCooldowns[level - 1] = Date.now() + EVOLUTION_COOLDOWN_MS
     saveFrogTiers(nextTiers)
     saveFrogTierCooldowns(nextCooldowns)
+    const mutagenPatch: Partial<
+      Pick<typeof state, 'mutagen1' | 'mutagen2' | 'mutagen3'>
+    > = {}
+    if (mutagenTier === 1) mutagenPatch.mutagen1 = state.mutagen1 - mutagenCost
+    else if (mutagenTier === 2)
+      mutagenPatch.mutagen2 = state.mutagen2 - mutagenCost
+    else mutagenPatch.mutagen3 = state.mutagen3 - mutagenCost
     set({
       gold: state.gold - goldCost,
       essence: state.essence - essenceCost,
-      mutagen: state.mutagen - mutagenCost,
+      ...mutagenPatch,
       frogTiers: nextTiers,
       frogTierCooldowns: nextCooldowns,
     })
@@ -641,7 +656,9 @@ useGameStore.subscribe((state, prev) => {
       // Phase 22 Plan 22-03: persist ascension pool + essence.
       ascendedCarriers: state.ascendedCarriers,
       essence: state.essence,
-      mutagen: state.mutagen,
+      mutagen1: state.mutagen1,
+      mutagen2: state.mutagen2,
+      mutagen3: state.mutagen3,
       routes: state.routes,
       // Phase 22 Plan 22-05: persist shop perma upgrades + counters.
       permaSlotBonus: state.permaSlotBonus,

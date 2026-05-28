@@ -456,10 +456,18 @@ export function loadCosmicSlice(): CosmicPersist {
         typeof parsed.essence === 'number' && parsed.essence >= 0
           ? parsed.essence
           : defaults.essence,
-      mutagen:
-        typeof parsed.mutagen === 'number' && parsed.mutagen >= 0
-          ? parsed.mutagen
-          : defaults.mutagen,
+      mutagen1:
+        typeof parsed.mutagen1 === 'number' && parsed.mutagen1 >= 0
+          ? parsed.mutagen1
+          : defaults.mutagen1,
+      mutagen2:
+        typeof parsed.mutagen2 === 'number' && parsed.mutagen2 >= 0
+          ? parsed.mutagen2
+          : defaults.mutagen2,
+      mutagen3:
+        typeof parsed.mutagen3 === 'number' && parsed.mutagen3 >= 0
+          ? parsed.mutagen3
+          : defaults.mutagen3,
       routes:
         parsed.routes && typeof parsed.routes === 'object'
           ? {

@@ -202,7 +202,9 @@ export function InventoryModal({ onClose }: Props) {
 
   const gold = useGameStore((s) => s.gold)
   const serums = useGameStore((s) => s.serums)
-  const mutagen = useGameStore((s) => s.mutagen)
+  const mutagen1 = useGameStore((s) => s.mutagen1)
+  const mutagen2 = useGameStore((s) => s.mutagen2)
+  const mutagen3 = useGameStore((s) => s.mutagen3)
   const routes = useGameStore((s) => s.routes)
   const setSerumDragActive = useGameStore((s) => s.setSerumDragActive)
 
@@ -223,16 +225,24 @@ export function InventoryModal({ onClose }: Props) {
       onToggle={() => setOpenTip((prev) => (prev === 'gold' ? null : 'gold'))}
     />,
   ]
-  if (mutagen > 0) {
+  // Три tier'а мутагена — отдельные слоты, каждый со своей иконкой /gens/genN.png.
+  const mutagenTiers: { tier: 1 | 2 | 3; count: number; range: string }[] = [
+    { tier: 1, count: mutagen1, range: 'L1-6' },
+    { tier: 2, count: mutagen2, range: 'L7-12' },
+    { tier: 3, count: mutagen3, range: 'L13-18' },
+  ]
+  for (const { tier, count, range } of mutagenTiers) {
+    if (count <= 0) continue
+    const id = `mutagen${tier}`
     filled.push(
       <InvSlot
-        key="mutagen"
-        emoji="🧬"
-        count={mutagen}
+        key={id}
+        icon={`/gens/gen${tier}.png`}
+        count={count}
         tint="#a855f7"
-        label="🧬 Мутаген — редкий космо-лут. Нужен для эволюции лягушек (вместе с эссенцией)."
-        isOpen={openTip === 'mutagen'}
-        onToggle={() => setOpenTip((prev) => (prev === 'mutagen' ? null : 'mutagen'))}
+        label={`🧬 Мутаген-${tier} — для эволюции лягушек ${range}. Космо-лут.`}
+        isOpen={openTip === id}
+        onToggle={() => setOpenTip((prev) => (prev === id ? null : id))}
       />,
     )
   }

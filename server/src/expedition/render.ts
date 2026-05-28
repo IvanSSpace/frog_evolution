@@ -47,7 +47,9 @@ export function toPlainText(result: ExpeditionResult): string {
 export function lootSummary(result: ExpeditionResult): {
   gold: number
   serums: Partial<Record<Element, number>>
-  mutagen: number
+  mutagen1: number
+  mutagen2: number
+  mutagen3: number
   routes: Record<'common' | 'rare' | 'epic', number>
 } {
   const serums: Partial<Record<Element, number>> = {}
@@ -57,7 +59,9 @@ export function lootSummary(result: ExpeditionResult): {
   return {
     gold: result.loot.gold,
     serums,
-    mutagen: result.loot.mutagen,
+    mutagen1: result.loot.mutagen1,
+    mutagen2: result.loot.mutagen2,
+    mutagen3: result.loot.mutagen3,
     routes: result.loot.routes,
   }
 }

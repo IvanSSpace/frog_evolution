@@ -210,12 +210,28 @@ function ShipInventory({ loot }: { loot: ExpeditionView['loot'] }) {
         tint="#d9a441"
         label="💰 Золото — основная валюта (слизь). Тратится в магазинах и на прокачку."
       />
-      {loot.mutagen > 0 && (
+      {loot.mutagen1 > 0 && (
         <InvSlot
-          emoji="🧬"
-          count={loot.mutagen}
+          icon="/gens/gen1.png"
+          count={loot.mutagen1}
           tint="#a855f7"
-          label="🧬 Мутаген — редкий космо-лут. Нужен для эволюции лягушек (вместе с эссенцией)."
+          label="🧬 Мутаген-1 — для эволюции лягушек L1-6. Космо-лут."
+        />
+      )}
+      {loot.mutagen2 > 0 && (
+        <InvSlot
+          icon="/gens/gen2.png"
+          count={loot.mutagen2}
+          tint="#a855f7"
+          label="🧬 Мутаген-2 — для эволюции лягушек L7-12. Космо-лут."
+        />
+      )}
+      {loot.mutagen3 > 0 && (
+        <InvSlot
+          icon="/gens/gen3.png"
+          count={loot.mutagen3}
+          tint="#a855f7"
+          label="🧬 Мутаген-3 — для эволюции лягушек L13-18. Космо-лут."
         />
       )}
       {ROUTE_RARITIES.filter((r) => (loot.routes?.[r.key] ?? 0) > 0).map(
@@ -435,16 +451,26 @@ export function ExpeditionModal({ onClose }: Props) {
         for (const [el, n] of Object.entries(res.loot.serums)) {
           if (n > 0) s.addSerum(el as Element, n)
         }
-        if (res.loot.mutagen > 0) {
+        if (
+          res.loot.mutagen1 > 0 ||
+          res.loot.mutagen2 > 0 ||
+          res.loot.mutagen3 > 0
+        ) {
           useGameStore.setState((st) => ({
-            mutagen: st.mutagen + res.loot.mutagen,
+            mutagen1: st.mutagen1 + (res.loot.mutagen1 || 0),
+            mutagen2: st.mutagen2 + (res.loot.mutagen2 || 0),
+            mutagen3: st.mutagen3 + (res.loot.mutagen3 || 0),
           }))
         }
       }
       const serums = Object.entries(res.loot.serums)
         .map(([k, v]) => `${k}×${v}`)
         .join(', ')
-      const mut = res.loot.mutagen > 0 ? `, 🧬×${res.loot.mutagen}` : ''
+      const mutTotal =
+        (res.loot.mutagen1 || 0) +
+        (res.loot.mutagen2 || 0) +
+        (res.loot.mutagen3 || 0)
+      const mut = mutTotal > 0 ? `, 🧬×${mutTotal}` : ''
       setClaimMsg(
         res.shipLost
           ? 'Корабль потерян — лут не доставлен.'

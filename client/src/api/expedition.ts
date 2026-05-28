@@ -30,7 +30,9 @@ export interface ExpeditionView {
   loot: {
     gold: number
     serums: Record<string, number>
-    mutagen: number
+    mutagen1: number
+    mutagen2: number
+    mutagen3: number
     routes: { common: number; rare: number; epic: number }
   }
   journal: JournalLine[]
@@ -68,7 +70,9 @@ interface ClaimResp {
   loot: {
     gold: number
     serums: Record<string, number>
-    mutagen: number
+    mutagen1: number
+    mutagen2: number
+    mutagen3: number
     routes: { common: number; rare: number; epic: number }
   }
 }

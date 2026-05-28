@@ -72,12 +72,24 @@ function beatNums(loot?: LootDelta): {
   return { slime, gold: loot?.gold ?? 0, mutagen: loot?.mutagen ?? 0 }
 }
 
+// Weighted распределение между gen1/gen2/gen3 при дропе мутагена.
+// 50% / 35% / 15% — gen3 редкий. Тип выбирает движок (не content), так что
+// контент-сценарии не знают про tier и могут переиспользоваться.
+function pickMutagenTier(rng: Rng): 1 | 2 | 3 {
+  const r = rng.float()
+  if (r < 0.5) return 1
+  if (r < 0.85) return 2
+  return 3
+}
+
 function applyLoot(
   loot: LootDelta,
   bag: {
     gold: number
     serums: Record<Element, number>
-    mutagen: number
+    mutagen1: number
+    mutagen2: number
+    mutagen3: number
     routes: Record<'common' | 'rare' | 'epic', number>
   },
   rng: Rng,
@@ -87,7 +99,10 @@ function applyLoot(
   // 2026-05-28: nerf — каждое событие с серумом/мутагеном проходит roll по
   // multiplier. Слишком частый дроп ломал баланс (12 серум + 3 мутаген / 3ч).
   if (loot.mutagen && rng.chance(cfg.mutagenDropMultiplier)) {
-    bag.mutagen += loot.mutagen
+    const tier = pickMutagenTier(rng)
+    if (tier === 1) bag.mutagen1 += loot.mutagen
+    else if (tier === 2) bag.mutagen2 += loot.mutagen
+    else bag.mutagen3 += loot.mutagen
   }
   if (loot.route) bag.routes[loot.route] += 1
   if (loot.serums && rng.chance(cfg.serumDropMultiplier)) {
@@ -136,7 +151,9 @@ export function simulate(
   const loot = {
     gold: 0,
     serums: zeroSerums(),
-    mutagen: 0,
+    mutagen1: 0,
+    mutagen2: 0,
+    mutagen3: 0,
     routes: { common: 0, rare: 0, epic: 0 },
   }
   let shipLost = false
@@ -277,7 +294,9 @@ export function simulate(
     // Lost everything. Loot is forfeit; the journey ends here.
     loot.gold = 0
     loot.serums = zeroSerums()
-    loot.mutagen = 0
+    loot.mutagen1 = 0
+    loot.mutagen2 = 0
+    loot.mutagen3 = 0
     loot.routes = { common: 0, rare: 0, epic: 0 }
     phase = 'arrived'
   } else if (recalled) {
@@ -334,8 +353,10 @@ export function simulate(
     if (shipLost) {
       loot.gold = 0
       loot.serums = zeroSerums()
-      loot.mutagen = 0
-    loot.routes = { common: 0, rare: 0, epic: 0 }
+      loot.mutagen1 = 0
+      loot.mutagen2 = 0
+      loot.mutagen3 = 0
+      loot.routes = { common: 0, rare: 0, epic: 0 }
     } else {
       beatIndex++
       emit(

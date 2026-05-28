@@ -138,8 +138,12 @@ export interface CosmicSlice {
   // Phase 22 Plan 22-03: meta-currency, выдаётся по +1 при каждом ascension (placeholder).
   // Balance — Plan 22-07.
   essence: number
-  // Мутаген (🧬) — редкий лут с космических экспедиций, тратится на эволюцию.
-  mutagen: number
+  // Мутаген (🧬) — три уровня: gen1 (для L1-6), gen2 (L7-12), gen3 (L13-18).
+  // 2026-05-29: split из единого `mutagen` на три tier'а; легаси поле сброшено
+  // миграцией в 0 на сервере.
+  mutagen1: number
+  mutagen2: number
+  mutagen3: number
   // Звёздные маршруты (🗺️) — лут экспедиций по редкости (common/rare/epic).
   // Накапливаются; расходуются миссиями. Сервер пишет в cosmic.routes, клиент
   // обязан их персистить, иначе следующий save затрёт серверный грант.
@@ -228,7 +232,9 @@ export function makeInitialCosmicSlice(): CosmicSlice {
     // Phase 22 Plan 22-03: ascended pool + essence start empty.
     ascendedCarriers: [],
     essence: 0,
-    mutagen: 0,
+    mutagen1: 0,
+    mutagen2: 0,
+    mutagen3: 0,
     routes: { common: 0, rare: 0, epic: 0 },
     // Phase 22 Plan 22-05: shop perma upgrades + counters start at 0.
     permaSlotBonus: 0,
