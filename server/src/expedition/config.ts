@@ -46,6 +46,11 @@ export interface ExpeditionConfig {
   hazardDmgMin: number
   hazardDmgMax: number
   hazardHitMaxFrac: number
+  // 2026-05-28: нерф дропа сывороток/мутагена в экспедициях. Каждое loot-event
+  // с серумом/мутагеном проходит через roll: < multiplier → keep; else skip.
+  // Целевые ставки: 1 сыворотка/50-75 мин, 1 мутаген/110-180 мин.
+  serumDropMultiplier: number
+  mutagenDropMultiplier: number
 }
 
 // Production tempo: hour-scale idle, FS-style.
@@ -75,6 +80,9 @@ export const EXPEDITION_CONFIG: ExpeditionConfig = {
   hazardDmgMin: 4,
   hazardDmgMax: 11,
   hazardHitMaxFrac: 0.5,
+  // 2026-05-28: 12 сывороток + 3 мутагена за 3ч ломали баланс. Нерф 0.25/0.4.
+  serumDropMultiplier: 0.25,
+  mutagenDropMultiplier: 0.4,
 }
 
 // Demo/test tempo: minute-scale so a full arc runs in seconds.

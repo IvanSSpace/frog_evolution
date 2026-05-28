@@ -81,11 +81,16 @@ function applyLoot(
     routes: Record<'common' | 'rare' | 'epic', number>
   },
   rng: Rng,
+  cfg: ExpeditionConfig,
 ): void {
   // gold обрабатывается в emit (масштабируется к доходу), здесь — остальное.
-  if (loot.mutagen) bag.mutagen += loot.mutagen
+  // 2026-05-28: nerf — каждое событие с серумом/мутагеном проходит roll по
+  // multiplier. Слишком частый дроп ломал баланс (12 серум + 3 мутаген / 3ч).
+  if (loot.mutagen && rng.chance(cfg.mutagenDropMultiplier)) {
+    bag.mutagen += loot.mutagen
+  }
   if (loot.route) bag.routes[loot.route] += 1
-  if (loot.serums) {
+  if (loot.serums && rng.chance(cfg.serumDropMultiplier)) {
     const entries = Object.entries(loot.serums) as [Element, number][]
     if (entries.length === 0) {
       // Engine's choice: a random element, one unit (slime cloud finds).
@@ -173,7 +178,7 @@ export function simulate(
     })
     if (s.loot) {
       if (scaledGold) loot.gold += scaledGold
-      applyLoot(s.loot, loot, rng)
+      applyLoot(s.loot, loot, rng, cfg)
     }
   }
 
