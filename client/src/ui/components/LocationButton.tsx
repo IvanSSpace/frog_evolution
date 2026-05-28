@@ -51,23 +51,6 @@ export function LocationButton({
     <div
       style={{ position: 'relative', display: 'flex', alignItems: 'center' }}
     >
-      {/* Розовая стрелка-указатель текущей локации, как в референсе */}
-      {isCurrent && (
-        <div
-          style={{
-            position: 'absolute',
-            left: -10,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: 0,
-            height: 0,
-            borderTop: '6px solid transparent',
-            borderBottom: '6px solid transparent',
-            borderLeft: '9px solid #ec4899',
-            filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.3))',
-          }}
-        />
-      )}
       <button
         type="button"
         onClick={onClick}
