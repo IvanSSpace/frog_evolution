@@ -230,7 +230,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
   {
     path: '/frogs_svg/frog14_t0.svg',
     name: 'Лягобог',
-    size: 1.9, // 2026-05-28: ×2
+    size: 1.75, // 2026-05-28: 1.9 − 0.15 = 1.75
     basePrice: 364_100_000,  /* original 3-этап */
     growthRate: 1.15,
     tint: 0xcfeb87,
@@ -241,7 +241,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
   {
     path: '/frogs_svg/frog15_t0.svg',
     name: 'Вселенжаб',
-    size: 1.65, // 2026-05-28: ×1.5
+    size: 1.75, // 2026-05-28: 1.65 + 0.1 = 1.75
     basePrice: 1_000_000_000,  /* original 3-этап */
     growthRate: 1.15,
     tint: 0xbddb73,
