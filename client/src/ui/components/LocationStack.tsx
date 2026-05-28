@@ -181,7 +181,7 @@ export function LocationStack() {
           // Чёрный фон-обёртка вокруг кнопок локаций.
           width: 'max-content',
           height: 'max-content',
-          background: 'rgba(20,20,28,0.65)',
+          background: '#1a1a24',
           padding: '8px 4px',
           borderRadius: 36,
         }}
