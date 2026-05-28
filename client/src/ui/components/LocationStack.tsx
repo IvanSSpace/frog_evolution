@@ -177,8 +177,11 @@ export function LocationStack() {
           pointerEvents: 'none', // обёртка прозрачная для кликов; auto только на самих кнопках
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'flex-end',
+          alignItems: 'center',
           gap: 4,
+          background: '#000',
+          padding: '8px 10px',
+          borderRadius: 16,
         }}
       >
         {!collapsed ? (
