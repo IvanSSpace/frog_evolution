@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   useGameStore,
@@ -10,6 +10,12 @@ import {
   getRareBoxThreshold,
   UPGRADE_CONFIG,
 } from '../../store/gameStore'
+import {
+  getShips,
+  upgradeShip,
+  type ShipView,
+  type ShipUpg,
+} from '../../api/expedition'
 import { SHIP_UNLOCK, shipUnlocked } from '../../game/config/upgrades'
 import { isLocationUnlocked } from '../../game/config/locationUnlocks'
 import { hapticNotification } from '../../utils/telegram'
@@ -19,7 +25,7 @@ import { useCosmosUnlocked } from '../../utils/cosmosGate'
 import { CosmicShopTab } from '../../components/CosmicHub/CosmicShopTab'
 
 type Props = { onClose: () => void }
-type ShopTab = 'upgrades' | 'cosmos'
+type ShopTab = 'upgrades' | 'ships' | 'cosmos'
 
 export function ShopModal({ onClose }: Props) {
   useModalLock()
@@ -84,6 +90,12 @@ export function ShopModal({ onClose }: Props) {
             Улучшения
           </ShopTabButton>
           <ShopTabButton
+            active={tab === 'ships'}
+            onClick={() => setTab('ships')}
+          >
+            🛠 Корабли
+          </ShopTabButton>
+          <ShopTabButton
             active={tab === 'cosmos'}
             onClick={() => setTab('cosmos')}
           >
@@ -91,7 +103,13 @@ export function ShopModal({ onClose }: Props) {
           </ShopTabButton>
         </div>
 
-        {tab === 'upgrades' ? <UpgradesCards /> : <CosmosCards />}
+        {tab === 'upgrades' ? (
+          <UpgradesCards />
+        ) : tab === 'ships' ? (
+          <ShipsUpgradeTab />
+        ) : (
+          <CosmosCards />
+        )}
       </div>
     </div>
   )
@@ -489,5 +507,173 @@ function RareBoxSpeedCard() {
         )
       }
     />
+  )
+}
+
+// ─── Прокачка кораблей (corpus/armor/engine/scanner) для всех 3 ────────────
+// SYNC с server/src/expedition/config.ts (SHIP_UPG_COSTS / SHIP_UPG_MAX).
+const SHIP_UPG_MAX = 5
+const SHIP_UPG_COSTS = [50_000, 200_000, 800_000, 3_200_000, 12_800_000]
+const SHIP_UPG_KEYS: (keyof ShipUpg)[] = [
+  'corpus',
+  'armor',
+  'engine',
+  'scanner',
+]
+function shipUpgCostsFor(upg: ShipUpg): Record<string, number | null> {
+  return Object.fromEntries(
+    SHIP_UPG_KEYS.map((k) => [
+      k,
+      upg[k] >= SHIP_UPG_MAX ? null : SHIP_UPG_COSTS[upg[k]],
+    ]),
+  )
+}
+
+const SHIP_STAT_META: {
+  key: keyof ShipUpg
+  icon: string
+  name: string
+  desc: string
+}[] = [
+  { key: 'corpus', icon: '❤️', name: 'Корпус', desc: 'Прочность (макс HP)' },
+  { key: 'armor', icon: '🛡', name: 'Броня', desc: 'Меньше урона и риска' },
+  { key: 'engine', icon: '⚡', name: 'Двигатель', desc: 'Больше золота' },
+  { key: 'scanner', icon: '🍀', name: 'Сканер', desc: 'Больше находок' },
+]
+
+function ShipsUpgradeTab() {
+  const [ships, setShips] = useState<ShipView[]>([])
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const gold = useGameStore((s) => s.gold)
+  useGameStore((s) => s.numberFormat) // subscribe to format changes
+
+  const refresh = useCallback(async () => {
+    try {
+      const res = await getShips()
+      setShips(res.ships)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
+
+  const onUpgrade = async (shipId: number, key: keyof ShipUpg) => {
+    if (busy) return
+    setBusy(true)
+    // Optimistic update — мгновенный UI без round-trip.
+    setShips((prev) =>
+      prev.map((s) => {
+        if (s.id !== shipId) return s
+        const nextUpg = { ...s.upg, [key]: s.upg[key] + 1 }
+        return {
+          ...s,
+          upg: nextUpg,
+          maxHp: 100 + nextUpg.corpus * 40, // SYNC deriveShip
+          upgCosts: shipUpgCostsFor(nextUpg),
+        }
+      }),
+    )
+    try {
+      await upgradeShip(shipId, key)
+      hapticNotification('success')
+      await refresh() // sync from server
+    } catch {
+      hapticNotification('error')
+      await refresh() // rollback
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3 p-4 overflow-y-auto">
+      {loading && (
+        <p className="text-center text-sm text-emerald-800">Загрузка…</p>
+      )}
+      {!loading && ships.length === 0 && (
+        <p className="text-center text-sm text-emerald-800">
+          Купи корабль во вкладке «🚀 Космос»
+        </p>
+      )}
+      {!loading &&
+        ships.map((ship) => (
+          <div
+            key={ship.id}
+            className="ff-card p-3 flex flex-col gap-2"
+          >
+            <div className="flex items-center justify-between">
+              <span className="ff-display text-base text-emerald-900">
+                🛠 {ship.name}
+              </span>
+              <span className="text-xs text-emerald-700 font-bold">
+                ❤️ {ship.maxHp} HP
+              </span>
+            </div>
+            {SHIP_STAT_META.map((m) => {
+              const lvl = ship.upg[m.key]
+              const cost = ship.upgCosts[m.key]
+              const isMax = cost === null
+              const canAfford = !isMax && gold >= (cost ?? 0)
+              return (
+                <div
+                  key={m.key}
+                  className="flex items-center gap-2 text-xs"
+                  style={{
+                    padding: '4px 6px',
+                    background: 'rgba(255,255,255,0.4)',
+                    borderRadius: 6,
+                  }}
+                >
+                  <span style={{ fontSize: 18 }}>{m.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="ff-display text-[12px] text-emerald-900 leading-tight">
+                      {m.name}{' '}
+                      <span className="text-emerald-700">
+                        ур.{lvl}/{ship.maxUpg}
+                      </span>
+                    </div>
+                    <div className="ff-body text-[10px] text-emerald-800 leading-tight">
+                      {m.desc}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => void onUpgrade(ship.id, m.key)}
+                    disabled={isMax || !canAfford || busy}
+                    className={`ff-btn text-xs ${
+                      isMax
+                        ? 'ff-btn-grey'
+                        : canAfford
+                          ? 'ff-btn-green'
+                          : 'ff-btn-red'
+                    }`}
+                  >
+                    {isMax ? (
+                      'макс'
+                    ) : (
+                      <>
+                        {fmt(cost ?? 0)}{' '}
+                        <img
+                          src="/goo.svg"
+                          style={{
+                            width: '1em',
+                            height: '1em',
+                            display: 'inline-block',
+                            verticalAlign: 'middle',
+                          }}
+                          alt=""
+                        />
+                      </>
+                    )}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        ))}
+    </div>
   )
 }

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso'
-import { useGameStore } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
 import { useModalLock } from '../../utils/modalLock'
 import { fmt } from '../../utils/formatting'
@@ -17,10 +16,8 @@ import {
   reviveExpedition,
   claimExpedition,
   getShips,
-  upgradeShip,
   type ExpeditionView,
   type ShipView,
-  type ShipUpg,
 } from '../../api/expedition'
 
 type Props = { onClose: () => void }
@@ -52,38 +49,6 @@ const ROUTE_RARITIES: {
   { key: 'common', name: 'обычный', tint: '#94a3b8' },
   { key: 'rare', name: 'редкий', tint: '#60a5fa' },
   { key: 'epic', name: 'эпический', tint: '#c084fc' },
-]
-
-// SYNC с server/src/expedition/config.ts (SHIP_UPG_COSTS / SHIP_UPG_MAX).
-// Нужно для оптимистичного апгрейда (мгновенный UI без round-trip).
-const SHIP_UPG_MAX = 5
-const SHIP_UPG_COSTS = [50_000, 200_000, 800_000, 3_200_000, 12_800_000]
-const SHIP_UPG_KEYS: (keyof ShipUpg)[] = [
-  'corpus',
-  'armor',
-  'engine',
-  'scanner',
-]
-function upgCostsFor(upg: ShipUpg): Record<string, number | null> {
-  return Object.fromEntries(
-    SHIP_UPG_KEYS.map((k) => [
-      k,
-      upg[k] >= SHIP_UPG_MAX ? null : SHIP_UPG_COSTS[upg[k]],
-    ]),
-  )
-}
-
-// Per-ship upgrade stats — player-facing meta.
-const STAT_META: {
-  key: keyof ShipUpg
-  icon: string
-  name: string
-  desc: string
-}[] = [
-  { key: 'corpus', icon: '❤️', name: 'Корпус', desc: 'Прочность (макс HP)' },
-  { key: 'armor', icon: '🛡', name: 'Броня', desc: 'Меньше урона и риска' },
-  { key: 'engine', icon: '⚡', name: 'Двигатель', desc: 'Больше золота' },
-  { key: 'scanner', icon: '🍀', name: 'Сканер', desc: 'Больше находок' },
 ]
 
 function fmtCountdown(ms: number): string {
@@ -268,7 +233,6 @@ export function ExpeditionModal({ onClose }: Props) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [claimMsg, setClaimMsg] = useState<string | null>(null)
-  const [showUpgrades, setShowUpgrades] = useState(false) // под-модалка прокачки корабля
   const [nowTs, setNowTs] = useState(() => Date.now())
   // Журнал: авто-скролл только когда внизу; иначе кнопка «↓ новое».
   const virtuosoRef = useRef<VirtuosoHandle>(null)
@@ -276,8 +240,6 @@ export function ExpeditionModal({ onClose }: Props) {
   const [hasNew, setHasNew] = useState(false)
   const prevLenRef = useRef(0)
   const prevShipRef = useRef<number | null>(null)
-
-  const gold = useGameStore((s) => s.gold)
 
   const selectedShip = ships.find((s) => s.id === selectedShipId) ?? null
   const activeExp = selectedShip?.activeExpeditionId
@@ -461,37 +423,6 @@ export function ExpeditionModal({ onClose }: Props) {
     } finally {
       setBusy(false)
     }
-  }
-
-  // Оптимистичный апгрейд: мгновенно бампаем уровень/HP/цену/голд, сервер
-  // подтверждает (синхрон голда) или откат при ошибке. Без refresh → без лага.
-  const onUpgrade = (shipId: number, stat: keyof ShipUpg) => {
-    const ship = ships.find((s) => s.id === shipId)
-    if (!ship) return
-    const cost = ship.upgCosts[stat]
-    if (cost == null || gold < cost) return
-
-    const prevShips = ships
-    const prevGold = gold
-    const nextUpg = { ...ship.upg, [stat]: ship.upg[stat] + 1 }
-    const optimistic: ShipView = {
-      ...ship,
-      upg: nextUpg,
-      maxHp: 100 + nextUpg.corpus * 40, // SYNC deriveShip (без экипажа)
-      upgCosts: upgCostsFor(nextUpg),
-    }
-    setShips(ships.map((s) => (s.id === shipId ? optimistic : s)))
-    useGameStore.setState({ gold: prevGold - cost })
-
-    void upgradeShip(shipId, stat)
-      .then((res) => {
-        useGameStore.setState({ gold: Number(res.gold) })
-      })
-      .catch((e) => {
-        setShips(prevShips)
-        useGameStore.setState({ gold: prevGold })
-        setError(e instanceof Error ? e.message : 'Не удалось улучшить')
-      })
   }
 
   const hpPct =
@@ -687,14 +618,6 @@ export function ExpeditionModal({ onClose }: Props) {
                   </span>
                 </div>
 
-                <button
-                  className="ff-btn py-3 text-base flex-shrink-0"
-                  disabled={busy}
-                  onClick={() => setShowUpgrades(true)}
-                >
-                  ⚙️ Прокачка корабля
-                </button>
-
                 {/* Снаряжение экипажа открывается автоматически при открытии
                     модалки (auto-openDeck выше). Ангар тут виден только если
                     у пользователя нет docked idle ships — fallback. */}
@@ -885,112 +808,6 @@ export function ExpeditionModal({ onClose }: Props) {
       </div>
     </div>
 
-      {/* Под-модалка прокачки корабля — отдельный оверлей поверх ангара. */}
-      {showUpgrades && selectedShip && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 160,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'rgba(0,0,0,0.55)',
-            padding: 16,
-            pointerEvents: 'auto',
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setShowUpgrades(false)
-          }}
-        >
-          <div
-            className="ff-panel ff-pop"
-            style={{
-              width: '100%',
-              maxWidth: 360,
-              maxHeight: '80vh',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 10,
-              padding: 16,
-              overflowY: 'auto',
-            }}
-          >
-            <div className="flex items-center justify-between flex-shrink-0">
-              <h3 className="ff-display text-lg text-emerald-900">
-                ⚙️ Прокачка — {selectedShip.name}
-              </h3>
-              <button
-                onClick={() => setShowUpgrades(false)}
-                aria-label="Закрыть"
-                className="ff-tile w-8 h-8 text-base"
-                style={{
-                  ['--ff-tile-from' as never]: '#fca5a5',
-                  ['--ff-tile-to' as never]: '#dc2626',
-                  ['--ff-tile-border' as never]: '#7f1d1d',
-                  color: '#fff',
-                }}
-              >
-                ✕
-              </button>
-            </div>
-            <div className="text-xs text-[#5a7a2a] flex-shrink-0">
-              ❤️ {selectedShip.maxHp} HP
-            </div>
-            {STAT_META.map((m) => {
-              const lvl = selectedShip.upg[m.key]
-              const cost = selectedShip.upgCosts[m.key]
-              const isMax = cost === null
-              const canAfford = !isMax && gold >= (cost ?? 0)
-              return (
-                <div key={m.key} className="ff-card p-3 flex items-center gap-3">
-                  <div className="text-2xl flex-shrink-0">{m.icon}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="ff-display text-sm text-emerald-900 leading-tight">
-                      {m.name}{' '}
-                      <span className="text-emerald-700">
-                        ур.{lvl}/{selectedShip.maxUpg}
-                      </span>
-                    </div>
-                    <div className="ff-body text-[11px] text-emerald-800">
-                      {m.desc}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => void onUpgrade(selectedShip.id, m.key)}
-                    disabled={isMax || !canAfford || busy}
-                    className={`ff-btn text-xs ${
-                      isMax
-                        ? 'ff-btn-grey'
-                        : canAfford
-                          ? 'ff-btn-green'
-                          : 'ff-btn-red'
-                    }`}
-                  >
-                    {isMax ? (
-                      'макс'
-                    ) : (
-                      <>
-                        {fmt(cost ?? 0)}{' '}
-                        <img
-                          src="/goo.svg"
-                          style={{
-                            width: '1.1em',
-                            height: '1.1em',
-                            display: 'inline-block',
-                            verticalAlign: 'middle',
-                          }}
-                          alt=""
-                        />
-                      </>
-                    )}
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
     </>,
     document.body,
   )
