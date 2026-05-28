@@ -61,7 +61,7 @@ export function LocationButton({
           height: 46,
           borderRadius: '50%',
           background: `linear-gradient(180deg, ${v.from} 0%, ${v.to} 100%)`,
-          border: '2px solid ' + v.border,
+          border: 'none',
           boxShadow,
           fontSize: 22,
           lineHeight: 1,
