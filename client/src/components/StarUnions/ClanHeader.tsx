@@ -1,4 +1,5 @@
 import type { ClanSnapshot } from '../../api/clan'
+import { FrogEmblem } from './FrogEmblem'
 
 interface Props {
   clan: ClanSnapshot['clan']
@@ -9,15 +10,16 @@ interface Props {
 export function ClanHeader({ clan, memberCount, onOpenRoster }: Props) {
   return (
     <div className="flex items-center gap-3 p-3" style={{ borderBottom: '1px solid rgba(77,107,31,0.3)' }}>
-      <div
-        className="flex-shrink-0 flex items-center justify-center rounded-lg text-xl"
-        style={{
-          width: 40,
-          height: 40,
-          background: clan.emblemColor,
-        }}
-      >
-        {clan.emblemIcon}
+      <div className="flex-shrink-0">
+        <FrogEmblem
+          variant={clan.emblem.variant}
+          style={clan.emblem.style}
+          bg={clan.emblem.bg}
+          frog={clan.emblem.frog}
+          topColor={clan.emblem.topColor}
+          stripeColor={clan.emblem.stripeColor}
+          size={40}
+        />
       </div>
       <div className="flex-1 min-w-0">
         <div className="font-bold truncate" style={{ color: '#1f2937' }}>{clan.name}</div>

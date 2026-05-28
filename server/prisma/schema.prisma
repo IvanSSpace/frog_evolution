@@ -112,8 +112,12 @@ model Expedition {
 model Clan {
   id              Int      @id @default(autoincrement())
   name            String   @unique
-  emblemIcon      String   @map("emblem_icon")
-  emblemColor     String   @map("emblem_color")
+  emblemVariant     Int     @default(0) @map("emblem_variant")
+  emblemStyle       String  @default("pond") @map("emblem_style")
+  emblemBg          String  @default("#5e8b2a") @map("emblem_bg")
+  emblemFrog        String  @default("#6aab3c") @map("emblem_frog")
+  emblemTopColor    String? @map("emblem_top_color")
+  emblemStripeColor String? @map("emblem_stripe_color")
   minEssence      Int      @default(0) @map("min_essence")
   leaderId        Int      @map("leader_id")
   createdAt       DateTime @default(now()) @map("created_at")

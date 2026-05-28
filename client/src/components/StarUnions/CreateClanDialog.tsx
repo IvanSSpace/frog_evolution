@@ -1,26 +1,9 @@
 import { useState } from 'react'
 import { createClan } from '../../api/clan'
 import { useClanStore } from '../../store/clan/slice'
-
-const ICONS = [
-  { key: 'rocket', emoji: '🚀' },
-  { key: 'star',   emoji: '⭐' },
-  { key: 'crown',  emoji: '👑' },
-  { key: 'shield', emoji: '🛡️' },
-  { key: 'comet',  emoji: '☄️' },
-  { key: 'planet', emoji: '🪐' },
-  { key: 'galaxy', emoji: '🌌' },
-  { key: 'moon',   emoji: '🌙' },
-]
-
-const COLORS = [
-  { key: 'teal',   hex: '#0d9488' },
-  { key: 'purple', hex: '#9333ea' },
-  { key: 'amber',  hex: '#d97706' },
-  { key: 'rose',   hex: '#e11d48' },
-  { key: 'sky',    hex: '#0284c7' },
-  { key: 'mint',   hex: '#16a34a' },
-]
+import { useGameStore } from '../../store/gameStore'
+import { EmblemPicker } from './EmblemPicker'
+import type { ClanEmblem } from '../../utils/frogEmblem'
 
 const MIN_ESSENCE_OPTIONS = [0, 1, 3, 5, 10]
 
@@ -34,10 +17,16 @@ interface Props {
 export function CreateClanDialog({ playerEssence, onClose }: Props) {
   const setSnapshot = useClanStore((s) => s.setSnapshot)
   const setCooldown = useClanStore((s) => s.setCooldown)
+  const devFlags = useGameStore((s) => s.devFlags)
+  const allowStripes = devFlags.includes('clan_admin_emblem')
 
   const [name, setName] = useState('')
-  const [selectedIcon, setSelectedIcon] = useState('rocket')
-  const [selectedColor, setSelectedColor] = useState('teal')
+  const [emblem, setEmblem] = useState<ClanEmblem>({
+    variant: Math.floor(Math.random() * 50),
+    style: 'pond',
+    bg: '#5e8b2a',
+    frog: '#6aab3c',
+  })
   const [minEssence, setMinEssence] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -51,12 +40,7 @@ export function CreateClanDialog({ playerEssence, onClose }: Props) {
     setLoading(true)
     setError(null)
     try {
-      const r = await createClan({
-        name,
-        emblemIcon: selectedIcon,
-        emblemColor: selectedColor,
-        minEssence,
-      })
+      const r = await createClan({ name, emblem, minEssence })
       setCooldown(r.cooldownUntil)
       if (r.clan) {
         setSnapshot({
@@ -136,46 +120,10 @@ export function CreateClanDialog({ playerEssence, onClose }: Props) {
             )}
           </div>
 
-          {/* Icon */}
+          {/* Emblem Picker */}
           <div>
-            <div className="mb-2" style={{ color: '#374151' }}>Иконка эмблемы</div>
-            <div className="grid grid-cols-4 gap-2">
-              {ICONS.map((ic) => (
-                <button
-                  key={ic.key}
-                  onClick={() => setSelectedIcon(ic.key)}
-                  className="flex items-center justify-center text-2xl rounded"
-                  style={{
-                    height: 44,
-                    background: selectedIcon === ic.key ? 'rgba(77,107,31,0.2)' : 'rgba(0,0,0,0.06)',
-                    border: selectedIcon === ic.key ? '2px solid #4d6b1f' : '2px solid transparent',
-                  }}
-                >
-                  {ic.emoji}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Color */}
-          <div>
-            <div className="mb-2" style={{ color: '#374151' }}>Цвет эмблемы</div>
-            <div className="flex gap-3">
-              {COLORS.map((c) => (
-                <button
-                  key={c.key}
-                  onClick={() => setSelectedColor(c.key)}
-                  className="rounded-full transition-transform"
-                  style={{
-                    width: 32,
-                    height: 32,
-                    background: c.hex,
-                    border: selectedColor === c.key ? '3px solid #1f2937' : '3px solid transparent',
-                    transform: selectedColor === c.key ? 'scale(1.15)' : 'scale(1)',
-                  }}
-                />
-              ))}
-            </div>
+            <div className="mb-2" style={{ color: '#374151' }}>Эмблема</div>
+            <EmblemPicker value={emblem} onChange={setEmblem} allowStripes={allowStripes} />
           </div>
 
           {/* minEssence */}

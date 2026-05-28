@@ -16,8 +16,7 @@ const MSG_MAX_LEN = 500
 const PIN_MAX_LEN = 300
 const NAME_MIN = 2
 const NAME_MAX = 24
-const VALID_EMBLEM_ICONS = ['rocket', 'star', 'crown', 'shield', 'comet', 'planet', 'galaxy', 'moon']
-const VALID_EMBLEM_COLORS = ['teal', 'purple', 'amber', 'rose', 'sky', 'mint']
+const HEX_RE = /^#[0-9a-fA-F]{6}$/
 const VALID_ELEMENTS = ['fire', 'ice', 'water', 'forest', 'toxic', 'plasma', 'crystal', 'desert', 'gas', 'ring', 'binary']
 
 type CosmicBlob = Record<string, unknown> & { essence?: number; serums?: Record<string, number> }
@@ -114,8 +113,14 @@ async function getMePayload(userId: number) {
     clan: {
       id: membership.clan.id,
       name: membership.clan.name,
-      emblemIcon: membership.clan.emblemIcon,
-      emblemColor: membership.clan.emblemColor,
+      emblem: {
+        variant: membership.clan.emblemVariant,
+        style: membership.clan.emblemStyle,
+        bg: membership.clan.emblemBg,
+        frog: membership.clan.emblemFrog,
+        topColor: membership.clan.emblemTopColor ?? undefined,
+        stripeColor: membership.clan.emblemStripeColor ?? undefined,
+      },
       minEssence: membership.clan.minEssence,
       leaderId: membership.clan.leaderId,
       createdAt: membership.clan.createdAt.toISOString(),
@@ -173,8 +178,14 @@ export async function clanRoutes(app: FastifyInstance) {
       clans: clans.map((c) => ({
         id: c.id,
         name: c.name,
-        emblemIcon: c.emblemIcon,
-        emblemColor: c.emblemColor,
+        emblem: {
+          variant: c.emblemVariant,
+          style: c.emblemStyle,
+          bg: c.emblemBg,
+          frog: c.emblemFrog,
+          topColor: c.emblemTopColor ?? undefined,
+          stripeColor: c.emblemStripeColor ?? undefined,
+        },
         minEssence: c.minEssence,
         memberCount: c._count.members,
       })),
@@ -190,18 +201,50 @@ export async function clanRoutes(app: FastifyInstance) {
   // POST /clan/create
   app.post('/clan/create', { preHandler: [app.authenticate] }, async (request, reply) => {
     const userId = request.user.id
-    const body = request.body as { name?: string; emblemIcon?: string; emblemColor?: string; minEssence?: number }
+    type EmblemBody = { variant?: unknown; style?: unknown; bg?: unknown; frog?: unknown; topColor?: unknown; stripeColor?: unknown }
+    const body = request.body as { name?: string; emblem?: EmblemBody; minEssence?: number }
 
     const name = (body.name ?? '').trim()
     if (name.length < NAME_MIN || name.length > NAME_MAX) {
       return reply.code(400).send({ error: `name must be ${NAME_MIN}-${NAME_MAX} chars` })
     }
-    if (!VALID_EMBLEM_ICONS.includes(body.emblemIcon ?? '')) {
-      return reply.code(400).send({ error: 'invalid emblemIcon' })
+
+    const emb = body.emblem ?? {}
+    const emblemVariant = Number(emb.variant ?? 0)
+    if (!Number.isInteger(emblemVariant) || emblemVariant < 0 || emblemVariant > 49) {
+      return reply.code(400).send({ error: 'emblem.variant must be integer 0..49' })
     }
-    if (!VALID_EMBLEM_COLORS.includes(body.emblemColor ?? '')) {
-      return reply.code(400).send({ error: 'invalid emblemColor' })
+    const emblemStyle = String(emb.style ?? 'pond')
+    if (emblemStyle !== 'pond' && emblemStyle !== 'stripes') {
+      return reply.code(400).send({ error: 'emblem.style must be pond or stripes' })
     }
+    const emblemBg = String(emb.bg ?? '')
+    if (!HEX_RE.test(emblemBg)) {
+      return reply.code(400).send({ error: 'emblem.bg must be #rrggbb hex' })
+    }
+    const emblemFrog = String(emb.frog ?? '')
+    if (!HEX_RE.test(emblemFrog)) {
+      return reply.code(400).send({ error: 'emblem.frog must be #rrggbb hex' })
+    }
+
+    if (emblemStyle === 'stripes') {
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { devFlags: true } })
+      if (!user?.devFlags.includes('clan_admin_emblem')) {
+        return reply.code(403).send({ error: 'stripes emblem reserved for admin' })
+      }
+    }
+
+    let emblemTopColor: string | null = null
+    let emblemStripeColor: string | null = null
+    if (emblemStyle === 'stripes') {
+      const tc = String(emb.topColor ?? '')
+      const sc = String(emb.stripeColor ?? '')
+      if (!HEX_RE.test(tc)) return reply.code(400).send({ error: 'emblem.topColor must be #rrggbb hex' })
+      if (!HEX_RE.test(sc)) return reply.code(400).send({ error: 'emblem.stripeColor must be #rrggbb hex' })
+      emblemTopColor = tc
+      emblemStripeColor = sc
+    }
+
     const minEssence = Number(body.minEssence ?? 0)
     if (!Number.isInteger(minEssence) || minEssence < 0) {
       return reply.code(400).send({ error: 'minEssence must be non-negative integer' })
@@ -234,8 +277,12 @@ export async function clanRoutes(app: FastifyInstance) {
       const c = await tx.clan.create({
         data: {
           name,
-          emblemIcon: body.emblemIcon!,
-          emblemColor: body.emblemColor!,
+          emblemVariant,
+          emblemStyle,
+          emblemBg,
+          emblemFrog,
+          emblemTopColor,
+          emblemStripeColor,
           minEssence,
           leaderId: userId,
         },

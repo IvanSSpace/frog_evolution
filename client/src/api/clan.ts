@@ -1,4 +1,7 @@
 import { apiJson } from './client'
+import type { ClanEmblem } from '../utils/frogEmblem'
+
+export type { ClanEmblem }
 
 export type ClanRole = 'LEADER' | 'COLEADER' | 'MEMBER'
 export type ClanRequestType = 'SLIME' | 'ESSENCE' | 'SERUM'
@@ -6,8 +9,7 @@ export type ClanRequestType = 'SLIME' | 'ESSENCE' | 'SERUM'
 export interface ClanListItem {
   id: number
   name: string
-  emblemIcon: string
-  emblemColor: string
+  emblem: ClanEmblem
   minEssence: number
   memberCount: number
 }
@@ -52,8 +54,7 @@ export interface ClanSnapshot {
   clan: {
     id: number
     name: string
-    emblemIcon: string
-    emblemColor: string
+    emblem: ClanEmblem
     minEssence: number
     leaderId: number
     createdAt: string
@@ -100,8 +101,7 @@ export async function fetchClanMe(): Promise<ClanMeResponse> {
 
 export async function createClan(input: {
   name: string
-  emblemIcon: string
-  emblemColor: string
+  emblem: ClanEmblem
   minEssence: number
 }): Promise<ClanMeResponse> {
   return clanJson('/clan/create', {

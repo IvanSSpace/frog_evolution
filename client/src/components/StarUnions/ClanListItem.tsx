@@ -2,26 +2,7 @@ import type { ClanListItem as ClanListItemType } from '../../api/clan'
 import { useClanStore } from '../../store/clan/slice'
 import { joinClan } from '../../api/clan'
 import { useState } from 'react'
-
-const ICON_MAP: Record<string, string> = {
-  rocket: '🚀',
-  star: '⭐',
-  crown: '👑',
-  shield: '🛡️',
-  comet: '☄️',
-  planet: '🪐',
-  galaxy: '🌌',
-  moon: '🌙',
-}
-
-const COLOR_MAP: Record<string, string> = {
-  teal: '#0d9488',
-  purple: '#9333ea',
-  amber: '#d97706',
-  rose: '#e11d48',
-  sky: '#0284c7',
-  mint: '#16a34a',
-}
+import { FrogEmblem } from './FrogEmblem'
 
 interface Props {
   item: ClanListItemType
@@ -34,9 +15,6 @@ export function ClanListItem({ item, disabled, disabledReason }: Props) {
   const setCooldown = useClanStore((s) => s.setCooldown)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-
-  const emblemBg = COLOR_MAP[item.emblemColor] ?? '#4b5563'
-  const emblemIcon = ICON_MAP[item.emblemIcon] ?? '⭐'
 
   async function handleJoin() {
     if (disabled || loading) return
@@ -72,15 +50,16 @@ export function ClanListItem({ item, disabled, disabledReason }: Props) {
 
   return (
     <div className="flex items-center gap-3 py-2 px-1" style={{ borderBottom: '1px solid rgba(77,107,31,0.15)' }}>
-      <div
-        className="flex-shrink-0 flex items-center justify-center rounded text-2xl"
-        style={{
-          width: 48,
-          height: 48,
-          background: emblemBg,
-        }}
-      >
-        {emblemIcon}
+      <div className="flex-shrink-0">
+        <FrogEmblem
+          variant={item.emblem.variant}
+          style={item.emblem.style}
+          bg={item.emblem.bg}
+          frog={item.emblem.frog}
+          topColor={item.emblem.topColor}
+          stripeColor={item.emblem.stripeColor}
+          size={48}
+        />
       </div>
 
       <div className="flex-1 min-w-0">
