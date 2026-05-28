@@ -5,7 +5,13 @@ import { devWarn } from '../utils/devLog'
 const KEY_MUTED = 'audio.sfxMuted'
 const KEY_VOLUME = 'audio.sfxVolume'
 
-export type SfxName = 'pickup' | 'drop' | 'merge' | 'evolve' | 'boxOpen'
+export type SfxName =
+  | 'pickup'
+  | 'drop'
+  | 'merge'
+  | 'evolve'
+  | 'boxOpen'
+  | 'boxPop'
 
 function loadMuted(): boolean {
   return localStorage.getItem(KEY_MUTED) === '1'
@@ -212,6 +218,16 @@ class SfxEngine {
             now + 0.2,
             0.35,
           )
+          break
+        }
+        case 'boxPop': {
+          // Лёгкий "плюх" на тап по боксу. Играет часто, поэтому максимально
+          // мягко: одна нота из C-пентатоники (рандом → повтор не монотонен,
+          // пентатоника → любые соседние тапы не диссонируют), тихо и коротко.
+          const PENTA = [72, 74, 76, 79, 81] // C5 D5 E5 G5 A5
+          const midi = PENTA[Math.floor(Math.random() * PENTA.length)]
+          const freq = Tone.Frequency(midi, 'midi').toFrequency()
+          k.pluck.triggerAttackRelease(freq, '16n', now, 0.12)
           break
         }
         case 'boxOpen': {

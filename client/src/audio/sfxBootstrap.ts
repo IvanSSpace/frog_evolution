@@ -17,6 +17,7 @@ export function initSfx(): void {
   })
   eventBus.on('merge:happened', ({ level }) => sfx.play('merge', { level }))
   eventBus.on('frog:discovered', ({ level }) => sfx.play('evolve', { level }))
+  eventBus.on('box:tapOpened', () => sfx.play('boxPop'))
 
   // Предзагружаем Tone заранее, чтобы Tone.start() мог быть вызван
   // синхронно внутри обработчика жеста (требование iOS Safari).
