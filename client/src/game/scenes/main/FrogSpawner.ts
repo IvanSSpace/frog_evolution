@@ -452,13 +452,23 @@ export class FrogSpawner {
         ease: 'Power2.easeOut',
       })
 
-      // Move to target
+      // Move to target — по дуге: x/y lerp + parabolic lift (4t(1-t)).
+      // ARC_HEIGHT — пик подъёма посередине траектории, чуть масштабируется
+      // с длиной прыжка (длинный прыжок — выше дуга).
+      const ARC_HEIGHT = Math.min(22, 8 + dist * 0.18) * DPR
+      const jumpState = { t: 0 }
       scene.tweens.add({
-        targets: frog.container,
-        x: toX,
-        y: toY,
+        targets: jumpState,
+        t: 1,
         duration: 200,
         ease: 'Power2.easeOut',
+        onUpdate: () => {
+          const t = jumpState.t
+          frog.container.x = fromX + (toX - fromX) * t
+          const arc = 4 * t * (1 - t) * ARC_HEIGHT
+          // y вверх по экрану = минус → вычитаем arc из интерполированного y.
+          frog.container.y = fromY + (toY - fromY) * t - arc
+        },
         onComplete: () => {
           if (frog.isDragging) return
 
