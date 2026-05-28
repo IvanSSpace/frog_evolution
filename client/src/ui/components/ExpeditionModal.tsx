@@ -268,6 +268,7 @@ export function ExpeditionModal({ onClose }: Props) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [claimMsg, setClaimMsg] = useState<string | null>(null)
+  const [showUpgrades, setShowUpgrades] = useState(false) // под-модалка прокачки корабля
   const [nowTs, setNowTs] = useState(() => Date.now())
   // Журнал: авто-скролл только когда внизу; иначе кнопка «↓ новое».
   const virtuosoRef = useRef<VirtuosoHandle>(null)
@@ -527,6 +528,7 @@ export function ExpeditionModal({ onClose }: Props) {
   }
 
   return createPortal(
+    <>
     <div
       style={{
         position: 'fixed',
@@ -664,60 +666,13 @@ export function ExpeditionModal({ onClose }: Props) {
                   </span>
                 </div>
 
-                {STAT_META.map((m) => {
-                  const lvl = selectedShip.upg[m.key]
-                  const cost = selectedShip.upgCosts[m.key]
-                  const isMax = cost === null
-                  const canAfford = !isMax && gold >= (cost ?? 0)
-                  return (
-                    <div
-                      key={m.key}
-                      className="ff-card p-3 flex items-center gap-3"
-                    >
-                      <div className="text-2xl flex-shrink-0">{m.icon}</div>
-                      <div className="flex-1 min-w-0">
-                        <div className="ff-display text-sm text-emerald-900 leading-tight">
-                          {m.name}{' '}
-                          <span className="text-emerald-700">
-                            ур.{lvl}/{selectedShip.maxUpg}
-                          </span>
-                        </div>
-                        <div className="ff-body text-[11px] text-emerald-800">
-                          {m.desc}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => void onUpgrade(selectedShip.id, m.key)}
-                        disabled={isMax || !canAfford || busy}
-                        className={`ff-btn text-xs ${
-                          isMax
-                            ? 'ff-btn-grey'
-                            : canAfford
-                              ? 'ff-btn-green'
-                              : 'ff-btn-red'
-                        }`}
-                      >
-                        {isMax ? (
-                          'макс'
-                        ) : (
-                          <>
-                            {fmt(cost ?? 0)}{' '}
-                            <img
-                              src="/goo.svg"
-                              style={{
-                                width: '1.1em',
-                                height: '1.1em',
-                                display: 'inline-block',
-                                verticalAlign: 'middle',
-                              }}
-                              alt=""
-                            />
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  )
-                })}
+                <button
+                  className="ff-btn py-3 text-base flex-shrink-0"
+                  disabled={busy}
+                  onClick={() => setShowUpgrades(true)}
+                >
+                  ⚙️ Прокачка корабля
+                </button>
 
                 <button
                   className="ff-btn ff-btn-green py-3 text-base flex-shrink-0 mt-1"
@@ -911,7 +866,115 @@ export function ExpeditionModal({ onClose }: Props) {
           </div>
         </div>
       </div>
-    </div>,
+    </div>
+
+      {/* Под-модалка прокачки корабля — отдельный оверлей поверх ангара. */}
+      {showUpgrades && selectedShip && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 160,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(0,0,0,0.55)',
+            padding: 16,
+            pointerEvents: 'auto',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowUpgrades(false)
+          }}
+        >
+          <div
+            className="ff-panel ff-pop"
+            style={{
+              width: '100%',
+              maxWidth: 360,
+              maxHeight: '80vh',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+              padding: 16,
+              overflowY: 'auto',
+            }}
+          >
+            <div className="flex items-center justify-between flex-shrink-0">
+              <h3 className="ff-display text-lg text-emerald-900">
+                ⚙️ Прокачка — {selectedShip.name}
+              </h3>
+              <button
+                onClick={() => setShowUpgrades(false)}
+                aria-label="Закрыть"
+                className="ff-tile w-8 h-8 text-base"
+                style={{
+                  ['--ff-tile-from' as never]: '#fca5a5',
+                  ['--ff-tile-to' as never]: '#dc2626',
+                  ['--ff-tile-border' as never]: '#7f1d1d',
+                  color: '#fff',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="text-xs text-[#5a7a2a] flex-shrink-0">
+              ❤️ {selectedShip.maxHp} HP
+            </div>
+            {STAT_META.map((m) => {
+              const lvl = selectedShip.upg[m.key]
+              const cost = selectedShip.upgCosts[m.key]
+              const isMax = cost === null
+              const canAfford = !isMax && gold >= (cost ?? 0)
+              return (
+                <div key={m.key} className="ff-card p-3 flex items-center gap-3">
+                  <div className="text-2xl flex-shrink-0">{m.icon}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="ff-display text-sm text-emerald-900 leading-tight">
+                      {m.name}{' '}
+                      <span className="text-emerald-700">
+                        ур.{lvl}/{selectedShip.maxUpg}
+                      </span>
+                    </div>
+                    <div className="ff-body text-[11px] text-emerald-800">
+                      {m.desc}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => void onUpgrade(selectedShip.id, m.key)}
+                    disabled={isMax || !canAfford || busy}
+                    className={`ff-btn text-xs ${
+                      isMax
+                        ? 'ff-btn-grey'
+                        : canAfford
+                          ? 'ff-btn-green'
+                          : 'ff-btn-red'
+                    }`}
+                  >
+                    {isMax ? (
+                      'макс'
+                    ) : (
+                      <>
+                        {fmt(cost ?? 0)}{' '}
+                        <img
+                          src="/goo.svg"
+                          style={{
+                            width: '1.1em',
+                            height: '1.1em',
+                            display: 'inline-block',
+                            verticalAlign: 'middle',
+                          }}
+                          alt=""
+                        />
+                      </>
+                    )}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </>,
     document.body,
   )
 }
