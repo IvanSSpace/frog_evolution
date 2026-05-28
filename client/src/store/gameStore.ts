@@ -116,10 +116,12 @@ interface GameStateBase {
   username: string | null
   telegramId: string | null
   devFlags: string[]
+  currentUserDbId: number | null
   setCurrentUser: (info: {
     username: string | null
     telegramId: string | null
     devFlags?: string[]
+    id?: number
   }) => void
 
   // Лягушки на поле + коробки (real-time, обновляется из MainScene)
@@ -337,11 +339,13 @@ export const useGameStore = create<GameState>((set, get) => ({
   username: null,
   telegramId: null,
   devFlags: [],
+  currentUserDbId: null,
   setCurrentUser: (info) =>
     set({
       username: info.username,
       telegramId: info.telegramId,
       devFlags: info.devFlags ?? [],
+      currentUserDbId: info.id ?? null,
     }),
 
   entityCount: 0,

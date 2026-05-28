@@ -104,6 +104,7 @@ function App() {
 
       console.log('[server] logged in as user', auth.user.id)
       useGameStore.getState().setCurrentUser({
+        id: auth.user.id,
         username: auth.user.username ?? null,
         telegramId: auth.user.telegramId,
         devFlags: auth.user.devFlags ?? [],
