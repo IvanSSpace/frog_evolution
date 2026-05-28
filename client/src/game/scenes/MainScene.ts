@@ -210,7 +210,10 @@ export class MainScene extends Phaser.Scene {
       onReady()
       return
     }
-    const path = `/frogs_svg/frog${level}_t${t}.svg`
+    // 2026-05-28: путь к tier-SVG берём из cfg.path (для swap L7↔L8 модельки).
+    // Раньше был хардкод frog${level}_t${t}.svg → tier эволюции прыгала на
+    // оригинальный номер вместо swapped.
+    const path = cfg.path.replace(/_t0\.svg$/, `_t${t}.svg`)
     // Через fetch — обходим Phaser loader queue (он завершён к этому моменту,
     // на новые .load.* нужен .start() и т.д., проще fetch напрямую).
     fetch(path)

@@ -335,6 +335,9 @@ export const configForLevel = (level: number): FrogLevelConfig =>
 export function getFrogPath(level: number, tier: number): string {
   const t = Math.max(0, Math.min(2, Math.floor(tier)))
   const lvl = Math.max(1, Math.min(MAX_LEVEL, Math.floor(level)))
+  // 2026-05-28: путь через cfg.path для swap L7↔L8 (см. ensureFrogTextureLoaded).
+  const cfg = FROG_LEVELS[lvl - 1]
+  if (cfg) return cfg.path.replace(/_t0\.svg$/, `_t${t}.svg`)
   return `/frogs_svg/frog${lvl}_t${t}.svg`
 }
 
