@@ -8,6 +8,8 @@ import { ClanPinBlock } from './ClanPinBlock'
 import { ChatMessage } from './ChatMessage'
 import { ClanRequestBlock } from './ClanRequestBlock'
 import { ClanRosterModal } from './ClanRosterModal'
+import { CreateRequestDialog } from './CreateRequestDialog'
+import { DonateDialog } from './DonateDialog'
 
 type ChatItem =
   | { kind: 'message'; data: ClanMessageDto; createdAt: string }
@@ -19,6 +21,8 @@ export function InClanView() {
   const currentUserDbId = useGameStore((s) => s.currentUserDbId)
 
   const [rosterOpen, setRosterOpen] = useState(false)
+  const [createRequestOpen, setCreateRequestOpen] = useState(false)
+  const [donateReq, setDonateReq] = useState<ClanRequestDto | null>(null)
   const [inputText, setInputText] = useState('')
   const [sending, setSending] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
@@ -89,6 +93,7 @@ export function InClanView() {
               key={`req-${item.data.id}`}
               req={item.data}
               canDonate={true}
+              onDonateClick={(r) => setDonateReq(r)}
             />
           ),
         )}
@@ -100,7 +105,7 @@ export function InClanView() {
         style={{ background: 'rgba(0,0,0,0.2)' }}
       >
         <button
-          onClick={() => alert('P5')}
+          onClick={() => setCreateRequestOpen(true)}
           className="flex-shrink-0 text-base px-2 py-1.5 rounded"
           style={{ background: 'rgba(255,255,255,0.08)' }}
           title="Обмен"
@@ -148,6 +153,31 @@ export function InClanView() {
       </div>
 
       {rosterOpen && <ClanRosterModal onClose={() => setRosterOpen(false)} />}
+
+      {createRequestOpen && snapshot && (
+        <CreateRequestDialog
+          clanId={snapshot.clan.id}
+          onClose={() => setCreateRequestOpen(false)}
+          onCreated={(req) => {
+            setSnapshot({ ...snapshot, requests: [...snapshot.requests, req] })
+            setCreateRequestOpen(false)
+          }}
+        />
+      )}
+
+      {donateReq && snapshot && (
+        <DonateDialog
+          req={donateReq}
+          onClose={() => setDonateReq(null)}
+          onDonated={(upd) => {
+            setSnapshot({
+              ...snapshot,
+              requests: snapshot.requests.map((r) => (r.id === upd.id ? upd : r)),
+            })
+            setDonateReq(null)
+          }}
+        />
+      )}
     </div>
   )
 }

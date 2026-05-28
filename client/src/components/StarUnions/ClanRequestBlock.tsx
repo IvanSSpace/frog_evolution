@@ -4,6 +4,7 @@ import type { ClanRequestDto, ClanRequestType } from '../../api/clan'
 interface Props {
   req: ClanRequestDto
   canDonate: boolean
+  onDonateClick: (req: ClanRequestDto) => void
 }
 
 const TYPE_ICON: Record<ClanRequestType, string> = {
@@ -27,7 +28,7 @@ function formatTimeLeft(expiresAt: string): string {
   return `${m}м`
 }
 
-export function ClanRequestBlock({ req, canDonate }: Props) {
+export function ClanRequestBlock({ req, canDonate, onDonateClick }: Props) {
   const [, setTick] = useState(0)
 
   useEffect(() => {
@@ -66,7 +67,7 @@ export function ClanRequestBlock({ req, canDonate }: Props) {
         </span>
         <button
           disabled={req.completed || !canDonate}
-          onClick={() => alert('P5: donate dialog')}
+          onClick={() => onDonateClick(req)}
           className="px-2 py-1 rounded text-xs font-semibold transition-opacity"
           style={{
             background: req.completed ? 'rgba(34,197,94,0.2)' : 'rgba(99,102,241,0.4)',
