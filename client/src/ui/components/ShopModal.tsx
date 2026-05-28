@@ -579,10 +579,30 @@ const SHIP_STAT_META: {
   name: string
   desc: string
 }[] = [
-  { key: 'corpus', icon: '❤️', name: 'Корпус', desc: 'Прочность (макс HP)' },
-  { key: 'armor', icon: '🛡', name: 'Броня', desc: 'Меньше урона и риска' },
-  { key: 'engine', icon: '⚡', name: 'Двигатель', desc: 'Больше золота' },
-  { key: 'scanner', icon: '🍀', name: 'Сканер', desc: 'Больше находок' },
+  {
+    key: 'corpus',
+    icon: '/ship/ship_health.png',
+    name: 'Корпус',
+    desc: 'Прочность (макс HP)',
+  },
+  {
+    key: 'armor',
+    icon: '/ship/ship_armor.png',
+    name: 'Броня',
+    desc: 'Меньше урона и риска',
+  },
+  {
+    key: 'engine',
+    icon: '/ship/ship_turbo.png',
+    name: 'Двигатель',
+    desc: 'Больше золота',
+  },
+  {
+    key: 'scanner',
+    icon: '/ship/ship_radar.png',
+    name: 'Сканер',
+    desc: 'Больше находок',
+  },
 ]
 
 function ShipsUpgradeTab() {
@@ -650,8 +670,19 @@ function ShipsUpgradeTab() {
               <span className="ff-display text-base text-emerald-900">
                 🛠 {ship.name}
               </span>
-              <span className="text-xs text-emerald-700 font-bold">
-                ❤️ {ship.maxHp} HP
+              <span className="text-xs text-emerald-700 font-bold inline-flex items-center gap-1">
+                <img
+                  src="/ship/ship_health.png"
+                  alt=""
+                  style={{
+                    width: 16,
+                    height: 16,
+                    objectFit: 'contain',
+                    display: 'inline-block',
+                    verticalAlign: 'middle',
+                  }}
+                />
+                {ship.maxHp} HP
               </span>
             </div>
             {SHIP_STAT_META.map((m) => {
@@ -669,7 +700,16 @@ function ShipsUpgradeTab() {
                     borderRadius: 6,
                   }}
                 >
-                  <span style={{ fontSize: 18 }}>{m.icon}</span>
+                  <img
+                    src={m.icon}
+                    alt=""
+                    style={{
+                      width: 24,
+                      height: 24,
+                      objectFit: 'contain',
+                      flexShrink: 0,
+                    }}
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="ff-display text-[12px] text-emerald-900 leading-tight">
                       {m.name}{' '}
