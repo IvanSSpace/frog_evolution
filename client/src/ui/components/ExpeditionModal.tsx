@@ -441,7 +441,7 @@ export function ExpeditionModal({ onClose }: Props) {
       setClaimMsg(
         res.shipLost
           ? 'Корабль потерян — лут не доставлен.'
-          : `Доставлено: ${res.loot.gold} золота${serums ? ', сыворотки: ' + serums : ''}${mut}.`,
+          : `Доставлено: ${res.loot.gold} слизи${serums ? ', сыворотки: ' + serums : ''}${mut}.`,
       )
       await refresh()
     } catch (e) {

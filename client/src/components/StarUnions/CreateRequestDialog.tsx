@@ -19,7 +19,8 @@ const PRESET_LABELS = ['25%', '50%', '75%', '100%'] as const
 
 export function CreateRequestDialog({ clanId, onClose, onCreated }: Props) {
   useModalLock()
-  const [type, setType] = useState<ClanRequestType>('SLIME')
+  // 2026-05-28: SLIME-запрос вырезан из UI. Default — ESSENCE.
+  const [type, setType] = useState<ClanRequestType>('ESSENCE')
   const [slimePreset, setSlimePreset] = useState<number | null>(null)
   // serumCounts: Element -> 0|1|2 (how many of that element selected)
   const [serumCounts, setSerumCounts] = useState<Record<Element, number>>(
@@ -225,7 +226,8 @@ export function CreateRequestDialog({ clanId, onClose, onCreated }: Props) {
               <div className="ff-card p-4">
                 <div className="text-xs mb-2" style={{ color: '#7a5a2f' }}>Тип запроса</div>
                 <div className="flex gap-2">
-                  {(['SLIME', 'ESSENCE', 'SERUM'] as ClanRequestType[]).map((t) => (
+                  {/* 2026-05-28: SLIME убран — клиент не может создать запрос слизи. */}
+                  {(['ESSENCE', 'SERUM'] as ClanRequestType[]).map((t) => (
                     <button
                       key={t}
                       onClick={() => handleTypeChange(t)}
