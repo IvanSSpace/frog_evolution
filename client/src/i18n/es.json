@@ -255,6 +255,7 @@
       "no_active_bonuses": "Sin bonos activos",
       "dispose_button": "Util.",
       "merge_blocked_mismatch": "Carriers incompatibles",
+      "merge_blocked_pair": "No puedes fusionar dos portadores. Fusiona con una rana normal.",
       "merge_cross_location_warn": "Merge entre ubicaciones — restaurado",
       "dispose": {
         "title": "¿Utilizar?",

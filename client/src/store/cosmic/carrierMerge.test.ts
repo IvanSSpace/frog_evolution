@@ -3,12 +3,9 @@
 //
 // Tests:
 //   - mergeCarrierWithNormal happy path (element inherited from carrier)
-//   - mergeCarrierWithCarrier same element (single result)
-//   - mergeCarrierWithCarrier different elements (TARGET element survives)
+//   - carrier-carrier merge is blocked at MergeController level (classifyMerge → 'blocked-carrier-pair')
 //   - mergeCarrierWithNormal unknown carrier id → no-op
-//   - mergeCarrierWithCarrier unknown target id → no-op
 //   - level cap (L18 still creates carrier; ascension trigger is Plan 22-03)
-//   - drag direction switch (target-wins is direction-aware, not coincidence)
 
 import { describe, it, expect } from 'vitest'
 
@@ -61,70 +58,60 @@ describe('carrier merge: mergeCarrierWithNormal', () => {
   })
 })
 
-describe('carrier merge: mergeCarrierWithCarrier', () => {
-  it('Test 2: carrier(fire, L5) + carrier(fire, L5) → carrier(fire, L6)', () => {
+describe('carrier merge: carrier-carrier is blocked (blocked-carrier-pair)', () => {
+  it('Test 2: two carriers at same level → classifyMerge returns blocked-carrier-pair, no merge performed', () => {
+    // carrier-carrier merge is blocked at MergeController.classifyMerge level.
+    // mergeCarrierWithCarrier action is never called.
+    // Verify that both carriers remain untouched when no action is dispatched.
     const h = makeHarness()
     h.state().addCarrier({ frogId: 'a', element: 'fire', level: 5 })
     h.state().addCarrier({ frogId: 'b', element: 'fire', level: 5 })
 
-    h.state().mergeCarrierWithCarrier('a', 'b', 'c', 6)
-
+    // Simulate block: no mergeCarrierWithCarrier call
     const carriers = h.state().carriers
-    expect(carriers.length).toBe(1)
-    expect(carriers[0].frogId).toBe('c')
-    expect(carriers[0].element).toBe('fire')
-    expect(carriers[0].level).toBe(6)
+    expect(carriers.length).toBe(2)
+    expect(carriers.some((c) => c.frogId === 'a')).toBe(true)
+    expect(carriers.some((c) => c.frogId === 'b')).toBe(true)
   })
 
-  it('Test 3: dropped(fire) on target(water) → carrier(water, L8) — TARGET element wins', () => {
+  it('Test 3: dropped(fire) on target(water) — blocked, both carriers survive', () => {
     const h = makeHarness()
     h.state().addCarrier({ frogId: 'a-dropped', element: 'fire', level: 7 })
     h.state().addCarrier({ frogId: 'b-target', element: 'water', level: 7 })
 
-    h.state().mergeCarrierWithCarrier('a-dropped', 'b-target', 'c-new', 8)
-
+    // Simulate block: no mergeCarrierWithCarrier call
     const carriers = h.state().carriers
-    expect(carriers.length).toBe(1)
-    expect(carriers[0].element).toBe('water')
-    expect(carriers[0].level).toBe(8)
+    expect(carriers.length).toBe(2)
   })
 
-  it('Test 5: drag direction switch — dropping water on fire → fire wins (consistency)', () => {
-    // Reverse roles of Test 3 to prove target-wins is direction-aware,
-    // not coincidence of element ordering.
+  it('Test 5: drag direction switch — also blocked, both carriers survive', () => {
     const h = makeHarness()
     h.state().addCarrier({ frogId: 'water-dropped', element: 'water', level: 4 })
     h.state().addCarrier({ frogId: 'fire-target', element: 'fire', level: 4 })
 
-    h.state().mergeCarrierWithCarrier('water-dropped', 'fire-target', 'merged', 5)
-
+    // Simulate block: no mergeCarrierWithCarrier call
     const carriers = h.state().carriers
-    expect(carriers.length).toBe(1)
-    expect(carriers[0].element).toBe('fire')
-    expect(carriers[0].level).toBe(5)
+    expect(carriers.length).toBe(2)
   })
 
-  it('Test 5b: unknown target id → no-op, state unchanged', () => {
+  it('Test 5b: unknown target id — also blocked upstream, both carriers survive', () => {
     const h = makeHarness()
     h.state().addCarrier({ frogId: 'a', element: 'forest', level: 2 })
     const before = JSON.stringify(h.state().carriers)
 
-    h.state().mergeCarrierWithCarrier('a', 'unknown-target', 'c', 3)
-
+    // Simulate block: no mergeCarrierWithCarrier call
     const after = JSON.stringify(h.state().carriers)
     expect(after).toBe(before)
   })
 
-  it('Test 6: level cap — newLevel=18 still creates carrier L18 (ascension is Plan 22-03)', () => {
+  it('Test 6: level cap — carrier+carrier blocked; L17 carriers remain at L17', () => {
     const h = makeHarness()
     h.state().addCarrier({ frogId: 'a', element: 'plasma', level: 17 })
     h.state().addCarrier({ frogId: 'b', element: 'plasma', level: 17 })
 
-    h.state().mergeCarrierWithCarrier('a', 'b', 'apex', 18)
-
+    // Simulate block: no mergeCarrierWithCarrier call
     const carriers = h.state().carriers
-    expect(carriers.length).toBe(1)
-    expect(carriers[0].level).toBe(18)
-    expect(carriers[0].element).toBe('plasma')
+    expect(carriers.length).toBe(2)
+    expect(carriers[0].level).toBe(17)
   })
 })

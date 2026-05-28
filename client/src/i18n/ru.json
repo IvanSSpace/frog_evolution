@@ -255,6 +255,7 @@
       "no_active_bonuses": "Нет активных бонусов",
       "dispose_button": "Утил.",
       "merge_blocked_mismatch": "Несовместимые carrier'ы",
+      "merge_blocked_pair": "Нельзя соединить двух носителей. Соедини с обычной лягушкой.",
       "merge_cross_location_warn": "Cross-location merge — carrier восстановит позицию",
       "dispose": {
         "title": "Утилизировать?",

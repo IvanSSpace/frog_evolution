@@ -255,6 +255,7 @@
       "no_active_bonuses": "No active bonuses",
       "dispose_button": "Dispose",
       "merge_blocked_mismatch": "Incompatible carriers",
+      "merge_blocked_pair": "Can't merge two carriers. Merge with a normal frog.",
       "merge_cross_location_warn": "Cross-location merge — carrier restored later",
       "dispose": {
         "title": "Dispose?",

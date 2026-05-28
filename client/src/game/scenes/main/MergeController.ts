@@ -57,8 +57,8 @@ import type { FrogSpawner } from './FrogSpawner'
 type MergeKind =
   | 'normal' // normal + normal → standard merge
   | 'carrier-normal' // carrier + normal (same level) → Plan 22-02 rule
-  | 'carrier-carrier' // carrier + carrier (same level, any element) → Plan 22-02 (target-wins)
   | 'blocked-mismatch' // different levels
+  | 'blocked-carrier-pair' // two carriers — disallowed
 
 function classifyMerge(
   a: FrogData,
@@ -68,7 +68,7 @@ function classifyMerge(
   if (a.level !== b.level) return 'blocked-mismatch'
   const aIsCarrier = carriers.some((c) => c.frogId === a.id)
   const bIsCarrier = carriers.some((c) => c.frogId === b.id)
-  if (aIsCarrier && bIsCarrier) return 'carrier-carrier'
+  if (aIsCarrier && bIsCarrier) return 'blocked-carrier-pair'
   if (aIsCarrier || bIsCarrier) return 'carrier-normal'
   return 'normal'
 }
@@ -88,12 +88,16 @@ export class MergeController {
     level: number,
     exclude: FrogData,
   ): FrogData | null {
+    const carriers = useGameStore.getState().carriers
+    const excludeIsCarrier = carriers.some((c) => c.frogId === exclude.id)
+
     let best: FrogData | null = null
     let bestDist = MERGE_RADIUS
     for (const other of this.scene.frogs) {
       if (other === exclude) continue
       if (other.isMerging || other.isDragging) continue
       if (other.level !== level) continue
+      if (excludeIsCarrier && carriers.some((c) => c.frogId === other.id)) continue
       const d = Phaser.Math.Distance.Between(
         x,
         y,
@@ -123,6 +127,8 @@ export class MergeController {
       byLevel.set(f.level, arr)
     }
 
+    const carriers = useGameStore.getState().carriers
+
     let bestPair: [FrogData, FrogData] | null = null
     let bestDist = Infinity
     for (const frogs of byLevel.values()) {
@@ -131,6 +137,9 @@ export class MergeController {
         for (let j = i + 1; j < frogs.length; j++) {
           const a = frogs[i]
           const b = frogs[j]
+          const aIsCarrier = carriers.some((c) => c.frogId === a.id)
+          const bIsCarrier = carriers.some((c) => c.frogId === b.id)
+          if (aIsCarrier && bIsCarrier) continue
           const d = Phaser.Math.Distance.Between(
             a.container.x,
             a.container.y,
@@ -171,6 +180,15 @@ export class MergeController {
       return
     }
 
+    if (kind === 'blocked-carrier-pair') {
+      eventBus.emit('cosmic:toast', {
+        type: 'generic',
+        msg: i18next.t('cosmic_hub.carrier.merge_blocked_pair'),
+      })
+      hapticNotification('error')
+      return
+    }
+
     // Plan 22-02: carrier merge metadata — resolved here BEFORE delayedCall
     // because carrier records can be torn down/rebound mid-animation.
     // For carrier-normal kind we capture which side is the carrier so that
@@ -178,7 +196,6 @@ export class MergeController {
     // right orientation regardless of drag direction.
     let carrierMergePlan:
       | { kind: 'carrier-normal'; carrierFrogId: string; normalFrogId: string }
-      | { kind: 'carrier-carrier'; droppedFrogId: string; targetFrogId: string }
       | null = null
 
     if (kind === 'carrier-normal') {
@@ -193,28 +210,6 @@ export class MergeController {
           carrierFrogId,
           normalFrogId,
           element: carrier?.element,
-        })
-      }
-    }
-
-    if (kind === 'carrier-carrier') {
-      // Drag direction = source of truth: `a` is dropped, `b` is target.
-      // TARGET's element survives per D-Carrier+carrier rule.
-      carrierMergePlan = {
-        kind: 'carrier-carrier',
-        droppedFrogId: a.id,
-        targetFrogId: b.id,
-      }
-      if (import.meta.env.DEV) {
-        const droppedC = carriers.find((c) => c.frogId === a.id)
-        const targetC = carriers.find((c) => c.frogId === b.id)
-        devLog('[carrier-merge]', {
-          kind: 'carrier-carrier',
-          droppedFrogId: a.id,
-          targetFrogId: b.id,
-          droppedElement: droppedC?.element,
-          targetElement: targetC?.element,
-          resultElement: targetC?.element,
         })
       }
     }
@@ -401,15 +396,6 @@ export class MergeController {
             .mergeCarrierWithNormal(
               carrierMergePlan.carrierFrogId,
               carrierMergePlan.normalFrogId,
-              newFrogId,
-              newLevel,
-            )
-        } else if (carrierMergePlan?.kind === 'carrier-carrier') {
-          useGameStore
-            .getState()
-            .mergeCarrierWithCarrier(
-              carrierMergePlan.droppedFrogId,
-              carrierMergePlan.targetFrogId,
               newFrogId,
               newLevel,
             )
