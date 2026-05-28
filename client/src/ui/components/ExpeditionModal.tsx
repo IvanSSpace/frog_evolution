@@ -544,7 +544,7 @@ export function ExpeditionModal({ onClose }: Props) {
             pointerEvents: 'auto',
             display: 'flex',
             flexDirection: 'column',
-            background: 'linear-gradient(180deg, #f5fbe9 0%, #d9eeb6 100%)',
+            background: '#E8F5D2',
             border: '4px solid #4d6b1f',
             borderBottom: idleMode ? '4px solid #4d6b1f' : '4px solid #4d6b1f',
             boxShadow: '0 0 0 3px #f7ffe0 inset',
