@@ -54,8 +54,8 @@ export function LocationButton({
       {/* Стрелка-указатель текущей локации — внутри круга справа, смотрит влево. */}
       {isCurrent && (
         <svg
-          width="16"
-          height="12"
+          width="22"
+          height="17"
           viewBox="0 0 20 16"
           style={{
             position: 'absolute',
