@@ -174,11 +174,13 @@ export function LocationStack() {
           right: 8,
           left: 'auto',
           zIndex: 50,
-          pointerEvents: 'none', // обёртка прозрачная для кликов; auto только на самих кнопках
+          pointerEvents: 'none',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
+          alignItems: 'flex-end',
           gap: 4,
+          // Чёрный фон-обёртка вокруг кнопок локаций.
+          width: 'fit-content',
           background: '#000',
           padding: '8px 10px',
           borderRadius: 16,
