@@ -67,25 +67,6 @@ export function MagnetToggle() {
             : 'grayscale(0.7)',
         }}
       />
-      {!magnetEnabled && (
-        <span
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#dc2626',
-            fontSize: '32px',
-            fontWeight: 900,
-            textShadow:
-              '0 0 4px rgba(255,255,255,0.85), 0 0 6px rgba(255,255,255,0.6)',
-            pointerEvents: 'none',
-          }}
-        >
-          ⊘
-        </span>
-      )}
     </button>
   )
 }

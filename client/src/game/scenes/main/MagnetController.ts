@@ -109,8 +109,9 @@ export class MagnetController {
     const container = scene.add.container(x, y)
     container.setDepth(99000)
 
-    const emoji = scene.add.text(0, 0, '🧲', { fontSize: `${30 * DPR}px` })
+    const emoji = scene.add.image(0, 0, 'magnet')
     emoji.setOrigin(0.5)
+    emoji.setDisplaySize(40 * DPR, 40 * DPR)
     container.add(emoji)
     container.setScale(0)
 

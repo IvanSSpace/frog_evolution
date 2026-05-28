@@ -186,6 +186,7 @@ export class MainScene extends Phaser.Scene {
     this.load.image('toxic_map3', '/maps/toxic_map3-v2.png')
     this.load.image('toxic_map4', '/maps/toxic_map4.webp')
     this.load.image('box', '/box.webp')
+    this.load.image('magnet', '/magnet.png')
   }
 
   /**

@@ -72,7 +72,7 @@ export interface BoxData {
 
 export interface MagnetData {
   container: Phaser.GameObjects.Container
-  emoji: Phaser.GameObjects.Text
+  emoji: Phaser.GameObjects.Image
   x: number
   y: number
   expiresAt: number
