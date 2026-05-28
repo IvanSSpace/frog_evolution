@@ -22,8 +22,24 @@ export function ClanHeader({ clan, memberCount, onOpenRoster }: Props) {
         />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="ff-display truncate" style={{ fontSize: 17, color: '#2f1f0e' }}>{clan.name}</div>
-        <div className="text-xs mt-0.5" style={{ color: '#7a5a2f' }}>👥 {memberCount}/30</div>
+        <div
+          className="ff-display truncate"
+          style={{
+            fontSize: 17,
+            color: '#e6ffd0',
+            fontWeight: 800,
+            textShadow:
+              '0 2px 0 rgba(0,0,0,0.3), 0 0 12px rgba(95,216,58,0.25)',
+          }}
+        >
+          {clan.name}
+        </div>
+        <div
+          className="text-xs mt-0.5"
+          style={{ color: 'var(--ff-text-dim)' }}
+        >
+          👥 {memberCount}/30
+        </div>
       </div>
       <button
         onClick={onOpenRoster}

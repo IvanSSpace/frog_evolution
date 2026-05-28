@@ -72,9 +72,15 @@ export function StarUnionsModal({ onClose }: { onClose: () => void }) {
           >
             <span
               className="ff-display flex-1"
-              style={{ fontSize: 20, color: '#2f4a1f' }}
+              style={{
+                fontSize: 20,
+                color: '#e6ffd0',
+                fontWeight: 800,
+                textShadow:
+                  '0 2px 0 rgba(0,0,0,0.3), 0 0 16px rgba(95,216,58,0.3)',
+              }}
             >
-              🤝 Звёздные союзы
+              Звёздные союзы
             </span>
             <button
               type="button"
