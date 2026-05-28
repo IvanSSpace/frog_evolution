@@ -89,3 +89,69 @@ body.modal-open .ship-follow-btn {
 .ff-stroke-white {
   /* intentionally empty — see .ff-display */
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   2026-05-28: Rarity-кольца + glow для frog-карточек.
+   Применяется через util src/utils/frogRarity.ts (rarityClass()).
+   Box-shadow поверх существующих border'ов карточек — не ломает inline стили.
+   --ff-rarity-glow читается ::before на иконке для подложки-glow.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.ff-rarity-common {
+  box-shadow:
+    0 0 0 1px rgba(148, 163, 184, 0.45),
+    0 0 6px rgba(148, 163, 184, 0.15);
+  --ff-rarity-glow: rgba(148, 163, 184, 0.18);
+}
+.ff-rarity-rare {
+  box-shadow:
+    0 0 0 2px #60a5fa,
+    0 0 14px rgba(96, 165, 250, 0.42);
+  --ff-rarity-glow: rgba(96, 165, 250, 0.45);
+}
+.ff-rarity-epic {
+  box-shadow:
+    0 0 0 2px #c084fc,
+    0 0 16px rgba(192, 132, 252, 0.48);
+  --ff-rarity-glow: rgba(192, 132, 252, 0.55);
+}
+.ff-rarity-legendary {
+  box-shadow:
+    0 0 0 2px #fbbf24,
+    0 0 18px rgba(251, 191, 36, 0.55);
+  --ff-rarity-glow: rgba(251, 191, 36, 0.65);
+  animation: ff-legendary-pulse 2.4s ease-in-out infinite;
+}
+@keyframes ff-legendary-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px #fbbf24,
+      0 0 14px rgba(251, 191, 36, 0.5);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px #fde047,
+      0 0 24px rgba(251, 191, 36, 0.78);
+  }
+}
+
+/* Иконочный glow — radial backdrop через ::before. Применяется на
+   div-обёртку TintedFrog внутри карточки. Inline background-gradient
+   обёртки не страдает (мы лежим в pseudo). */
+.ff-rarity-icon {
+  position: relative;
+}
+.ff-rarity-icon::before {
+  content: '';
+  position: absolute;
+  inset: -35%;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at center,
+    var(--ff-rarity-glow, transparent) 0%,
+    transparent 65%
+  );
+  border-radius: 50%;
+}

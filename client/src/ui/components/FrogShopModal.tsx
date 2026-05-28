@@ -16,6 +16,12 @@ import {
   LOCATION_GATE_THRESHOLD,
 } from '../../game/config/evolution'
 import { hapticNotification } from '../../utils/telegram'
+import {
+  rarityForLevel,
+  rarityForTier,
+  maxRarity,
+  rarityClass,
+} from '../../utils/frogRarity'
 import { eventBus } from '../../store/eventBus'
 import { fmt } from '../../utils/formatting'
 import { useModalLock } from '../../utils/modalLock'
@@ -181,10 +187,13 @@ function FrogCard({
     }
   }
 
+  const rarity = rarityForLevel(level)
   return (
-    <div className="ff-card px-2.5 py-2 flex items-center gap-2.5">
+    <div
+      className={`ff-card ff-rarity ${rarityClass(rarity)} px-2.5 py-2 flex items-center gap-2.5`}
+    >
       <div
-        className="w-12 h-12 flex-shrink-0 flex items-center justify-center p-1 rounded-xl"
+        className="ff-rarity-icon w-12 h-12 flex-shrink-0 flex items-center justify-center p-1 rounded-xl"
         style={{
           background: 'linear-gradient(180deg, #ecfccb 0%, #bef264 100%)',
           border: '2px solid #4d7c0f',
@@ -449,10 +458,14 @@ function EvolveCard({
     }
   }
 
+  const currentRarity = maxRarity(rarityForLevel(level), rarityForTier(tier))
+  const nextRarity = maxRarity(rarityForLevel(level), rarityForTier(nextTier))
   return (
-    <div className="ff-card px-2.5 py-2 flex items-center gap-2.5">
+    <div
+      className={`ff-card ff-rarity ${rarityClass(currentRarity)} px-2.5 py-2 flex items-center gap-2.5`}
+    >
       <div
-        className="w-12 h-12 flex-shrink-0 flex items-center justify-center p-1 rounded-xl"
+        className="ff-rarity-icon w-12 h-12 flex-shrink-0 flex items-center justify-center p-1 rounded-xl"
         style={{
           background: 'linear-gradient(180deg, #ecfccb 0%, #bef264 100%)',
           border: '2px solid #4d7c0f',
@@ -476,7 +489,7 @@ function EvolveCard({
             →
           </span>
           <div
-            className="w-12 h-12 flex-shrink-0 flex items-center justify-center p-1 rounded-xl"
+            className={`ff-rarity-icon ${rarityClass(nextRarity)} w-12 h-12 flex-shrink-0 flex items-center justify-center p-1 rounded-xl`}
             style={{
               background: 'linear-gradient(180deg, #ecfccb 0%, #bef264 100%)',
               border: '2px solid #4d7c0f',
