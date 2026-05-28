@@ -189,8 +189,7 @@ export function BottomBar({
           onClick={onOpenExpedition}
         />
         <Tile
-          icon="slime"
-          emoji="🤝"
+          icon="clan"
           skin="purple"
           title="Звёздные союзы"
           onClick={onOpenClan}

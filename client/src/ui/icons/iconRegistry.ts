@@ -16,6 +16,7 @@ export type IconName =
   | 'cosmic-hub'
   | 'bestiary'
   | 'inventory'
+  | 'clan'
   // Кнопки корабля
   | 'recall'
   | 'in-transit'
@@ -48,6 +49,7 @@ export const ICON_EMOJI: Record<IconName, string> = {
   'cosmic-hub': '🧬',
   bestiary: '📖',
   inventory: '🎒',
+  clan: '🤝',
   recall: '↩',
   'in-transit': '🛸',
   unload: '🛬',
@@ -73,9 +75,9 @@ const FOOTER_OVERRIDE: Partial<Record<IconName, string>> = {
   'frog-shop': '/footer_icons/icon_frog.png',
   'upgrade-shop': '/footer_icons/icon_upgrade.png',
   ship: '/footer_icons/icon_rocket.png',
-  'cosmic-hub': '/footer_icons/icon_shield.png',
   bestiary: '/footer_icons/icon_book.png',
   inventory: '/footer_icons/icon_backpack.png',
+  clan: '/footer_icons/icon_shield.png',
 }
 
 /** Путь к SVG/PNG-ассету иконки в public/icons/. */
