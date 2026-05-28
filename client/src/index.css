@@ -37,11 +37,13 @@ body.modal-open .ship-follow-btn {
    ══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  --ff-glass-dark-1: #070d11;
-  --ff-glass-dark-2: #0c1414;
-  --ff-card: #192828;
-  --ff-card-2: #203434;
-  --ff-line: #2f4a49;
+  /* 2026-05-28: подняты тон фонов (раньше #070d11 — слишком чёрные).
+     Лёгкая зелёная нота сохранена для атмосферы. */
+  --ff-glass-dark-1: #0f1a16;
+  --ff-glass-dark-2: #18261f;
+  --ff-card: #1d2e25;
+  --ff-card-2: #25382e;
+  --ff-line: #36514a;
   --ff-neon-green: #5fd83a;
   --ff-neon-green-soft: #86f25a;
   --ff-accent-purple: #b15cf0;
@@ -206,4 +208,52 @@ body.modal-open .ship-follow-btn {
 .ff-progress-fill.waiting {
   background: linear-gradient(180deg, #fca5a5 0%, #dc2626 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   2026-05-28: Override inline тёмных color'ов внутри .ff-panel.
+   В TSX-компонентах разбросаны `style={{ color: '#15803d' }}` и подобные —
+   дизайнились под светлый фон, на тёмном тонут. Перехватываем через
+   attribute-selector [style*="color: #xxx"] + !important (единственный
+   способ победить inline-style без правок самих TSX-файлов).
+   Также берём Tailwind text-emerald-{700|800|900} классы — у них меньшая
+   специфичность чем .ff-panel .text-emerald-* override.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Тёмные зелёные (заголовки / акценты) → светлые зелёные/салатовые */
+.ff-panel [style*="color: #15803d"] {
+  color: #a8e088 !important;
+}
+.ff-panel [style*="color: #2f4a1f"] {
+  color: #b8e090 !important;
+}
+.ff-panel [style*="color: #365314"] {
+  color: #b8d496 !important;
+}
+.ff-panel [style*="color: #4d7c0f"] {
+  color: #a8e060 !important;
+}
+.ff-panel [style*="color: #166534"] {
+  color: #7adb9f !important;
+}
+
+/* Тёмные коричневые (body-text, hints) → светлые тёплые */
+.ff-panel [style*="color: #2f1f0e"] {
+  color: #e8d8c4 !important;
+}
+.ff-panel [style*="color: #7a5a2f"] {
+  color: #d4b88e !important;
+}
+.ff-panel [style*="color: #92400e"] {
+  color: #ffb878 !important;
+}
+
+/* Tailwind emerald-* классы — поверх дефолтной утилиты */
+.ff-panel .text-emerald-900,
+.ff-panel .text-emerald-800,
+.ff-panel .text-emerald-700 {
+  color: #a8e088 !important;
+}
+.ff-panel .text-emerald-50 {
+  color: #eef3ea !important;
 }
