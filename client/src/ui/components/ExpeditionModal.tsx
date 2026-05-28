@@ -245,12 +245,39 @@ export function ExpeditionModal({ onClose }: Props) {
   const activeExp = selectedShip?.activeExpeditionId
     ? (exps.find((e) => e.id === selectedShip.activeExpeditionId) ?? null)
     : null
+  // Idle = выбранный корабль в ангаре (не в полёте). В этом режиме React-панель
+  // сворачивается до шапки, остальное — Phaser ShipDeck снизу.
+  const idleMode = !loading && !!selectedShip && !activeExp
 
-  const handleClose = useCallback(() => {
-    if (closing) return
-    setClosing(true)
-    window.setTimeout(onClose, 280)
-  }, [closing, onClose])
+  const closingRef = useRef(false)
+  const handleClose = useCallback(
+    (emitCancel = true) => {
+      if (closingRef.current) return
+      closingRef.current = true
+      // Закрываем Phaser ShipDeck (открыт под модалкой) — только если закрываемся
+      // не в ответ на его собственное событие, иначе зацикливание.
+      if (emitCancel) eventBus.emit('shipdeck:cancel', {})
+      setClosing(true)
+      window.setTimeout(onClose, 280)
+    },
+    [onClose],
+  )
+
+  // Phaser ✕ / launch / mission-start — закрывают ShipDeck. Синхронизируем
+  // закрытие React-модалки (без повторного emit cancel).
+  useEffect(() => {
+    const onCancel = () => handleClose(false)
+    const onLaunch = () => handleClose(false)
+    const onSurvivorStart = () => handleClose(false)
+    eventBus.on('shipdeck:cancel', onCancel)
+    eventBus.on('shipdeck:launch', onLaunch)
+    eventBus.on('survivor:start', onSurvivorStart)
+    return () => {
+      eventBus.off('shipdeck:cancel', onCancel)
+      eventBus.off('shipdeck:launch', onLaunch)
+      eventBus.off('survivor:start', onSurvivorStart)
+    }
+  }, [handleClose])
 
   const refresh = useCallback(async () => {
     try {
@@ -299,9 +326,9 @@ export function ExpeditionModal({ onClose }: Props) {
     }
   }, [activeExp, nowTs, refresh])
 
-  // Снаряжение: уходим в Phaser-сцену (выбор экипажа + анимация запуска).
-  // Закрываем модалку, чтобы сцена была видна; App переоткроет на launch/cancel.
-  const openDeck = (ship: ShipView) => {
+  // Эмитим shipdeck:open без закрытия React-модалки — Phaser ShipDeck виден
+  // под модалкой (шапка с табами сверху, Phaser снизу).
+  const emitShipDeck = (ship: ShipView) => {
     const minL = (ship.id - 1) * 6 + 1
     const maxL = ship.id * 6
     eventBus.emit('shipdeck:open', {
@@ -311,21 +338,16 @@ export function ExpeditionModal({ onClose }: Props) {
       maxL,
       demo: DEMO_TEMPO,
     })
-    handleClose()
   }
 
-  // Сразу открыть ShipDeck (сцена с кораблём + лягушки) при открытии модалки:
-  // как только корабли загружены и выбранный корабль в ангаре (не в полёте).
-  // Срабатывает один раз за mount (autoOpenedRef).
-  const autoOpenedRef = useRef(false)
+  // Авто-открытие ShipDeck при mount + при смене выбранного корабля (если он
+  // в ангаре, не в полёте).
   useEffect(() => {
-    if (autoOpenedRef.current) return
-    if (loading || !selectedShip || busy) return
+    if (loading || !selectedShip) return
     if (selectedShip.activeExpeditionId) return
-    autoOpenedRef.current = true
-    openDeck(selectedShip)
+    emitShipDeck(selectedShip)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, selectedShip, busy])
+  }, [loading, selectedShipId])
 
   // Оптимистично: мгновенно меняем фазу локально, сервер подтверждает/откат.
   const onRecall = () => {
@@ -501,12 +523,18 @@ export function ExpeditionModal({ onClose }: Props) {
           className={closing ? 'ff-slide-up' : 'ff-slide-down'}
           style={{
             position: 'absolute',
-            inset: 0,
+            // В idle-режиме (selected ship в ангаре) панель = только шапка
+            // сверху, снизу прозрачно — виден Phaser ShipDeck.
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: idleMode ? 'auto' : 0,
             pointerEvents: 'auto',
             display: 'flex',
             flexDirection: 'column',
             background: 'linear-gradient(180deg, #f5fbe9 0%, #d9eeb6 100%)',
             border: '4px solid #4d6b1f',
+            borderBottom: idleMode ? '4px solid #4d6b1f' : '4px solid #4d6b1f',
             boxShadow: '0 0 0 3px #f7ffe0 inset',
           }}
         >
@@ -536,15 +564,7 @@ export function ExpeditionModal({ onClose }: Props) {
                   return (
                     <button
                       key={s.id}
-                      onClick={() => {
-                        // Первый тап — выбрать (показать ангар). Повторный тап по
-                        // выбранному кораблю-в-ангаре → сразу снаряжение экипажа.
-                        if (s.id !== selectedShipId) {
-                          setSelectedShipId(s.id)
-                          return
-                        }
-                        if (!s.activeExpeditionId && !busy) openDeck(s)
-                      }}
+                      onClick={() => setSelectedShipId(s.id)}
                       className={`ff-btn text-xs py-2 px-3 flex-shrink-0 ${
                         s.id === selectedShipId ? 'ff-btn-green' : 'ff-btn-grey'
                       }`}
@@ -556,7 +576,7 @@ export function ExpeditionModal({ onClose }: Props) {
             </div>
             <button
               type="button"
-              onClick={handleClose}
+              onClick={() => handleClose()}
               aria-label="Закрыть"
               className="ff-tile w-10 h-10 text-xl flex-shrink-0"
               style={{
@@ -601,28 +621,8 @@ export function ExpeditionModal({ onClose }: Props) {
               </div>
             )}
 
-            {/* Idle ship → stats + upgrades + launch */}
-            {!loading && selectedShip && !activeExp && (
-              <div className="flex-1 flex flex-col gap-3 overflow-y-auto">
-                {claimMsg && (
-                  <p className="text-[#2f7d32] font-semibold text-xs text-center">
-                    {claimMsg}
-                  </p>
-                )}
-                <div className="flex items-center justify-between text-sm flex-shrink-0">
-                  <span className="font-semibold text-[#3a5214]">
-                    🛠 {selectedShip.name} — в ангаре
-                  </span>
-                  <span className="text-[#5a7a2a]">
-                    ❤️ {selectedShip.maxHp} HP
-                  </span>
-                </div>
-
-                {/* Снаряжение экипажа открывается автоматически при открытии
-                    модалки (auto-openDeck выше). Ангар тут виден только если
-                    у пользователя нет docked idle ships — fallback. */}
-              </div>
-            )}
+            {/* Idle режим — body не рендерим: Phaser ShipDeck виден под модалкой
+                (через прозрачный низ панели). Phaser owns корабль + лягушки + ✕ + запуск. */}
 
             {/* Flying ship → expedition view */}
             {!loading && selectedShip && activeExp && (
