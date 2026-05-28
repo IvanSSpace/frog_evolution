@@ -904,7 +904,7 @@ export class MainScene extends Phaser.Scene {
   startVolcanoFog(): void {
     if (this.volcanoFogTimer) return
     this.volcanoFogTimer = this.time.addEvent({
-      delay: 400,
+      delay: 120, // плотный поток струйки
       loop: true,
       callback: () => this.spawnVolcanoFogParticle(),
     })
@@ -917,31 +917,32 @@ export class MainScene extends Phaser.Scene {
   }
 
   private spawnVolcanoFogParticle(): void {
-    // Вулкан примерно в верх-центре карты. Подкрути координаты под арт.
+    // Струйка: тонкая вертикальная капля, не кружок. Множество частиц с малым
+    // интервалом → виден непрерывный поток. Зиг-заг по X, подъём вверх.
     const volcanoX = this.scale.width * 0.5
     const volcanoY = this.scale.height * 0.18
-    const ellipse = this.add
-      .ellipse(volcanoX, volcanoY, 36 * DPR, 46 * DPR, 0x4ade80, 0.55)
+    const particle = this.add
+      .ellipse(volcanoX, volcanoY, 7 * DPR, 22 * DPR, 0x4ade80, 0.75)
       .setDepth(5)
     const startX = volcanoX
     const startY = volcanoY
-    const rise = 220 * DPR
-    const zigAmp = 28 * DPR
-    const zigFreq = 4 // волн на траектории
+    const rise = 260 * DPR
+    const zigAmp = 22 * DPR
+    const zigFreq = 5 // волн на траектории
     this.tweens.add({
       targets: { t: 0 },
       t: 1,
-      duration: 3500,
+      duration: 2800,
       ease: 'Sine.easeOut',
       onUpdate: (tween) => {
         const t = tween.progress
-        ellipse.x = startX + Math.sin(t * Math.PI * zigFreq) * zigAmp
-        ellipse.y = startY - t * rise
-        ellipse.alpha = Math.sin(t * Math.PI) * 0.55
-        const s = 1 + t * 0.6
-        ellipse.setScale(s)
+        particle.x = startX + Math.sin(t * Math.PI * zigFreq) * zigAmp
+        particle.y = startY - t * rise
+        particle.alpha = Math.sin(t * Math.PI) * 0.75
+        // Лёгкое утолщение вверх — туман развеивается.
+        particle.setScale(1 + t * 0.4)
       },
-      onComplete: () => ellipse.destroy(),
+      onComplete: () => particle.destroy(),
     })
   }
 }
