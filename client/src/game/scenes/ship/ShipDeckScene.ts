@@ -13,6 +13,8 @@ import { DPR, BASE_SCALE } from '../main/types'
 import { textureKeyForLevel } from '../../config/frogs'
 import { eventBus } from '../../../store/eventBus'
 import { useGameStore } from '../../../store/gameStore'
+import { ELEMENT_TINTS } from '../../effects/elements/elementTints'
+import type { Element } from '../../../store/cosmic/types'
 
 interface DeckParams {
   shipId: number
@@ -35,7 +37,7 @@ export class ShipDeckScene extends Phaser.Scene {
   private ready = false
   private launching = false
 
-  private frogs: number[] = [] // все доступные лягушки (стабильный список)
+  private frogs: { level: number; element?: Element }[] = [] // все доступные лягушки (стабильный список)
   private selected = new Set<number>() // индексы выбранных в this.frogs
   private frogTiers: number[] = [] // tier эволюции per-level (для модельки)
 
@@ -76,7 +78,22 @@ export class ShipDeckScene extends Phaser.Scene {
     const { location, minL, maxL } = this.params
     const store = useGameStore.getState()
     const all = store.locationFrogs[location - 1] ?? []
-    this.frogs = all.filter((lvl) => lvl >= minL && lvl <= maxL)
+    const carriers = store.carriers
+    const poolByLevel = new Map<number, Element[]>()
+    for (const c of carriers) {
+      const lvl = c.level ?? 1
+      if (lvl < minL || lvl > maxL) continue
+      const arr = poolByLevel.get(lvl) ?? []
+      arr.push(c.element)
+      poolByLevel.set(lvl, arr)
+    }
+    this.frogs = all
+      .filter((lvl) => lvl >= minL && lvl <= maxL)
+      .map((lvl) => {
+        const pool = poolByLevel.get(lvl)
+        const element = pool && pool.length ? pool.shift() : undefined
+        return { level: lvl, element }
+      })
     this.frogTiers = store.frogTiers
     this.selected = new Set()
     this.layout()
@@ -150,7 +167,7 @@ export class ShipDeckScene extends Phaser.Scene {
     const rows = Math.max(1, Math.ceil(n / cols))
     const rowH = bandH / rows
 
-    this.frogs.forEach((lvl, idx) => {
+    this.frogs.forEach((entry, idx) => {
       const c = idx % cols
       const r = Math.floor(idx / cols)
       // Центрируем каждый ряд (последний неполный — по центру) → ровные интервалы.
@@ -163,6 +180,14 @@ export class ShipDeckScene extends Phaser.Scene {
       const y = bandTop + rowH * (r + 0.5) + jy
       const isSel = this.selected.has(idx)
 
+      if (entry.element) {
+        const auraW = 50 * DPR * BASE_SCALE * 2.2
+        const aura = this.add
+          .ellipse(x, y + 18 * DPR, auraW, auraW * 0.5, ELEMENT_TINTS[entry.element], 0.4)
+          .setStrokeStyle(2 * DPR, ELEMENT_TINTS[entry.element], 0.9)
+        this.layer.add(aura)
+      }
+
       if (isSel) {
         const ringW = 50 * DPR * BASE_SCALE * 2 // ~frog width
         const ring = this.add
@@ -171,7 +196,7 @@ export class ShipDeckScene extends Phaser.Scene {
         this.layer.add(ring)
       }
 
-      const f = this.makeFrog(lvl, x, y)
+      const f = this.makeFrog(entry.level, x, y)
       if (isSel) f.setScale(BASE_SCALE * 1.12)
       f.setInteractive({ useHandCursor: true })
       f.on('pointerup', () => this.toggleSelect(idx))
@@ -242,7 +267,7 @@ export class ShipDeckScene extends Phaser.Scene {
   // эмитит survivor:start (см. SurvivorMissionSelect). crew = уровни жаб («жизни»).
   private onMission() {
     if (this.launching || this.selected.size < 1) return
-    const crew = [...this.selected].map((i) => this.frogs[i])
+    const crew = [...this.selected].map((i) => this.frogs[i].level)
     eventBus.emit('survivor:choose-mission', { crew, shipId: this.params.shipId })
   }
 
@@ -275,7 +300,7 @@ export class ShipDeckScene extends Phaser.Scene {
   private onLaunch() {
     if (this.launching || this.selected.size < 1) return
     this.launching = true
-    const crew = [...this.selected].map((i) => this.frogs[i])
+    const crew = [...this.selected].map((i) => this.frogs[i].level)
     const shipX = this.ship.x
     const shipY = this.ship.y
 
