@@ -216,7 +216,7 @@ function ShipCard() {
 }
 
 type GenericCardProps = {
-  icon: string
+  icon: ReactNode
   title: string
   effect: string
   level: number
@@ -320,7 +320,18 @@ function DropSpeedCard() {
   const next = isMax ? cur : (getDropIntervalMs(level + 1) / 1000).toFixed(1)
   return (
     <UpgradeCard
-      icon="📦"
+      icon={
+        <img
+          src="/box.webp"
+          alt=""
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
+          }}
+        />
+      }
       title={t('shop.drop_speed.name')}
       effect={isMax ? `${cur}s` : `${cur}s → ${next}s`}
       level={level}
@@ -391,8 +402,7 @@ function MagnetCard({
   // 2026-05-28: gate покупки магнита по открытию соответствующей локации.
   // magnet (Болото, locId=1) — всегда открыт. magnet2 → Лес (locId=2,
   // нужен discovered L7). magnet3 → Континент (locId=3, нужен L13).
-  const locId =
-    upgradeKey === 'magnet2' ? 2 : upgradeKey === 'magnet3' ? 3 : 1
+  const locId = upgradeKey === 'magnet2' ? 2 : upgradeKey === 'magnet3' ? 3 : 1
   const locUnlocked = isLocationUnlocked(locId, discovered)
   const lockLabel = !locUnlocked
     ? upgradeKey === 'magnet2'
@@ -420,7 +430,18 @@ function MagnetCard({
   const baseTitle = t('shop.magnet.name')
   return (
     <UpgradeCard
-      icon="🧲"
+      icon={
+        <img
+          src="/magnet.png"
+          alt=""
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
+          }}
+        />
+      }
       title={titleSuffix ? `${baseTitle} (${titleSuffix})` : baseTitle}
       effect={isMax ? cur : `${cur} → ${next}`}
       level={level}
@@ -459,7 +480,18 @@ function CrateQualityCard() {
       : `${curName} → ${nextName}`
   return (
     <UpgradeCard
-      icon="📦"
+      icon={
+        <img
+          src="/box.webp"
+          alt=""
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
+          }}
+        />
+      }
       title={t('shop.crate.name')}
       effect={effect}
       level={level}
@@ -493,7 +525,19 @@ function RareBoxSpeedCard() {
     : `${t('shop.rare_box_speed.effect', { count: curCount })} → ${nextCount}`
   return (
     <UpgradeCard
-      icon="✨"
+      icon={
+        <img
+          src="/box.webp"
+          alt=""
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            filter:
+              'brightness(1.15) sepia(0.85) saturate(2.6) hue-rotate(-12deg) drop-shadow(0 1px 1px rgba(0,0,0,0.45))',
+          }}
+        />
+      }
       title={t('shop.rare_box_speed.name')}
       effect={effect}
       level={level}
@@ -601,10 +645,7 @@ function ShipsUpgradeTab() {
       )}
       {!loading &&
         ships.map((ship) => (
-          <div
-            key={ship.id}
-            className="ff-card p-3 flex flex-col gap-2"
-          >
+          <div key={ship.id} className="ff-card p-3 flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="ff-display text-base text-emerald-900">
                 🛠 {ship.name}
