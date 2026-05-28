@@ -171,7 +171,7 @@ export function LocationStack() {
         style={{
           position: 'fixed',
           top: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad) + 8px)',
-          right: -4,
+          right: 2,
           zIndex: 50,
           pointerEvents: 'none',
           display: 'flex',
@@ -182,7 +182,7 @@ export function LocationStack() {
           width: 'max-content',
           height: 'max-content',
           background: '#000',
-          padding: '8px 10px',
+          padding: '8px 4px',
           borderRadius: 36,
         }}
       >
