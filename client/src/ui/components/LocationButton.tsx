@@ -71,9 +71,10 @@ export function LocationButton({
             d="M 2 16 L 16 3 L 16 11 L 28 11 L 28 21 L 16 21 L 16 29 Z"
             fill="#D558D7"
             stroke="#5A1F5C"
-            strokeWidth="1.8"
+            strokeWidth="4"
             strokeLinejoin="round"
             strokeLinecap="round"
+            paintOrder="stroke"
           />
         </svg>
       )}
