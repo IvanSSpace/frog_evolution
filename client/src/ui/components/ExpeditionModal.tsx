@@ -1066,15 +1066,8 @@ function ShipDeckBlock(props: ShipDeckBlockProps) {
         })}
       </div>
 
-      {/* Кнопки запуска. */}
+      {/* Кнопка запуска. «На миссию» скрыта по запросу — только космос. */}
       <div className="flex gap-2 flex-shrink-0">
-        <button
-          className={`ff-btn flex-1 py-3 text-sm ${canLaunch ? 'ff-btn-red' : 'ff-btn-grey'}`}
-          disabled={!canLaunch}
-          onClick={() => startLaunch('mission')}
-        >
-          ⚔️ На миссию
-        </button>
         <button
           className={`ff-btn flex-1 py-3 text-sm ${canLaunch ? 'ff-btn-green' : 'ff-btn-grey'}`}
           disabled={!canLaunch}
