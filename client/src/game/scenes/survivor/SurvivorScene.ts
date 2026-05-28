@@ -285,6 +285,15 @@ export class SurvivorScene extends Phaser.Scene {
     super('SurvivorScene')
   }
 
+  preload() {
+    if (!this.textures.exists('planet-texture1')) {
+      this.load.image('planet-texture1', '/maps/planet-texture1.jpg')
+    }
+    if (!this.textures.exists('planet-texture2')) {
+      this.load.image('planet-texture2', '/maps/planet-texture2.jpg')
+    }
+  }
+
   init(data: SurvivorInit) {
     // Сортируем по убыванию: первая «жизнь» — сильнейшая жаба.
     this.crew = [...(data.crew ?? [])].sort((a, b) => b - a)
@@ -326,6 +335,18 @@ export class SurvivorScene extends Phaser.Scene {
 
     this.cameras.main.setBounds(0, 0, WORLD, WORLD)
     this.cameras.main.setBackgroundColor('#16241a')
+
+    // Planet background: детерминированный выбор текстуры + тинта по mission.id.
+    const idHash = [...this.mission.id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 0)
+    const textureKey = idHash % 2 === 0 ? 'planet-texture1' : 'planet-texture2'
+    const TINT_PALETTE = [0xffd6a8, 0xa8d6ff, 0xd8a8ff, 0xa8ffc8, 0xffa8b8]
+    const tint = TINT_PALETTE[idHash % TINT_PALETTE.length]
+    if (this.textures.exists(textureKey)) {
+      const bg = this.add.tileSprite(0, 0, WORLD, WORLD, textureKey).setOrigin(0, 0)
+      bg.setTint(tint)
+      bg.setAlpha(0.85)
+      bg.setDepth(-100)
+    }
 
     // Ground: тайл существующей карты болота, если текстура есть.
     if (this.textures.exists('map')) {
