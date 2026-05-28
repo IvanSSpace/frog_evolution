@@ -68,7 +68,7 @@ export function LocationButton({
           }}
         >
           <path
-            d="M 3 16 L 12 3 L 12 13 L 21 13 L 21 19 L 12 19 L 12 29 Z"
+            d="M 2 16 L 16 3 L 16 13 L 22 13 L 22 19 L 16 19 L 16 29 Z"
             fill="#D558D7"
             stroke="#5A1F5C"
             strokeWidth="1.8"
