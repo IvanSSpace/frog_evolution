@@ -190,7 +190,7 @@ function BoxProgress({
   return (
     <div
       className={`relative inline-block leading-none ${waiting ? 'animate-pulse' : ''}`}
-      style={{ width: 64, height: 64 }}
+      style={{ width: 32, height: 32 }}
     >
       <img
         src="/box.webp"
