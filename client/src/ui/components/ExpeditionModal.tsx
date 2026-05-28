@@ -352,6 +352,19 @@ export function ExpeditionModal({ onClose }: Props) {
     handleClose()
   }
 
+  // Сразу открыть ShipDeck (сцена с кораблём + лягушки) при открытии модалки:
+  // как только корабли загружены и выбранный корабль в ангаре (не в полёте).
+  // Срабатывает один раз за mount (autoOpenedRef).
+  const autoOpenedRef = useRef(false)
+  useEffect(() => {
+    if (autoOpenedRef.current) return
+    if (loading || !selectedShip || busy) return
+    if (selectedShip.activeExpeditionId) return
+    autoOpenedRef.current = true
+    openDeck(selectedShip)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, selectedShip, busy])
+
   // Оптимистично: мгновенно меняем фазу локально, сервер подтверждает/откат.
   const onRecall = () => {
     if (!activeExp || activeExp.phase !== 'outbound') return
@@ -682,11 +695,9 @@ export function ExpeditionModal({ onClose }: Props) {
                   ⚙️ Прокачка корабля
                 </button>
 
-                {/* Снаряжение экипажа — без отдельной кнопки: повторный тап по
-                    кораблю (табу сверху) открывает выбор экипажа + запуск. */}
-                <p className="text-center text-[11px] text-[#5a7a2a] flex-shrink-0 mt-1">
-                  Нажми на корабль ещё раз, чтобы снарядить экипаж и запустить
-                </p>
+                {/* Снаряжение экипажа открывается автоматически при открытии
+                    модалки (auto-openDeck выше). Ангар тут виден только если
+                    у пользователя нет docked idle ships — fallback. */}
               </div>
             )}
 
