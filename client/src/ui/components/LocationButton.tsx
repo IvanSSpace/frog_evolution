@@ -52,6 +52,7 @@ export function LocationButton({
         onClick={onClick}
         disabled={disabled}
         aria-label={locName}
+        aria-pressed={isCurrent}
         title={locName}
         style={{
           pointerEvents: 'auto',
