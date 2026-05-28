@@ -87,9 +87,13 @@ export function LocationButton({
             : undefined,
         }}
       >
-        {loc.id === 6 ? (
+        {loc.id === 6 || loc.id === 3 ? (
           <img
-            src="/locations/galaxyIcon4.png"
+            src={
+              loc.id === 6
+                ? '/locations/galaxyIcon4.png'
+                : '/locations/planetIcon3.png'
+            }
             alt=""
             style={{
               width: 30,
