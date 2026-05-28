@@ -163,9 +163,9 @@ export function RareCrateModal({ minLevel, maxLevel, onClose }: Props) {
                 src="/box.webp"
                 alt=""
                 style={{
-                  width: 180,
+                  width: 260,
                   height: 'auto',
-                  filter: 'drop-shadow(0 0 18px rgba(255,215,0,0.65))',
+                  filter: 'drop-shadow(0 0 22px rgba(255,215,0,0.7))',
                 }}
               />
             </div>
