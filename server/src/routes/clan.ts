@@ -18,7 +18,7 @@ const NAME_MIN = 2
 const NAME_MAX = 24
 const VALID_EMBLEM_ICONS = ['rocket', 'star', 'crown', 'shield', 'comet', 'planet', 'galaxy', 'moon']
 const VALID_EMBLEM_COLORS = ['teal', 'purple', 'amber', 'rose', 'sky', 'mint']
-const VALID_ELEMENTS = ['water', 'fire', 'earth', 'air', 'light', 'dark', 'plasma', 'crystal', 'metal', 'plant', 'toxin']
+const VALID_ELEMENTS = ['fire', 'ice', 'water', 'forest', 'toxic', 'plasma', 'crystal', 'desert', 'gas', 'ring', 'binary']
 
 type CosmicBlob = Record<string, unknown> & { essence?: number; serums?: Record<string, number> }
 
