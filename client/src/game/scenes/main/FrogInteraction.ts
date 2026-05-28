@@ -21,6 +21,7 @@ import { eventBus } from '../../../store/eventBus'
 import { hapticImpact, hapticNotification } from '../../../utils/telegram'
 import { burstEffect } from '../../effects/elements/burstEffect'
 import { ELEMENT_TINT } from '../../../components/CosmicHub/ElementGrid'
+import { showToast } from '../../../ui/showToast'
 import i18next from 'i18next'
 import type { Element } from '../../../store/cosmic/types'
 import { DPR, tintToHex, type FrogData } from './types'
@@ -101,6 +102,20 @@ export class FrogInteraction {
         const eligible = scene.frogs.filter((f) =>
           isEligible({ id: f.id, level: f.level }, state.carriers),
         )
+        // 2026-05-28: если игрок тапнул серум, а на текущей локации нет L1
+        // non-carrier лягушек — drag всё равно активируется, но применять
+        // не на кого, что путает. Показываем подсказку и снимаем drag.
+        // Магнит → лягушки слипаются на ходу → быстро становятся L2+,
+        // поэтому подсказка явно намекает на отключение магнита.
+        if (dragChanged && eligible.length === 0) {
+          showToast(
+            'Нет лягушек 1 уровня. Для удобства выключите магнит.',
+          )
+          hapticNotification('warning')
+          useGameStore.getState().setSerumDragActive(false)
+          eventBus.emit('cosmic:cancel-serum')
+          return
+        }
         scene.selectionLayer?.show(
           eligible.map((f) => ({
             id: f.id,

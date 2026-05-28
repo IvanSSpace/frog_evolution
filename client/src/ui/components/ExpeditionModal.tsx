@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom'
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso'
 import { useGameStore } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
-import { getFrogPath } from '../../game/config/frogs'
 import { useModalLock } from '../../utils/modalLock'
 import { fmt } from '../../utils/formatting'
 import { ELEMENTS, type Element } from '../../store/cosmic/types'
@@ -279,16 +278,6 @@ export function ExpeditionModal({ onClose }: Props) {
   const prevShipRef = useRef<number | null>(null)
 
   const gold = useGameStore((s) => s.gold)
-  // Для inline-пикера экипажа: лягушки по локациям + carriers (стихия носителя).
-  const locationFrogs = useGameStore((s) => s.locationFrogs)
-  const carriers = useGameStore((s) => s.carriers)
-  // Выделенные индексы в frogList текущего корабля (max 6).
-  const [selectedCrew, setSelectedCrew] = useState<Set<number>>(new Set())
-
-  // Сброс выбора при смене корабля.
-  useEffect(() => {
-    setSelectedCrew(new Set())
-  }, [selectedShipId])
 
   const selectedShip = ships.find((s) => s.id === selectedShipId) ?? null
   const activeExp = selectedShip?.activeExpeditionId
@@ -349,6 +338,32 @@ export function ExpeditionModal({ onClose }: Props) {
   }, [activeExp, nowTs, refresh])
 
   // Снаряжение: уходим в Phaser-сцену (выбор экипажа + анимация запуска).
+  // Закрываем модалку, чтобы сцена была видна; App переоткроет на launch/cancel.
+  const openDeck = (ship: ShipView) => {
+    const minL = (ship.id - 1) * 6 + 1
+    const maxL = ship.id * 6
+    eventBus.emit('shipdeck:open', {
+      shipId: ship.id,
+      location: ship.id,
+      minL,
+      maxL,
+      demo: DEMO_TEMPO,
+    })
+    handleClose()
+  }
+
+  // Сразу открыть ShipDeck (сцена с кораблём + лягушки) при открытии модалки:
+  // как только корабли загружены и выбранный корабль в ангаре (не в полёте).
+  // Срабатывает один раз за mount (autoOpenedRef).
+  const autoOpenedRef = useRef(false)
+  useEffect(() => {
+    if (autoOpenedRef.current) return
+    if (loading || !selectedShip || busy) return
+    if (selectedShip.activeExpeditionId) return
+    autoOpenedRef.current = true
+    openDeck(selectedShip)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, selectedShip, busy])
 
   // Оптимистично: мгновенно меняем фазу локально, сервер подтверждает/откат.
   const onRecall = () => {
@@ -590,7 +605,15 @@ export function ExpeditionModal({ onClose }: Props) {
                   return (
                     <button
                       key={s.id}
-                      onClick={() => setSelectedShipId(s.id)}
+                      onClick={() => {
+                        // Первый тап — выбрать (показать ангар). Повторный тап по
+                        // выбранному кораблю-в-ангаре → сразу снаряжение экипажа.
+                        if (s.id !== selectedShipId) {
+                          setSelectedShipId(s.id)
+                          return
+                        }
+                        if (!s.activeExpeditionId && !busy) openDeck(s)
+                      }}
                       className={`ff-btn text-xs py-2 px-3 flex-shrink-0 ${
                         s.id === selectedShipId ? 'ff-btn-green' : 'ff-btn-grey'
                       }`}
@@ -655,163 +678,26 @@ export function ExpeditionModal({ onClose }: Props) {
                     {claimMsg}
                   </p>
                 )}
-                {(() => {
-                  // Инлайн-пикер экипажа (вместо отдельной Phaser ShipDeckScene).
-                  // Лягушки текущего корабля: locationFrogs[ship.id-1], фильтр по
-                  // [minL,maxL]. Элемент носителя — из carriers (распределяем по
-                  // уровню pool.shift, как в Phaser-сцене).
-                  const minL = (selectedShip.id - 1) * 6 + 1
-                  const maxL = selectedShip.id * 6
-                  const all = locationFrogs[selectedShip.id - 1] ?? []
-                  const poolByLevel = new Map<number, Element[]>()
-                  for (const c of carriers) {
-                    const lvl = c.level ?? 1
-                    if (lvl < minL || lvl > maxL) continue
-                    const arr = poolByLevel.get(lvl) ?? []
-                    arr.push(c.element)
-                    poolByLevel.set(lvl, arr)
-                  }
-                  const frogList = all
-                    .filter((lvl) => lvl >= minL && lvl <= maxL)
-                    .map((lvl) => {
-                      const pool = poolByLevel.get(lvl)
-                      const element = pool && pool.length ? pool.shift() : undefined
-                      return { level: lvl, element }
-                    })
-                  const MAX_CREW = 6
-                  const canLaunch = selectedCrew.size >= 1
-                  const toggle = (idx: number) => {
-                    setSelectedCrew((prev) => {
-                      const next = new Set(prev)
-                      if (next.has(idx)) next.delete(idx)
-                      else if (next.size < MAX_CREW) next.add(idx)
-                      return next
-                    })
-                  }
-                  const crewLevels = (): number[] =>
-                    [...selectedCrew].map((i) => frogList[i].level)
-                  const onLaunchMission = () => {
-                    if (!canLaunch || busy) return
-                    eventBus.emit('survivor:choose-mission', {
-                      crew: crewLevels(),
-                      shipId: selectedShip.id,
-                    })
-                    handleClose()
-                  }
-                  const onLaunchCosmos = () => {
-                    if (!canLaunch || busy) return
-                    eventBus.emit('shipdeck:launch', {
-                      shipId: selectedShip.id,
-                      crew: crewLevels(),
-                      demo: DEMO_TEMPO,
-                    })
-                    handleClose()
-                  }
-                  return (
-                    <>
-                      <div className="flex items-center justify-between text-sm flex-shrink-0">
-                        <span className="font-semibold text-[#3a5214]">
-                          🛠 {selectedShip.name} — в ангаре
-                        </span>
-                        <span className="text-[#5a7a2a]">
-                          ❤️ {selectedShip.maxHp} HP
-                        </span>
-                      </div>
+                <div className="flex items-center justify-between text-sm flex-shrink-0">
+                  <span className="font-semibold text-[#3a5214]">
+                    🛠 {selectedShip.name} — в ангаре
+                  </span>
+                  <span className="text-[#5a7a2a]">
+                    ❤️ {selectedShip.maxHp} HP
+                  </span>
+                </div>
 
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexWrap: 'wrap',
-                          gap: 8,
-                          justifyContent: 'center',
-                          padding: 8,
-                          border: '2px dashed rgba(77,107,31,0.35)',
-                          borderRadius: 12,
-                          background: 'rgba(77,107,31,0.06)',
-                        }}
-                      >
-                        {frogList.length === 0 && (
-                          <div className="text-xs text-[#5a7a2a] py-4">
-                            Нет лягушек L{minL}–L{maxL} для этого корабля
-                          </div>
-                        )}
-                        {frogList.map((entry, idx) => {
-                          const sel = selectedCrew.has(idx)
-                          const tint = entry.element
-                            ? ELEMENT_TINT[entry.element]
-                            : 'transparent'
-                          return (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => toggle(idx)}
-                              style={{
-                                width: 52,
-                                height: 60,
-                                borderRadius: 10,
-                                border: sel
-                                  ? '3px solid #16a34a'
-                                  : entry.element
-                                    ? `3px solid ${tint}`
-                                    : '2px solid rgba(77,107,31,0.4)',
-                                background: entry.element
-                                  ? `${tint}22`
-                                  : 'rgba(255,255,255,0.5)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer',
-                                transform: sel ? 'scale(1.05)' : undefined,
-                                transition: 'transform .12s, border-color .12s',
-                                padding: 4,
-                              }}
-                              title={`L${entry.level}${entry.element ? ` · ${entry.element}` : ''}`}
-                            >
-                              <img
-                                src={getFrogPath(entry.level, 0)}
-                                alt={`L${entry.level}`}
-                                style={{
-                                  height: 40,
-                                  width: 'auto',
-                                  pointerEvents: 'none',
-                                }}
-                              />
-                            </button>
-                          )
-                        })}
-                      </div>
+                <button
+                  className="ff-btn py-3 text-base flex-shrink-0"
+                  disabled={busy}
+                  onClick={() => setShowUpgrades(true)}
+                >
+                  ⚙️ Прокачка корабля
+                </button>
 
-                      <div className="text-center text-xs text-[#5a7a2a] flex-shrink-0">
-                        Экипаж: {selectedCrew.size}/{MAX_CREW}
-                      </div>
-
-                      <div className="flex gap-2 flex-shrink-0">
-                        <button
-                          className={`ff-btn flex-1 py-3 text-sm ${canLaunch ? 'ff-btn-red' : 'ff-btn-grey'}`}
-                          disabled={!canLaunch || busy}
-                          onClick={onLaunchMission}
-                        >
-                          ⚔️ На миссию
-                        </button>
-                        <button
-                          className={`ff-btn flex-1 py-3 text-sm ${canLaunch ? 'ff-btn-green' : 'ff-btn-grey'}`}
-                          disabled={!canLaunch || busy}
-                          onClick={onLaunchCosmos}
-                        >
-                          🚀 В космос
-                        </button>
-                      </div>
-
-                      <button
-                        className="ff-btn py-3 text-sm flex-shrink-0"
-                        disabled={busy}
-                        onClick={() => setShowUpgrades(true)}
-                      >
-                        ⚙️ Прокачка корабля
-                      </button>
-                    </>
-                  )
-                })()}
+                {/* Снаряжение экипажа открывается автоматически при открытии
+                    модалки (auto-openDeck выше). Ангар тут виден только если
+                    у пользователя нет docked idle ships — fallback. */}
               </div>
             )}
 
