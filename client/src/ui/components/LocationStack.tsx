@@ -254,6 +254,7 @@ export function LocationStack() {
             textShadow: '0 1px 0 rgba(0,0,0,0.5)',
             padding: 0,
             marginTop: 2,
+            alignSelf: 'center',
           }}
         >
           {collapsed ? '▼' : '▲'}
