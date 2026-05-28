@@ -14,6 +14,11 @@ export function StarUnionsModal({ onClose }: { onClose: () => void }) {
   const setSnapshot = useClanStore((s) => s.setSnapshot)
   const setCooldown = useClanStore((s) => s.setCooldown)
   const [closing, setClosing] = useState(false)
+  // 2026-05-28: показываем loading пока first fetchClanMe не вернулся —
+  // иначе на первом открытии в сессии (snapshot=null) мелькает NoClanView
+  // даже у тех кто в клане. Если snapshot уже есть из прошлого открытия,
+  // сразу считаем готово.
+  const [initialFetchDone, setInitialFetchDone] = useState(snapshot !== null)
 
   const handleClose = useCallback(() => {
     if (closing) return
@@ -39,6 +44,7 @@ export function StarUnionsModal({ onClose }: { onClose: () => void }) {
         setCooldown(r.cooldownUntil)
       })
       .catch(console.error)
+      .finally(() => setInitialFetchDone(true))
   }, [setSnapshot, setCooldown])
 
   useClanPolling(!!snapshot)
@@ -117,7 +123,18 @@ export function StarUnionsModal({ onClose }: { onClose: () => void }) {
               overscrollBehavior: 'contain',
             }}
           >
-            {snapshot ? <InClanView /> : <NoClanView />}
+            {!initialFetchDone ? (
+              <div
+                className="flex items-center justify-center"
+                style={{ minHeight: 200, color: '#7a5a2f' }}
+              >
+                <span className="ff-body text-sm">Подключение…</span>
+              </div>
+            ) : snapshot ? (
+              <InClanView />
+            ) : (
+              <NoClanView />
+            )}
           </div>
         </div>
       </div>
