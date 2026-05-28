@@ -84,6 +84,8 @@ export class MainScene extends Phaser.Scene {
   prevLocation = 1
   isLocationTransitioning = false
   bg!: Phaser.GameObjects.Image
+  // 2026-05-28: Континент (loc 3) — зелёный туманный шлейф над вулканом.
+  private volcanoFogTimer: Phaser.Time.TimerEvent | null = null
   // Аккумулятор для фонового дохода с лягушек неактивных локаций
   // (на текущей локации монеты приходят через настоящие какашки visible-лягушек)
   private bgIncomeAccum = 0
@@ -710,6 +712,9 @@ export class MainScene extends Phaser.Scene {
     // 2026-05-18: l18AbsoluteBonusPerSec (от first L18+L18 merge) тикает здесь
     // как ghost-frog income (см. gameStore). Multiplier applies через addGold.
     const currentLocId = store.currentLocation
+    // Континент → запускаем туманный шлейф вулкана; ушли → останавливаем.
+    if (currentLocId === 3 && !this.volcanoFogTimer) this.startVolcanoFog()
+    else if (currentLocId !== 3 && this.volcanoFogTimer) this.stopVolcanoFog()
     let bgIncomePerSec = store.l18AbsoluteBonusPerSec
     store.locationFrogs.forEach((arr, idx) => {
       const locId = idx + 1
@@ -890,5 +895,52 @@ export class MainScene extends Phaser.Scene {
     })
     this.overlayManager?.markDirty()
     devLog('[debug] spawned 16 carrier frogs on each of 4 locations (64 total)')
+  }
+
+  // ─── Туманный шлейф вулкана (локация 3 — Континент) ─────────────────────
+  // Зелёные эллипсы поднимаются вверх зиг-загом (sin-волна) с волкан-точки,
+  // alpha 0→peak→0, lifetime ~3.5s. Спавн каждые 400мс пока loc=3.
+  startVolcanoFog(): void {
+    if (this.volcanoFogTimer) return
+    this.volcanoFogTimer = this.time.addEvent({
+      delay: 400,
+      loop: true,
+      callback: () => this.spawnVolcanoFogParticle(),
+    })
+  }
+
+  stopVolcanoFog(): void {
+    if (!this.volcanoFogTimer) return
+    this.volcanoFogTimer.remove(false)
+    this.volcanoFogTimer = null
+  }
+
+  private spawnVolcanoFogParticle(): void {
+    // Вулкан примерно в верх-центре карты. Подкрути координаты под арт.
+    const volcanoX = this.scale.width * 0.5
+    const volcanoY = this.scale.height * 0.18
+    const ellipse = this.add
+      .ellipse(volcanoX, volcanoY, 36 * DPR, 46 * DPR, 0x4ade80, 0.55)
+      .setDepth(5)
+    const startX = volcanoX
+    const startY = volcanoY
+    const rise = 220 * DPR
+    const zigAmp = 28 * DPR
+    const zigFreq = 4 // волн на траектории
+    this.tweens.add({
+      targets: { t: 0 },
+      t: 1,
+      duration: 3500,
+      ease: 'Sine.easeOut',
+      onUpdate: (tween) => {
+        const t = tween.progress
+        ellipse.x = startX + Math.sin(t * Math.PI * zigFreq) * zigAmp
+        ellipse.y = startY - t * rise
+        ellipse.alpha = Math.sin(t * Math.PI) * 0.55
+        const s = 1 + t * 0.6
+        ellipse.setScale(s)
+      },
+      onComplete: () => ellipse.destroy(),
+    })
   }
 }
