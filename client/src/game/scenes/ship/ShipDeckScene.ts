@@ -196,7 +196,7 @@ export class ShipDeckScene extends Phaser.Scene {
         this.layer.add(ring)
       }
 
-      const f = this.makeFrog(entry.level, x, y)
+      const f = this.makeFrog(entry.level, x, y, entry.element)
       if (isSel) f.setScale(BASE_SCALE * 1.12)
       f.setInteractive({ useHandCursor: true })
       f.on('pointerup', () => this.toggleSelect(idx))
@@ -275,11 +275,14 @@ export class ShipDeckScene extends Phaser.Scene {
     level: number,
     x: number,
     y: number,
+    element?: Element,
   ): Phaser.GameObjects.Image {
     const tier = this.frogTiers[level - 1] ?? 0 // эволюционировавшая моделька
     const key = textureKeyForLevel(level, tier)
     const img = this.add.image(x, y, key)
     img.setScale(BASE_SCALE) // тот же размер, что лягушки на поле
+    // Носитель сыворотки — красим тело в цвет стихии (как FrogElementOverlay на ферме).
+    if (element) img.setTint(ELEMENT_TINTS[element])
     return img
   }
 
