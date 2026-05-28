@@ -128,6 +128,7 @@ type BottomBarProps = {
   onOpenSettings?: () => void
   onOpenExpedition?: () => void
   onOpenInventory?: () => void
+  onOpenClan?: () => void
 }
 
 export function BottomBar({
@@ -136,6 +137,7 @@ export function BottomBar({
   onOpenSettings,
   onOpenExpedition,
   onOpenInventory,
+  onOpenClan,
 }: BottomBarProps) {
   // Badge «новый контент» на 🐸 и 📖. true когда есть discoveredLevel,
   // которого ещё нет в соответствующем seenLevels массиве.
@@ -187,6 +189,13 @@ export function BottomBar({
           }
           disabled={!forestUnlocked}
           onClick={onOpenExpedition}
+        />
+        <Tile
+          icon="slime"
+          emoji="🤝"
+          skin="purple"
+          title="Звёздные союзы"
+          onClick={onOpenClan}
         />
       </div>
 

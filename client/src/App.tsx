@@ -34,6 +34,7 @@ import { CaptainBirthModal } from './components/Captain/CaptainBirthModal'
 import { EvolutionCeremony } from './components/Evolution/EvolutionCeremony'
 import { installCaptainBirthController } from './components/Captain/captainBirthController'
 import { SerumBar } from './components/SerumBar'
+import { StarUnionsModal } from './components/StarUnions/StarUnionsModal'
 import { installBestiaryDevHelpers } from './utils/devHelpers'
 import { installFrogTierDevHelpers } from './utils/devFrogTiers'
 import { installOnboardingDevHelpers } from './utils/onboardingDevHelpers'
@@ -60,6 +61,7 @@ function App() {
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [expeditionOpen, setExpeditionOpen] = useState(false)
   const [inventoryOpen, setInventoryOpen] = useState(false)
+  const [clanOpen, setClanOpen] = useState(false)
   const [welcomeBack, setWelcomeBack] = useState<{
     earned: number
     hours: number
@@ -353,6 +355,7 @@ function App() {
             onOpenSettings={() => setSettingsOpen(true)}
             onOpenExpedition={() => setExpeditionOpen(true)}
             onOpenInventory={() => setInventoryOpen(true)}
+            onOpenClan={() => setClanOpen(true)}
           />
         </div>
       </div>
@@ -374,6 +377,7 @@ function App() {
         <InventoryModal onClose={() => setInventoryOpen(false)} />
       )}
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+      {clanOpen && <StarUnionsModal onClose={() => setClanOpen(false)} />}
       <SurvivorUpgradeModal />
       <SurvivorMissionSelect />
       {/* Phase 18 (REQ BESTIARY-07): milestone toast — listens cosmic:bestiary-milestone
