@@ -60,13 +60,13 @@ export function LocationButton({
         style={{
           pointerEvents: 'auto',
           cursor: disabled ? 'not-allowed' : 'pointer',
-          width: 56,
-          height: 56,
+          width: 46,
+          height: 46,
           borderRadius: '50%',
           background: `linear-gradient(180deg, ${v.from} 0%, ${v.to} 100%)`,
           border: '1px solid ' + v.border,
           boxShadow,
-          fontSize: 28,
+          fontSize: 22,
           lineHeight: 1,
           padding: 0,
           display: 'flex',
@@ -103,8 +103,8 @@ export function LocationButton({
             }
             alt=""
             style={{
-              width: 44,
-              height: 44,
+              width: 40,
+              height: 40,
               objectFit: 'contain',
               pointerEvents: 'none',
               filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
