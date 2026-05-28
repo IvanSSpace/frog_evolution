@@ -11,6 +11,7 @@ import {
   UPGRADE_CONFIG,
 } from '../../store/gameStore'
 import { SHIP_UNLOCK, shipUnlocked } from '../../game/config/upgrades'
+import { isLocationUnlocked } from '../../game/config/locationUnlocks'
 import { hapticNotification } from '../../utils/telegram'
 import { fmt } from '../../utils/formatting'
 import { useModalLock } from '../../utils/modalLock'
@@ -364,10 +365,22 @@ function MagnetCard({
   const level = useGameStore((s) => s.upgrades[upgradeKey])
   const gold = useGameStore((s) => s.gold)
   const buyUpgrade = useGameStore((s) => s.buyUpgrade)
+  const discovered = useGameStore((s) => s.discoveredLevels)
   const cfg = UPGRADE_CONFIG[upgradeKey]
   const isMax = level >= cfg.maxLevel
   const cost = isMax ? 0 : getUpgradeCost(upgradeKey, level)
   const canAfford = gold >= cost
+  // 2026-05-28: gate покупки магнита по открытию соответствующей локации.
+  // magnet (Болото, locId=1) — всегда открыт. magnet2 → Лес (locId=2,
+  // нужен discovered L7). magnet3 → Континент (locId=3, нужен L13).
+  const locId =
+    upgradeKey === 'magnet2' ? 2 : upgradeKey === 'magnet3' ? 3 : 1
+  const locUnlocked = isLocationUnlocked(locId, discovered)
+  const lockLabel = !locUnlocked
+    ? upgradeKey === 'magnet2'
+      ? 'Откройте Лес'
+      : 'Откройте Континент'
+    : ''
   const interval = (getMagnetSpawnInterval(level) / 1000).toFixed(0)
   const duration = (getMagnetDuration(level) / 1000).toFixed(0)
   const nextInterval = isMax
@@ -397,6 +410,8 @@ function MagnetCard({
       cost={cost}
       isMax={isMax}
       canAfford={canAfford}
+      locked={!isMax && !locUnlocked}
+      lockLabel={lockLabel}
       onBuy={() =>
         void buyUpgrade(upgradeKey).then((ok) =>
           hapticNotification(ok ? 'success' : 'error'),
