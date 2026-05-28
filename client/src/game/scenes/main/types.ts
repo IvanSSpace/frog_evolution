@@ -47,13 +47,10 @@ export const BASE_SCALE = DPR / TEXTURE_QUALITY // = 1/1.5 ≈ 0.667
 export const tintToHex = (cssHex: string): number =>
   parseInt(cssHex.replace('#', ''), 16)
 
-export const mapKeyForLocation = (locId: number): string => {
-  // id=1 Болото → map.webp, id=2 Лес → map2.webp, id=3 Континент → map3.webp.
-  // map4.webp оставлен для anti-zoom перехода в космос.
-  if (locId === 1) return 'map'
-  if (locId === 2) return 'map2'
-  if (locId === 3) return 'map3'
-  return 'map'
+export const mapKeyForLocation = (_locId: number): string => {
+  // 2026-05-28: TEST — toxic_map.webp для всех локаций. Откатить заменив тело
+  // на оригинал: if (id===1) 'map' / id===2 'map2' / id===3 'map3' / else 'map'.
+  return 'toxic_map'
 }
 
 export interface BoxData {

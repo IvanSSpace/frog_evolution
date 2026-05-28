@@ -180,6 +180,8 @@ export class MainScene extends Phaser.Scene {
     this.load.image('map2', '/maps/map2.webp')
     this.load.image('map3', '/maps/map3.webp')
     this.load.image('map4', '/maps/map4.webp')
+    // 2026-05-28: тестовый toxic_map для всех локаций (см. mapKeyForLocation).
+    this.load.image('toxic_map', '/maps/toxic_map.webp')
     this.load.image('box', '/box.webp')
   }
 
