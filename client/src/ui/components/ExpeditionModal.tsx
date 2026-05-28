@@ -416,6 +416,24 @@ export function ExpeditionModal({ onClose }: Props) {
     setBusy(true)
     try {
       const res = await claimExpedition(activeExp.id)
+      // 2026-05-28: применяем лут в локальный store. Server-side роут
+      // /claim уже добавил gold/serums/mutagen игроку в DB; раньше клиент
+      // про это не знал — refresh() тянет только ships+expeditions, не
+      // game state — и инвентарь продолжал показывать старые цифры до
+      // следующего полного loadGameState. ClaimResp.loot — дельта (что
+      // именно зачислено), мирорим её локально → состояние совпадает с DB.
+      if (!res.shipLost) {
+        const s = useGameStore.getState()
+        if (res.loot.gold > 0) s.addGold(res.loot.gold)
+        for (const [el, n] of Object.entries(res.loot.serums)) {
+          if (n > 0) s.addSerum(el as Element, n)
+        }
+        if (res.loot.mutagen > 0) {
+          useGameStore.setState((st) => ({
+            mutagen: st.mutagen + res.loot.mutagen,
+          }))
+        }
+      }
       const serums = Object.entries(res.loot.serums)
         .map(([k, v]) => `${k}×${v}`)
         .join(', ')
@@ -423,7 +441,7 @@ export function ExpeditionModal({ onClose }: Props) {
       setClaimMsg(
         res.shipLost
           ? 'Корабль потерян — лут не доставлен.'
-          : `Доставлено: ${res.loot.gold} золота${serums ? ', слизь: ' + serums : ''}${mut}.`,
+          : `Доставлено: ${res.loot.gold} золота${serums ? ', сыворотки: ' + serums : ''}${mut}.`,
       )
       await refresh()
     } catch (e) {
