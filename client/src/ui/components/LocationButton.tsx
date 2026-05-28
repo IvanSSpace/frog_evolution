@@ -51,19 +51,20 @@ export function LocationButton({
     <div
       style={{ position: 'relative', display: 'flex', alignItems: 'center' }}
     >
-      {/* Стрелка-указатель текущей локации (справа, указывает влево). */}
+      {/* Стрелка-указатель текущей локации — внутри круга справа, смотрит влево. */}
       {isCurrent && (
         <svg
-          width="20"
-          height="16"
+          width="16"
+          height="12"
           viewBox="0 0 20 16"
           style={{
             position: 'absolute',
-            right: -22,
+            right: 3,
             top: '50%',
             transform: 'translateY(-50%)',
-            filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.35))',
+            filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.5))',
             pointerEvents: 'none',
+            zIndex: 2,
           }}
         >
           <path
