@@ -36,7 +36,7 @@ import {
 } from '../../utils/cosmicSettings'
 import { useModalLock } from '../../utils/modalLock'
 
-type Tab = 'bestiary' | 'settings' | 'player'
+type Tab = 'bestiary' | 'settings' | 'player' | 'mechanics'
 type Props = { onClose: () => void }
 
 export function SettingsModal({ onClose }: Props) {
@@ -124,6 +124,13 @@ export function SettingsModal({ onClose }: Props) {
               {t('settings_modal.tab_settings')}
             </button>
             <button
+              onClick={() => setTab('mechanics')}
+              aria-label="Механики"
+              className={`ff-btn flex-shrink-0 text-xs py-2 px-3 ${tab === 'mechanics' ? 'ff-btn-green' : 'ff-btn-grey'}`}
+            >
+              ?
+            </button>
+            <button
               type="button"
               onClick={handleClose}
               aria-label={t('settings_modal.close')}
@@ -151,6 +158,7 @@ export function SettingsModal({ onClose }: Props) {
             {tab === 'bestiary' && <BestiaryTab />}
             {tab === 'player' && <PlayerPanel />}
             {tab === 'settings' && <SettingsTab />}
+            {tab === 'mechanics' && <MechanicsTab />}
           </div>
         </div>
       </div>
@@ -739,6 +747,100 @@ function SettingsRow({
         {label}
       </span>
       <div className="flex-shrink-0">{children}</div>
+    </div>
+  )
+}
+
+// ────────────────────────── MECHANICS TAB ──────────────────────────
+
+function MechanicsTab() {
+  return (
+    <div className="flex flex-col gap-4">
+      <div
+        className="ff-display text-center"
+        style={{ fontSize: 22, color: '#15803d' }}
+      >
+        Как всё работает
+      </div>
+
+      <MechanicsSection title="🪙 Доход">
+        <MechanicsItem name="Мерджи" desc="соединяй одинаковых лягушек → уровень выше → больше дохода. Основа игры." />
+        <MechanicsItem name="Эволюция" desc="прокачка лягушки за слизь + эссенцию + мутаген. Даёт % бонус к доходу." />
+        <MechanicsItem name="Магнит / Трактор" desc="авто-сбор слизи с поля." />
+        <MechanicsItem name="Оффлайн-доход" desc="копится слизь пока тебя нет, начисляется при возврате." />
+      </MechanicsSection>
+
+      <MechanicsSection title="🛒 Магазины">
+        <MechanicsItem name="Магазин прокачки" desc="апгрейды за слизь (пассив/тап)." />
+        <MechanicsItem name="Магазин лягушек" desc="покупка и эволюция лягушек за слизь." />
+        <MechanicsItem name="Космический магазин" desc="перма-апгрейды за эссенцию (слоты, скорость корабля, шанс сыворотки и др.)." />
+      </MechanicsSection>
+
+      <MechanicsSection title="📦 Боксы">
+        <MechanicsItem name="Боксы" desc="дропают лягушек. Бывают обычные, мега, супер, редкий крейт." />
+        <MechanicsItem name="Качество / скорость дропа" desc="влияют на то что и как часто падает." />
+      </MechanicsSection>
+
+      <MechanicsSection title="🗺️ Локации">
+        <MechanicsItem name="Локации" desc="Болото → Лес → Континент. Открываются по прогрессу, дают новых лягушек и доступ к системам." />
+      </MechanicsSection>
+
+      <MechanicsSection title="🚀 Космос">
+        <MechanicsItem name="Открытие космоса" desc="гейт всего космо-контента (после двойного соединения L18+L18)." />
+        <MechanicsItem name="Космический корабль" desc="летает по звёздной карте." />
+        <MechanicsItem name="Звёздная карта" desc="карта планет и маршрутов." />
+        <MechanicsItem name="Экспедиции" desc="отправь корабль с экипажем исследовать космос. Возвращается с лутом и бортовым журналом (рапортами)." />
+        <MechanicsItem name="Survivor-миссии" desc="аркадный забег (в стиле vampire survivors) за лут и предметы." />
+        <MechanicsItem name="Вознесение" desc="лягушка-носитель, доведённая до L18, возносится → даёт эссенцию." />
+      </MechanicsSection>
+
+      <MechanicsSection title="🧪 Сыворотки и архетипы">
+        <MechanicsItem name="Сыворотки" desc="применяются на лягушку 1 уровня (с панели или из инвентаря) → она становится носителем стихии (carrier). 11 элементов." />
+        <MechanicsItem name="Архетип" desc="стихия носителя. Сейчас даёт бонусы по категориям (показаны в Cosmic Hub), механический эффект в доработке." />
+        <MechanicsItem name="Первый контакт / расы" desc="встреча инопланетных рас на планетах, отношения с ними." />
+        <MechanicsItem name="Квесты" desc="задания от рас, дают лут и сыворотки." />
+      </MechanicsSection>
+
+      <MechanicsSection title="👑 Капитан">
+        <MechanicsItem name="Капитан" desc="особый этап после доведения лягушки через двойное соединение L18+L18." />
+      </MechanicsSection>
+
+      <MechanicsSection title="💎 Ресурсы">
+        <MechanicsItem name="Слизь" desc="основная валюта (золото)." />
+        <MechanicsItem name="Эссенция" desc="космо-валюта (вознесение, квесты, L18+L18). Тратится на эволюцию и космо-магазин." />
+        <MechanicsItem name="Мутаген 🧬" desc="редкий космо-лут, нужен для эволюции." />
+        <MechanicsItem name="Сыворотки 🧪" desc="расходник, применяется на лягушку." />
+      </MechanicsSection>
+    </div>
+  )
+}
+
+function MechanicsSection({
+  title,
+  children,
+}: {
+  title: string
+  children: ReactNode
+}) {
+  return (
+    <div className="ff-card p-3 flex flex-col gap-1.5">
+      <div
+        className="ff-body font-bold"
+        style={{ fontSize: 15, color: '#15803d', marginBottom: 4 }}
+      >
+        {title}
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function MechanicsItem({ name, desc }: { name: string; desc: string }) {
+  return (
+    <div className="ff-body" style={{ fontSize: 13, color: '#365314', lineHeight: 1.5 }}>
+      <span style={{ fontWeight: 700 }}>{name}</span>
+      {' — '}
+      {desc}
     </div>
   )
 }
