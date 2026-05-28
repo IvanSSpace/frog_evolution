@@ -13,9 +13,9 @@ import Phaser from 'phaser'
 export const DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 3))
 
 export const DASH_RADIUS = 70 * DPR
-// 2026-05-28: 48 → 60 — поле сужено по бокам (лягушки/боксы держатся ближе
-// к центру, меньше прыжков к самому краю канваса).
-export const FIELD_PAD_X = 60 * DPR
+// 2026-05-28: 48 → 60 → 58 — поле слегка расширено обратно (на 2px с каждой
+// стороны от 60), чтоб лягушкам не было совсем тесно.
+export const FIELD_PAD_X = 58 * DPR
 export const FIELD_PAD_Y = 60 * DPR // верхний отступ от верха канваса
 export const FIELD_PAD_Y_BOTTOM = 90 * DPR // нижний отступ — крупнее, чтобы лягушки не уходили слишком вниз
 
