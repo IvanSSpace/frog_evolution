@@ -110,7 +110,7 @@ export class ShipDeckScene extends Phaser.Scene {
 
     // bg
     const bg = this.add
-      .rectangle(0, 0, w, h, 0x0a0e1a)
+      .rectangle(0, 0, w, h, 0xe8f5d2)
       .setOrigin(0)
       .setInteractive()
     this.layer.add(bg)
