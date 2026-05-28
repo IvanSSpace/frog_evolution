@@ -183,7 +183,7 @@ export class MainScene extends Phaser.Scene {
     // 2026-05-28: тестовые toxic_mapN для всех локаций (см. mapKeyForLocation).
     this.load.image('toxic_map', '/maps/toxic_map.webp')
     this.load.image('toxic_map2', '/maps/toxic_map2.webp')
-    this.load.image('toxic_map3', '/maps/toxic_map3.webp')
+    this.load.image('toxic_map3', '/maps/toxic_map3-v2.png')
     this.load.image('toxic_map4', '/maps/toxic_map4.webp')
     this.load.image('box', '/box.webp')
   }
