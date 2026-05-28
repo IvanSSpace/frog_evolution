@@ -55,25 +55,25 @@ export function LocationButton({
       {isCurrent && (
         <svg
           width="22"
-          height="48"
-          viewBox="0 0 20 16"
-          preserveAspectRatio="none"
+          height="28"
+          viewBox="0 0 24 32"
           style={{
             position: 'absolute',
             right: 0,
             top: '50%',
             transform: 'translateY(-50%)',
-            filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.5))',
+            filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))',
             pointerEvents: 'none',
             zIndex: 2,
           }}
         >
           <path
-            d="M 1 8 L 9 1 L 9 5 L 19 5 L 19 11 L 9 11 L 9 15 Z"
+            d="M 3 16 L 12 3 L 12 13 L 21 13 L 21 19 L 12 19 L 12 29 Z"
             fill="#D558D7"
             stroke="#5A1F5C"
-            strokeWidth="1.4"
+            strokeWidth="1.8"
             strokeLinejoin="round"
+            strokeLinecap="round"
           />
         </svg>
       )}
