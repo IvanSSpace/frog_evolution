@@ -465,9 +465,12 @@ export class FrogSpawner {
         onUpdate: () => {
           const t = jumpState.t
           frog.container.x = fromX + (toX - fromX) * t
+          // Контейнер идёт по земле линейно — тень остаётся на земле.
+          frog.container.y = fromY + (toY - fromY) * t
+          // Дугу прыжка применяем только к body.y (локально) — тень в
+          // контейнере не подскакивает с лягушкой.
           const arc = 4 * t * (1 - t) * ARC_HEIGHT
-          // y вверх по экрану = минус → вычитаем arc из интерполированного y.
-          frog.container.y = fromY + (toY - fromY) * t - arc
+          frog.body.y = -arc
         },
         onComplete: () => {
           if (frog.isDragging) return
