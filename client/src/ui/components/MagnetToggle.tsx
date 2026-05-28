@@ -44,8 +44,8 @@ export function MagnetToggle() {
       aria-label={magnetEnabled ? t('magnet.off') : t('magnet.on')}
       style={{
         position: 'fixed',
-        top: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad) + 2px)',
-        left: 12,
+        top: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad) + 12px)',
+        left: 4,
         zIndex: 50,
         pointerEvents: 'auto',
         ['--ff-tile-from' as never]: magnetEnabled ? '#fcd34d' : '#9ca3af',
