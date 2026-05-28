@@ -60,7 +60,7 @@ export function LocationButton({
           width: 46,
           height: 46,
           borderRadius: '50%',
-          background: `linear-gradient(180deg, ${v.from} 0%, ${v.to} 100%)`,
+          background: 'transparent',
           border: 'none',
           boxShadow,
           fontSize: 22,
@@ -94,8 +94,8 @@ export function LocationButton({
             }
             alt=""
             style={{
-              width: 40,
-              height: 40,
+              width: 46,
+              height: 46,
               objectFit: 'contain',
               pointerEvents: 'none',
               filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
