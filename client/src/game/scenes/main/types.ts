@@ -47,9 +47,12 @@ export const BASE_SCALE = DPR / TEXTURE_QUALITY // = 1/1.5 ≈ 0.667
 export const tintToHex = (cssHex: string): number =>
   parseInt(cssHex.replace('#', ''), 16)
 
-export const mapKeyForLocation = (_locId: number): string => {
-  // 2026-05-28: TEST — toxic_map.webp для всех локаций. Откатить заменив тело
-  // на оригинал: if (id===1) 'map' / id===2 'map2' / id===3 'map3' / else 'map'.
+export const mapKeyForLocation = (locId: number): string => {
+  // 2026-05-28: TEST — toxic_mapN.webp для всех локаций. Откатить → вернуть
+  // 'map'/'map2'/'map3'.
+  if (locId === 1) return 'toxic_map'
+  if (locId === 2) return 'toxic_map2'
+  if (locId === 3) return 'toxic_map3'
   return 'toxic_map'
 }
 
