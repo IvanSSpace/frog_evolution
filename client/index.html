@@ -206,22 +206,23 @@
             rgba(12, 22, 17, 0.94) 0%,
             rgba(21, 36, 26, 0.94) 100%
           );
-        /* Header (default): glow по НИЖНЕМУ краю + soft drop вниз. */
-        border-bottom: 1.5px solid var(--ff-neon-green);
+        /* Header (default): тонкая полупрозрачная зелёная кромка снизу +
+           мягкий drop в игровое поле. Glow приглушён ~3x. */
+        border-bottom: 1px solid rgba(116, 232, 58, 0.55);
         box-shadow:
-          0 1px 8px rgba(116, 232, 58, 0.32),
-          0 6px 14px rgba(0, 0, 0, 0.45),
-          inset 0 1px 0 rgba(255, 255, 255, 0.06);
+          0 0 4px rgba(116, 232, 58, 0.12),
+          0 4px 10px rgba(0, 0, 0, 0.4),
+          inset 0 1px 0 rgba(255, 255, 255, 0.05);
         color: var(--ff-text-light);
       }
       .ff-bar.bottom {
-        /* Footer: зеркально — glow по ВЕРХНЕМУ краю + soft drop вверх. */
+        /* Footer: зеркально — кромка сверху, glow вверх. */
         border-bottom: 0;
-        border-top: 1.5px solid var(--ff-neon-green);
+        border-top: 1px solid rgba(116, 232, 58, 0.55);
         box-shadow:
-          0 -1px 8px rgba(116, 232, 58, 0.32),
-          0 -6px 14px rgba(0, 0, 0, 0.45),
-          inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+          0 0 4px rgba(116, 232, 58, 0.12),
+          0 -4px 10px rgba(0, 0, 0, 0.4),
+          inset 0 -1px 0 rgba(255, 255, 255, 0.05);
       }
       /* Grain overlay — мелкий шум через inline SVG fractalNoise, 5%
          непрозрачности, overlay-blend. Лежит поверх фона панели но ПОД
