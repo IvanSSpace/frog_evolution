@@ -30,7 +30,7 @@ export const MERGE_RADIUS = 50 * DPR
 export const MAX_ENTITIES = 16 // суммарный лимит лягушки + коробки
 export const MAX_PENDING_BOXES = 8 // cap «отложенных» коробок при отсутствии на болоте
 export const BOX_FALL_DURATION = 380 // длительность падения (быстрее)
-export const BOX_DISPLAY_SIZE = 100 * DPR // размер коробки на экране (увеличен)
+export const BOX_DISPLAY_SIZE = 120 * DPR // размер коробки на экране (увеличен)
 export const BOX_IDLE_INTERVAL = 5500 // период подпрыгивания
 export const BOX_OPEN_RADIUS = 80 * DPR // радиус разлёта тапа — открывает все коробки рядом
 // Окно магнит-иммунитета (мс) для свежих из бокса лягушек. AoE-открытие

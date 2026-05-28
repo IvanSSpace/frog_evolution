@@ -274,6 +274,7 @@ export class MainScene extends Phaser.Scene {
     )
     this.bg.setDisplaySize(width, height)
     this.bg.setDepth(-1) // фон всегда под лягушками
+    this.bg.setTint(0x9aa39a) // 2026-05-28: затемнение фона — контраст с лягушками
 
     // DEV-only: визуализация границ игрового поля; production билд не показывает.
     if (import.meta.env.DEV) {
