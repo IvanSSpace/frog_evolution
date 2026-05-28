@@ -219,7 +219,7 @@ export const FROG_LEVELS: readonly FrogLevelConfig[] = [
   {
     path: '/frogs_svg/frog13_t0.svg',
     name: 'Квакатлас',
-    size: 0.98, // 2026-05-28: 0.48 + 0.5 = 0.98
+    size: 1.28, // 2026-05-28: 0.98 + 0.3 = 1.28
     basePrice: 130_000_000,  /* original 3-этап (rounded), formula approx 560 × 2.8^12 */
     growthRate: 1.15,
     tint: 0xcbeb83,
