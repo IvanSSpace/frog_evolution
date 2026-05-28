@@ -3,7 +3,7 @@
 // Один тип серума per element (без секций common/rare/epic/legendary).
 // Boxes section остаётся (для открытия боксов).
 
-import { useState, lazy, Suspense } from 'react'
+import { useState, useRef, useLayoutEffect, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useGameStore } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
@@ -67,6 +67,12 @@ export function SerumInventoryTab({ onClose }: Props) {
   const setSerumDragActive = useGameStore((s) => s.setSerumDragActive)
   const [selected, setSelected] = useState<Element | null>(null)
   const [activeBox, setActiveBox] = useState<BoxData | null>(null)
+  // При открытии меню скроллим блок в самый низ (по просьбе — описания внизу).
+  const scrollRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const el = scrollRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [])
 
   // Носителей на поле по стихиям (лягушка под сывороткой = «серум есть»).
   const carrierCountByElement = {} as Record<Element, number>
@@ -141,7 +147,10 @@ export function SerumInventoryTab({ onClose }: Props) {
 
   return (
     <>
-      <div className="flex flex-col gap-4 px-3 py-3 overflow-y-auto h-full">
+      <div
+        ref={scrollRef}
+        className="flex flex-col gap-4 px-3 py-3 overflow-y-auto h-full"
+      >
         {/* Boxes section — first */}
         {elementsWithBoxes.length > 0 && (
           <section className="flex flex-col gap-2">
@@ -274,7 +283,7 @@ export function SerumInventoryTab({ onClose }: Props) {
                     </div>
                     {onField > 0 && (
                       <div style={{ fontSize: 10.5, color: tint, fontWeight: 600 }}>
-                        🐸 носителей на поле: {onField}
+                        Носителей на поле: {onField}
                       </div>
                     )}
                     {canApply && (
