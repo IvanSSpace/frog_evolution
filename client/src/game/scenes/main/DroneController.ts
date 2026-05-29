@@ -182,6 +182,13 @@ export class DroneController {
     this.baselineY = 0
   }
 
+  /** Показать дрон если его ещё нет (без запуска движения сверх spawn-логики).
+   *  Вызывается во время location-transition, чтобы дрон появлялся синхронно
+   *  с лягушками, а не после unfreeze update-loop'а. */
+  ensureSpawned(): void {
+    if (!this.sprite) this.spawn()
+  }
+
   tick(level: number, delta: number): void {
     if (!this.sprite) this.spawn()
     const sprite = this.sprite!

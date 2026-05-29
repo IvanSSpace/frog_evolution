@@ -2,7 +2,6 @@ import Phaser from 'phaser'
 import { useGameStore, getDropIntervalMs } from '../../store/gameStore'
 import { magnetKeyForLocation } from '../config/upgrades'
 import { eventBus } from '../../store/eventBus'
-import { loadFieldBoxCount } from '../../store/persistence'
 import {
   FROG_LEVELS,
   textureKeyForLevel,
@@ -49,14 +48,6 @@ import { FactoryController } from './main/FactoryController'
 import { LocationTransition } from './main/LocationTransition'
 import { FrogInteraction } from './main/FrogInteraction'
 
-// Буфер offline box drops: App.tsx эмитит 'box:offline-pending' синхронно в
-// useEffect, а MainScene.create() регистрирует handler позже (после preload).
-// Модульный listener ловит count до того, как scene готова к спавну — create()
-// дренирует буфер сразу после spawnLocationFrogs().
-let _offlineBoxBuffer = 0
-eventBus.on('box:offline-pending', ({ count }: { count: number }) => {
-  _offlineBoxBuffer += count
-})
 
 const SWIPE_SLOP = 90 * DPR   // палец должен сдвинуться на столько, прежде чем начнётся скролл
 const SWIPE_FLICK_V = 0.5   // |velocity.y| (px/ms) выше — считаем фликом, переключаем по направлению
@@ -74,10 +65,9 @@ export class MainScene extends Phaser.Scene {
   // Phase 21-03 (Wave 3): boxes/pendingBoxCount пакеджед-public —
   // используются BoxController + LocationTransition.
   boxes: BoxData[] = []
-  // Phase 21-05 (Wave 5): boxProgressMs/pendingBoxCount package-public —
+  // Phase 21-05 (Wave 5): boxProgressMs package-public —
   // мутируется LocationTransition (snap-end resets).
   boxProgressMs = 0
-  pendingBoxCount = 0
 
   // Phase 21-04 (Wave 4): magnet state перенесён в MagnetController.
 
@@ -352,11 +342,6 @@ export class MainScene extends Phaser.Scene {
       }
     })
     this.events.once(Phaser.Scenes.Events.DESTROY, () => unsubTiers())
-    // Offline box drops: модульный listener (выше класса) пишет в _offlineBoxBuffer
-    // с момента загрузки модуля — ловит emit даже если он пришёл до create().
-    // Инстанс-handler дренирует буфер при каждом новом emit (маловероятен,
-    // но корректно обрабатывает повторные вызовы).
-    eventBus.on('box:offline-pending', this.onOfflinePendingBoxes)
     // Phase 21-05: location-changed + dev-clear перенесены в LocationTransition.
     eventBus.on('location:changed', this.locTransition.onLocationChanged)
     eventBus.on('dev:clearAllFrogs', this.locTransition.onDevClearAllFrogs)
@@ -406,16 +391,6 @@ export class MainScene extends Phaser.Scene {
     })
 
     this.spawnLocationFrogs()
-
-    // Восстанавливаем коробки, лежавшие на земле Болота до перезахода (раньше
-    // field-боксы не персистились и пропадали). Заливаем сохранённый счётчик в
-    // pendingBoxCount — drain в update() заспавнит их в валидных позициях на
-    // Болоте, либо они дождутся входа на Болото (если reload был на др. локации).
-    this.pendingBoxCount += loadFieldBoxCount()
-
-    // Дренируем offline-drop буфер: боксы которые должны были упасть пока
-    // игрок был away (count пришёл в _offlineBoxBuffer через модульный listener).
-    this.drainOfflineBoxBuffer()
 
     // Phase 12: overlay manager — создаётся ПОСЛЕ spawnLocationFrogs так что
     // первый sync видит уже живых лягушек, и для их frogId-match с CarrierData.
@@ -622,16 +597,6 @@ export class MainScene extends Phaser.Scene {
     })
   }
 
-  // Offline box drops: спавним боксы прямо на поле Болота до лимита ENTITY_CAP.
-  // Cap'имся на ENTITY_CAP минус текущее число лягушек на Болоте.
-  // Боксы и мегабоксы не persist'ятся, поэтому учитываем только frogs.
-  // Остаток сверх cap теряется — поле физически не вмещает больше.
-  // Примечание: count уже аккумулирован в _offlineBoxBuffer модульным listener'ом;
-  // здесь только дренируем (не добавляем снова, чтобы не задвоить).
-  private onOfflinePendingBoxes = (_evt: { count: number }) => {
-    this.drainOfflineBoxBuffer()
-  }
-
   // Plan 22-03: carrier ascension visual hook.
   // Триггерится из ascendCarrier action (после удаления carrier из store).
   // Находит live frog по frogId и проигрывает ~1.5s tween (scale up + alpha → 0
@@ -704,17 +669,6 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
-  private drainOfflineBoxBuffer() {
-    // При возврате после offline period (buffer > 0) — заполняем поле боксами
-    // до cap (canSpawnBox учитывает frogs + boxes + effectiveSlotCap с perma bonus).
-    // Юзер видит «полное» поле, а не пара штук = floor(elapsedMs / dropInterval).
-    if (_offlineBoxBuffer <= 0) return
-    _offlineBoxBuffer = 0
-    while (this.canSpawnBox()) {
-      this.spawnBox(false, true) // preLanded — без анимации падения
-    }
-  }
-
   // Phase 21-01: package-public — вызывается FrogSpawner (after spawn/remove).
   syncEntityCount() {
     useGameStore
@@ -750,6 +704,23 @@ export class MainScene extends Phaser.Scene {
       }
     }
 
+    // 2026-05-30: дрон + фабрика показываются ДО transition-gate, чтобы
+    // появляться синхронно с лягушками (которые спавнятся в transition-
+    // handler'е), а не через секунду после unfreeze. Только статичный show —
+    // движение дрона (tick) остаётся ниже gate.
+    {
+      const locId = storeForTimer.currentLocation
+      if (locId === 1) {
+        this.factory.show()
+        if ((storeForTimer.upgrades.autoCollect ?? 0) > 0) {
+          this.drone.ensureSpawned()
+        }
+      } else {
+        this.factory.hide()
+        this.drone.despawn()
+      }
+    }
+
     // Во время перехода между локациями замораживаем всю логику —
     // лягушки в wrapper-контейнере с локальными координатами, любые расчёты
     // позиций выдадут неправильные значения.
@@ -782,37 +753,21 @@ export class MainScene extends Phaser.Scene {
     const intervalMs = getDropIntervalMs(store.upgrades.dropSpeed)
     const isBoloto = currentLocId === 1
 
-    // На болоте, если в pending остались накопленные коробки — выливаем ПО
-    // ОДНОМУ: спавним следующий только когда предыдущий уже приземлился (нет
-    // боксов в состоянии isLanding). Иначе все pending падали бы одновременно
-    // одним тиком («дождь»). preLanded=false → каждый влетает с анимацией.
-    if (isBoloto && this.pendingBoxCount > 0 && this.canSpawnBox()) {
-      const anyFalling = this.boxes.some((b) => b.isLanding)
-      if (!anyFalling) {
-        this.pendingBoxCount--
-        this.spawnBox(false, false)
-      }
-    }
-
-    // Заполнен ли «выходной канал»: только на болоте при лимите entity.
-    // На других локациях pending растёт без cap'а → анимация всегда циклит.
+    // Спавн без очереди: раз в интервал спавним РОВНО один бокс — только на Болоте
+    // и только если есть свободный слот. Никаких pending/offline-накоплений: таймер
+    // просто тикает, переполнение интервала не копится.
     const outputBlocked = isBoloto && !this.canSpawnBox()
-
-    // Спавн/pending логика. Таймер уже инкрементирован выше (до transition gate).
     if (this.boxProgressMs >= intervalMs) {
-      let produced = false
-      if (isBoloto) {
-        if (this.canSpawnBox()) {
-          this.spawnBox()
-          produced = true
-        }
+      if (isBoloto && this.canSpawnBox()) {
+        this.spawnBox()
+        this.boxProgressMs = 0
+      } else if (!isBoloto) {
+        // Не на Болоте боксов нет — сбрасываем таймер, ничего не копим.
+        this.boxProgressMs = 0
       } else {
-        this.pendingBoxCount++
-        produced = true
+        // Болото, но поле заполнено — ждём слот (waiting), очередь не растёт.
+        this.boxProgressMs = intervalMs
       }
-      // Сбрасываем только если реально что-то произвели; иначе залипаем на 100%
-      if (produced) this.boxProgressMs = 0
-      else this.boxProgressMs = intervalMs
     }
     const progress = Math.min(1, this.boxProgressMs / intervalMs)
     const waiting = this.boxProgressMs >= intervalMs && outputBlocked
@@ -835,20 +790,15 @@ export class MainScene extends Phaser.Scene {
       this.magnet.resetSpawnTimer()
     }
 
-    // Дрон автосбора — только на локации 1, только если куплен, не во время serum pause.
+    // Дрон автосбора — движение/сбор. Lifecycle (spawn/despawn по локации)
+    // управляется блоком выше transition-gate. Здесь только tick при активных
+    // условиях; при serum-pause дрон просто замирает (не despawn).
     const autoCollectLevel = store.upgrades.autoCollect
     if (currentLocId === 1 && autoCollectLevel > 0 && !serumPaused) {
       this.drone.tick(autoCollectLevel, delta)
-    } else {
-      this.drone.despawn()
     }
 
-    // Фабрика — только на локации 1, безусловно.
-    if (currentLocId === 1) {
-      this.factory.show()
-    } else {
-      this.factory.hide()
-    }
+    // Фабрика show/hide — тоже в блоке выше transition-gate.
 
     // Depth sort: чем ниже лягушка/коробка, тем она поверх
     for (const frog of this.frogs) {
@@ -982,7 +932,6 @@ export class MainScene extends Phaser.Scene {
     this.input.off('pointermove', this.onSwipePointerMove, this)
     this.input.off('pointerup', this.onSwipePointerUp, this)
     eventBus.off('frog:purchased', this.onFrogPurchased)
-    eventBus.off('box:offline-pending', this.onOfflinePendingBoxes)
     // Phase 21-05: location handlers живут в LocationTransition; отписываем
     // bound-методы которые регистрировали в create().
     eventBus.off('location:changed', this.locTransition.onLocationChanged)
