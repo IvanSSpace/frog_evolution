@@ -151,7 +151,19 @@ export class FrogSpawner {
     body.scaleY = 1.0
     // Tint уже запечён в SVG при preload (replace #ffffff → cfg.tint hex).
     // Цветные элементы (короны, узоры) сохраняют собственные цвета.
-    body.setInteractive({ useHandCursor: true })
+    // Чуть увеличенная зона захвата (~12% padding) — прощает мелкие промахи.
+    const hitPadW = body.width * 0.12
+    const hitPadH = body.height * 0.12
+    body.setInteractive({
+      hitArea: new Phaser.Geom.Rectangle(
+        -hitPadW,
+        -hitPadH,
+        body.width + hitPadW * 2,
+        body.height + hitPadH * 2,
+      ),
+      hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+      useHandCursor: true,
+    })
     scene.input.setDraggable(body)
 
     container.add(shadow) // сначала тень — она под body в z-order
