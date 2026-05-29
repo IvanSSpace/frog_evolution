@@ -287,6 +287,20 @@ export class FrogSpawner {
       }
       prevDragX = pointer.x
 
+      // 2026-05-30: наклон в сторону движения (как дрон-сборщик). lerp к
+      // целевому tilt — плавно. Сбрасывается в dragend. 0.15 rad = MAX_TILT
+      // дрона. scaleX (flip) отрицателен когда смотрит влево, поэтому tilt
+      // домножаем на знак facing — наклон всегда визуально «по ходу».
+      const FROG_DRAG_TILT = 0.15
+      const facingSign = frog.facingRight ? 1 : -1
+      const targetTilt =
+        Math.abs(dx) > 0.5 ? Math.sign(dx) * FROG_DRAG_TILT * facingSign : 0
+      frog.container.rotation = Phaser.Math.Linear(
+        frog.container.rotation,
+        targetTilt,
+        0.3,
+      )
+
       frog.container.x = pointer.x + grabOffsetX
       frog.container.y = pointer.y + grabOffsetY
       frog.body.x = 0
@@ -295,6 +309,14 @@ export class FrogSpawner {
 
     body.on('dragend', (pointer: Phaser.Input.Pointer) => {
       frog.isDragging = false
+
+      // 2026-05-30: плавно вернуть наклон от drag к 0 (отпустили лягушку).
+      scene.tweens.add({
+        targets: frog.container,
+        rotation: 0,
+        duration: 180,
+        ease: 'Back.easeOut',
+      })
 
       // Phase 14 (SERUM-06): drop-merge заблокирован во время serum selection.
       // Tap-as-drag-end остаётся (handler ниже route'ит через onFrogTapped → handleSerumTap).
