@@ -15,7 +15,7 @@ import type { MainScene } from '../MainScene'
 // Доля ширины экрана под спрайт фабрики (подгоняемо)
 const FACTORY_WIDTH_FRAC = 0.5
 // Отступ верхнего края фабрики от верха канваса (px)
-const FACTORY_TOP_Y = 4 * DPR
+const FACTORY_TOP_Y = 40 * DPR
 // Глубина — фоновый объект, под лягушками/боксами
 const FACTORY_DEPTH = 0
 
