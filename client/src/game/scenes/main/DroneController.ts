@@ -188,13 +188,15 @@ export class DroneController {
 
     sprite.rotation = Phaser.Math.Linear(sprite.rotation, this.targetTilt, TILT_LERP)
 
-    // Синхронизируем тень с дроном: позиция + смещение, наклон, flip, scale.
+    // Синхронизируем тень с дроном. Дрон ПАРИТ → тень отбрасывается заметно
+    // ниже (28px) и чуть меньше (0.85) — отрыв от тени читается как парение.
     if (this.shadow) {
+      const shScale = 0.85
       this.shadow.x = sprite.x + 4 * DPR
-      this.shadow.y = sprite.y + 8 * DPR
+      this.shadow.y = sprite.y + 28 * DPR
       this.shadow.rotation = sprite.rotation
-      this.shadow.scaleX = sprite.scaleX
-      this.shadow.scaleY = sprite.scaleY
+      this.shadow.scaleX = sprite.scaleX * shScale
+      this.shadow.scaleY = sprite.scaleY * shScale
     }
     if (this.isDragging) {
       this.targetTilt = Phaser.Math.Linear(this.targetTilt, 0, TILT_LERP)
