@@ -38,7 +38,7 @@ const BOB_AMP = 4 * DPR
 const BOB_PERIOD_MS = 3000
 
 // Плавный полёт к боксу в режиме сбора (px/с) + мин. длительность
-const FLY_SPEED = 130 * DPR
+const FLY_SPEED = 70 * DPR
 const FLY_MIN_MS = 250
 
 type DroneMode = 'WANDER' | 'COLLECT'
