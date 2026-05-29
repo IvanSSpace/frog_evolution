@@ -30,7 +30,12 @@ const TILT_LERP = 0.12
 // Глубина отрисовки дрона — поверх боксов, под UI
 const DRONE_DEPTH = 95000
 // Длительность фазы перемещения (мс) — медленнее лягушачьего рывка
-const MOVE_MS = 450
+const MOVE_MS = 550
+// Масштаб дрона относительно BOX_DISPLAY_SIZE
+const DRONE_SCALE_MULT = 0.7
+// Лёгкое парение вверх-вниз в покое
+const BOB_AMP = 4 * DPR
+const BOB_PERIOD_MS = 1400
 
 type DroneMode = 'WANDER' | 'COLLECT'
 
@@ -58,6 +63,10 @@ export class DroneController {
   // Базовый масштаб (модуль) — для зеркалирования по направлению
   private baseScale = 0
 
+  // Парение (bob) — фаза и базовая линия Y
+  private bobPhase = 0
+  private baselineY = 0
+
   // Ссылки на таймеры для despawn-cleanup
   private restTimer: Phaser.Time.TimerEvent | null = null
   private prePauseTimer: Phaser.Time.TimerEvent | null = null
@@ -75,9 +84,10 @@ export class DroneController {
     const cy = (FIELD_PAD_Y + (height - FIELD_PAD_Y_BOTTOM)) / 2
 
     this.sprite = this.scene.add.image(cx, cy, 'goo_collector')
-    this.baseScale = BOX_DISPLAY_SIZE / this.sprite.width
+    this.baseScale = (BOX_DISPLAY_SIZE * DRONE_SCALE_MULT) / this.sprite.width
     this.sprite.setScale(this.baseScale)
     this.sprite.setDepth(DRONE_DEPTH)
+    this.baselineY = cy
 
     this.scheduleNextHop()
   }
@@ -104,6 +114,8 @@ export class DroneController {
     this.mode = 'WANDER'
     this.collectTarget = null
     this.isHopping = false
+    this.bobPhase = 0
+    this.baselineY = 0
   }
 
   tick(level: number, delta: number): void {
@@ -149,6 +161,14 @@ export class DroneController {
 
     // Плавный наклон каждый кадр (hop устанавливает targetTilt, idle сбрасывает)
     sprite.rotation = Phaser.Math.Linear(sprite.rotation, this.targetTilt, TILT_LERP)
+
+    // Парение: смещаем Y вокруг baselineY только в покое
+    this.bobPhase += delta
+    if (!this.isHopping) {
+      const bob =
+        BOB_AMP * Math.sin((this.bobPhase * 2 * Math.PI) / BOB_PERIOD_MS)
+      sprite.y = this.baselineY + bob
+    }
   }
 
   // Выбор следующего hop — точка назначения + pre-pause + tween
@@ -234,6 +254,7 @@ export class DroneController {
         ease: 'Power2.easeOut',
         onComplete: () => {
           if (!this.sprite) return
+          this.baselineY = this.sprite.y
 
           // Idle: наклон сбрасываем
           this.targetTilt = 0
