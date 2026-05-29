@@ -50,6 +50,15 @@ export function InClanView() {
     chatEndRef.current?.scrollIntoView({ behavior: 'auto' })
   }, [items.length])
 
+  // Фокус на инпут БЕЗ авто-скролла контейнера: дефолтный autoFocus заставлял
+  // браузер скроллить модалку к инпуту при открытии клавиатуры → хедер уезжал
+  // и ломался. preventScroll держит хедер на месте.
+  useEffect(() => {
+    if (chatOpen) {
+      inputRef.current?.focus({ preventScroll: true })
+    }
+  }, [chatOpen])
+
   async function handleSend() {
     if (!snapshot || !inputText.trim() || sending) return
     const text = inputText.trim()
@@ -154,7 +163,6 @@ export function InClanView() {
         >
           <input
             ref={inputRef}
-            autoFocus
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
