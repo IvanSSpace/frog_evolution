@@ -196,7 +196,7 @@ export class MainScene extends Phaser.Scene {
     this.load.image('box', '/box.webp')
     this.load.image('magnet', '/magnet.png')
     this.load.image('goo_collector', '/goo_collector.png')
-    this.load.image('factory1', '/factory/factory1.png')
+    this.load.image('factory3', '/factory/factory3.png')
   }
 
   /**
