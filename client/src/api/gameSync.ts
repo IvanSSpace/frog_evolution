@@ -398,6 +398,14 @@ export async function loadGameState(): Promise<boolean> {
 
 export async function saveGameState(force = false): Promise<boolean> {
   if (!syncEnabled && !force) return false
+  // Сериализуем PUT'ы: если сохранение уже в полёте — помечаем pending и выходим.
+  // Иначе второй PUT уходит со старой version (первый ещё не вернул новую) →
+  // сервер отвечает 409 → hard reload. Это и вызывало перезагрузку при частых
+  // тапах по прокачке (каждый buy → set() → scheduleSave).
+  if (inFlightSave) {
+    pendingSave = true
+    return false
+  }
   inFlightSave = true
   try {
     const payload = snapshotForSave()
@@ -429,6 +437,9 @@ export async function saveGameState(force = false): Promise<boolean> {
     return false
   } finally {
     inFlightSave = false
+    // Если за время PUT накопились изменения — планируем следующий (throttled) save
+    // с уже обновлённой lastKnownVersion.
+    if (pendingSave && syncEnabled) scheduleSave()
   }
 }
 
