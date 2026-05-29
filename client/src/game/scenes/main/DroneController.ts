@@ -1,6 +1,6 @@
 // DroneController: дрон-сборщик для апгрейда autoCollect (локация 1, Болото).
 //
-// Дрон плавно летает по полю и периодически открывает ближайший обычный бокс.
+// Дрон двигается рывками (dash-hop) как лягушки, но без дуги прыжка и squash/stretch.
 // Только онлайн, только на локации 1 при upgrades.autoCollect > 0.
 //
 // Public API:
@@ -11,6 +11,7 @@ import Phaser from 'phaser'
 import { getAutoCollectCooldownMs } from '../../../store/gameStore'
 import {
   BOX_DISPLAY_SIZE,
+  DASH_RADIUS,
   DPR,
   FIELD_PAD_X,
   FIELD_PAD_Y,
@@ -20,13 +21,6 @@ import {
 import type { MainScene } from '../MainScene'
 import type { BoxController } from './BoxController'
 
-// Скорость дрона в пикселях/с при свободном гулянии — неспешно, как лягушки
-const WANDER_SPEED = 45 * DPR
-// Скорость полёта к боксу
-const FLY_SPEED = 95 * DPR
-// Пауза-отдых на точке гуляния (мс) — имитирует рывково-отдыхающий ритм лягушек
-const WANDER_REST_MIN_MS = 700
-const WANDER_REST_MAX_MS = 1800
 // Дистанция «достиг бокса» (px)
 const REACH_DIST = 30 * DPR
 // Максимальный наклон спрайта (рад)
@@ -36,24 +30,33 @@ const TILT_LERP = 0.12
 // Глубина отрисовки дрона — поверх боксов, под UI
 const DRONE_DEPTH = 95000
 
+type DroneMode = 'WANDER' | 'COLLECT'
+
 export class DroneController {
   private scene: MainScene
   private box: BoxController
 
   private sprite: Phaser.GameObjects.Image | null = null
 
-  // Цель гуляния
-  private wanderX = 0
-  private wanderY = 0
-
   // Накопленный кулдаун (мс)
   private cooldownAccum = 0
 
-  // Режим полёта к конкретному боксу
-  private flyTarget: BoxData | null = null
+  // Режим
+  private mode: DroneMode = 'WANDER'
 
-  // Остаток паузы-отдыха на точке гуляния (мс)
-  private wanderRestMs = 0
+  // Цель в COLLECT режиме
+  private collectTarget: BoxData | null = null
+
+  // Флаг: сейчас выполняется hop-твин (блокирует запуск нового)
+  private isHopping = false
+
+  // Целевой наклон (обновляется в начале hop или при idle)
+  private targetTilt = 0
+
+  // Ссылки на таймеры для despawn-cleanup
+  private restTimer: Phaser.Time.TimerEvent | null = null
+  private prePauseTimer: Phaser.Time.TimerEvent | null = null
+
 
   constructor(scene: MainScene, box: BoxController) {
     this.scene = scene
@@ -67,22 +70,34 @@ export class DroneController {
     const cy = (FIELD_PAD_Y + (height - FIELD_PAD_Y_BOTTOM)) / 2
 
     this.sprite = this.scene.add.image(cx, cy, 'goo_collector')
-    // Uniform scale по целевой ширине — сохраняем пропорции картинки
-    // (setDisplaySize квадратом давил непропорциональный спрайт по высоте).
     this.sprite.setScale(BOX_DISPLAY_SIZE / this.sprite.width)
     this.sprite.setDepth(DRONE_DEPTH)
 
-    this.pickNewWanderTarget()
+    this.scheduleNextHop()
   }
 
   despawn(): void {
     if (!this.sprite) return
+
+    // Убиваем все таймеры
+    if (this.restTimer) {
+      this.restTimer.remove(false)
+      this.restTimer = null
+    }
+    if (this.prePauseTimer) {
+      this.prePauseTimer.remove(false)
+      this.prePauseTimer = null
+    }
+
     this.scene.tweens.killTweensOf(this.sprite)
     this.sprite.destroy()
     this.sprite = null
-    this.flyTarget = null
+
     this.cooldownAccum = 0
-    this.wanderRestMs = 0
+    this.targetTilt = 0
+    this.mode = 'WANDER'
+    this.collectTarget = null
+    this.isHopping = false
   }
 
   tick(level: number, delta: number): void {
@@ -91,119 +106,192 @@ export class DroneController {
 
     const cooldown = getAutoCollectCooldownMs(level)
 
-    // Накапливаем кулдаун — не растём бесконечно (cap на cooldown)
+    // Накапливаем кулдаун (cap cooldown*2)
     this.cooldownAccum = Math.min(this.cooldownAccum + delta, cooldown * 2)
 
-    if (this.flyTarget !== null) {
-      // Проверяем что цель ещё жива
+    // Валидируем collect-цель каждый кадр
+    if (this.mode === 'COLLECT') {
       if (
-        !this.scene.boxes.includes(this.flyTarget) ||
-        !this.flyTarget.img.active
+        this.collectTarget === null ||
+        !this.scene.boxes.includes(this.collectTarget) ||
+        !this.collectTarget.img.active
       ) {
-        this.flyTarget = null
-        this.pickNewWanderTarget()
-      } else {
-        // Летим к боксу
-        const tx = this.flyTarget.img.x
-        const ty = this.flyTarget.img.y
-        const dx = tx - sprite.x
-        const dy = ty - sprite.y
-        const dist = Math.sqrt(dx * dx + dy * dy)
-
-        if (dist < REACH_DIST) {
-          // Открываем бокс
-          this.box.onBoxTapped(this.flyTarget)
-          this.flyTarget = null
-          this.cooldownAccum = 0
-          this.pickNewWanderTarget()
+        // Ищем новую ближайшую нормальную коробку
+        const nearest = this.findNearestNormalBox(sprite.x, sprite.y)
+        if (nearest) {
+          this.collectTarget = nearest
         } else {
-          const step = FLY_SPEED * (delta / 1000)
-          const ratio = Math.min(step / dist, 1)
-          sprite.x += dx * ratio
-          sprite.y += dy * ratio
-          sprite.rotation = Phaser.Math.Linear(
-            sprite.rotation,
-            Math.sign(dx) * MAX_TILT,
-            TILT_LERP,
-          )
+          // Боксов нет — выходим из COLLECT, держим accum на cooldown
+          this.mode = 'WANDER'
+          this.collectTarget = null
+          this.cooldownAccum = cooldown
         }
-        return
       }
     }
 
-    // Режим гуляния — неспешно, с паузами-отдыхом (ритм как у лягушек)
-    if (this.wanderRestMs > 0) {
-      this.wanderRestMs -= delta
-      // Выравниваем наклон во время отдыха
-      sprite.rotation = Phaser.Math.Linear(sprite.rotation, 0, TILT_LERP)
-    } else {
-      const dx = this.wanderX - sprite.x
-      const dy = this.wanderY - sprite.y
-      const dist = Math.sqrt(dx * dx + dy * dy)
-
-      if (dist < 4 * DPR) {
-        this.pickNewWanderTarget()
-        this.wanderRestMs = Phaser.Math.Between(
-          WANDER_REST_MIN_MS,
-          WANDER_REST_MAX_MS,
-        )
+    // Проверяем переход в COLLECT
+    if (this.mode === 'WANDER' && this.cooldownAccum >= cooldown) {
+      const nearest = this.findNearestNormalBox(sprite.x, sprite.y)
+      if (nearest) {
+        this.mode = 'COLLECT'
+        this.collectTarget = nearest
       } else {
-        const step = WANDER_SPEED * (delta / 1000)
-        const ratio = Math.min(step / dist, 1)
-        sprite.x += dx * ratio
-        sprite.y += dy * ratio
-        const targetTilt = dx !== 0 ? Math.sign(dx) * MAX_TILT : 0
-        sprite.rotation = Phaser.Math.Linear(
-          sprite.rotation,
-          targetTilt,
-          TILT_LERP,
-        )
-      }
-    }
-
-    // Проверяем кулдаун и наличие обычного бокса
-    if (this.cooldownAccum >= cooldown) {
-      const normalBoxes = this.scene.boxes.filter(
-        (b) => !b.isRare && b.img.active && !b.isLanding,
-      )
-      if (normalBoxes.length > 0) {
-        // Ищем ближайший
-        let closest = normalBoxes[0]
-        let minDist = Phaser.Math.Distance.Between(
-          sprite.x,
-          sprite.y,
-          closest.img.x,
-          closest.img.y,
-        )
-        for (let i = 1; i < normalBoxes.length; i++) {
-          const d = Phaser.Math.Distance.Between(
-            sprite.x,
-            sprite.y,
-            normalBoxes[i].img.x,
-            normalBoxes[i].img.y,
-          )
-          if (d < minDist) {
-            minDist = d
-            closest = normalBoxes[i]
-          }
-        }
-        this.flyTarget = closest
-      } else {
-        // Боксов нет — держим cooldownAccum на максимуме (не копим бесконечно)
+        // Нет боксов — держим accum на cooldown
         this.cooldownAccum = cooldown
       }
     }
+
+    // Плавный наклон каждый кадр (hop устанавливает targetTilt, idle сбрасывает)
+    sprite.rotation = Phaser.Math.Linear(sprite.rotation, this.targetTilt, TILT_LERP)
   }
 
-  private pickNewWanderTarget(): void {
+  // Выбор следующего hop — точка назначения + pre-pause + tween
+  private scheduleNextHop(): void {
+    if (!this.sprite) return
+
+    const restMs =
+      this.mode === 'COLLECT'
+        ? Phaser.Math.Between(100, 250)
+        : Phaser.Math.Between(2000, 4000)
+
+    this.restTimer = this.scene.time.delayedCall(restMs, () => {
+      this.restTimer = null
+      if (!this.sprite) return
+      this.startHop()
+    })
+  }
+
+  private startHop(): void {
+    if (!this.sprite) return
+    if (this.isHopping) return
+
+    const sprite = this.sprite
     const { width, height } = this.scene.scale
-    this.wanderX = Phaser.Math.Between(
-      FIELD_PAD_X + 10 * DPR,
-      width - FIELD_PAD_X - 10 * DPR,
+
+    let toX: number
+    let toY: number
+    let prePauseMs: number
+
+    if (this.mode === 'COLLECT' && this.collectTarget) {
+      const target = this.collectTarget
+      const tx = target.img.x
+      const ty = target.img.y
+      const dx = tx - sprite.x
+      const dy = ty - sprite.y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      const hopDist = Math.min(dist, DASH_RADIUS)
+      const angle = Math.atan2(dy, dx)
+      toX = Phaser.Math.Clamp(
+        sprite.x + Math.cos(angle) * hopDist,
+        FIELD_PAD_X + 10 * DPR,
+        width - FIELD_PAD_X - 10 * DPR,
+      )
+      toY = Phaser.Math.Clamp(
+        sprite.y + Math.sin(angle) * hopDist,
+        FIELD_PAD_Y + 10 * DPR,
+        height - FIELD_PAD_Y_BOTTOM - 10 * DPR,
+      )
+      prePauseMs = 0
+    } else {
+      // WANDER
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2)
+      const dist = Phaser.Math.FloatBetween(40 * DPR, DASH_RADIUS)
+      toX = Phaser.Math.Clamp(
+        sprite.x + Math.cos(angle) * dist,
+        FIELD_PAD_X + 10 * DPR,
+        width - FIELD_PAD_X - 10 * DPR,
+      )
+      toY = Phaser.Math.Clamp(
+        sprite.y + Math.sin(angle) * dist,
+        FIELD_PAD_Y + 10 * DPR,
+        height - FIELD_PAD_Y_BOTTOM - 10 * DPR,
+      )
+      prePauseMs = 350
+    }
+
+    this.isHopping = true
+
+    const doTween = () => {
+      if (!this.sprite) return
+      // Наклон выставляем в момент реального старта движения (не во время pre-pause)
+      const dx = toX - this.sprite.x
+      this.targetTilt = dx !== 0 ? Math.sign(dx) * MAX_TILT : 0
+      this.scene.tweens.add({
+        targets: this.sprite,
+        x: toX,
+        y: toY,
+        duration: 200,
+        ease: 'Power2.easeOut',
+        onComplete: () => {
+          if (!this.sprite) return
+
+          // Idle: наклон сбрасываем
+          this.targetTilt = 0
+          this.isHopping = false
+
+          // Проверяем достижение бокса в COLLECT режиме
+          if (this.mode === 'COLLECT' && this.collectTarget) {
+            const dist = Phaser.Math.Distance.Between(
+              this.sprite.x,
+              this.sprite.y,
+              this.collectTarget.img.x,
+              this.collectTarget.img.y,
+            )
+            if (dist < REACH_DIST) {
+              this.box.onBoxTapped(this.collectTarget)
+              this.collectTarget = null
+              this.cooldownAccum = 0
+              this.mode = 'WANDER'
+              // После сбора — нормальный отдых 2000-4000мс
+              this.restTimer = this.scene.time.delayedCall(
+                Phaser.Math.Between(2000, 4000),
+                () => {
+                  this.restTimer = null
+                  if (!this.sprite) return
+                  this.startHop()
+                },
+              )
+              return
+            }
+          }
+
+          this.scheduleNextHop()
+        },
+      })
+    }
+
+    if (prePauseMs > 0) {
+      this.prePauseTimer = this.scene.time.delayedCall(prePauseMs, () => {
+        this.prePauseTimer = null
+        if (!this.sprite) {
+          this.isHopping = false
+          return
+        }
+        doTween()
+      })
+    } else {
+      doTween()
+    }
+  }
+
+  private findNearestNormalBox(
+    x: number,
+    y: number,
+  ): BoxData | null {
+    const normalBoxes = this.scene.boxes.filter(
+      (b) => !b.isRare && b.img.active && !b.isLanding,
     )
-    this.wanderY = Phaser.Math.Between(
-      FIELD_PAD_Y + 10 * DPR,
-      height - FIELD_PAD_Y_BOTTOM - 10 * DPR,
-    )
+    if (normalBoxes.length === 0) return null
+
+    let closest = normalBoxes[0]
+    let minDist = Phaser.Math.Distance.Between(x, y, closest.img.x, closest.img.y)
+    for (let i = 1; i < normalBoxes.length; i++) {
+      const d = Phaser.Math.Distance.Between(x, y, normalBoxes[i].img.x, normalBoxes[i].img.y)
+      if (d < minDist) {
+        minDist = d
+        closest = normalBoxes[i]
+      }
+    }
+    return closest
   }
 }
