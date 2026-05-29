@@ -146,7 +146,7 @@ export function InClanView() {
           className="ff-card flex-shrink-0 flex items-center gap-2"
           style={{
             margin: '0 -16px',
-            marginBottom: 'var(--kb-inset, 0px)',
+            marginBottom: 'calc(var(--kb-inset, 0px) - 12px)',
             borderRadius: 0,
             padding: '8px 16px',
             gap: 8,
