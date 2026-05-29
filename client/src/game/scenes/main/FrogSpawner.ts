@@ -221,11 +221,18 @@ export class FrogSpawner {
     let dragStartX = 0
     let dragStartY = 0
     let prevDragX = 0
+    // 2026-05-30: offset точки захвата относительно центра лягушки. Без него
+    // container телепортился центром под палец при pickup. С offset — лягушку
+    // можно взять за любую точку модели (как дрон), она держится «за то место».
+    let grabOffsetX = 0
+    let grabOffsetY = 0
 
     body.on('dragstart', (pointer: Phaser.Input.Pointer) => {
       dragStartX = pointer.x
       dragStartY = pointer.y
       prevDragX = pointer.x
+      grabOffsetX = frog.container.x - pointer.x
+      grabOffsetY = frog.container.y - pointer.y
       dragMoved = false
       scene.tweens.killTweensOf(frog.container)
       scene.tweens.killTweensOf(frog.body)
@@ -280,8 +287,8 @@ export class FrogSpawner {
       }
       prevDragX = pointer.x
 
-      frog.container.x = pointer.x
-      frog.container.y = pointer.y
+      frog.container.x = pointer.x + grabOffsetX
+      frog.container.y = pointer.y + grabOffsetY
       frog.body.x = 0
       frog.body.y = 0
     })
