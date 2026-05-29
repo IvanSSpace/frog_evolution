@@ -86,6 +86,9 @@ export class MainScene extends Phaser.Scene {
   prevLocation = 1
   isLocationTransitioning = false
   bg!: Phaser.GameObjects.Image
+  // Two-zone loc1: tall background covering frogs zone (top) + buildings zone (bottom).
+  private loc1Bg!: Phaser.GameObjects.Image
+  private currentZone: 'frogs' | 'buildings' = 'frogs'
   // Аккумулятор для фонового дохода с лягушек неактивных локаций
   // (на текущей локации монеты приходят через настоящие какашки visible-лягушек)
   private bgIncomeAccum = 0
@@ -197,6 +200,7 @@ export class MainScene extends Phaser.Scene {
     this.load.image('magnet', '/magnet.png')
     this.load.image('goo_collector', '/goo_collector.png')
     this.load.image('factory3_shadow', '/factory/factory3_shadow.png')
+    this.load.image('toxic_map2size', '/maps/toxic_map2size.png')
   }
 
   /**
@@ -289,6 +293,15 @@ export class MainScene extends Phaser.Scene {
     this.bg.setDepth(-1) // фон всегда под лягушками
     this.bg.setTint(0xc4c8c4) // 2026-05-28: затемнение фона — контраст с лягушками
 
+    // Two-zone loc1 background (frogs top + buildings bottom).
+    this.loc1Bg = this.add.image(width / 2, height, 'toxic_map2size')
+    this.loc1Bg.setDisplaySize(width, height * 2)
+    this.loc1Bg.setDepth(-1)
+    this.loc1Bg.setTint(0xc4c8c4)
+    this.loc1Bg.setVisible(false)
+
+    this.configureWorld(useGameStore.getState().currentLocation)
+
     // DEV-only: визуализация границ игрового поля; production билд не показывает.
     if (import.meta.env.DEV) {
       const fieldW = width - FIELD_PAD_X * 2
@@ -299,6 +312,11 @@ export class MainScene extends Phaser.Scene {
         .setStrokeStyle(2, 0xffffff, 0.35)
         .setFillStyle(0x000000, 0)
     }
+
+    // Two-zone: transition reset + post-settle reconfigure + toggle handler.
+    eventBus.on('location:transitionStart', this.onTransitionStart)
+    eventBus.on('location:transitionEnd', this.onTransitionEnd)
+    eventBus.on('field:toggleZone', this.onToggleZone)
 
     // Подписка на покупку лягушки из магазина
     eventBus.on('frog:purchased', this.onFrogPurchased)
@@ -829,7 +847,56 @@ export class MainScene extends Phaser.Scene {
     // Какашки auto-collect через onComplete твинов — никакой ручной очистки не нужно
   }
 
+  private configureWorld(locId: number): void {
+    const { width, height } = this.scale
+    if (locId === 1) {
+      this.loc1Bg.setVisible(true)
+      this.bg.setVisible(false)
+      this.cameras.main.setBounds(0, 0, width, height * 2)
+    } else {
+      this.loc1Bg.setVisible(false)
+      this.bg.setVisible(true)
+      this.cameras.main.setBounds(0, 0, width, height)
+    }
+    this.cameras.main.setScroll(0, 0)
+    this.currentZone = 'frogs'
+    eventBus.emit('field:zoneChanged', { zone: 'frogs' })
+  }
+
+  private onTransitionStart = () => {
+    const { width, height } = this.scale
+    this.tweens.killTweensOf(this.cameras.main)
+    this.cameras.main.setScroll(0, 0)
+    this.currentZone = 'frogs'
+    this.loc1Bg.setVisible(false)
+    this.bg.setVisible(true)
+    this.cameras.main.setBounds(0, 0, width, height)
+    eventBus.emit('field:zoneChanged', { zone: 'frogs' })
+  }
+
+  private onTransitionEnd = ({ id }: { id: number }) => {
+    this.configureWorld(id)
+  }
+
+  private onToggleZone = () => {
+    if (useGameStore.getState().currentLocation !== 1) return
+    const { height } = this.scale
+    const next = this.currentZone === 'frogs' ? 'buildings' : 'frogs'
+    this.currentZone = next
+    this.tweens.killTweensOf(this.cameras.main)
+    this.tweens.add({
+      targets: this.cameras.main,
+      scrollY: next === 'buildings' ? height : 0,
+      duration: 420,
+      ease: 'Sine.easeInOut',
+    })
+    eventBus.emit('field:zoneChanged', { zone: next })
+  }
+
   destroy() {
+    eventBus.off('location:transitionStart', this.onTransitionStart)
+    eventBus.off('location:transitionEnd', this.onTransitionEnd)
+    eventBus.off('field:toggleZone', this.onToggleZone)
     eventBus.off('frog:purchased', this.onFrogPurchased)
     eventBus.off('box:offline-pending', this.onOfflinePendingBoxes)
     // Phase 21-05: location handlers живут в LocationTransition; отписываем

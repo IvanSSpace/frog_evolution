@@ -32,8 +32,8 @@ export class FactoryController {
       this.sprite.setVisible(true)
       return
     }
-    const { width } = this.scene.scale
-    this.sprite = this.scene.add.image(width / 2, FACTORY_TOP_Y, 'factory3_shadow')
+    const { width, height } = this.scene.scale
+    this.sprite = this.scene.add.image(width / 2, height + FACTORY_TOP_Y, 'factory3_shadow')
     this.sprite.setOrigin(0.5, 0)
     this.sprite.setScale((width * FACTORY_WIDTH_FRAC) / this.sprite.width)
     this.sprite.setDepth(FACTORY_DEPTH)

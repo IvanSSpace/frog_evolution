@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useGameStore } from '../../store/gameStore'
+import { eventBus } from '../../store/eventBus'
 import { Icon } from '../icons/Icon'
 import type { IconName } from '../icons/iconRegistry'
 
@@ -151,6 +152,15 @@ export function BottomBar({
   // Экспедиции (корабли) доступны только после открытия Леса (discovered L7+).
   const forestUnlocked = discoveredLevels.some((l) => l >= 7)
 
+  // Two-zone toggle: only visible on loc 1.
+  const isLoc1 = useGameStore((s) => s.currentLocation) === 1
+  const [zone, setZone] = useState<'frogs' | 'buildings'>('frogs')
+  useEffect(() => {
+    const handler = ({ zone }: { zone: 'frogs' | 'buildings' }) => setZone(zone)
+    eventBus.on('field:zoneChanged', handler)
+    return () => { eventBus.off('field:zoneChanged', handler) }
+  }, [])
+
   return (
     <div
       className="ff-bar bottom w-full h-full flex items-center justify-between px-3 pt-0 pb-1"
@@ -176,6 +186,16 @@ export function BottomBar({
           title="Инвентарь"
           onClick={onOpenInventory}
         />
+        {/* Two-zone toggle: only on loc 1. */}
+        {isLoc1 && (
+          <Tile
+            icon="inventory"
+            emoji={zone === 'frogs' ? '🏭' : '🐸'}
+            skin="amber"
+            title={zone === 'frogs' ? 'Здания' : 'Лягушки'}
+            onClick={() => eventBus.emit('field:toggleZone')}
+          />
+        )}
         {/* 🛰️ Космическая экспедиция (Fallout-Shelter-style) — отправить
             корабль, читать бортовой журнал, вовремя вернуть. Заперта 🔒 пока
             не открыт Лес (L7): экспедиции доступны только после Леса. */}

@@ -199,6 +199,8 @@ type Events = {
     name: string
     bonusPct: number
   }
+  'field:toggleZone': void
+  'field:zoneChanged': { zone: 'frogs' | 'buildings' }
 }
 
 export const eventBus = mitt<Events>()
