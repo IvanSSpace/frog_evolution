@@ -58,6 +58,8 @@ eventBus.on('box:offline-pending', ({ count }: { count: number }) => {
   _offlineBoxBuffer += count
 })
 
+const SWIPE_SLOP = 16 * DPR   // палец должен сдвинуться на столько, прежде чем начнётся скролл
+
 
 export class MainScene extends Phaser.Scene {
   // Phase 21 (Wave 1+): несколько полей переведены с `private` на package-public,
@@ -113,6 +115,7 @@ export class MainScene extends Phaser.Scene {
 
   // Swipe detection state for vertical zone switching (loc1 only).
   private swipeArmed = false
+  private swipePanning = false
   private swipeStartY = 0
   private swipeStartScrollY = 0
 
@@ -927,6 +930,7 @@ export class MainScene extends Phaser.Scene {
       return
     }
     this.swipeArmed = true
+    this.swipePanning = false
     this.swipeStartY = pointer.y
     this.swipeStartScrollY = this.cameras.main.scrollY
     this.tweens.killTweensOf(this.cameras.main)
@@ -934,6 +938,13 @@ export class MainScene extends Phaser.Scene {
 
   private onSwipePointerMove = (pointer: Phaser.Input.Pointer) => {
     if (!this.swipeArmed || !pointer.isDown) return
+    if (!this.swipePanning) {
+      if (Math.abs(pointer.y - this.swipeStartY) < SWIPE_SLOP) return
+      // порог пройден — начинаем пан, перезаякориваемся чтобы не было скачка
+      this.swipePanning = true
+      this.swipeStartY = pointer.y
+      this.swipeStartScrollY = this.cameras.main.scrollY
+    }
     const { height } = this.scale
     const ns = Phaser.Math.Clamp(this.swipeStartScrollY - (pointer.y - this.swipeStartY), 0, height)
     this.cameras.main.setScroll(0, ns)
@@ -941,7 +952,10 @@ export class MainScene extends Phaser.Scene {
 
   private onSwipePointerUp = (_pointer: Phaser.Input.Pointer) => {
     if (!this.swipeArmed) return
+    const wasPanning = this.swipePanning
     this.swipeArmed = false
+    this.swipePanning = false
+    if (!wasPanning) return
     const { height } = this.scale
     const target = this.cameras.main.scrollY < height / 2 ? 0 : height
     const zone: 'frogs' | 'buildings' = target === 0 ? 'frogs' : 'buildings'
