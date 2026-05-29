@@ -7,9 +7,11 @@ import { InClanView } from './InClanView'
 import { ClanHeader } from './ClanHeader'
 import { ClanRosterModal } from './ClanRosterModal'
 import { useModalLock } from '../../utils/modalLock'
+import { useKeyboardInset } from '../../hooks/useKeyboardInset'
 
 export function StarUnionsModal({ onClose }: { onClose: () => void }) {
   useModalLock()
+  useKeyboardInset()
   const snapshot = useClanStore((s) => s.snapshot)
   const fetchClanMeAction = useClanStore((s) => s.fetchClanMe)
   const [closing, setClosing] = useState(false)
@@ -49,7 +51,8 @@ export function StarUnionsModal({ onClose }: { onClose: () => void }) {
         style={{
           position: 'absolute',
           top: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad))',
-          bottom: 0,
+          height:
+            'calc(var(--stable-vh, 100vh) - var(--ui-top-offset) - var(--tg-chrome-pad))',
           left: 0,
           right: 0,
           zIndex: 151,
