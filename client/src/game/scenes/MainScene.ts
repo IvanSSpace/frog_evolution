@@ -59,6 +59,7 @@ eventBus.on('box:offline-pending', ({ count }: { count: number }) => {
 })
 
 const SWIPE_SLOP = 16 * DPR   // палец должен сдвинуться на столько, прежде чем начнётся скролл
+const SWIPE_FLICK_V = 0.5   // |velocity.y| (px/ms) выше — считаем фликом, переключаем по направлению
 
 
 export class MainScene extends Phaser.Scene {
@@ -950,18 +951,26 @@ export class MainScene extends Phaser.Scene {
     this.cameras.main.setScroll(0, ns)
   }
 
-  private onSwipePointerUp = (_pointer: Phaser.Input.Pointer) => {
+  private onSwipePointerUp = (pointer: Phaser.Input.Pointer) => {
     if (!this.swipeArmed) return
     const wasPanning = this.swipePanning
     this.swipeArmed = false
     this.swipePanning = false
     if (!wasPanning) return
     const { height } = this.scale
-    const target = this.cameras.main.scrollY < height / 2 ? 0 : height
+    const vy = pointer.velocity.y
+    let target: number
+    if (vy < -SWIPE_FLICK_V) {
+      target = height            // флик вверх → зона строений (низ)
+    } else if (vy > SWIPE_FLICK_V) {
+      target = 0                 // флик вниз → зона лягушек (верх)
+    } else {
+      target = this.cameras.main.scrollY < height / 2 ? 0 : height   // медленно → ближайшая
+    }
     const zone: 'frogs' | 'buildings' = target === 0 ? 'frogs' : 'buildings'
     this.currentZone = zone
     this.tweens.killTweensOf(this.cameras.main)
-    this.tweens.add({ targets: this.cameras.main, scrollY: target, duration: 200, ease: 'Sine.easeOut' })
+    this.tweens.add({ targets: this.cameras.main, scrollY: target, duration: 220, ease: 'Sine.easeOut' })
     eventBus.emit('field:zoneChanged', { zone })
   }
 
