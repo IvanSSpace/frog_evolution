@@ -27,6 +27,9 @@ export interface ClanMessageDto {
   username: string | null
   text: string
   createdAt: string
+  // client-only: стабильный ключ для оптимистичных сообщений, чтобы React
+  // не перемонтировал пузырь при замене temp→real id (без мигания).
+  clientId?: string
 }
 
 export interface ClanRequestDto {

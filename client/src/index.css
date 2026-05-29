@@ -156,6 +156,12 @@ body.modal-open .ship-follow-btn {
   --ff-rarity-glow: rgba(255, 203, 74, 0.5);
   animation: ff-legendary-pulse 2.4s ease-in-out infinite;
 }
+@keyframes ff-msg-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ff-msg-in { animation: ff-msg-in 0.22s ease-out both; }
+
 @keyframes ff-legendary-pulse {
   0%,
   100% {

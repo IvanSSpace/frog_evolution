@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { fetchClanMe } from '../api/clan'
 import { useClanStore } from '../store/clan/slice'
+import { mergeServerMessages } from '../store/clan/mergeMessages'
 import type { ClanSnapshot } from '../api/clan'
 
 export function useClanPolling(enabled: boolean) {
@@ -21,7 +22,7 @@ export function useClanPolling(enabled: boolean) {
               clan: r.clan,
               me: r.me!,
               members: r.members!,
-              messages: r.messages!,
+              messages: mergeServerMessages(useClanStore.getState().snapshot?.messages, r.messages!),
               requests: r.requests!,
               pin: r.pin ?? null,
             } as ClanSnapshot)

@@ -20,6 +20,7 @@ export function InClanView() {
   const snapshot = useClanStore((s) => s.snapshot)
   const setSnapshot = useClanStore((s) => s.setSnapshot)
   const currentUserDbId = useGameStore((s) => s.currentUserDbId)
+  const currentUsername = useGameStore((s) => s.username)
 
   const [rosterOpen, setRosterOpen] = useState(false)
   const [createRequestOpen, setCreateRequestOpen] = useState(false)
@@ -52,16 +53,33 @@ export function InClanView() {
   async function handleSend() {
     if (!snapshot || !inputText.trim() || sending) return
     const text = inputText.trim()
+    const tempId = -Date.now()
+    const clientId = `c-${tempId}-${Math.floor(Math.random() * 1e6)}`
+    const optimistic: ClanMessageDto = {
+      id: tempId,
+      clientId,
+      userId: currentUserDbId ?? -1,
+      username: currentUsername,
+      text,
+      createdAt: new Date().toISOString(),
+    }
+    setInputText('')
+    setSnapshot({ ...snapshot, messages: [...snapshot.messages, optimistic] })
     setSending(true)
     try {
       const newMsg = await sendMessage(snapshot.clan.id, text)
-      setInputText('')
-      setSnapshot({
-        ...snapshot,
-        messages: [...snapshot.messages, newMsg],
-      })
+      const cur = useClanStore.getState().snapshot
+      if (cur) {
+        const without = cur.messages.filter((m) => m.id !== tempId && m.id !== newMsg.id)
+        setSnapshot({ ...cur, messages: [...without, { ...newMsg, clientId }] })
+      }
     } catch (e) {
       console.error(e)
+      const cur = useClanStore.getState().snapshot
+      if (cur) {
+        setSnapshot({ ...cur, messages: cur.messages.filter((m) => m.id !== tempId) })
+      }
+      setInputText(text)
     } finally {
       setSending(false)
     }
@@ -97,15 +115,16 @@ export function InClanView() {
         />
       )}
 
-      {/* Chat scroll. 2026-05-28: ff-scanlines — ЭЛТ-полосы на фон чата. */}
+      {/* Chat scroll. 2026-05-28: scanlines теперь на всей панели союза (.ff-panel). */}
       <div
-        className="ff-scanlines flex-1 overflow-y-auto ff-no-scrollbar px-2 py-2"
+        className="flex-1 overflow-y-auto ff-no-scrollbar px-2 py-2"
         style={{ minHeight: 0, WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
+        onClick={() => { if (chatOpen) setChatOpen(false) }}
       >
         {items.map((item) =>
           item.kind === 'message' ? (
             <ChatMessage
-              key={`msg-${item.data.id}`}
+              key={`msg-${item.data.clientId ?? item.data.id}`}
               msg={item.data}
               mine={item.data.userId === currentUserDbId}
             />
@@ -121,11 +140,17 @@ export function InClanView() {
         <div ref={chatEndRef} />
       </div>
 
-      {/* Chat input sheet */}
+      {/* Chat input sheet — pinned full-width above the bottom bar */}
       {chatOpen && (
         <div
-          className="ff-card flex-shrink-0 flex items-center gap-2 flex-shrink-0"
-          style={{ margin: '0', borderRadius: 0, padding: '8px 10px', gap: 6 }}
+          className="ff-card flex-shrink-0 flex items-center gap-2"
+          style={{
+            margin: '0 -16px',
+            borderRadius: 0,
+            padding: '8px 16px',
+            gap: 8,
+            borderTop: '1px solid rgba(95,216,58,0.18)',
+          }}
         >
           <input
             ref={inputRef}
@@ -143,29 +168,17 @@ export function InClanView() {
               padding: '6px 12px',
               color: '#2f1f0e',
             }}
-            disabled={sending}
           />
           <button
-            onClick={handleSend}
-            disabled={!inputText.trim() || sending}
-            className="ff-btn ff-btn-green text-xs py-1.5 px-3 flex-shrink-0"
-          >
-            Отправить
-          </button>
-          <button
-            onClick={() => setChatOpen(false)}
-            className="ff-tile flex-shrink-0"
-            style={{
-              width: 32,
-              height: 32,
-              fontSize: 14,
-              ['--ff-tile-from' as never]: '#fca5a5',
-              ['--ff-tile-to' as never]: '#dc2626',
-              ['--ff-tile-border' as never]: '#7f1d1d',
-              color: '#fff',
+            onClick={() => {
+              handleSend()
+              setChatOpen(false)
             }}
+            aria-label="Отправить"
+            className="ff-btn ff-btn-green flex-shrink-0 flex items-center justify-center"
+            style={{ width: 40, height: 40, fontSize: 20, padding: 0 }}
           >
-            ✕
+            ✓
           </button>
         </div>
       )}

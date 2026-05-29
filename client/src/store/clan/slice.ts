@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { ClanSnapshot, ClanListItem } from '../../api/clan'
 import { fetchClanMe } from '../../api/clan'
+import { mergeServerMessages } from './mergeMessages'
 
 export interface ClanState {
   snapshot: ClanSnapshot | null
@@ -19,7 +20,7 @@ export interface ClanState {
   fetchClanMe(): Promise<void>
 }
 
-export const useClanStore = create<ClanState>((set) => ({
+export const useClanStore = create<ClanState>((set, get) => ({
   snapshot: null,
   cooldownUntil: null,
   list: [],
@@ -53,7 +54,7 @@ export const useClanStore = create<ClanState>((set) => ({
             clan: r.clan,
             me: r.me!,
             members: r.members!,
-            messages: r.messages!,
+            messages: mergeServerMessages(get().snapshot?.messages, r.messages!),
             requests: r.requests!,
             pin: r.pin ?? null,
           } as ClanSnapshot,

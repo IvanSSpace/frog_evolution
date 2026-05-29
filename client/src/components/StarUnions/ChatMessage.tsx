@@ -19,7 +19,7 @@ const BUBBLE_TEXT_STYLE = {
 export function ChatMessage({ msg, mine }: Props) {
   if (mine) {
     return (
-      <div className="flex justify-end mb-2">
+      <div className="ff-msg-in flex justify-end mb-2">
         <div
           className="max-w-[75%] px-3 py-2 text-sm"
           style={{
@@ -43,7 +43,7 @@ export function ChatMessage({ msg, mine }: Props) {
   }
 
   return (
-    <div className="flex justify-start mb-2">
+    <div className="ff-msg-in flex justify-start mb-2">
       <div className="ff-card max-w-[75%] px-3 py-2 text-sm">
         <div
           className="text-xs font-semibold mb-0.5"
