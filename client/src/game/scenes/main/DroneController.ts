@@ -29,6 +29,8 @@ const MAX_TILT = 0.15
 const TILT_LERP = 0.12
 // Глубина отрисовки дрона — поверх боксов, под UI
 const DRONE_DEPTH = 95000
+// Длительность фазы перемещения (мс) — медленнее лягушачьего рывка
+const MOVE_MS = 450
 
 type DroneMode = 'WANDER' | 'COLLECT'
 
@@ -228,7 +230,7 @@ export class DroneController {
         targets: this.sprite,
         x: toX,
         y: toY,
-        duration: 200,
+        duration: MOVE_MS,
         ease: 'Power2.easeOut',
         onComplete: () => {
           if (!this.sprite) return
