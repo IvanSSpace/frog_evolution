@@ -22,6 +22,8 @@ const FACTORY_DEPTH = 0
 export class FactoryController {
   private scene: MainScene
   private sprite: Phaser.GameObjects.Image | null = null
+  // Базовый scale (origin низ-центр) — pulse() анимирует относительно него.
+  private baseScale = 1
 
   constructor(scene: MainScene) {
     this.scene = scene
@@ -35,8 +37,40 @@ export class FactoryController {
     const { width, height } = this.scene.scale
     this.sprite = this.scene.add.image(width / 2, height * 2 - FACTORY_BOTTOM_Y, 'factory3_shadow')
     this.sprite.setOrigin(0.5, 1)
-    this.sprite.setScale((width * FACTORY_WIDTH_FRAC) / this.sprite.width)
+    this.baseScale = (width * FACTORY_WIDTH_FRAC) / this.sprite.width
+    this.sprite.setScale(this.baseScale)
     this.sprite.setDepth(FACTORY_DEPTH)
+  }
+
+  /**
+   * Squash-«выстрел»: фабрика сжимается по вертикали и слегка раздаётся вширь,
+   * затем отпружинивает. Origin = низ-центр → сжатие к земле (отдача при
+   * выбросе бокса из трубы). Вызывается из MainScene.spawnBox при дропе на
+   * Болоте — связывает «фабрика выстрелила» ↔ «бокс падает с неба».
+   */
+  pulse(): void {
+    if (!this.sprite || !this.sprite.visible) return
+    const s = this.sprite
+    this.scene.tweens.killTweensOf(s)
+    s.setScale(this.baseScale)
+    this.scene.tweens.add({
+      targets: s,
+      scaleY: this.baseScale * 0.88,
+      scaleX: this.baseScale * 1.07,
+      duration: 90,
+      ease: 'Quad.easeOut',
+      yoyo: true,
+      onComplete: () => {
+        if (!s.active) return
+        this.scene.tweens.add({
+          targets: s,
+          scaleY: this.baseScale,
+          scaleX: this.baseScale,
+          duration: 140,
+          ease: 'Back.easeOut',
+        })
+      },
+    })
   }
 
   hide(): void {

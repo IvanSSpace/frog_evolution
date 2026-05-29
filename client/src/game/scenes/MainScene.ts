@@ -562,6 +562,10 @@ export class MainScene extends Phaser.Scene {
 
   private spawnBox(isRare = false, preLanded = false) {
     this.box.spawnBox(isRare, preLanded)
+    // 2026-05-30: фабрика «выстреливает» squash'ем при реальном дропе с неба
+    // (preLanded=false). Лор: бокс вылетает из трубы фабрики снизу → падает.
+    // factory.pulse() сам no-op если спрайт скрыт (не Болото).
+    if (!preLanded) this.factory?.pulse()
   }
 
   // ============== МАГНИТ ==============
