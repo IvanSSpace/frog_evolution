@@ -77,6 +77,9 @@ export class DroneController {
 
   private isDragging = false
 
+  // Последняя X при перетаскивании — для расчёта направления наклона
+  private lastDragX = 0
+
 
   constructor(scene: MainScene, box: BoxController) {
     this.scene = scene
@@ -107,7 +110,7 @@ export class DroneController {
       this.isHopping = false
       this.mode = 'WANDER'
       this.collectTarget = null
-      this.targetTilt = 0
+      this.lastDragX = this.sprite.x
     })
 
     this.sprite.on('drag', (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
@@ -115,6 +118,12 @@ export class DroneController {
       const { width, height } = this.scene.scale
       const clampedX = Phaser.Math.Clamp(dragX, FIELD_PAD_X + 10 * DPR, width - FIELD_PAD_X - 10 * DPR)
       const clampedY = Phaser.Math.Clamp(dragY, FIELD_PAD_Y + 10 * DPR, height - FIELD_PAD_Y_BOTTOM - 10 * DPR)
+      const dx = clampedX - this.lastDragX
+      this.lastDragX = clampedX
+      if (Math.abs(dx) > 0.5) {
+        this.targetTilt = Math.sign(dx) * MAX_TILT
+        this.sprite.scaleX = (dx > 0 ? -1 : 1) * this.baseScale
+      }
       this.sprite.x = clampedX
       this.sprite.y = clampedY
     })
@@ -160,7 +169,11 @@ export class DroneController {
     if (!this.sprite) this.spawn()
     const sprite = this.sprite!
 
-    if (this.isDragging) return
+    sprite.rotation = Phaser.Math.Linear(sprite.rotation, this.targetTilt, TILT_LERP)
+    if (this.isDragging) {
+      this.targetTilt = Phaser.Math.Linear(this.targetTilt, 0, TILT_LERP)
+      return
+    }
 
     const cooldown = getAutoCollectCooldownMs(level)
 
@@ -217,9 +230,6 @@ export class DroneController {
         this.cooldownAccum = cooldown
       }
     }
-
-    // Плавный наклон каждый кадр (hop устанавливает targetTilt, idle сбрасывает)
-    sprite.rotation = Phaser.Math.Linear(sprite.rotation, this.targetTilt, TILT_LERP)
 
     // Парение: смещаем Y вокруг baselineY только в покое
     this.bobPhase += delta
