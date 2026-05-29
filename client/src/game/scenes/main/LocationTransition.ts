@@ -278,7 +278,7 @@ export class LocationTransition {
     newContainer.setAlpha(0) // плавно проявится в начале перехода
     // Свежий фон для новой локации
     const newBg = scene.add.image(0, 0, mapKeyForLocation(newLoc))
-    newBg.setScale(Math.max(width / newBg.width, height / newBg.height))
+    newBg.setScale(Math.min(width / newBg.width, height / newBg.height))
     newBg.setTint(0xc4c8c4) // SYNC с MainScene.create — затемнение фона
     newContainer.add(newBg)
 
