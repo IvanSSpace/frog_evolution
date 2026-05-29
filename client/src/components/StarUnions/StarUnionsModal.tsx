@@ -4,6 +4,8 @@ import { useClanStore } from '../../store/clan/slice'
 import { useClanPolling } from '../../hooks/useClanPolling'
 import { NoClanView } from './NoClanView'
 import { InClanView } from './InClanView'
+import { ClanHeader } from './ClanHeader'
+import { ClanRosterModal } from './ClanRosterModal'
 import { useModalLock } from '../../utils/modalLock'
 
 export function StarUnionsModal({ onClose }: { onClose: () => void }) {
@@ -14,6 +16,7 @@ export function StarUnionsModal({ onClose }: { onClose: () => void }) {
   // Показываем loading только если store пустой (preload ещё не успел).
   // Если snapshot уже есть — рендерим сразу, refresh идёт в фоне без блокировки UI.
   const [initialFetchDone, setInitialFetchDone] = useState(snapshot !== null)
+  const [rosterOpen, setRosterOpen] = useState(false)
 
   const handleClose = useCallback(() => {
     if (closing) return
@@ -65,23 +68,23 @@ export function StarUnionsModal({ onClose }: { onClose: () => void }) {
             borderRadius: 0,
           }}
         >
-          {/* Header */}
+          {/* Header: блок клана на месте бывшего заголовка «Звёздные союзы».
+              Заголовок убран по запросу. */}
           <div
-            className="flex items-center gap-1.5 px-3 pt-4 pb-3 flex-shrink-0"
+            className="flex items-center gap-2 px-3 pt-3 pb-2 flex-shrink-0"
             style={{ borderBottom: '1px solid rgba(95,216,58,0.18)' }}
           >
-            <span
-              className="ff-display flex-1"
-              style={{
-                fontSize: 20,
-                color: '#e6ffd0',
-                fontWeight: 800,
-                textShadow:
-                  '0 2px 0 rgba(0,0,0,0.3), 0 0 16px rgba(95,216,58,0.3)',
-              }}
-            >
-              Звёздные союзы
-            </span>
+            {snapshot?.clan ? (
+              <div className="flex-1 min-w-0">
+                <ClanHeader
+                  clan={snapshot.clan}
+                  memberCount={snapshot.members.length}
+                  onOpenRoster={() => setRosterOpen(true)}
+                />
+              </div>
+            ) : (
+              <div className="flex-1" />
+            )}
             <button
               type="button"
               onClick={handleClose}
@@ -119,6 +122,10 @@ export function StarUnionsModal({ onClose }: { onClose: () => void }) {
               <NoClanView />
             )}
           </div>
+
+          {rosterOpen && snapshot && (
+            <ClanRosterModal onClose={() => setRosterOpen(false)} />
+          )}
         </div>
       </div>
     </div>,

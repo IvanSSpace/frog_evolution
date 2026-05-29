@@ -9,7 +9,7 @@ interface Props {
 
 export function ClanHeader({ clan, memberCount, onOpenRoster }: Props) {
   return (
-    <div className="ff-card flex items-center gap-3 flex-shrink-0" style={{ padding: '12px 14px', margin: '0 0 8px' }}>
+    <div className="ff-card flex items-center gap-3 flex-shrink-0" style={{ padding: '12px 14px', margin: 0 }}>
       <div className="flex-shrink-0">
         <FrogEmblem
           variant={clan.emblem.variant}

@@ -3,11 +3,9 @@ import { useClanStore } from '../../store/clan/slice'
 import { useGameStore } from '../../store/gameStore'
 import { sendMessage, deletePin } from '../../api/clan'
 import type { ClanMessageDto, ClanRequestDto, ClanPinDto } from '../../api/clan'
-import { ClanHeader } from './ClanHeader'
 import { ClanPinBlock } from './ClanPinBlock'
 import { ChatMessage } from './ChatMessage'
 import { ClanRequestBlock } from './ClanRequestBlock'
-import { ClanRosterModal } from './ClanRosterModal'
 import { CreateRequestDialog } from './CreateRequestDialog'
 import { CreatePinDialog } from './CreatePinDialog'
 import { DonateDialog } from './DonateDialog'
@@ -22,7 +20,6 @@ export function InClanView() {
   const currentUserDbId = useGameStore((s) => s.currentUserDbId)
   const currentUsername = useGameStore((s) => s.username)
 
-  const [rosterOpen, setRosterOpen] = useState(false)
   const [createRequestOpen, setCreateRequestOpen] = useState(false)
   const [createPinOpen, setCreatePinOpen] = useState(false)
   const [donateReq, setDonateReq] = useState<ClanRequestDto | null>(null)
@@ -107,12 +104,6 @@ export function InClanView() {
 
   return (
     <div className="flex flex-col" style={{ height: '100%', minHeight: 0 }}>
-      <ClanHeader
-        clan={snapshot.clan}
-        memberCount={snapshot.members.length}
-        onOpenRoster={() => setRosterOpen(true)}
-      />
-
       {snapshot.pin && (
         <ClanPinBlock
           pin={snapshot.pin}
@@ -250,8 +241,6 @@ export function InClanView() {
         </button>
       </div>
       )}
-
-      {rosterOpen && <ClanRosterModal onClose={() => setRosterOpen(false)} />}
 
       {createPinOpen && snapshot && (
         <CreatePinDialog
