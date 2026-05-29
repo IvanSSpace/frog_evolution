@@ -779,7 +779,10 @@ export class MainScene extends Phaser.Scene {
     if (isBoloto) {
       while (this.pendingBoxCount > 0 && this.canSpawnBox()) {
         this.pendingBoxCount--
-        this.spawnBox(false, true)
+        // 2026-05-30: preLanded=false — pending-боксы влетают с анимацией
+        // падения. Раньше preLanded=true → при освобождении слота (открыл
+        // переполненный бокс) новый появлялся мгновенно без падения.
+        this.spawnBox(false, false)
       }
     }
 
