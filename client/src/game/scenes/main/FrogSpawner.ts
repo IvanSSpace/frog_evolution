@@ -438,18 +438,52 @@ export class FrogSpawner {
     }
 
     const { width, height } = scene.scale
-    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2)
     const dist = Phaser.Math.FloatBetween(40 * DPR, DASH_RADIUS)
 
     const fromX = frog.container.x
     const fromY = frog.container.y
+
+    // 2026-05-30: лёгкий center-bias против скопления в углах. Random-walk без
+    // bias дрейфует к краям (clamp прижимает) → толпа в углу. Подмешиваем
+    // направление-к-центру с весом пропорциональным удалённости от центра:
+    // у центра bias≈0 (чистый рандом, прыгают везде), у края — до 0.4.
+    const cx = width / 2
+    const cy = (FIELD_PAD_Y + (height - FIELD_PAD_Y_BOTTOM)) / 2
+    const halfW = (width - 2 * FIELD_PAD_X) / 2
+    const halfH = (height - FIELD_PAD_Y - FIELD_PAD_Y_BOTTOM) / 2
+    // Нормализованная удалённость от центра по худшей оси (0 центр, 1 край).
+    const edge = Math.min(
+      1,
+      Math.max(
+        Math.abs(fromX - cx) / Math.max(1, halfW),
+        Math.abs(fromY - cy) / Math.max(1, halfH),
+      ),
+    )
+    const MAX_BIAS = 0.4
+    const bias = edge * MAX_BIAS
+
+    const rndAngle = Phaser.Math.FloatBetween(0, Math.PI * 2)
+    let dirX = Math.cos(rndAngle)
+    let dirY = Math.sin(rndAngle)
+    // Направление к центру (если не в самом центре).
+    const toCx = cx - fromX
+    const toCy = cy - fromY
+    const cLen = Math.hypot(toCx, toCy)
+    if (cLen > 1) {
+      dirX = dirX * (1 - bias) + (toCx / cLen) * bias
+      dirY = dirY * (1 - bias) + (toCy / cLen) * bias
+      const dLen = Math.hypot(dirX, dirY) || 1
+      dirX /= dLen
+      dirY /= dLen
+    }
+
     const toX = Phaser.Math.Clamp(
-      fromX + Math.cos(angle) * dist,
+      fromX + dirX * dist,
       FIELD_PAD_X + 10 * DPR,
       width - FIELD_PAD_X - 10 * DPR,
     )
     const toY = Phaser.Math.Clamp(
-      fromY + Math.sin(angle) * dist,
+      fromY + dirY * dist,
       FIELD_PAD_Y + 10 * DPR,
       height - FIELD_PAD_Y_BOTTOM - 10 * DPR,
     )
