@@ -7,9 +7,9 @@ const KEY_AUTORESUME = 'audio.autoResume'
 
 export function loadVolumeDb(): number {
   const raw = localStorage.getItem(KEY_VOLUME)
-  if (!raw) return -14
+  if (!raw) return 0
   const n = Number(raw)
-  if (!Number.isFinite(n)) return -14
+  if (!Number.isFinite(n)) return 0
   return Math.max(-60, Math.min(0, n))
 }
 
