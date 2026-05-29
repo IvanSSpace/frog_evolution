@@ -35,7 +35,7 @@ const MOVE_MS = 550
 const DRONE_SCALE_MULT = 0.6
 // Лёгкое парение вверх-вниз в покое
 const BOB_AMP = 4 * DPR
-const BOB_PERIOD_MS = 1400
+const BOB_PERIOD_MS = 3000
 
 type DroneMode = 'WANDER' | 'COLLECT'
 
