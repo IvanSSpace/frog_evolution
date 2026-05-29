@@ -27,7 +27,7 @@ import {
   getMagnetDuration,
   getMagnetMergesPerCycle,
 } from '../../../store/gameStore'
-import { DPR, MERGE_RADIUS, type MagnetData } from './types'
+import { MERGE_RADIUS, type MagnetData } from './types'
 import type { MainScene } from '../MainScene'
 import type { MergeController } from './MergeController'
 
@@ -106,32 +106,17 @@ export class MagnetController {
     const y = (a.container.y + b.container.y) / 2
     const duration = getMagnetDuration(level)
 
+    // Магнит невидимый: на поле физически ничего не показываем — только
+    // логическая точка притяжения. 2 лягушки тянутся друг к другу и мерджатся
+    // в центре. (Раньше тут спавнился видимый спрайт с pop-in + бесконечной
+    // пульсацией — он и давал «огромную анимацию» на экране.)
     const container = scene.add.container(x, y)
     container.setDepth(99000)
+    container.setVisible(false)
 
     const emoji = scene.add.image(0, 0, 'magnet')
-    emoji.setOrigin(0.5)
-    emoji.setDisplaySize(40 * DPR, 40 * DPR)
+    emoji.setVisible(false)
     container.add(emoji)
-    container.setScale(0)
-
-    // Pop-in
-    scene.tweens.add({
-      targets: container,
-      scale: 1,
-      duration: 200,
-      ease: 'Back.easeOut',
-    })
-
-    // Лёгкая пульсация эмодзи
-    scene.tweens.add({
-      targets: emoji,
-      scale: 1.12,
-      duration: 600,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    })
 
     const magnet: MagnetData = {
       container,
