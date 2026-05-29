@@ -1,4 +1,3 @@
-import { useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useClanStore } from '../../store/clan/slice'
 import { kickMember, promoteMember, demoteMember, transferLeader, leaveClan, fetchClanMe } from '../../api/clan'
@@ -25,14 +24,6 @@ export function ClanRosterModal({ onClose }: Props) {
   const snapshot = useClanStore((s) => s.snapshot)
   const setSnapshot = useClanStore((s) => s.setSnapshot)
   const setCooldown = useClanStore((s) => s.setCooldown)
-  const [closing, setClosing] = useState(false)
-
-  const handleClose = useCallback(() => {
-    if (closing) return
-    setClosing(true)
-    window.setTimeout(onClose, 280)
-  }, [closing, onClose])
-
   if (!snapshot) return null
 
   const myRole = snapshot.me.role
@@ -120,38 +111,27 @@ export function ClanRosterModal({ onClose }: Props) {
 
   return createPortal(
     <div
+      onClick={onClose}
+      className="ff-backdrop ff-fade"
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 250,
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
         pointerEvents: 'auto',
-        background: 'transparent',
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) handleClose()
+        padding: '0 16px 4px',
       }}
     >
-      <div
-        style={{
-          position: 'absolute',
-          top: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad))',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 251,
-          pointerEvents: 'none',
-          overflow: 'hidden',
-        }}
-      >
         <div
-          className={`ff-panel ${closing ? 'ff-slide-up' : 'ff-slide-down'}`}
+          className="ff-panel ff-pop"
           style={{
-            position: 'absolute',
-            inset: 0,
-            pointerEvents: 'auto',
+            width: '100%',
+            maxWidth: 380,
+            height: '75vh',
             display: 'flex',
             flexDirection: 'column',
-            borderRadius: 0,
           }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -160,12 +140,12 @@ export function ClanRosterModal({ onClose }: Props) {
             className="flex items-center gap-1.5 px-3 pt-4 pb-3 flex-shrink-0"
             style={{ borderBottom: '3px dashed rgba(77,107,31,0.4)' }}
           >
-            <span className="ff-display flex-1" style={{ fontSize: 20, color: '#2f4a1f' }}>
+            <span className="ff-display flex-1" style={{ fontSize: 20, color: '#e6ffd0' }}>
               Участники союза
             </span>
             <button
               type="button"
-              onClick={handleClose}
+              onClick={onClose}
               aria-label="Закрыть"
               className="ff-tile w-10 h-10 text-xl flex-shrink-0"
               style={{
@@ -191,8 +171,8 @@ export function ClanRosterModal({ onClose }: Props) {
                 return (
                   <div key={member.userId} className="ff-card flex items-center gap-2" style={{ padding: '10px 12px' }}>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm ff-display truncate" style={{ color: '#2f1f0e' }}>{name}</div>
-                      <div className="text-xs mt-0.5" style={{ color: '#7a5a2f' }}>{ROLE_BADGE[member.role]} · {days} дн. с нами</div>
+                      <div className="text-sm ff-display truncate" style={{ color: 'var(--ff-text-light)' }}>{name}</div>
+                      <div className="text-xs mt-0.5" style={{ color: 'var(--ff-text-dim)' }}>{ROLE_BADGE[member.role]} · {days} дн. с нами</div>
                     </div>
                     <div className="flex gap-1 flex-shrink-0">
                       {myRole === 'LEADER' && member.role === 'MEMBER' && (
@@ -249,13 +229,12 @@ export function ClanRosterModal({ onClose }: Props) {
               🚪 Покинуть союз
             </button>
             {myRole === 'LEADER' && (
-              <div className="text-xs text-center mt-1" style={{ color: '#7a5a2f' }}>
+              <div className="text-xs text-center mt-1" style={{ color: 'var(--ff-text-dim)' }}>
                 Лидерство автоматически передастся старшему
               </div>
             )}
           </div>
         </div>
-      </div>
     </div>,
     document.body,
   )

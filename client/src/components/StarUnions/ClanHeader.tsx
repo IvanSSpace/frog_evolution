@@ -9,7 +9,13 @@ interface Props {
 
 export function ClanHeader({ clan, memberCount, onOpenRoster }: Props) {
   return (
-    <div className="ff-card flex items-center gap-3 flex-shrink-0" style={{ padding: '12px 14px', margin: 0 }}>
+    <button
+      type="button"
+      onClick={onOpenRoster}
+      title="Участники союза"
+      className="ff-card flex items-center gap-3 w-full text-left"
+      style={{ padding: '12px 14px', margin: 0 }}
+    >
       <div className="flex-shrink-0">
         <FrogEmblem
           variant={clan.emblem.variant}
@@ -41,19 +47,6 @@ export function ClanHeader({ clan, memberCount, onOpenRoster }: Props) {
           👥 {memberCount}/30
         </div>
       </div>
-      <button
-        onClick={onOpenRoster}
-        title="Участники союза"
-        className="ff-tile w-10 h-10 text-xl flex-shrink-0"
-        style={{
-          ['--ff-tile-from' as never]: '#c4b5fd',
-          ['--ff-tile-to' as never]: '#7c3aed',
-          ['--ff-tile-border' as never]: '#3b0764',
-          color: '#fff',
-        }}
-      >
-        ⚙
-      </button>
-    </div>
+    </button>
   )
 }
