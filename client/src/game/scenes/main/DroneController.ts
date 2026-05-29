@@ -32,7 +32,7 @@ const DRONE_DEPTH = 95000
 // Длительность фазы перемещения (мс) — медленнее лягушачьего рывка
 const MOVE_MS = 550
 // Масштаб дрона относительно BOX_DISPLAY_SIZE
-const DRONE_SCALE_MULT = 0.7
+const DRONE_SCALE_MULT = 0.76
 // Лёгкое парение вверх-вниз в покое
 const BOB_AMP = 4 * DPR
 const BOB_PERIOD_MS = 3000
