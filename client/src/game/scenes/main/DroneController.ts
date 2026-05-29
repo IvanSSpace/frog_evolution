@@ -75,6 +75,8 @@ export class DroneController {
   private restTimer: Phaser.Time.TimerEvent | null = null
   private prePauseTimer: Phaser.Time.TimerEvent | null = null
 
+  private isDragging = false
+
 
   constructor(scene: MainScene, box: BoxController) {
     this.scene = scene
@@ -92,6 +94,37 @@ export class DroneController {
     this.sprite.setScale(this.baseScale)
     this.sprite.setDepth(DRONE_DEPTH)
     this.baselineY = cy
+
+    this.sprite.setInteractive({ useHandCursor: true })
+    this.scene.input.setDraggable(this.sprite)
+
+    this.sprite.on('dragstart', () => {
+      if (!this.sprite) return
+      this.isDragging = true
+      if (this.restTimer) { this.restTimer.remove(false); this.restTimer = null }
+      if (this.prePauseTimer) { this.prePauseTimer.remove(false); this.prePauseTimer = null }
+      this.scene.tweens.killTweensOf(this.sprite)
+      this.isHopping = false
+      this.mode = 'WANDER'
+      this.collectTarget = null
+      this.targetTilt = 0
+    })
+
+    this.sprite.on('drag', (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
+      if (!this.sprite) return
+      const { width, height } = this.scene.scale
+      const clampedX = Phaser.Math.Clamp(dragX, FIELD_PAD_X + 10 * DPR, width - FIELD_PAD_X - 10 * DPR)
+      const clampedY = Phaser.Math.Clamp(dragY, FIELD_PAD_Y + 10 * DPR, height - FIELD_PAD_Y_BOTTOM - 10 * DPR)
+      this.sprite.x = clampedX
+      this.sprite.y = clampedY
+    })
+
+    this.sprite.on('dragend', () => {
+      if (!this.sprite) return
+      this.isDragging = false
+      this.baselineY = this.sprite.y
+      this.scheduleNextHop()
+    })
 
     this.scheduleNextHop()
   }
@@ -113,6 +146,7 @@ export class DroneController {
     this.sprite.destroy()
     this.sprite = null
 
+    this.isDragging = false
     this.cooldownAccum = 0
     this.targetTilt = 0
     this.mode = 'WANDER'
@@ -125,6 +159,8 @@ export class DroneController {
   tick(level: number, delta: number): void {
     if (!this.sprite) this.spawn()
     const sprite = this.sprite!
+
+    if (this.isDragging) return
 
     const cooldown = getAutoCollectCooldownMs(level)
 
