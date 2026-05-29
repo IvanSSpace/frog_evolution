@@ -774,14 +774,14 @@ export class MainScene extends Phaser.Scene {
     const intervalMs = getDropIntervalMs(store.upgrades.dropSpeed)
     const isBoloto = currentLocId === 1
 
-    // На болоте, если в pending остались накопленные коробки — выливаем по мере
-    // освобождения слотов (после переноса с другой локации или мерджа лягушек).
-    if (isBoloto) {
-      while (this.pendingBoxCount > 0 && this.canSpawnBox()) {
+    // На болоте, если в pending остались накопленные коробки — выливаем ПО
+    // ОДНОМУ: спавним следующий только когда предыдущий уже приземлился (нет
+    // боксов в состоянии isLanding). Иначе все pending падали бы одновременно
+    // одним тиком («дождь»). preLanded=false → каждый влетает с анимацией.
+    if (isBoloto && this.pendingBoxCount > 0 && this.canSpawnBox()) {
+      const anyFalling = this.boxes.some((b) => b.isLanding)
+      if (!anyFalling) {
         this.pendingBoxCount--
-        // 2026-05-30: preLanded=false — pending-боксы влетают с анимацией
-        // падения. Раньше preLanded=true → при освобождении слота (открыл
-        // переполненный бокс) новый появлялся мгновенно без падения.
         this.spawnBox(false, false)
       }
     }
