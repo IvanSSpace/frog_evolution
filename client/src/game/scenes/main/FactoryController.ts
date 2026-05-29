@@ -9,7 +9,7 @@
 //   - destroy(): уничтожить спрайт (вызывается при уничтожении сцены).
 
 import Phaser from 'phaser'
-import { DPR } from './types'
+import { DPR, BOX_DISPLAY_SIZE } from './types'
 import type { MainScene } from '../MainScene'
 
 // Доля ширины экрана под спрайт фабрики (подгоняемо)
@@ -53,6 +53,22 @@ export class FactoryController {
     const s = this.sprite
     this.scene.tweens.killTweensOf(s)
     s.setScale(this.baseScale)
+    // Косметический бокс «вылетает» из трубы фабрики вверх и гаснет ВНУТРИ зоны
+    // строений — не долетает до поля лягушек (на их экране видно только падение).
+    const mouthY = s.y - s.displayHeight * 0.85
+    const box = this.scene.add.image(s.x, mouthY, 'box')
+    box.setDisplaySize(BOX_DISPLAY_SIZE * 0.7, BOX_DISPLAY_SIZE * 0.7)
+    box.setDepth(FACTORY_DEPTH + 1)
+    this.scene.tweens.add({
+      targets: box,
+      y: mouthY - 200 * DPR,
+      scaleX: box.scaleX * 0.6,
+      scaleY: box.scaleY * 0.6,
+      alpha: 0,
+      duration: 480,
+      ease: 'Quad.easeOut',
+      onComplete: () => box.destroy(),
+    })
     this.scene.tweens.add({
       targets: s,
       scaleY: this.baseScale * 0.88,
