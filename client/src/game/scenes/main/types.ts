@@ -43,7 +43,11 @@ export const RARE_BOX_TINT = 0xffd700
 export const RARE_BOX_SCALE_MULT = 1.25
 
 // SVG грузится в физических пикселях (CSS * DPR), плюс +50% для запаса
-export const TEXTURE_QUALITY = DPR * 1.5
+// Supersample-фактор растеризации SVG. Капим к 2× (= backing store канваса в
+// index.ts), т.к. выше — впустую: текстуры раздуваются без выигрыша чёткости.
+// TQ сокращается в формуле display-размера (display = 50·DPR·size), поэтому
+// снижение НЕ меняет размер лягушек — только разрешение текстуры (память/полоса GPU).
+export const TEXTURE_QUALITY = Math.min(DPR, 2) * 1.5
 export const BASE_SCALE = (DPR / TEXTURE_QUALITY) * 0.92 // чуть меньше (×0.92)
 
 export const tintToHex = (cssHex: string): number =>
