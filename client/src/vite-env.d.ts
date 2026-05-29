@@ -19,6 +19,11 @@ interface TelegramWebApp {
   initData: string
   // 'android' | 'android_x' | 'ios' | 'macos' | 'tdesktop' | 'weba' | 'webk' | 'unigram' | 'unknown'
   platform?: string
+  // Высота видимой области Mini App. viewportHeight меняется при открытии
+  // клавиатуры; viewportStableHeight — стабильная (без клавиатуры).
+  viewportHeight?: number
+  viewportStableHeight?: number
+  isExpanded?: boolean
   initDataUnsafe: {
     user?: {
       id: number
