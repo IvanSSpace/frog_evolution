@@ -61,6 +61,7 @@ export type UpgradeKey =
   | 'crateQuality'
   | 'rareBoxSpeed'
   | 'ships'
+  | 'autoCollect'
 
 interface UpgradeCfg {
   maxLevel: number
@@ -106,6 +107,11 @@ export const UPGRADE_CONFIG: Readonly<Record<UpgradeKey, UpgradeCfg>> = {
   ships: {
     maxLevel: 3,
     costs: [2_000_000, 200_000_000, 20_000_000_000],
+  },
+  // Автосбор: дрон на Болоте открывает обычные боксы онлайн.
+  autoCollect: {
+    maxLevel: 6,
+    costs: [300_000, 1_500_000, 8_000_000, 60_000_000, 500_000_000, 4_000_000_000],
   },
 }
 

@@ -73,6 +73,11 @@
       "not_bought": "no comprado",
       "offline": "{{hours}} h sin conexión"
     },
+    "autoCollect": {
+      "name": "Autorrecolección",
+      "not_bought": "no comprado",
+      "cooldown": "recarga: {{sec}}s"
+    },
     "magnet": {
       "name": "Imán",
       "not_bought": "no comprado",

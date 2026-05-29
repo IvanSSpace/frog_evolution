@@ -73,6 +73,11 @@
       "not_bought": "не куплен",
       "offline": "{{hours}} ч офлайн"
     },
+    "autoCollect": {
+      "name": "Автосбор",
+      "not_bought": "не куплен",
+      "cooldown": "кулдаун: {{sec}}с"
+    },
     "magnet": {
       "name": "Магнит",
       "not_bought": "не куплен",

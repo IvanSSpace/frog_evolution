@@ -73,6 +73,11 @@
       "not_bought": "not purchased",
       "offline": "{{hours}} h offline"
     },
+    "autoCollect": {
+      "name": "Auto-collect",
+      "not_bought": "not purchased",
+      "cooldown": "cooldown: {{sec}}s"
+    },
     "magnet": {
       "name": "Magnet",
       "not_bought": "not purchased",

@@ -13,6 +13,7 @@ import {
   getMagnetMergesPerCycle,
   getCrateLevel,
   getRareBoxThreshold,
+  getAutoCollectCooldownMs,
   toUpgrades,
   type Upgrades,
 } from '../game/config/upgrades'
@@ -82,6 +83,7 @@ export {
   getMagnetMergesPerCycle,
   getCrateLevel,
   getRareBoxThreshold,
+  getAutoCollectCooldownMs,
   LOCATIONS,
   getLocationById,
 }
@@ -289,6 +291,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       crateQuality: 0,
       rareBoxSpeed: 0,
       ships: 0,
+      autoCollect: 0,
     }
     saveUpgrades(defaults)
     set({ upgrades: defaults })

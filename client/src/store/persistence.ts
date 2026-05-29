@@ -58,6 +58,7 @@ export function loadUpgrades(): Upgrades {
     crateQuality: 0,
     rareBoxSpeed: 0,
     ships: 0,
+    autoCollect: 0,
   }
   try {
     const raw = localStorage.getItem(UPGRADES_KEY)
@@ -84,6 +85,10 @@ export function loadUpgrades(): Upgrades {
           UPGRADE_CONFIG.rareBoxSpeed.maxLevel,
         ),
         ships: Math.min(parsed.ships ?? 0, UPGRADE_CONFIG.ships.maxLevel),
+        autoCollect: Math.min(
+          (parsed as unknown as Record<string, number>).autoCollect ?? 0,
+          UPGRADE_CONFIG.autoCollect.maxLevel,
+        ),
       }
     }
   } catch {

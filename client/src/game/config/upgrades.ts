@@ -15,6 +15,8 @@ export interface Upgrades {
   rareBoxSpeed: number
   // Космос: число купленных кораблей (0-3). Гейтится прогрессией (SHIP_UNLOCK).
   ships: number
+  // Автосбор: дрон на Болоте (локация 1) открывает обычные боксы онлайн.
+  autoCollect: number
 }
 
 // Прогрессивный анлок кораблей: чтобы купить корабль №(i+1), max discoveredLevel
@@ -48,6 +50,7 @@ export function toUpgrades(
     crateQuality: r.crateQuality ?? 0,
     rareBoxSpeed: r.rareBoxSpeed ?? 0,
     ships: r.ships ?? 0,
+    autoCollect: r.autoCollect ?? 0,
   }
 }
 
@@ -130,6 +133,15 @@ export const UPGRADE_CONFIG = {
     maxLevel: 3,
     costs: [2_000_000, 200_000_000, 20_000_000_000],
   },
+  // Автосбор: дрон на Болоте, открывает обычные боксы онлайн.
+  // cooldownSec[level] = кулдаун между открытиями (index 0 не используется).
+  autoCollect: {
+    maxLevel: 6,
+    cooldownSec: [0, 20, 17, 14, 11, 8, 5] as readonly number[],
+    costs: [
+      300_000, 1_500_000, 8_000_000, 60_000_000, 500_000_000, 4_000_000_000,
+    ],
+  },
 } as const
 
 export const ENTITY_CAP = 16 // total cap of frogs + boxes on field
@@ -176,4 +188,10 @@ export function getCrateLevel(upgradeLevel: number): number {
 export function getRareBoxThreshold(upgradeLevel: number): number {
   const arr = UPGRADE_CONFIG.rareBoxSpeed.counts
   return arr[Math.min(upgradeLevel, arr.length - 1)]
+}
+
+export function getAutoCollectCooldownMs(level: number): number {
+  const arr = UPGRADE_CONFIG.autoCollect.cooldownSec
+  const clamped = Math.min(Math.max(0, level), arr.length - 1)
+  return arr[clamped] * 1000
 }

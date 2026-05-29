@@ -8,6 +8,7 @@ import {
   getMagnetDuration,
   getCrateLevel,
   getRareBoxThreshold,
+  getAutoCollectCooldownMs,
   UPGRADE_CONFIG,
 } from '../../store/gameStore'
 import {
@@ -155,6 +156,7 @@ function UpgradesCards() {
       <MagnetCard upgradeKey="magnet3" titleSuffix="Континент" />
       <RareBoxSpeedCard />
       <GooCollectorCard />
+      <AutoCollectCard />
     </div>
   )
 }
@@ -387,6 +389,54 @@ function GooCollectorCard() {
       canAfford={canAfford}
       onBuy={() =>
         void buyUpgrade('gooCollector').then((ok) =>
+          hapticNotification(ok ? 'success' : 'error'),
+        )
+      }
+    />
+  )
+}
+
+function AutoCollectCard() {
+  const { t } = useTranslation()
+  const level = useGameStore((s) => s.upgrades.autoCollect)
+  const gold = useGameStore((s) => s.gold)
+  const buyUpgrade = useGameStore((s) => s.buyUpgrade)
+  const cfg = UPGRADE_CONFIG.autoCollect
+  const isMax = level >= cfg.maxLevel
+  const cost = isMax ? 0 : getUpgradeCost('autoCollect', level)
+  const canAfford = gold >= cost
+  const cooldownMs = getAutoCollectCooldownMs(level)
+  const cooldownSec = Math.round(cooldownMs / 1000)
+  const nextCooldownMs = isMax ? cooldownMs : getAutoCollectCooldownMs(level + 1)
+  const nextCooldownSec = Math.round(nextCooldownMs / 1000)
+  const cur =
+    level === 0
+      ? t('shop.autoCollect.not_bought')
+      : t('shop.autoCollect.cooldown', { sec: cooldownSec })
+  const next = isMax ? '' : t('shop.autoCollect.cooldown', { sec: nextCooldownSec })
+  return (
+    <UpgradeCard
+      icon={
+        <img
+          src="/goo_collector.png"
+          alt=""
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
+          }}
+        />
+      }
+      title={t('shop.autoCollect.name')}
+      effect={isMax ? cur : `${cur} → ${next}`}
+      level={level}
+      maxLevel={cfg.maxLevel}
+      cost={cost}
+      isMax={isMax}
+      canAfford={canAfford}
+      onBuy={() =>
+        void buyUpgrade('autoCollect').then((ok) =>
           hapticNotification(ok ? 'success' : 'error'),
         )
       }
