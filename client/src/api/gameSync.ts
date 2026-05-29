@@ -374,19 +374,7 @@ export async function loadGameState(): Promise<boolean> {
       }
     }
 
-    // Offline box drops — server возвращает raw elapsedMs.
-    // Эмитим event как сигнал «юзер вернулся, заполни поле боксами».
-    // MainScene.drainOfflineBoxBuffer fillит поле до cap (effectiveSlotCap),
-    // count теперь служит только маркером «buffer > 0», точное значение не важно.
-    // Threshold 60s: quick reload / first login не триггерит fill (юзер пришёл
-    // в чистое поле, а не в забитое боксами после реального offline period).
-    const OFFLINE_FILL_THRESHOLD_MS = 60_000
-    if (
-      typeof data.elapsedMs === 'number' &&
-      data.elapsedMs > OFFLINE_FILL_THRESHOLD_MS
-    ) {
-      eventBus.emit('box:offline-pending', { count: 1 })
-    }
+    // Offline box drops удалены: боксы спавнятся только по таймеру, без очереди.
 
     devLog('[gameSync] loaded state from server')
     return true

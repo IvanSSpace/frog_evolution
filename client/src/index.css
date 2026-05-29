@@ -79,6 +79,12 @@ body.modal-open .ship-follow-btn {
   color: var(--ff-text-light);
 }
 
+/* 2026-05-30: модалки без зелёной рамки по краям (клан + космос). Убираем только
+   inset-border, внешнюю тень оставляем. */
+.ff-panel.ff-panel--no-edge {
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6);
+}
+
 /* Grain layer — мелкий шум через inline SVG fractalNoise. */
 .ff-panel::after {
   content: '';

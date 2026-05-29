@@ -104,8 +104,6 @@ type Events = {
   // Phase 19-01 — box-opened event.
   // Phase 22: rarity removed from box-opened payload.
   'cosmic:box-opened': { boxId: string; element: Element }
-  // Offline box drops (boot-time): сколько боксов «упало» пока игрок был away.
-  'box:offline-pending': { count: number }
   // Тап по боксу на поле (раз на жест, не per-box) → лёгкий boxPop sfx.
   'box:tapOpened': Record<string, never>
   // Server-authoritative goo collector offline income (boot-time).

@@ -55,7 +55,7 @@ export function StarUnionsModal({ onClose }: { onClose: () => void }) {
         }}
       >
         <div
-          className={`ff-panel ff-scanlines ${closing ? 'ff-slide-up' : 'ff-slide-down'}`}
+          className={`ff-panel ff-panel--no-edge ff-scanlines ${closing ? 'ff-slide-up' : 'ff-slide-down'}`}
           style={{
             position: 'absolute',
             inset: 0,

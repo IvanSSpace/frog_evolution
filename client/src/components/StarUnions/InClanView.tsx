@@ -183,7 +183,9 @@ export function InClanView() {
         </div>
       )}
 
-      {/* Bottom action bar */}
+      {/* Bottom action bar — скрыта пока открыт ввод сообщения, чтобы compose-блок
+          был прибит прямо к клавиатуре (без зазора в виде панели кнопок). */}
+      {!chatOpen && (
       <div
         className="flex-shrink-0 flex items-center gap-3 flex-shrink-0"
         style={{ borderTop: '3px dashed rgba(77,107,31,0.4)', padding: '10px 14px' }}
@@ -239,6 +241,7 @@ export function InClanView() {
           🗺️
         </button>
       </div>
+      )}
 
       {rosterOpen && <ClanRosterModal onClose={() => setRosterOpen(false)} />}
 

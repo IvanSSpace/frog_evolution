@@ -557,7 +557,7 @@ export function ExpeditionModal({ onClose }: Props) {
         }}
       >
         <div
-          className={`ff-panel ${closing ? 'ff-slide-up' : 'ff-slide-down'}`}
+          className={`ff-panel ff-panel--no-edge ${closing ? 'ff-slide-up' : 'ff-slide-down'}`}
           style={{
             position: 'absolute',
             inset: 0,
