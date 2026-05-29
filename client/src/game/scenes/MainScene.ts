@@ -58,8 +58,6 @@ eventBus.on('box:offline-pending', ({ count }: { count: number }) => {
   _offlineBoxBuffer += count
 })
 
-const SWIPE_MIN_DIST = 55 * DPR
-const SWIPE_MAX_TIME = 700
 
 export class MainScene extends Phaser.Scene {
   // Phase 21 (Wave 1+): несколько полей переведены с `private` на package-public,
@@ -115,9 +113,8 @@ export class MainScene extends Phaser.Scene {
 
   // Swipe detection state for vertical zone switching (loc1 only).
   private swipeArmed = false
-  private swipeStartX = 0
   private swipeStartY = 0
-  private swipeStartT = 0
+  private swipeStartScrollY = 0
 
   // Phase 21-01 (Wave 1): frog spawn / motion / lifecycle в отдельном controller'е.
   private spawner!: FrogSpawner
@@ -431,6 +428,7 @@ export class MainScene extends Phaser.Scene {
 
     // Swipe detection для vertical zone switch (loc1 frogs ↔ buildings).
     this.input.on('pointerdown', this.onSwipePointerDown, this)
+    this.input.on('pointermove', this.onSwipePointerMove, this)
     this.input.on('pointerup', this.onSwipePointerUp, this)
 
     // Phase 12 dev: expose scene для smoke-helpers (window.__listFrogIds()).
@@ -922,22 +920,28 @@ export class MainScene extends Phaser.Scene {
       return
     }
     this.swipeArmed = true
-    this.swipeStartX = pointer.x
     this.swipeStartY = pointer.y
-    this.swipeStartT = this.time.now
+    this.swipeStartScrollY = this.cameras.main.scrollY
+    this.tweens.killTweensOf(this.cameras.main)
   }
 
-  private onSwipePointerUp = (pointer: Phaser.Input.Pointer) => {
+  private onSwipePointerMove = (pointer: Phaser.Input.Pointer) => {
+    if (!this.swipeArmed || !pointer.isDown) return
+    const { height } = this.scale
+    const ns = Phaser.Math.Clamp(this.swipeStartScrollY - (pointer.y - this.swipeStartY), 0, height)
+    this.cameras.main.setScroll(0, ns)
+  }
+
+  private onSwipePointerUp = (_pointer: Phaser.Input.Pointer) => {
     if (!this.swipeArmed) return
     this.swipeArmed = false
-    const dy = pointer.y - this.swipeStartY
-    const dx = pointer.x - this.swipeStartX
-    const dt = this.time.now - this.swipeStartT
-    if (dt > SWIPE_MAX_TIME) return
-    if (Math.abs(dy) < SWIPE_MIN_DIST) return
-    if (Math.abs(dy) < Math.abs(dx) * 1.2) return
-    if (dy < 0) this.setZone('buildings')
-    else this.setZone('frogs')
+    const { height } = this.scale
+    const target = this.cameras.main.scrollY < height / 2 ? 0 : height
+    const zone: 'frogs' | 'buildings' = target === 0 ? 'frogs' : 'buildings'
+    this.currentZone = zone
+    this.tweens.killTweensOf(this.cameras.main)
+    this.tweens.add({ targets: this.cameras.main, scrollY: target, duration: 200, ease: 'Sine.easeOut' })
+    eventBus.emit('field:zoneChanged', { zone })
   }
 
   destroy() {
@@ -945,6 +949,7 @@ export class MainScene extends Phaser.Scene {
     eventBus.off('location:transitionEnd', this.onTransitionEnd)
     eventBus.off('field:toggleZone', this.onToggleZone)
     this.input.off('pointerdown', this.onSwipePointerDown, this)
+    this.input.off('pointermove', this.onSwipePointerMove, this)
     this.input.off('pointerup', this.onSwipePointerUp, this)
     eventBus.off('frog:purchased', this.onFrogPurchased)
     eventBus.off('box:offline-pending', this.onOfflinePendingBoxes)
