@@ -33,12 +33,10 @@ import type { MainScene } from '../MainScene'
 import type { FrogSpawner } from './FrogSpawner'
 import type { MagnetController } from './MagnetController'
 import type { BoxController } from './BoxController'
-
 export class LocationTransition {
   private scene: MainScene
   private spawner: FrogSpawner
   private magnet: MagnetController
-  private box: BoxController
   // 2026-05-28: in-memory кеш позиций лягушек на локациях. На выходе с
   // локации снапшотим [level,x,y] всех живых frog'ов, на возврате — если
   // levels из store совпадают с кешем по длине и порядку, восстанавливаем
@@ -54,12 +52,11 @@ export class LocationTransition {
     scene: MainScene,
     spawner: FrogSpawner,
     magnet: MagnetController,
-    box: BoxController,
+    _box: BoxController,
   ) {
     this.scene = scene
     this.spawner = spawner
     this.magnet = magnet
-    this.box = box
   }
 
   // Полная очистка поля при смене локации
@@ -175,13 +172,6 @@ export class LocationTransition {
 
     // 1. Магниты эфемерны — убиваем сразу
     this.magnet.clearAll()
-
-    // Если уходим с болота — фиксируем в pending, чтобы при возврате восстановились.
-    // Сами img коробок улетают вместе с oldContainer (см. ниже), так что юзер видит
-    // их анимирующимися с локацией, а не пропадающими внезапно.
-    if (oldLoc === 1 && scene.boxes.length > 0) {
-      scene.pendingBoxCount = scene.pendingBoxCount + scene.boxes.length
-    }
 
     // Phase 22-fix: detach overlay manager БЕЗ release/drain. Overlay containers
     // остаются вложенными в frog.container → масштабируются вместе с oldContainer
@@ -308,22 +298,6 @@ export class LocationTransition {
         frog.container.x = wx - cx
         frog.container.y = wy - cy
       })
-    }
-
-    // Если возвращаемся на болото с накопленными pending-коробками — спавним
-    // ДО анимации и переносим в newContainer, чтобы они плыли вместе с лягушками
-    // (а не появлялись внезапно после завершения transition).
-    if (newLoc === 1 && scene.pendingBoxCount > 0) {
-      while (scene.pendingBoxCount > 0 && this.box.canSpawnBox()) {
-        scene.pendingBoxCount--
-        this.box.spawnBox(false, true)
-        const lastBox = scene.boxes[scene.boxes.length - 1]
-        const wx = lastBox.img.x
-        const wy = lastBox.img.y
-        newContainer.add(lastBox.img)
-        lastBox.img.x = wx - cx
-        lastBox.img.y = wy - cy
-      }
     }
 
     // 4. Слой-порядок: при подъёме старая остаётся ВПЕРЕДИ (мы видим как она
@@ -463,11 +437,6 @@ export class LocationTransition {
       const cy = height / 2
 
       this.magnet.clearAll()
-
-      // Если уходим с болота — фиксируем коробки в pending, чтобы при возврате восстановились
-      if (scene.prevLocation === 1 && scene.boxes.length > 0) {
-        scene.pendingBoxCount = scene.pendingBoxCount + scene.boxes.length
-      }
 
       // Detach overlay manager БЕЗ release (тинт сыворотки сохраняется до destroy)
       scene.overlayManager?.disposeForTransition()
@@ -650,20 +619,6 @@ export class LocationTransition {
           frog.container.x = wx - cx
           frog.container.y = wy - cy
         })
-      }
-
-      // Pending-коробки восстанавливаются если возвращаемся на Лужу
-      if (targetLocId === 1 && scene.pendingBoxCount > 0) {
-        while (scene.pendingBoxCount > 0 && this.box.canSpawnBox()) {
-          scene.pendingBoxCount--
-          this.box.spawnBox(false, true)
-          const lastBox = scene.boxes[scene.boxes.length - 1]
-          const wx = lastBox.img.x
-          const wy = lastBox.img.y
-          newContainer.add(lastBox.img)
-          lastBox.img.x = wx - cx
-          lastBox.img.y = wy - cy
-        }
       }
 
       // Going DOWN: новая впереди (зумимся внутрь), старая сзади разлетается
