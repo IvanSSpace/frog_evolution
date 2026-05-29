@@ -58,7 +58,7 @@ eventBus.on('box:offline-pending', ({ count }: { count: number }) => {
   _offlineBoxBuffer += count
 })
 
-const SWIPE_SLOP = 50 * DPR   // палец должен сдвинуться на столько, прежде чем начнётся скролл
+const SWIPE_SLOP = 90 * DPR   // палец должен сдвинуться на столько, прежде чем начнётся скролл
 const SWIPE_FLICK_V = 0.5   // |velocity.y| (px/ms) выше — считаем фликом, переключаем по направлению
 
 
