@@ -48,6 +48,9 @@ export class DroneController {
   private box: BoxController
 
   private sprite: Phaser.GameObjects.Image | null = null
+  // 2026-05-30: тень дрона — чёрный силуэт того же спрайта, под ним, со
+  // смещением. Синхронизируется с дроном в tick (pos/rotation/flip/scale).
+  private shadow: Phaser.GameObjects.Image | null = null
 
   // Накопленный кулдаун (мс)
   private cooldownAccum = 0
@@ -92,10 +95,18 @@ export class DroneController {
     const cx = width / 2
     const cy = (FIELD_PAD_Y + (height - FIELD_PAD_Y_BOTTOM)) / 2
 
+    // Тень — создаём ПЕРВОЙ (ниже дрона по z), чёрный силуэт того же спрайта.
+    this.shadow = this.scene.add.image(cx, cy, 'goo_collector')
+    ;(this.shadow as unknown as { tintFill: boolean }).tintFill = true
+    this.shadow.setTint(0x000000)
+    this.shadow.setAlpha(0.32)
+    this.shadow.setDepth(DRONE_DEPTH - 1)
+
     this.sprite = this.scene.add.image(cx, cy, 'goo_collector')
     this.baseScale = (BOX_DISPLAY_SIZE * DRONE_SCALE_MULT) / this.sprite.width
     this.sprite.setScale(this.baseScale)
     this.sprite.setDepth(DRONE_DEPTH)
+    this.shadow.setScale(this.baseScale)
     this.baselineY = cy
 
     this.sprite.setInteractive({ useHandCursor: true })
@@ -155,6 +166,12 @@ export class DroneController {
     this.sprite.destroy()
     this.sprite = null
 
+    if (this.shadow) {
+      this.scene.tweens.killTweensOf(this.shadow)
+      this.shadow.destroy()
+      this.shadow = null
+    }
+
     this.isDragging = false
     this.cooldownAccum = 0
     this.targetTilt = 0
@@ -170,6 +187,15 @@ export class DroneController {
     const sprite = this.sprite!
 
     sprite.rotation = Phaser.Math.Linear(sprite.rotation, this.targetTilt, TILT_LERP)
+
+    // Синхронизируем тень с дроном: позиция + смещение, наклон, flip, scale.
+    if (this.shadow) {
+      this.shadow.x = sprite.x + 4 * DPR
+      this.shadow.y = sprite.y + 8 * DPR
+      this.shadow.rotation = sprite.rotation
+      this.shadow.scaleX = sprite.scaleX
+      this.shadow.scaleY = sprite.scaleY
+    }
     if (this.isDragging) {
       this.targetTilt = Phaser.Math.Linear(this.targetTilt, 0, TILT_LERP)
       return
