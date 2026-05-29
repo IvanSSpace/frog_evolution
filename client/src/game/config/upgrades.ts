@@ -83,7 +83,10 @@ export const UPGRADE_CONFIG = {
     maxLevel: 6,
     spawnIntervalMs: [Infinity, 10000, 8000, 7000, 6000, 5000, 4000],
     durationMs: [0, 5000, 5500, 6000, 6500, 7000, 8000],
-    mergesPerCycle: [0, 1, 1, 2, 2, 3, 3],
+    // 2026-05-29: ровно 1 merge за цикл на всех уровнях (раньше lvl3+ делал
+    // 2-3 — выглядело «странно», магнит перелетал и мерджил несколько пар).
+    // Уровень теперь влияет только на частоту (spawnInterval) и duration.
+    mergesPerCycle: [0, 1, 1, 1, 1, 1, 1],
     costs: [
       300_000, 1_000_000, 5_000_000, 50_000_000, 500_000_000, 5_000_000_000,
     ],
@@ -97,7 +100,7 @@ export const UPGRADE_CONFIG = {
     maxLevel: 6,
     spawnIntervalMs: [Infinity, 10000, 8000, 7000, 6000, 5000, 4000],
     durationMs: [0, 5000, 5500, 6000, 6500, 7000, 8000],
-    mergesPerCycle: [0, 1, 1, 2, 2, 3, 3],
+    mergesPerCycle: [0, 1, 1, 1, 1, 1, 1],
     costs: [
       450_000, 1_500_000, 7_500_000, 75_000_000, 750_000_000, 7_500_000_000,
     ],
@@ -106,7 +109,7 @@ export const UPGRADE_CONFIG = {
     maxLevel: 6,
     spawnIntervalMs: [Infinity, 10000, 8000, 7000, 6000, 5000, 4000],
     durationMs: [0, 5000, 5500, 6000, 6500, 7000, 8000],
-    mergesPerCycle: [0, 1, 1, 2, 2, 3, 3],
+    mergesPerCycle: [0, 1, 1, 1, 1, 1, 1],
     costs: [
       750_000, 2_500_000, 12_500_000, 125_000_000, 1_250_000_000,
       12_500_000_000,
