@@ -14,8 +14,8 @@ import type { MainScene } from '../MainScene'
 
 // Доля ширины экрана под спрайт фабрики (подгоняемо)
 const FACTORY_WIDTH_FRAC = 0.35
-// Отступ нижнего края фабрики от низа зоны строений (px)
-const FACTORY_BOTTOM_Y = 40 * DPR
+// Отступ верхнего края фабрики от верха зоны строений (px)
+const FACTORY_TOP_Y = 40 * DPR
 // Глубина — фоновый объект, под лягушками/боксами
 const FACTORY_DEPTH = 0
 
@@ -35,10 +35,12 @@ export class FactoryController {
       return
     }
     const { width, height } = this.scene.scale
-    this.sprite = this.scene.add.image(width / 2, height * 2 - FACTORY_BOTTOM_Y, 'factory3_shadow')
+    this.sprite = this.scene.add.image(0, 0, 'factory3_shadow')
     this.sprite.setOrigin(0.5, 1)
     this.baseScale = (width * FACTORY_WIDTH_FRAC) / this.sprite.width
     this.sprite.setScale(this.baseScale)
+    // верх зоны строений = world y `height`; bottom-origin → bottom = height + высота + отступ
+    this.sprite.setPosition(width / 2, height + this.sprite.displayHeight + FACTORY_TOP_Y)
     this.sprite.setDepth(FACTORY_DEPTH)
   }
 
