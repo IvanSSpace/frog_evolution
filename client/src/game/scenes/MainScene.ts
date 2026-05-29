@@ -285,8 +285,7 @@ export class MainScene extends Phaser.Scene {
       height / 2,
       mapKeyForLocation(this.prevLocation),
     )
-    // contain-fit: вся карта целиком без искажения и без зума (возможны поля по краям)
-    this.bg.setScale(Math.min(width / this.bg.width, height / this.bg.height))
+    this.bg.setDisplaySize(width, height)
     this.bg.setDepth(-1) // фон всегда под лягушками
     this.bg.setTint(0xc4c8c4) // 2026-05-28: затемнение фона — контраст с лягушками
 
