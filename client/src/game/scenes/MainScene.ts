@@ -58,6 +58,9 @@ eventBus.on('box:offline-pending', ({ count }: { count: number }) => {
   _offlineBoxBuffer += count
 })
 
+const SWIPE_MIN_DIST = 55 * DPR
+const SWIPE_MAX_TIME = 700
+
 export class MainScene extends Phaser.Scene {
   // Phase 21 (Wave 1+): несколько полей переведены с `private` на package-public,
   // потому что main/FrogSpawner.ts (и далее main/MergeController, main/BoxController…)
@@ -109,6 +112,12 @@ export class MainScene extends Phaser.Scene {
   // Phase 14: SERUM-11 desktop drag — haptic-rate-limit на hover eligible.
   // Phase 21-05: package-public — мутируется FrogInteraction + LocationTransition.
   lastHaptiHover = false
+
+  // Swipe detection state for vertical zone switching (loc1 only).
+  private swipeArmed = false
+  private swipeStartX = 0
+  private swipeStartY = 0
+  private swipeStartT = 0
 
   // Phase 21-01 (Wave 1): frog spawn / motion / lifecycle в отдельном controller'е.
   private spawner!: FrogSpawner
@@ -419,6 +428,10 @@ export class MainScene extends Phaser.Scene {
     // Phase 21-05: serum subscribe + global pointerdown + desktop DnD listeners
     // — перенесены в FrogInteraction.setup().
     this.interaction.setup()
+
+    // Swipe detection для vertical zone switch (loc1 frogs ↔ buildings).
+    this.input.on('pointerdown', this.onSwipePointerDown, this)
+    this.input.on('pointerup', this.onSwipePointerUp, this)
 
     // Phase 12 dev: expose scene для smoke-helpers (window.__listFrogIds()).
     // Phase 23 Plan 23-05: expose в production тоже — OnboardingController (React)
@@ -878,25 +891,61 @@ export class MainScene extends Phaser.Scene {
     this.configureWorld(id)
   }
 
-  private onToggleZone = () => {
+  private setZone(zone: 'frogs' | 'buildings'): void {
     if (useGameStore.getState().currentLocation !== 1) return
+    if (this.currentZone === zone) return
     const { height } = this.scale
-    const next = this.currentZone === 'frogs' ? 'buildings' : 'frogs'
-    this.currentZone = next
+    this.currentZone = zone
     this.tweens.killTweensOf(this.cameras.main)
     this.tweens.add({
       targets: this.cameras.main,
-      scrollY: next === 'buildings' ? height : 0,
+      scrollY: zone === 'buildings' ? height : 0,
       duration: 420,
       ease: 'Sine.easeInOut',
     })
-    eventBus.emit('field:zoneChanged', { zone: next })
+    eventBus.emit('field:zoneChanged', { zone })
+  }
+
+  private onToggleZone = () => {
+    if (useGameStore.getState().currentLocation !== 1) return
+    this.setZone(this.currentZone === 'frogs' ? 'buildings' : 'frogs')
+  }
+
+  private onSwipePointerDown = (pointer: Phaser.Input.Pointer, currentlyOver: Phaser.GameObjects.GameObject[]) => {
+    if (
+      useGameStore.getState().currentLocation !== 1 ||
+      this.isLocationTransitioning ||
+      useGameStore.getState().serumDragActive ||
+      currentlyOver.length !== 0
+    ) {
+      this.swipeArmed = false
+      return
+    }
+    this.swipeArmed = true
+    this.swipeStartX = pointer.x
+    this.swipeStartY = pointer.y
+    this.swipeStartT = this.time.now
+  }
+
+  private onSwipePointerUp = (pointer: Phaser.Input.Pointer) => {
+    if (!this.swipeArmed) return
+    this.swipeArmed = false
+    const dy = pointer.y - this.swipeStartY
+    const dx = pointer.x - this.swipeStartX
+    const dt = this.time.now - this.swipeStartT
+    if (dt > SWIPE_MAX_TIME) return
+    if (Math.abs(dy) < SWIPE_MIN_DIST) return
+    if (Math.abs(dy) < Math.abs(dx) * 1.2) return
+    if (dy < 0) this.setZone('buildings')
+    else this.setZone('frogs')
   }
 
   destroy() {
     eventBus.off('location:transitionStart', this.onTransitionStart)
     eventBus.off('location:transitionEnd', this.onTransitionEnd)
     eventBus.off('field:toggleZone', this.onToggleZone)
+    this.input.off('pointerdown', this.onSwipePointerDown, this)
+    this.input.off('pointerup', this.onSwipePointerUp, this)
     eventBus.off('frog:purchased', this.onFrogPurchased)
     eventBus.off('box:offline-pending', this.onOfflinePendingBoxes)
     // Phase 21-05: location handlers живут в LocationTransition; отписываем
