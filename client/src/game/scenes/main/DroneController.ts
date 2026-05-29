@@ -53,6 +53,9 @@ export class DroneController {
   // Целевой наклон (обновляется в начале hop или при idle)
   private targetTilt = 0
 
+  // Базовый масштаб (модуль) — для зеркалирования по направлению
+  private baseScale = 0
+
   // Ссылки на таймеры для despawn-cleanup
   private restTimer: Phaser.Time.TimerEvent | null = null
   private prePauseTimer: Phaser.Time.TimerEvent | null = null
@@ -70,7 +73,8 @@ export class DroneController {
     const cy = (FIELD_PAD_Y + (height - FIELD_PAD_Y_BOTTOM)) / 2
 
     this.sprite = this.scene.add.image(cx, cy, 'goo_collector')
-    this.sprite.setScale(BOX_DISPLAY_SIZE / this.sprite.width)
+    this.baseScale = BOX_DISPLAY_SIZE / this.sprite.width
+    this.sprite.setScale(this.baseScale)
     this.sprite.setDepth(DRONE_DEPTH)
 
     this.scheduleNextHop()
@@ -216,6 +220,10 @@ export class DroneController {
       // Наклон выставляем в момент реального старта движения (не во время pre-pause)
       const dx = toX - this.sprite.x
       this.targetTilt = dx !== 0 ? Math.sign(dx) * MAX_TILT : 0
+      // Разворот по направлению: арт смотрит влево, движение вправо → зеркалим.
+      if (dx !== 0) {
+        this.sprite.scaleX = (dx > 0 ? -1 : 1) * this.baseScale
+      }
       this.scene.tweens.add({
         targets: this.sprite,
         x: toX,
