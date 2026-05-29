@@ -37,6 +37,10 @@ const DRONE_SCALE_MULT = 0.6
 const BOB_AMP = 4 * DPR
 const BOB_PERIOD_MS = 3000
 
+// Плавный полёт к боксу в режиме сбора (px/с) + мин. длительность
+const FLY_SPEED = 130 * DPR
+const FLY_MIN_MS = 250
+
 type DroneMode = 'WANDER' | 'COLLECT'
 
 export class DroneController {
@@ -137,9 +141,19 @@ export class DroneController {
         // Ищем новую ближайшую нормальную коробку
         const nearest = this.findNearestNormalBox(sprite.x, sprite.y)
         if (nearest) {
+          // Переключаем цель и прерываем устаревший полёт
           this.collectTarget = nearest
+          if (this.isHopping) {
+            this.scene.tweens.killTweensOf(sprite)
+            this.isHopping = false
+          }
+          this.startHop()
         } else {
           // Боксов нет — выходим из COLLECT, держим accum на cooldown
+          if (this.isHopping) {
+            this.scene.tweens.killTweensOf(sprite)
+            this.isHopping = false
+          }
           this.mode = 'WANDER'
           this.collectTarget = null
           this.cooldownAccum = cooldown
@@ -153,6 +167,15 @@ export class DroneController {
       if (nearest) {
         this.mode = 'COLLECT'
         this.collectTarget = nearest
+        // Начинаем лететь немедленно, если не в прыжке
+        if (!this.isHopping) {
+          if (this.restTimer) {
+            this.restTimer.remove(false)
+            this.restTimer = null
+          }
+          this.startHop()
+        }
+        // Если isHopping — текущий hop завершится и увидит COLLECT в onComplete
       } else {
         // Нет боксов — держим accum на cooldown
         this.cooldownAccum = cooldown
@@ -175,10 +198,7 @@ export class DroneController {
   private scheduleNextHop(): void {
     if (!this.sprite) return
 
-    const restMs =
-      this.mode === 'COLLECT'
-        ? Phaser.Math.Between(100, 250)
-        : Phaser.Math.Between(2000, 4000)
+    const restMs = Phaser.Math.Between(2000, 4000)
 
     this.restTimer = this.scene.time.delayedCall(restMs, () => {
       this.restTimer = null
@@ -197,27 +217,28 @@ export class DroneController {
     let toX: number
     let toY: number
     let prePauseMs: number
+    let moveDuration: number
+    let moveEase: string
 
     if (this.mode === 'COLLECT' && this.collectTarget) {
       const target = this.collectTarget
-      const tx = target.img.x
-      const ty = target.img.y
-      const dx = tx - sprite.x
-      const dy = ty - sprite.y
-      const dist = Math.sqrt(dx * dx + dy * dy)
-      const hopDist = Math.min(dist, DASH_RADIUS)
-      const angle = Math.atan2(dy, dx)
+      // Летим прямо к боксу (полная дистанция, не DASH_RADIUS)
       toX = Phaser.Math.Clamp(
-        sprite.x + Math.cos(angle) * hopDist,
+        target.img.x,
         FIELD_PAD_X + 10 * DPR,
         width - FIELD_PAD_X - 10 * DPR,
       )
       toY = Phaser.Math.Clamp(
-        sprite.y + Math.sin(angle) * hopDist,
+        target.img.y,
         FIELD_PAD_Y + 10 * DPR,
         height - FIELD_PAD_Y_BOTTOM - 10 * DPR,
       )
       prePauseMs = 0
+      const dx = toX - sprite.x
+      const dy = toY - sprite.y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      moveDuration = Phaser.Math.Clamp(dist / FLY_SPEED * 1000, FLY_MIN_MS, 60000)
+      moveEase = 'Sine.easeInOut'
     } else {
       // WANDER
       const angle = Phaser.Math.FloatBetween(0, Math.PI * 2)
@@ -233,6 +254,8 @@ export class DroneController {
         height - FIELD_PAD_Y_BOTTOM - 10 * DPR,
       )
       prePauseMs = 350
+      moveDuration = MOVE_MS
+      moveEase = 'Power2.easeOut'
     }
 
     this.isHopping = true
@@ -250,8 +273,8 @@ export class DroneController {
         targets: this.sprite,
         x: toX,
         y: toY,
-        duration: MOVE_MS,
-        ease: 'Power2.easeOut',
+        duration: moveDuration,
+        ease: moveEase,
         onComplete: () => {
           if (!this.sprite) return
           this.baselineY = this.sprite.y
@@ -270,10 +293,10 @@ export class DroneController {
             )
             if (dist < REACH_DIST) {
               this.box.onBoxTapped(this.collectTarget)
-              this.collectTarget = null
               this.cooldownAccum = 0
               this.mode = 'WANDER'
-              // После сбора — нормальный отдых 2000-4000мс
+              this.collectTarget = null
+              // После сбора — нормальный отдых 2000-4000мс перед следующим wander hop
               this.restTimer = this.scene.time.delayedCall(
                 Phaser.Math.Between(2000, 4000),
                 () => {
@@ -284,6 +307,9 @@ export class DroneController {
               )
               return
             }
+            // Цель ещё не достигнута (например, сменилась) — продолжаем лететь без паузы
+            this.startHop()
+            return
           }
 
           this.scheduleNextHop()
