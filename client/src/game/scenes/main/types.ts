@@ -30,7 +30,7 @@ export const MERGE_RADIUS = 50 * DPR
 export const MAX_ENTITIES = 16 // суммарный лимит лягушки + коробки
 export const MAX_PENDING_BOXES = 8 // cap «отложенных» коробок при отсутствии на болоте
 export const BOX_FALL_DURATION = 380 // длительность падения (быстрее)
-export const BOX_DISPLAY_SIZE = 56 * DPR // размер коробки на экране
+export const BOX_DISPLAY_SIZE = 48 * DPR // размер коробки на экране
 export const BOX_IDLE_INTERVAL = 5500 // период подпрыгивания
 export const BOX_OPEN_RADIUS = 80 * DPR // радиус разлёта тапа — открывает все коробки рядом
 // Окно магнит-иммунитета (мс) для свежих из бокса лягушек. AoE-открытие
@@ -44,7 +44,7 @@ export const RARE_BOX_SCALE_MULT = 1.25
 
 // SVG грузится в физических пикселях (CSS * DPR), плюс +50% для запаса
 export const TEXTURE_QUALITY = DPR * 1.5
-export const BASE_SCALE = DPR / TEXTURE_QUALITY // = 1/1.5 ≈ 0.667
+export const BASE_SCALE = (DPR / TEXTURE_QUALITY) * 0.92 // чуть меньше (×0.92)
 
 export const tintToHex = (cssHex: string): number =>
   parseInt(cssHex.replace('#', ''), 16)
