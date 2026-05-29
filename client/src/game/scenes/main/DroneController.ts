@@ -20,14 +20,19 @@ import {
 import type { MainScene } from '../MainScene'
 import type { BoxController } from './BoxController'
 
-// Скорость дрона в пикселях/с при свободном гулянии
-const WANDER_SPEED = 80 * DPR
+// Скорость дрона в пикселях/с при свободном гулянии — неспешно, как лягушки
+const WANDER_SPEED = 45 * DPR
 // Скорость полёта к боксу
-const FLY_SPEED = 140 * DPR
+const FLY_SPEED = 95 * DPR
+// Пауза-отдых на точке гуляния (мс) — имитирует рывково-отдыхающий ритм лягушек
+const WANDER_REST_MIN_MS = 700
+const WANDER_REST_MAX_MS = 1800
 // Дистанция «достиг бокса» (px)
 const REACH_DIST = 30 * DPR
 // Максимальный наклон спрайта (рад)
 const MAX_TILT = 0.15
+// Коэффициент сглаживания наклона (lerp на кадр)
+const TILT_LERP = 0.12
 // Глубина отрисовки дрона — поверх боксов, под UI
 const DRONE_DEPTH = 95000
 
@@ -46,6 +51,9 @@ export class DroneController {
 
   // Режим полёта к конкретному боксу
   private flyTarget: BoxData | null = null
+
+  // Остаток паузы-отдыха на точке гуляния (мс)
+  private wanderRestMs = 0
 
   constructor(scene: MainScene, box: BoxController) {
     this.scene = scene
@@ -74,6 +82,7 @@ export class DroneController {
     this.sprite = null
     this.flyTarget = null
     this.cooldownAccum = 0
+    this.wanderRestMs = 0
   }
 
   tick(level: number, delta: number): void {
@@ -112,25 +121,44 @@ export class DroneController {
           const ratio = Math.min(step / dist, 1)
           sprite.x += dx * ratio
           sprite.y += dy * ratio
-          sprite.rotation = Math.sign(dx) * MAX_TILT
+          sprite.rotation = Phaser.Math.Linear(
+            sprite.rotation,
+            Math.sign(dx) * MAX_TILT,
+            TILT_LERP,
+          )
         }
         return
       }
     }
 
-    // Режим гуляния
-    const dx = this.wanderX - sprite.x
-    const dy = this.wanderY - sprite.y
-    const dist = Math.sqrt(dx * dx + dy * dy)
-
-    if (dist < 4 * DPR) {
-      this.pickNewWanderTarget()
+    // Режим гуляния — неспешно, с паузами-отдыхом (ритм как у лягушек)
+    if (this.wanderRestMs > 0) {
+      this.wanderRestMs -= delta
+      // Выравниваем наклон во время отдыха
+      sprite.rotation = Phaser.Math.Linear(sprite.rotation, 0, TILT_LERP)
     } else {
-      const step = WANDER_SPEED * (delta / 1000)
-      const ratio = Math.min(step / dist, 1)
-      sprite.x += dx * ratio
-      sprite.y += dy * ratio
-      sprite.rotation = dx !== 0 ? Math.sign(dx) * MAX_TILT : 0
+      const dx = this.wanderX - sprite.x
+      const dy = this.wanderY - sprite.y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+
+      if (dist < 4 * DPR) {
+        this.pickNewWanderTarget()
+        this.wanderRestMs = Phaser.Math.Between(
+          WANDER_REST_MIN_MS,
+          WANDER_REST_MAX_MS,
+        )
+      } else {
+        const step = WANDER_SPEED * (delta / 1000)
+        const ratio = Math.min(step / dist, 1)
+        sprite.x += dx * ratio
+        sprite.y += dy * ratio
+        const targetTilt = dx !== 0 ? Math.sign(dx) * MAX_TILT : 0
+        sprite.rotation = Phaser.Math.Linear(
+          sprite.rotation,
+          targetTilt,
+          TILT_LERP,
+        )
+      }
     }
 
     // Проверяем кулдаун и наличие обычного бокса
