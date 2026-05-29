@@ -59,7 +59,9 @@ export class DroneController {
     const cy = (FIELD_PAD_Y + (height - FIELD_PAD_Y_BOTTOM)) / 2
 
     this.sprite = this.scene.add.image(cx, cy, 'goo_collector')
-    this.sprite.setDisplaySize(BOX_DISPLAY_SIZE, BOX_DISPLAY_SIZE)
+    // Uniform scale по целевой ширине — сохраняем пропорции картинки
+    // (setDisplaySize квадратом давил непропорциональный спрайт по высоте).
+    this.sprite.setScale(BOX_DISPLAY_SIZE / this.sprite.width)
     this.sprite.setDepth(DRONE_DEPTH)
 
     this.pickNewWanderTarget()
