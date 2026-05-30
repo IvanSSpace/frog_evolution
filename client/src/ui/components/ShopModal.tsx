@@ -151,12 +151,13 @@ function UpgradesCards() {
     <div className="flex flex-col gap-3 p-4 overflow-y-auto">
       <DropSpeedCard />
       <CrateQualityCard />
+      {/* Дроны рядом: магниты (Лужа/Лес/Континент) + автосбор. */}
       <MagnetCard />
       <MagnetCard upgradeKey="magnet2" titleSuffix="Лес" />
       <MagnetCard upgradeKey="magnet3" titleSuffix="Континент" />
+      <AutoCollectCard />
       <RareBoxSpeedCard />
       <GooCollectorCard />
-      <AutoCollectCard />
     </div>
   )
 }
