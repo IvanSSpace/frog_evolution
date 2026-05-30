@@ -47,11 +47,21 @@ type DroneMode = 'WANDER' | 'COLLECT' | 'RTB' | 'CHARGING' | 'EMERGING'
 
 // Подзарядка на базе (мс) — за это время battery 0 → 100.
 const RECHARGE_MS = 60000
-// Раскладка зданий (SYNC с BuildingsController): main центр, droner слева.
-const MAIN_X_FRAC = 0.5
-const MAIN_Y_FRAC = 0.34
-const DRONER_X_FRAC = 0.38
-const DRONER_Y_FRAC = 0.74
+// Дверь домика дронов (droner) — точка появления/исчезновения.
+const DRONER_X_FRAC = 0.536
+const DRONER_Y_FRAC = 0.767
+// Маршрут (frac: xf от ширины, yf от высоты зоны строений; yf<0 = поле).
+// Дверь → подъём → развилка (50% лево/право) → выход на поле.
+const RISE = { xf: 0.534, yf: 0.422 }
+const BRANCH_LEFT = [
+  { xf: 0.48, yf: 0.066 },
+  { xf: 0.455, yf: -0.054 },
+]
+const BRANCH_RIGHT = [
+  { xf: 0.808, yf: 0.272 },
+  { xf: 0.574, yf: 0.065 },
+  { xf: 0.619, yf: -0.08 },
+]
 
 export class DroneController {
   private scene: MainScene
@@ -109,11 +119,8 @@ export class DroneController {
   private spawn(): void {
     if (this.sprite) return
     const { width, height } = this.scene.scale
-    // TEST: спавн на входе droner для подгонки позиции. Вернуть на random:
-    //   const cx = Phaser.Math.Between(FIELD_PAD_X+10*DPR, width-FIELD_PAD_X-10*DPR)
-    //   const cy = Phaser.Math.Between(FIELD_PAD_Y+10*DPR, height-FIELD_PAD_Y_BOTTOM-10*DPR)
-    const cx = width * DRONER_X_FRAC
-    const cy = height + height * DRONER_Y_FRAC
+    const cx = Phaser.Math.Between(FIELD_PAD_X + 10 * DPR, width - FIELD_PAD_X - 10 * DPR)
+    const cy = Phaser.Math.Between(FIELD_PAD_Y + 10 * DPR, height - FIELD_PAD_Y_BOTTOM - 10 * DPR)
 
     // Тень — создаём ПЕРВОЙ (ниже дрона по z), чёрный силуэт того же спрайта.
     this.shadow = this.scene.add.image(cx, cy, 'goo_collector')
@@ -279,17 +286,17 @@ export class DroneController {
     this.collectTarget = null
 
     const { width, height } = this.scene.scale
-    const side = Math.random() < 0.5 ? -1 : 1 // обход main слева/справа
-    const mainX = width * MAIN_X_FRAC
-    const mainY = height + height * MAIN_Y_FRAC
-    const dronerX = width * DRONER_X_FRAC
-    const dronerY = height + height * DRONER_Y_FRAC
-
-    const waypoints: { x: number; y: number }[] = [
-      { x: mainX, y: height - FIELD_PAD_Y_BOTTOM }, // центр-низ frogs-зоны
-      { x: mainX, y: height + height * 0.12 }, // вошли в зону строений сверху
-      { x: mainX + side * width * 0.3, y: mainY }, // обход main сбоку
-      { x: dronerX, y: dronerY }, // к droner
+    const toW = (f: { xf: number; yf: number }) => ({
+      x: f.xf * width,
+      y: height + f.yf * height,
+    })
+    // Заход — обратный маршрут выхода: с поля → развилка (reverse) → подъём
+    // → дверь. Развилка 50% лево/право.
+    const branch = Math.random() < 0.5 ? BRANCH_LEFT : BRANCH_RIGHT
+    const waypoints = [
+      ...[...branch].reverse().map(toW),
+      toW(RISE),
+      toW({ xf: DRONER_X_FRAC, yf: DRONER_Y_FRAC }),
     ]
     this.flyWaypoints(waypoints, () => this.enterDroner())
   }
@@ -368,12 +375,14 @@ export class DroneController {
       ease: 'Back.easeOut',
       onComplete: () => {
         if (!this.sprite) return
-        // Поднимаемся вверх на поле лягушек к случайной точке.
-        const toX = Phaser.Math.Between(FIELD_PAD_X + 20 * DPR, width - FIELD_PAD_X - 20 * DPR)
-        const toY = Phaser.Math.Between(FIELD_PAD_Y + 20 * DPR, height - FIELD_PAD_Y_BOTTOM - 20 * DPR)
-        // 2026-05-30: прямой полёт droner→поле одним сегментом. Раньше был
-        // промежуточный waypoint на границе зон → резкий flip/наклон = «отдёрг».
-        this.flyWaypoints([{ x: toX, y: toY }], () => {
+        // Выход: дверь → подъём → развилка (50% лево/право) → на поле.
+        const toW = (f: { xf: number; yf: number }) => ({
+          x: f.xf * width,
+          y: height + f.yf * height,
+        })
+        const branch = Math.random() < 0.5 ? BRANCH_LEFT : BRANCH_RIGHT
+        const waypoints = [toW(RISE), ...branch.map(toW)]
+        this.flyWaypoints(waypoints, () => {
           this.targetTilt = 0
           this.mode = 'WANDER'
           this.cooldownAccum = 0

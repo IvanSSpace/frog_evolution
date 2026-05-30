@@ -48,11 +48,20 @@ const DRONE_SCALE_MULT = 0.7
 const BATTERY_FULL_MS = 480000
 // Подзарядка на базе (мс).
 const RECHARGE_MS = 60000
-// Раскладка зданий (SYNC с BuildingsController).
-const MAIN_X_FRAC = 0.5
-const MAIN_Y_FRAC = 0.34
-const DRONER_X_FRAC = 0.38
-const DRONER_Y_FRAC = 0.74
+// Дверь домика дронов (droner) — точка появления/исчезновения.
+const DRONER_X_FRAC = 0.536
+const DRONER_Y_FRAC = 0.767
+// Маршрут (frac: xf от ширины, yf от высоты зоны строений; yf<0 = поле).
+const RISE = { xf: 0.534, yf: 0.422 }
+const BRANCH_LEFT = [
+  { xf: 0.48, yf: 0.066 },
+  { xf: 0.455, yf: -0.054 },
+]
+const BRANCH_RIGHT = [
+  { xf: 0.808, yf: 0.272 },
+  { xf: 0.574, yf: 0.065 },
+  { xf: 0.619, yf: -0.08 },
+]
 
 type MagnetMode = 'WANDER' | 'WORK' | 'PULLING' | 'RTB' | 'CHARGING' | 'EMERGING'
 
@@ -250,17 +259,17 @@ export class MagnetController {
     }
 
     const { width, height } = this.scene.scale
-    const side = Math.random() < 0.5 ? -1 : 1
-    const mainX = width * MAIN_X_FRAC
-    const mainY = height + height * MAIN_Y_FRAC
-    const dronerX = width * DRONER_X_FRAC
-    const dronerY = height + height * DRONER_Y_FRAC
+    const toW = (f: { xf: number; yf: number }) => ({
+      x: f.xf * width,
+      y: height + f.yf * height,
+    })
+    // Заход — обратный маршрут выхода: поле → развилка (reverse) → подъём → дверь.
+    const branch = Math.random() < 0.5 ? BRANCH_LEFT : BRANCH_RIGHT
     this.flyWaypoints(
       [
-        { x: mainX, y: height - FIELD_PAD_Y_BOTTOM },
-        { x: mainX, y: height + height * 0.12 },
-        { x: mainX + side * width * 0.3, y: mainY },
-        { x: dronerX, y: dronerY },
+        ...[...branch].reverse().map(toW),
+        toW(RISE),
+        toW({ xf: DRONER_X_FRAC, yf: DRONER_Y_FRAC }),
       ],
       () => this.enterDroner(),
     )
@@ -337,10 +346,13 @@ export class MagnetController {
       ease: 'Back.easeOut',
       onComplete: () => {
         if (!this.sprite) return
-        const toX = Phaser.Math.Between(FIELD_PAD_X + 20 * DPR, width - FIELD_PAD_X - 20 * DPR)
-        const toY = Phaser.Math.Between(FIELD_PAD_Y + 20 * DPR, height - FIELD_PAD_Y_BOTTOM - 20 * DPR)
-        // Прямой полёт droner→поле (без waypoint на границе → нет «отдёрга»).
-        this.flyWaypoints([{ x: toX, y: toY }], () => {
+        // Выход: дверь → подъём → развилка (50% лево/право) → на поле.
+        const toW = (f: { xf: number; yf: number }) => ({
+          x: f.xf * width,
+          y: height + f.yf * height,
+        })
+        const branch = Math.random() < 0.5 ? BRANCH_LEFT : BRANCH_RIGHT
+        this.flyWaypoints([toW(RISE), ...branch.map(toW)], () => {
           this.targetTilt = 0
           this.mode = 'WANDER'
           this.workAccum = 0
