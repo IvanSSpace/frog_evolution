@@ -330,14 +330,13 @@ export class MagnetController {
   private showChargeBar(): void {
     this.hideChargeBar()
     const { width, height } = this.scene.scale
-    const x = width * DRONER_X_FRAC + 22 * DPR
+    const x = width * DRONER_X_FRAC - 8 * DPR
     const y = height + height * DRONER_Y_FRAC - 50 * DPR
-    const w = 13 * DPR
-    const h = 70 * DPR
+    const w = 9 * DPR
+    const h = 48 * DPR
     this.chargeBg = this.scene.add
       .rectangle(x, y, w, h, 0x0c1611, 0.92)
       .setOrigin(0.5, 1)
-      .setStrokeStyle(2 * DPR, 0x2f4a49)
       .setDepth(210000)
     this.chargeFill = this.scene.add
       .rectangle(x, y, w - 4 * DPR, 0, 0x5fd83a, 1)
