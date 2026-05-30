@@ -56,7 +56,7 @@ const ENTRY = { xf: 0.536, yf: 0.767 }
 // Дверь → подъём → развилка (50% лево/право) → выход на поле.
 const RISE = { xf: 0.534, yf: 0.422 }
 const BRANCH_LEFT = [
-  { xf: 0.48, yf: 0.066 },
+  { xf: 0.192, yf: 0.268 },
   { xf: 0.455, yf: -0.054 },
 ]
 const BRANCH_RIGHT = [
