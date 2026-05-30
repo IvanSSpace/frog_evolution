@@ -146,8 +146,8 @@ function ChargeRow({
 
 export function DronerModal({ onClose }: Props) {
   useModalLock()
-  const droneBattery = useGameStore((s) => s.droneBattery)
-  const magnetBattery = useGameStore((s) => s.magnetBattery)
+  const droneBatteries = useGameStore((s) => s.droneBatteries)
+  const magnetBatteries = useGameStore((s) => s.magnetBatteries)
   const [tab, setTab] = useState<DronerTab>('charge')
 
   return (
@@ -219,16 +219,38 @@ export function DronerModal({ onClose }: Props) {
         >
           {tab === 'charge' ? (
             <>
-              <ChargeRow
-                icon="/goo_collector_icon.png"
-                name="Дрон-сборщик"
-                battery={droneBattery}
-              />
-              <ChargeRow
-                icon="/magnet_drone_icon.png"
-                name="Магнит-дрон"
-                battery={magnetBattery}
-              />
+              {droneBatteries.length === 0 && magnetBatteries.length === 0 && (
+                <div
+                  className="ff-display text-sm text-center py-6"
+                  style={{ color: 'var(--ff-text-dim)' }}
+                >
+                  Нет активных дронов
+                </div>
+              )}
+              {droneBatteries.map((b, i) => (
+                <ChargeRow
+                  key={`d${i}`}
+                  icon="/goo_collector_icon.png"
+                  name={
+                    droneBatteries.length > 1
+                      ? `Дрон-сборщик ${i + 1}`
+                      : 'Дрон-сборщик'
+                  }
+                  battery={b}
+                />
+              ))}
+              {magnetBatteries.map((b, i) => (
+                <ChargeRow
+                  key={`m${i}`}
+                  icon="/magnet_drone_icon.png"
+                  name={
+                    magnetBatteries.length > 1
+                      ? `Магнит-дрон ${i + 1}`
+                      : 'Магнит-дрон'
+                  }
+                  battery={b}
+                />
+              ))}
             </>
           ) : (
             <>

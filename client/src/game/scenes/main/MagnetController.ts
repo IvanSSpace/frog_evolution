@@ -105,6 +105,13 @@ class MagnetInstance {
   private pair: [FrogData, FrogData] | null = null
   private mergesDone = 0
   private mergesTarget = 1
+  // Рассинхрон: per-дрон множитель длительности отдыха (одни ленивее).
+  private restBias = Phaser.Math.FloatBetween(0.6, 1.7)
+
+  // Случайная пауза отдыха с учётом bias дрона.
+  private restDelay(): number {
+    return Math.round(Phaser.Math.Between(2000, 4000) * this.restBias)
+  }
 
   constructor(scene: MainScene, merge: MergeController, index: number) {
     this.scene = scene
@@ -182,6 +189,9 @@ class MagnetInstance {
     this.baselineY = cy
     // Десинк парения: рандомная стартовая фаза bob — дроны качаются вразнобой.
     this.bobPhase = Math.random() * BOB_PERIOD_MS
+    // Рассинхрон работы: отрицательный стартовый кулдаун — магниты выходят на
+    // работу не одновременно.
+    this.workAccum = -Phaser.Math.Between(0, 6000)
 
     // Перетаскивание (как goo_collector): берём в любой точке, тянем.
     this.sprite.setInteractive({ useHandCursor: true })
@@ -596,7 +606,7 @@ class MagnetInstance {
     this.workAccum = 0
     if (!this.isHopping) {
       this.restTimer = this.scene.time.delayedCall(
-        Phaser.Math.Between(2000, 4000),
+        this.restDelay(),
         () => {
           this.restTimer = null
           if (this.sprite) this.startHop()
@@ -608,7 +618,7 @@ class MagnetInstance {
   private scheduleNextHop(): void {
     if (!this.sprite) return
     this.restTimer = this.scene.time.delayedCall(
-      Phaser.Math.Between(2000, 4000),
+      this.restDelay(),
       () => {
         this.restTimer = null
         if (this.sprite) this.startHop()
@@ -711,6 +721,8 @@ export class MagnetController {
   private scene: MainScene
   private merge: MergeController
   private instances: MagnetInstance[] = []
+  // Throttle синка зарядов в store (для модалки).
+  private syncMs = 0
 
   constructor(scene: MainScene, merge: MergeController) {
     this.scene = scene
@@ -744,16 +756,19 @@ export class MagnetController {
   tick(level: number, delta: number): void {
     this.sync(this.targetCount())
     for (const m of this.instances) m.tick(level, delta)
-    // В store кладём минимальный заряд активных дронов (для модалки).
-    const bats = this.instances.map((m) => m.getBattery())
-    useGameStore
-      .getState()
-      .setMagnetBattery(bats.length ? Math.round(Math.min(...bats)) : -1)
+    // В store кладём заряд каждого дрона (для модалки). Throttle ~500мс.
+    this.syncMs += delta
+    if (this.syncMs >= 500) {
+      this.syncMs = 0
+      useGameStore
+        .getState()
+        .setMagnetBatteries(this.instances.map((m) => Math.round(m.getBattery())))
+    }
   }
 
   clearAll(): void {
     for (const m of this.instances) m.despawn()
     this.instances = []
-    useGameStore.getState().setMagnetBattery(-1)
+    useGameStore.getState().setMagnetBatteries([])
   }
 }

@@ -85,6 +85,13 @@ class DroneInstance {
   private tooltipTimer: Phaser.Time.TimerEvent | null = null
   private chargeBg: Phaser.GameObjects.Rectangle | null = null
   private chargeFill: Phaser.GameObjects.Rectangle | null = null
+  // Рассинхрон: per-дрон множитель длительности отдыха (одни ленивее).
+  private restBias = Phaser.Math.FloatBetween(0.6, 1.7)
+
+  // Случайная пауза отдыха с учётом bias дрона.
+  private restDelay(): number {
+    return Math.round(Phaser.Math.Between(2000, 4000) * this.restBias)
+  }
 
   constructor(scene: MainScene, box: BoxController, index: number, claimed: Set<BoxData>) {
     this.scene = scene
@@ -137,6 +144,9 @@ class DroneInstance {
     this.baselineY = cy
     // Десинк парения: рандомная стартовая фаза bob — дроны качаются вразнобой.
     this.bobPhase = Math.random() * BOB_PERIOD_MS
+    // Рассинхрон работы: отрицательный стартовый cooldown — дроны выходят на
+    // сбор не одновременно (одни раньше, другие позже).
+    this.cooldownAccum = -Phaser.Math.Between(0, 6000)
 
     this.sprite.setInteractive({ useHandCursor: true })
     this.scene.input.setDraggable(this.sprite)
@@ -447,7 +457,7 @@ class DroneInstance {
 
   private scheduleNextHop(): void {
     if (!this.sprite) return
-    this.restTimer = this.scene.time.delayedCall(Phaser.Math.Between(2000, 4000), () => {
+    this.restTimer = this.scene.time.delayedCall(this.restDelay(), () => {
       this.restTimer = null
       if (this.sprite) this.startHop()
     })
@@ -513,7 +523,7 @@ class DroneInstance {
               this.cooldownAccum = 0
               this.mode = 'WANDER'
               this.setCollectTarget(null)
-              this.restTimer = this.scene.time.delayedCall(Phaser.Math.Between(2000, 4000), () => {
+              this.restTimer = this.scene.time.delayedCall(this.restDelay(), () => {
                 this.restTimer = null
                 if (this.sprite) this.startHop()
               })
@@ -564,6 +574,8 @@ export class DroneController {
   private instances: DroneInstance[] = []
   // Один бокс = один дрон. Общий набор для всех инстансов.
   private claimed: Set<BoxData> = new Set()
+  // Throttle синка зарядов в store (для модалки).
+  private syncMs = 0
 
   constructor(scene: MainScene, box: BoxController) {
     this.scene = scene
@@ -600,18 +612,21 @@ export class DroneController {
       if (!this.scene.boxes.includes(b) || !b.img.active) this.claimed.delete(b)
     }
     for (const d of this.instances) d.tick(level, delta)
-    // В store кладём минимальный заряд активных дронов (для модалки).
-    const bats = this.instances.map((d) => d.getBattery())
-    useGameStore
-      .getState()
-      .setDroneBattery(bats.length ? Math.round(Math.min(...bats)) : -1)
+    // В store кладём заряд каждого дрона (для модалки). Throttle ~500мс.
+    this.syncMs += delta
+    if (this.syncMs >= 500) {
+      this.syncMs = 0
+      useGameStore
+        .getState()
+        .setDroneBatteries(this.instances.map((d) => Math.round(d.getBattery())))
+    }
   }
 
   despawn(): void {
     for (const d of this.instances) d.despawn()
     this.instances = []
     this.claimed.clear()
-    useGameStore.getState().setDroneBattery(-1)
+    useGameStore.getState().setDroneBatteries([])
   }
 
   getSprites(): Phaser.GameObjects.Image[] {
