@@ -62,6 +62,8 @@ export type UpgradeKey =
   | 'rareBoxSpeed'
   | 'ships'
   | 'autoCollect'
+  | 'droneCount'
+  | 'magnetCount'
 
 interface UpgradeCfg {
   maxLevel: number
@@ -112,6 +114,16 @@ export const UPGRADE_CONFIG: Readonly<Record<UpgradeKey, UpgradeCfg>> = {
   autoCollect: {
     maxLevel: 6,
     costs: [300_000, 1_500_000, 8_000_000, 60_000_000, 500_000_000, 4_000_000_000],
+  },
+  // Доп. дроны-сборщики (level 0=1 дрон … 3=4 дрона). 3 покупки.
+  droneCount: {
+    maxLevel: 3,
+    costs: [10_000_000, 120_000_000, 1_500_000_000],
+  },
+  // Доп. магнит-дроны.
+  magnetCount: {
+    maxLevel: 3,
+    costs: [15_000_000, 180_000_000, 2_000_000_000],
   },
 }
 
