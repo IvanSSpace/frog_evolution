@@ -411,6 +411,43 @@ export class MainScene extends Phaser.Scene {
     this.input.on('pointermove', this.onSwipePointerMove, this)
     this.input.on('pointerup', this.onSwipePointerUp, this)
 
+    // DEV coord-picker: window.__coords() вкл/выкл. Клик по полю печатает
+    // world x/y + доли (xFrac=x/width; yFracZone=(y-height)/height для зоны
+    // строений) — для подгонки waypoints дрон-маршрута.
+    {
+      const w = window as unknown as { __coords?: () => void; __coordsOn?: boolean }
+      w.__coords = () => {
+        w.__coordsOn = !w.__coordsOn
+        // eslint-disable-next-line no-console
+        console.log(`[coords] ${w.__coordsOn ? 'ON — кликай по полю' : 'OFF'}`)
+      }
+      let coordText: Phaser.GameObjects.Text | null = null
+      this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+        if (!w.__coordsOn) return
+        const { width, height } = this.scale
+        const x = p.worldX
+        const y = p.worldY
+        const xFrac = (x / width).toFixed(3)
+        const yFracZone = ((y - height) / height).toFixed(3)
+        const msg = `x=${Math.round(x)} y=${Math.round(y)}\nxFrac=${xFrac}\nyFracZone=${yFracZone}`
+        // eslint-disable-next-line no-console
+        console.log(`[coords] ${msg.replace(/\n/g, ' | ')}`)
+        coordText?.destroy()
+        coordText = this.add
+          .text(x, y, msg, {
+            fontFamily: 'ui-monospace, monospace',
+            fontSize: `${Math.round(12 * DPR)}px`,
+            color: '#fde047',
+            backgroundColor: 'rgba(0,0,0,0.85)',
+            padding: { x: 5 * DPR, y: 3 * DPR },
+            align: 'center',
+          })
+          .setOrigin(0.5, 1.2)
+          .setDepth(999999)
+        this.time.delayedCall(4000, () => coordText?.destroy())
+      })
+    }
+
     // Phase 12 dev: expose scene для smoke-helpers (window.__listFrogIds()).
     // Phase 23 Plan 23-05: expose в production тоже — OnboardingController (React)
     // нуждается в scene reference чтобы spawn'ить Phaser ConfettiBurst при
