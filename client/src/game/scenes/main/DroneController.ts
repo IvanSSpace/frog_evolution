@@ -94,8 +94,9 @@ export class DroneController {
   private lastDragX = 0
 
   // 2026-05-30: заряд дрона (0..100). Тратится со временем работы; при 0 дрон
-  // улетит на базу заряжаться (RTB — отдельный шаг). Тултип по тапу показывает %.
-  private battery = 100
+  // улетит на базу заряжаться. Тултип по тапу показывает %.
+  // TEST: стартовый 2% — быстрый RTB для проверки. Вернуть на 100.
+  private battery = 2
   private tooltip: Phaser.GameObjects.Text | null = null
   private tooltipTimer: Phaser.Time.TimerEvent | null = null
 
