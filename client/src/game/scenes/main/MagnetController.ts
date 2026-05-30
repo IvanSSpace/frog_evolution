@@ -393,6 +393,9 @@ export class MagnetController {
         const branch = Math.random() < 0.5 ? BRANCH_LEFT : BRANCH_RIGHT
         this.flyWaypoints([toW(ENTRY), toW(RISE), ...branch.map(toW)], () => {
           this.targetTilt = 0
+          // Обновляем baselineY на финальную точку — иначе bob в WANDER
+          // прыгнул бы дрон к устаревшему baselineY (телепорт).
+          if (this.sprite) this.baselineY = this.sprite.y
           this.mode = 'WANDER'
           this.workAccum = 0
           this.scheduleNextHop()

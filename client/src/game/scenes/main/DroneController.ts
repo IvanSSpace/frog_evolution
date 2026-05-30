@@ -425,6 +425,9 @@ export class DroneController {
         const waypoints = [toW(ENTRY), toW(RISE), ...branch.map(toW)]
         this.flyWaypoints(waypoints, () => {
           this.targetTilt = 0
+          // baselineY на финальную точку — иначе bob в WANDER телепортирует
+          // дрон к устаревшему baselineY.
+          if (this.sprite) this.baselineY = this.sprite.y
           this.mode = 'WANDER'
           this.cooldownAccum = 0
           this.scheduleNextHop()
