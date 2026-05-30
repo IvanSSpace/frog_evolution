@@ -27,7 +27,7 @@ import {
   getMagnetDuration,
   getMagnetMergesPerCycle,
 } from '../../../store/gameStore'
-import { MERGE_RADIUS, type MagnetData } from './types'
+import { MERGE_RADIUS, BOX_DISPLAY_SIZE, DPR, type MagnetData } from './types'
 import type { MainScene } from '../MainScene'
 import type { MergeController } from './MergeController'
 
@@ -106,17 +106,23 @@ export class MagnetController {
     const y = (a.container.y + b.container.y) / 2
     const duration = getMagnetDuration(level)
 
-    // Магнит невидимый: на поле физически ничего не показываем — только
-    // логическая точка притяжения. 2 лягушки тянутся друг к другу и мерджатся
-    // в центре. (Раньше тут спавнился видимый спрайт с pop-in + бесконечной
-    // пульсацией — он и давал «огромную анимацию» на экране.)
+    // 2026-05-30: магнит-дрон (magnet_drone.png) — видимый спрайт, парит между
+    // парой лягушек и соединяет их. Депт высокий (поверх лягушек).
     const container = scene.add.container(x, y)
     container.setDepth(99000)
-    container.setVisible(false)
 
-    const emoji = scene.add.image(0, 0, 'magnet')
-    emoji.setVisible(false)
+    const emoji = scene.add.image(0, 0, 'magnet_drone')
+    emoji.setScale((BOX_DISPLAY_SIZE * 0.7) / emoji.width)
     container.add(emoji)
+    // Лёгкое парение вверх-вниз.
+    scene.tweens.add({
+      targets: emoji,
+      y: -4 * DPR,
+      duration: 700,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: -1,
+    })
 
     const magnet: MagnetData = {
       container,
