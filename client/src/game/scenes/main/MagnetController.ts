@@ -46,8 +46,15 @@ const PULL = 0.08
 const DRONE_SCALE_MULT = 0.7
 // Полный заряд (100%) тратится за 8 минут активной работы.
 const BATTERY_FULL_MS = 480000
+// Подзарядка на базе (мс).
+const RECHARGE_MS = 60000
+// Раскладка зданий (SYNC с BuildingsController).
+const MAIN_X_FRAC = 0.5
+const MAIN_Y_FRAC = 0.34
+const DRONER_X_FRAC = 0.24
+const DRONER_Y_FRAC = 0.82
 
-type MagnetMode = 'WANDER' | 'WORK' | 'PULLING'
+type MagnetMode = 'WANDER' | 'WORK' | 'PULLING' | 'RTB' | 'CHARGING' | 'EMERGING'
 
 export class MagnetController {
   private scene: MainScene
@@ -68,7 +75,8 @@ export class MagnetController {
   private prePauseTimer: Phaser.Time.TimerEvent | null = null
 
   // 2026-05-30: заряд + тултип по тапу (как goo_collector).
-  private battery = 100
+  // TEST: стартовый 2% — быстрый RTB. Вернуть на 100.
+  private battery = 2
   private tooltip: Phaser.GameObjects.Text | null = null
   private tooltipTimer: Phaser.Time.TimerEvent | null = null
 
@@ -224,13 +232,139 @@ export class MagnetController {
     this.tooltip.setText(`🔋 ${Math.round(this.battery)}%`)
   }
 
+  // ─── RTB: разрядился → на базу (droner) заряжаться. Прямые повороты. ───
+  private startRTB(): void {
+    if (!this.sprite) return
+    this.mode = 'RTB'
+    this.hideTooltip()
+    if (this.restTimer) { this.restTimer.remove(false); this.restTimer = null }
+    if (this.prePauseTimer) { this.prePauseTimer.remove(false); this.prePauseTimer = null }
+    this.scene.tweens.killTweensOf(this.sprite)
+    this.isHopping = false
+    // Освобождаем пару если была в работе.
+    if (this.pair) {
+      for (const f of this.pair) {
+        if (this.scene.frogs.includes(f)) f.isAttracted = false
+      }
+      this.pair = null
+    }
+
+    const { width, height } = this.scene.scale
+    const side = Math.random() < 0.5 ? -1 : 1
+    const mainX = width * MAIN_X_FRAC
+    const mainY = height + height * MAIN_Y_FRAC
+    const dronerX = width * DRONER_X_FRAC
+    const dronerY = height + height * DRONER_Y_FRAC
+    this.flyWaypoints(
+      [
+        { x: mainX, y: height - FIELD_PAD_Y_BOTTOM },
+        { x: mainX, y: height + height * 0.12 },
+        { x: mainX + side * width * 0.3, y: mainY },
+        { x: dronerX, y: dronerY },
+      ],
+      () => this.enterDroner(),
+    )
+  }
+
+  private flyWaypoints(
+    pts: { x: number; y: number }[],
+    onDone: () => void,
+  ): void {
+    if (!this.sprite || pts.length === 0) {
+      onDone()
+      return
+    }
+    const [next, ...rest] = pts
+    const sprite = this.sprite
+    const dx = next.x - sprite.x
+    this.targetTilt = dx !== 0 ? Math.sign(dx) * MAX_TILT : 0
+    if (dx !== 0) sprite.scaleX = (dx > 0 ? -1 : 1) * this.baseScale
+    const dist = Phaser.Math.Distance.Between(sprite.x, sprite.y, next.x, next.y)
+    this.scene.tweens.add({
+      targets: sprite,
+      x: next.x,
+      y: next.y,
+      duration: Phaser.Math.Clamp((dist / FLY_SPEED) * 1000, FLY_MIN_MS, 4000),
+      ease: 'Linear',
+      onComplete: () => {
+        if (this.sprite) this.flyWaypoints(rest, onDone)
+      },
+    })
+  }
+
+  private enterDroner(): void {
+    if (!this.sprite) return
+    this.targetTilt = 0
+    this.sprite.rotation = 0
+    this.scene.tweens.add({
+      targets: [this.sprite, this.shadow].filter(Boolean),
+      alpha: 0,
+      scale: this.baseScale * 0.6,
+      duration: 350,
+      ease: 'Quad.easeIn',
+      onComplete: () => {
+        if (this.sprite) this.sprite.setVisible(false)
+        if (this.shadow) this.shadow.setVisible(false)
+        this.mode = 'CHARGING'
+      },
+    })
+  }
+
+  private startEmerge(): void {
+    if (!this.sprite) return
+    this.mode = 'EMERGING'
+    const { width, height } = this.scene.scale
+    const dronerX = width * DRONER_X_FRAC
+    const dronerY = height + height * DRONER_Y_FRAC
+    this.sprite.setPosition(dronerX, dronerY)
+    this.sprite.setAlpha(0).setScale(this.baseScale * 0.6).setVisible(true)
+    if (this.shadow) {
+      this.shadow.setPosition(dronerX + 4 * DPR, dronerY + 26 * DPR)
+      this.shadow.setAlpha(0).setScale(this.baseScale * 0.6).setVisible(true)
+      this.scene.tweens.add({
+        targets: this.shadow,
+        alpha: 0.3,
+        scale: this.baseScale,
+        duration: 350,
+        ease: 'Back.easeOut',
+      })
+    }
+    this.scene.tweens.add({
+      targets: this.sprite,
+      alpha: 1,
+      scale: this.baseScale,
+      duration: 350,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        if (!this.sprite) return
+        const toX = Phaser.Math.Between(FIELD_PAD_X + 20 * DPR, width - FIELD_PAD_X - 20 * DPR)
+        const toY = Phaser.Math.Between(FIELD_PAD_Y + 20 * DPR, height - FIELD_PAD_Y_BOTTOM - 20 * DPR)
+        this.flyWaypoints(
+          [{ x: dronerX, y: height + height * 0.12 }, { x: toX, y: toY }],
+          () => {
+            this.targetTilt = 0
+            this.mode = 'WANDER'
+            this.workAccum = 0
+            this.scheduleNextHop()
+          },
+        )
+      },
+    })
+  }
+
   tick(level: number, delta: number): void {
     if (!this.sprite) this.spawn()
     const sprite = this.sprite!
 
-    // Разряд батареи во время работы (не при перетаскивании).
-    if (!this.isDragging) {
+    // Разряд только в активных режимах.
+    const active = this.mode === 'WANDER' || this.mode === 'WORK' || this.mode === 'PULLING'
+    if (!this.isDragging && active) {
       this.battery = Math.max(0, this.battery - (100 * delta) / BATTERY_FULL_MS)
+      if (this.battery <= 0) this.startRTB()
+    }
+    if (this.mode === 'CHARGING') {
+      this.battery = Math.min(100, this.battery + (100 * delta) / RECHARGE_MS)
+      if (this.battery >= 100) this.startEmerge()
     }
     if (this.tooltip) this.positionTooltip()
 
@@ -250,6 +384,9 @@ export class MagnetController {
       this.targetTilt = Phaser.Math.Linear(this.targetTilt, 0, TILT_LERP)
       return
     }
+
+    // RTB/CHARGING/EMERGING — движение в tween-цепочке, обычную логику скип.
+    if (!active) return
 
     const spawnInterval = getMagnetSpawnInterval(level)
     this.workAccum = Math.min(this.workAccum + delta, spawnInterval * 2)

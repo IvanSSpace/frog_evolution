@@ -310,7 +310,7 @@ export class DroneController {
       x: next.x,
       y: next.y,
       duration: Phaser.Math.Clamp((dist / FLY_SPEED) * 1000, FLY_MIN_MS, 4000),
-      ease: 'Sine.easeInOut',
+      ease: 'Linear', // прямые сегменты, резкие повороты на waypoints
       onComplete: () => {
         if (!this.sprite) return
         this.flyWaypoints(rest, onDone)

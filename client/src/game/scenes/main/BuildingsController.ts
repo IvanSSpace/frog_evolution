@@ -66,8 +66,10 @@ export class BuildingsController {
       const baseScale = (width * b.widthFrac) / sp.width
       sp.setScale(baseScale)
       sp.setPosition(width * b.xFrac, zoneTop + zoneH * b.yFrac)
-      // Iso-сортировка между зданиями: ниже по y = ближе к зрителю.
-      sp.setDepth(b.yFrac * 100)
+      // Iso-сортировка между зданиями: ниже по y = ближе к зрителю. main —
+      // поверх дронов (depth > drone 96000), чтобы дрон проходил ЗА зданием
+      // при обходе на RTB-маршруте.
+      sp.setDepth(b.key === 'bld_main' ? 200000 : b.yFrac * 100)
       // Тап → squash-jiggle (origin низ → сжатие к земле, как «толкнули»).
       sp.setInteractive({ useHandCursor: true })
       sp.on('pointerdown', () => {
