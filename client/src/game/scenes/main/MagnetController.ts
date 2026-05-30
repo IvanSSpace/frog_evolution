@@ -51,8 +51,8 @@ const RECHARGE_MS = 60000
 // Раскладка зданий (SYNC с BuildingsController).
 const MAIN_X_FRAC = 0.5
 const MAIN_Y_FRAC = 0.34
-const DRONER_X_FRAC = 0.34
-const DRONER_Y_FRAC = 0.68
+const DRONER_X_FRAC = 0.28
+const DRONER_Y_FRAC = 0.76
 
 type MagnetMode = 'WANDER' | 'WORK' | 'PULLING' | 'RTB' | 'CHARGING' | 'EMERGING'
 
@@ -339,15 +339,13 @@ export class MagnetController {
         if (!this.sprite) return
         const toX = Phaser.Math.Between(FIELD_PAD_X + 20 * DPR, width - FIELD_PAD_X - 20 * DPR)
         const toY = Phaser.Math.Between(FIELD_PAD_Y + 20 * DPR, height - FIELD_PAD_Y_BOTTOM - 20 * DPR)
-        this.flyWaypoints(
-          [{ x: dronerX, y: height + height * 0.12 }, { x: toX, y: toY }],
-          () => {
-            this.targetTilt = 0
-            this.mode = 'WANDER'
-            this.workAccum = 0
-            this.scheduleNextHop()
-          },
-        )
+        // Прямой полёт droner→поле (без waypoint на границе → нет «отдёрга»).
+        this.flyWaypoints([{ x: toX, y: toY }], () => {
+          this.targetTilt = 0
+          this.mode = 'WANDER'
+          this.workAccum = 0
+          this.scheduleNextHop()
+        })
       },
     })
   }

@@ -50,8 +50,8 @@ const RECHARGE_MS = 60000
 // Раскладка зданий (SYNC с BuildingsController): main центр, droner слева.
 const MAIN_X_FRAC = 0.5
 const MAIN_Y_FRAC = 0.34
-const DRONER_X_FRAC = 0.34
-const DRONER_Y_FRAC = 0.68
+const DRONER_X_FRAC = 0.28
+const DRONER_Y_FRAC = 0.76
 
 export class DroneController {
   private scene: MainScene
@@ -371,15 +371,14 @@ export class DroneController {
         // Поднимаемся вверх на поле лягушек к случайной точке.
         const toX = Phaser.Math.Between(FIELD_PAD_X + 20 * DPR, width - FIELD_PAD_X - 20 * DPR)
         const toY = Phaser.Math.Between(FIELD_PAD_Y + 20 * DPR, height - FIELD_PAD_Y_BOTTOM - 20 * DPR)
-        this.flyWaypoints(
-          [{ x: dronerX, y: height + height * 0.12 }, { x: toX, y: toY }],
-          () => {
-            this.targetTilt = 0
-            this.mode = 'WANDER'
-            this.cooldownAccum = 0
-            this.scheduleNextHop()
-          },
-        )
+        // 2026-05-30: прямой полёт droner→поле одним сегментом. Раньше был
+        // промежуточный waypoint на границе зон → резкий flip/наклон = «отдёрг».
+        this.flyWaypoints([{ x: toX, y: toY }], () => {
+          this.targetTilt = 0
+          this.mode = 'WANDER'
+          this.cooldownAccum = 0
+          this.scheduleNextHop()
+        })
       },
     })
   }
