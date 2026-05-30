@@ -94,6 +94,9 @@ class MagnetInstance {
 
   // 2026-05-30: заряд + тултип по тапу (как goo_collector).
   private battery = 100
+  // Рассинхрон зарядки: per-дрон множитель скорости разряда (0.8..1.2). Вместе
+  // со случайным стартовым зарядом даёт устойчивый десинк RTB/зарядки.
+  private batteryDrainMult = Phaser.Math.FloatBetween(0.8, 1.2)
   private tooltip: Phaser.GameObjects.Text | null = null
   private tooltipTimer: Phaser.Time.TimerEvent | null = null
   private chargeBg: Phaser.GameObjects.Rectangle | null = null
@@ -192,6 +195,8 @@ class MagnetInstance {
     // Рассинхрон работы: отрицательный стартовый кулдаун — магниты выходят на
     // работу не одновременно.
     this.workAccum = -Phaser.Math.Between(0, 6000)
+    // Рассинхрон зарядки: случайный стартовый заряд — разряжаются вразнобой.
+    this.battery = Phaser.Math.Between(45, 100)
 
     // Перетаскивание (как goo_collector): берём в любой точке, тянем.
     this.sprite.setInteractive({ useHandCursor: true })
@@ -442,7 +447,7 @@ class MagnetInstance {
     // Разряд только в активных режимах.
     const active = this.mode === 'WANDER' || this.mode === 'WORK' || this.mode === 'PULLING'
     if (!this.isDragging && active) {
-      this.battery = Math.max(0, this.battery - (100 * delta) / BATTERY_FULL_MS)
+      this.battery = Math.max(0, this.battery - ((100 * delta) / BATTERY_FULL_MS) * this.batteryDrainMult)
       if (this.battery <= 0) this.startRTB()
     }
     if (this.mode === 'CHARGING') {

@@ -81,6 +81,10 @@ class DroneInstance {
   private isDragging = false
   private lastDragX = 0
   private battery = 100
+  // Рассинхрон зарядки: per-дрон множитель скорости разряда (0.8..1.2). Вместе
+  // со случайным стартовым зарядом даёт устойчивый десинк RTB/зарядки (после
+  // полной зарядки все = 100, но разный дрейн снова разводит их по фазе).
+  private batteryDrainMult = Phaser.Math.FloatBetween(0.8, 1.2)
   private tooltip: Phaser.GameObjects.Text | null = null
   private tooltipTimer: Phaser.Time.TimerEvent | null = null
   private chargeBg: Phaser.GameObjects.Rectangle | null = null
@@ -147,6 +151,8 @@ class DroneInstance {
     // Рассинхрон работы: отрицательный стартовый cooldown — дроны выходят на
     // сбор не одновременно (одни раньше, другие позже).
     this.cooldownAccum = -Phaser.Math.Between(0, 6000)
+    // Рассинхрон зарядки: случайный стартовый заряд — разряжаются вразнобой.
+    this.battery = Phaser.Math.Between(45, 100)
 
     this.sprite.setInteractive({ useHandCursor: true })
     this.scene.input.setDraggable(this.sprite)
@@ -382,7 +388,7 @@ class DroneInstance {
     const sprite = this.sprite!
 
     if (!this.isDragging && (this.mode === 'WANDER' || this.mode === 'COLLECT')) {
-      this.battery = Math.max(0, this.battery - (100 * delta) / BATTERY_FULL_MS)
+      this.battery = Math.max(0, this.battery - ((100 * delta) / BATTERY_FULL_MS) * this.batteryDrainMult)
       if (this.battery <= 0) this.startRTB()
     }
     if (this.mode === 'CHARGING') {
