@@ -47,10 +47,12 @@ type DroneMode = 'WANDER' | 'COLLECT' | 'RTB' | 'CHARGING' | 'EMERGING'
 
 // Подзарядка на базе (мс) — за это время battery 0 → 100.
 const RECHARGE_MS = 60000
-// Дверь домика дронов (droner) — точка появления/исчезновения.
-const DRONER_X_FRAC = 0.536
-const DRONER_Y_FRAC = 0.767
+// Дверь домика дронов (droner) — точка появления/исчезновения (настроена ранее).
+const DRONER_X_FRAC = 0.38
+const DRONER_Y_FRAC = 0.74
 // Маршрут (frac: xf от ширины, yf от высоты зоны строений; yf<0 = поле).
+// ENTRY — первая точка у домика, затем подъём, затем развилка.
+const ENTRY = { xf: 0.536, yf: 0.767 }
 // Дверь → подъём → развилка (50% лево/право) → выход на поле.
 const RISE = { xf: 0.534, yf: 0.422 }
 const BRANCH_LEFT = [
@@ -296,6 +298,7 @@ export class DroneController {
     const waypoints = [
       ...[...branch].reverse().map(toW),
       toW(RISE),
+      toW(ENTRY),
       toW({ xf: DRONER_X_FRAC, yf: DRONER_Y_FRAC }),
     ]
     this.flyWaypoints(waypoints, () => this.enterDroner())
@@ -381,7 +384,7 @@ export class DroneController {
           y: height + f.yf * height,
         })
         const branch = Math.random() < 0.5 ? BRANCH_LEFT : BRANCH_RIGHT
-        const waypoints = [toW(RISE), ...branch.map(toW)]
+        const waypoints = [toW(ENTRY), toW(RISE), ...branch.map(toW)]
         this.flyWaypoints(waypoints, () => {
           this.targetTilt = 0
           this.mode = 'WANDER'

@@ -48,10 +48,12 @@ const DRONE_SCALE_MULT = 0.7
 const BATTERY_FULL_MS = 480000
 // Подзарядка на базе (мс).
 const RECHARGE_MS = 60000
-// Дверь домика дронов (droner) — точка появления/исчезновения.
-const DRONER_X_FRAC = 0.536
-const DRONER_Y_FRAC = 0.767
+// Дверь домика дронов (droner) — точка появления/исчезновения (настроена ранее).
+const DRONER_X_FRAC = 0.38
+const DRONER_Y_FRAC = 0.74
 // Маршрут (frac: xf от ширины, yf от высоты зоны строений; yf<0 = поле).
+// ENTRY — первая точка у домика, затем подъём, затем развилка.
+const ENTRY = { xf: 0.536, yf: 0.767 }
 const RISE = { xf: 0.534, yf: 0.422 }
 const BRANCH_LEFT = [
   { xf: 0.48, yf: 0.066 },
@@ -269,6 +271,7 @@ export class MagnetController {
       [
         ...[...branch].reverse().map(toW),
         toW(RISE),
+        toW(ENTRY),
         toW({ xf: DRONER_X_FRAC, yf: DRONER_Y_FRAC }),
       ],
       () => this.enterDroner(),
@@ -352,7 +355,7 @@ export class MagnetController {
           y: height + f.yf * height,
         })
         const branch = Math.random() < 0.5 ? BRANCH_LEFT : BRANCH_RIGHT
-        this.flyWaypoints([toW(RISE), ...branch.map(toW)], () => {
+        this.flyWaypoints([toW(ENTRY), toW(RISE), ...branch.map(toW)], () => {
           this.targetTilt = 0
           this.mode = 'WANDER'
           this.workAccum = 0
