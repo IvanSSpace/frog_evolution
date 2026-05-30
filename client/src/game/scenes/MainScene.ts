@@ -791,10 +791,14 @@ export class MainScene extends Phaser.Scene {
     const magnetKey = magnetKeyForLocation(store.currentLocation)
     const magnetLevel = store.upgrades[magnetKey]
     const serumPaused = store.serumDragActive
-    if (!serumPaused && magnetLevel > 0 && store.magnetEnabled) {
-      this.magnet.tick(magnetLevel, delta)
+    if (magnetLevel > 0 && store.magnetEnabled) {
+      // Куплен и включён: tick (движение), при serum-pause — замирание (дрон
+      // остаётся на поле, не despawn — иначе мигал бы).
+      if (!serumPaused) this.magnet.tick(magnetLevel, delta)
+      else this.magnet.resetSpawnTimer()
     } else {
-      this.magnet.resetSpawnTimer()
+      // Не куплен / выключен тумблером → убрать дрон с поля.
+      this.magnet.clearAll()
     }
 
     // Дрон автосбора — движение/сбор. Lifecycle (spawn/despawn по локации)

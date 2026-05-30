@@ -1,292 +1,293 @@
-// Phase 21-04 (Wave 4): Magnet controller, extracted from MainScene.ts.
+// Phase 21-04: Magnet controller.
 //
-// Owns: список активных магнитов + spawn-таймер. Магнит — эфемерный
-// gameobject (text-emoji в контейнере) который тянет ближайшую пару
-// одноуровневых лягушек к своей точке и мерджит их при сближении.
-// На цикле выполняет N мерджей (зависит от уровня апгрейда), затем
-// исчезает; либо expires по таймеру.
+// 2026-05-30: магнит — persistent летающий дрон (magnet_drone.png), как
+// goo_collector. Постоянно бродит по полю (WANDER), периодически (раз в
+// spawnInterval) находит ближайшую пару одноуровневых лягушек, летит к ним
+// (WORK), стягивает и мерджит. Затем возвращается к блужданию.
 //
 // Public API:
-//   - magnets: read-only ссылка на массив (для onLocationChanged cleanup)
-//   - resetSpawnTimer(): сбросить magnetSpawnMs (после transition / clearField)
-//   - tick(level, delta): вызывается из MainScene.update() при условии
-//     что serum-paused=false и магнит включён в локации/апгрейдах. Сам
-//     решает пора ли спавнить новый магнит (если ещё нет ни одного и
-//     есть валидная пара) и шевелит активные.
-//   - clearAll(): destroy + очистка списка (используется при transition snap-end и
-//     перед началом transition — магниты эфемерны).
-//
-// Coupling: ссылка на MainScene + MergeController. Использует
-// scene.frogs (read для isAttracted reset), scene.tweens, scene.add,
-// scene.time. Вызывает merge.findClosestSameLevelPair / merge.performMerge /
-// merge.hasMergeablePair.
+//   - tick(level, delta): per-frame (caller проверил magnetEnabled / болото /
+//     !serumPaused). Спавнит дрон при первом вызове.
+//   - resetSpawnTimer(): сброс рабочего кулдауна (после transition/serum).
+//   - clearAll(): despawn дрона (при transition / уходе с локации).
 
 import Phaser from 'phaser'
 import {
   getMagnetSpawnInterval,
-  getMagnetDuration,
   getMagnetMergesPerCycle,
 } from '../../../store/gameStore'
-import { MERGE_RADIUS, BOX_DISPLAY_SIZE, DPR, type MagnetData } from './types'
+import {
+  MERGE_RADIUS,
+  BOX_DISPLAY_SIZE,
+  DASH_RADIUS,
+  DPR,
+  FIELD_PAD_X,
+  FIELD_PAD_Y,
+  FIELD_PAD_Y_BOTTOM,
+  type FrogData,
+} from './types'
 import type { MainScene } from '../MainScene'
 import type { MergeController } from './MergeController'
+
+// Максимальный наклон по ходу (рад) + сглаживание.
+const MAX_TILT = 0.13
+const TILT_LERP = 0.14
+// Скорость движения к цели (lerp-фактор за кадр).
+const CHASE_LERP = 0.08
+// Парение в покое.
+const BOB_AMP = 4 * DPR
+const BOB_PERIOD_MS = 2800
+// Притяжение лягушек к дрону (lerp за кадр).
+const PULL = 0.07
+// Депт — поверх лягушек/боксов.
+const MAGNET_DEPTH = 96000
+
+type MagnetMode = 'WANDER' | 'WORK'
 
 export class MagnetController {
   private scene: MainScene
   private merge: MergeController
 
-  // Phase 21-04: магнит-state теперь живёт здесь, а не в scene-полях.
-  private _magnets: MagnetData[] = []
-  private spawnMs = 0
+  private sprite: Phaser.GameObjects.Image | null = null
+  private shadow: Phaser.GameObjects.Image | null = null
+  private baseScale = 1
+
+  private mode: MagnetMode = 'WANDER'
+  private targetX = 0
+  private targetY = 0
+  private prevX = 0
+  private targetTilt = 0
+  private bobPhase = 0
+  private baselineY = 0
+
+  // Рабочий кулдаун (мс) — раз в spawnInterval дрон идёт мерджить пару.
+  private workAccum = 0
+  // Пара в работе.
+  private pair: [FrogData, FrogData] | null = null
+  private mergesDone = 0
+  private mergesTarget = 1
+  // Таймер смены wander-цели.
+  private wanderTimer = 0
 
   constructor(scene: MainScene, merge: MergeController) {
     this.scene = scene
     this.merge = merge
   }
 
-  /** Read-only ссылка для onLocationChanged (уничтожает магниты до transition). */
-  get magnets(): readonly MagnetData[] {
-    return this._magnets
+  // Совместимость: старый getter (никто не читает содержимое, но оставлен).
+  get magnets(): readonly never[] {
+    return []
   }
 
-  /** Сбросить spawn-таймер — в clearField + после transition snap-end. */
   resetSpawnTimer(): void {
-    this.spawnMs = 0
+    this.workAccum = 0
   }
 
-  /**
-   * Уничтожить все активные магниты немедленно (без fade-out).
-   * Используется при clearField и в начале location-transition.
-   */
   clearAll(): void {
-    for (const m of [...this._magnets]) {
-      this.scene.tweens.killTweensOf(m.emoji)
-      this.scene.tweens.killTweensOf(m.container)
-      m.container.destroy(true)
+    const scene = this.scene
+    if (this.sprite) {
+      scene.tweens.killTweensOf(this.sprite)
+      this.sprite.destroy()
+      this.sprite = null
     }
-    this._magnets = []
-    // Позиция дрона невалидна между локациями — следующий спавн стартует свежо.
-    this.lastDroneX = null
-    this.lastDroneY = null
+    if (this.shadow) {
+      scene.tweens.killTweensOf(this.shadow)
+      this.shadow.destroy()
+      this.shadow = null
+    }
+    this.mode = 'WANDER'
+    this.pair = null
+    this.workAccum = 0
+    this.wanderTimer = 0
+    this.targetTilt = 0
   }
 
-  /**
-   * Per-frame tick. Caller (MainScene.update) уже проверил что:
-   *   - !isLocationTransitioning
-   *   - !serumPaused
-   *   - location.magnetEnabled && magnetLevel > 0 && store.magnetEnabled
-   * (если эти условия не выполнены — caller вызывает resetSpawnTimer).
-   */
+  private spawn(): void {
+    const scene = this.scene
+    const { width, height } = scene.scale
+    const cx = width / 2
+    const cy = (FIELD_PAD_Y + (height - FIELD_PAD_Y_BOTTOM)) / 2
+
+    this.shadow = scene.add.image(cx, cy, 'magnet_drone')
+    ;(this.shadow as unknown as { tintFill: boolean }).tintFill = true
+    this.shadow.setTint(0x000000)
+    this.shadow.setAlpha(0.3)
+    this.shadow.setDepth(MAGNET_DEPTH - 1)
+
+    this.sprite = scene.add.image(cx, cy, 'magnet_drone')
+    this.baseScale = (BOX_DISPLAY_SIZE * 0.7) / this.sprite.width
+    this.sprite.setScale(this.baseScale)
+    this.sprite.setDepth(MAGNET_DEPTH)
+    this.shadow.setScale(this.baseScale)
+
+    this.baselineY = cy
+    this.targetX = cx
+    this.targetY = cy
+    this.prevX = cx
+    this.pickWanderTarget()
+  }
+
+  private pickWanderTarget(): void {
+    if (!this.sprite) return
+    const { width, height } = this.scene.scale
+    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2)
+    const dist = Phaser.Math.FloatBetween(60 * DPR, DASH_RADIUS * 1.4)
+    this.targetX = Phaser.Math.Clamp(
+      this.sprite.x + Math.cos(angle) * dist,
+      FIELD_PAD_X + 20 * DPR,
+      width - FIELD_PAD_X - 20 * DPR,
+    )
+    this.targetY = Phaser.Math.Clamp(
+      this.sprite.y + Math.sin(angle) * dist,
+      FIELD_PAD_Y + 20 * DPR,
+      height - FIELD_PAD_Y_BOTTOM - 20 * DPR,
+    )
+  }
+
   tick(level: number, delta: number): void {
-    this.spawnMs += delta
-    const spawnInt = getMagnetSpawnInterval(level)
-    if (this.spawnMs >= spawnInt) {
-      if (this.merge.hasMergeablePair() && this._magnets.length === 0) {
-        this.spawnMagnet(level)
-        this.spawnMs = 0
-      } else {
-        // Замираем на 100% и ждём появления пары
-        this.spawnMs = spawnInt
+    if (!this.sprite) this.spawn()
+    const sprite = this.sprite!
+
+    const spawnInterval = getMagnetSpawnInterval(level)
+    this.workAccum = Math.min(this.workAccum + delta, spawnInterval * 2)
+
+    // ─── WANDER: бродим, копим кулдаун, ищем работу ───
+    if (this.mode === 'WANDER') {
+      this.wanderTimer += delta
+      if (this.wanderTimer > 1800) {
+        this.wanderTimer = 0
+        this.pickWanderTarget()
+      }
+      // Готов работать + есть пара → WORK
+      if (
+        this.workAccum >= spawnInterval &&
+        this.merge.hasMergeablePair()
+      ) {
+        const pair = this.merge.findClosestSameLevelPair()
+        if (pair) {
+          this.pair = pair
+          this.mergesDone = 0
+          this.mergesTarget = getMagnetMergesPerCycle(level) || 1
+          this.mode = 'WORK'
+        }
       }
     }
 
-    if (this._magnets.length > 0) this.updateMagnets()
+    // ─── WORK: летим к паре, стягиваем, мерджим ───
+    if (this.mode === 'WORK') {
+      this.updateWork(delta)
+    }
+
+    // ─── Движение к цели (lerp-chase) ───
+    sprite.x = Phaser.Math.Linear(sprite.x, this.targetX, CHASE_LERP)
+    sprite.y = Phaser.Math.Linear(sprite.y, this.targetY, CHASE_LERP)
+
+    // Наклон по ходу + flip.
+    const dx = sprite.x - this.prevX
+    this.prevX = sprite.x
+    if (Math.abs(dx) > 0.3) {
+      this.targetTilt = Phaser.Math.Clamp(dx * 0.02, -MAX_TILT, MAX_TILT)
+      sprite.scaleX = (dx > 0 ? 1 : -1) * this.baseScale
+    } else {
+      this.targetTilt = 0
+    }
+    sprite.rotation = Phaser.Math.Linear(sprite.rotation, this.targetTilt, TILT_LERP)
+
+    // Парение в покое (далеко от цели не бобаем — там idle-движения нет).
+    this.bobPhase += delta
+    const nearTarget =
+      Phaser.Math.Distance.Between(sprite.x, sprite.y, this.targetX, this.targetY) <
+      8 * DPR
+    if (nearTarget && this.mode === 'WANDER') {
+      const bob = BOB_AMP * Math.sin((this.bobPhase * 2 * Math.PI) / BOB_PERIOD_MS)
+      sprite.y = this.baselineY + bob
+    } else {
+      this.baselineY = sprite.y
+    }
+
+    // Тень.
+    if (this.shadow) {
+      this.shadow.x = sprite.x + 4 * DPR
+      this.shadow.y = sprite.y + 26 * DPR
+      this.shadow.rotation = sprite.rotation
+      this.shadow.scaleX = sprite.scaleX * 0.85
+      this.shadow.scaleY = sprite.scaleY * 0.85
+    }
   }
 
-  private spawnMagnet(level: number) {
+  private updateWork(_delta: number): void {
     const scene = this.scene
-    const pair = this.merge.findClosestSameLevelPair()
-    if (!pair) return
-
+    const pair = this.pair
+    if (!pair) {
+      this.endWork()
+      return
+    }
     const [a, b] = pair
 
-    // Освобождаем пару от их текущих движений чтобы магнит чисто тянул
-    for (const f of [a, b]) {
-      scene.tweens.killTweensOf(f.container)
-      f.isMoving = false
+    // Пара невалидна → бросаем работу.
+    if (
+      !scene.frogs.includes(a) ||
+      !scene.frogs.includes(b) ||
+      a.isDragging ||
+      a.isMerging ||
+      b.isDragging ||
+      b.isMerging
+    ) {
+      this.endWork()
+      return
     }
 
-    const x = (a.container.x + b.container.x) / 2
-    const y = (a.container.y + b.container.y) / 2
-    const duration = getMagnetDuration(level)
+    // Цель дрона = midpoint пары.
+    const midX = (a.container.x + b.container.x) / 2
+    const midY = (a.container.y + b.container.y) / 2
+    this.targetX = midX
+    this.targetY = midY
 
-    // 2026-05-30: магнит-дрон (magnet_drone.png) — видимый, ПРИЛЕТАЕТ к паре
-    // как goo_collector (наклон по ходу + flip), потом тянет/мерджит. Стартует
-    // от позиции последнего дрона (непрерывный полёт) либо сверху при первом
-    // спавне. Депт высокий (поверх лягушек).
-    const startX = this.lastDroneX ?? x + (Math.random() < 0.5 ? -1 : 1) * 120 * DPR
-    const startY = this.lastDroneY ?? y - 200 * DPR
-    const container = scene.add.container(startX, startY)
-    container.setDepth(99000)
+    // Тянем пару к текущей позиции дрона.
+    const sx = this.sprite!.x
+    const sy = this.sprite!.y
+    a.container.x = Phaser.Math.Linear(a.container.x, sx, PULL)
+    a.container.y = Phaser.Math.Linear(a.container.y, sy, PULL)
+    b.container.x = Phaser.Math.Linear(b.container.x, sx, PULL)
+    b.container.y = Phaser.Math.Linear(b.container.y, sy, PULL)
+    a.isAttracted = true
+    b.isAttracted = true
 
-    const emoji = scene.add.image(0, 0, 'magnet_drone')
-    const baseScale = (BOX_DISPLAY_SIZE * 0.7) / emoji.width
-    emoji.setScale(baseScale)
-    container.add(emoji)
-    // Лёгкое парение вверх-вниз.
-    scene.tweens.add({
-      targets: emoji,
-      y: -4 * DPR,
-      duration: 700,
-      ease: 'Sine.easeInOut',
-      yoyo: true,
-      repeat: -1,
-    })
-
-    const magnet: MagnetData = {
-      container,
-      emoji,
-      x,
-      y,
-      expiresAt: Date.now() + duration,
-      pair,
-      mergesDone: 0,
-      mergesTarget: getMagnetMergesPerCycle(level),
-      arriving: true,
-    }
-    this._magnets.push(magnet)
-    // Полёт к паре с наклоном; по прилёте снимаем arriving → начинается тяга.
-    this.flyTo(magnet, x, y, baseScale, () => {
-      magnet.arriving = false
-    })
-  }
-
-  // Позиция последнего дрона — новый стартует оттуда (непрерывный полёт).
-  private lastDroneX: number | null = null
-  private lastDroneY: number | null = null
-
-  /** Летит контейнером к (tx,ty) с наклоном по ходу и flip спрайта. */
-  private flyTo(
-    m: MagnetData,
-    tx: number,
-    ty: number,
-    baseScale: number,
-    onDone?: () => void,
-  ): void {
-    const scene = this.scene
-    const fromX = m.container.x
-    const dir = tx >= fromX ? 1 : -1
-    m.emoji.scaleX = dir * baseScale
-    scene.tweens.killTweensOf(m.container)
-    const dist = Phaser.Math.Distance.Between(fromX, m.container.y, tx, ty)
-    const dur = Phaser.Math.Clamp(dist * 1.6, 220, 700)
-    m.container.rotation = dir * 0.12
-    scene.tweens.add({
-      targets: m.container,
-      x: tx,
-      y: ty,
-      duration: dur,
-      ease: 'Sine.easeInOut',
-      onUpdate: () => {
-        this.lastDroneX = m.container.x
-        this.lastDroneY = m.container.y
-      },
-      onComplete: () => {
-        if (!m.container.active) return
-        scene.tweens.add({
-          targets: m.container,
-          rotation: 0,
-          duration: 160,
-          ease: 'Back.easeOut',
-        })
-        onDone?.()
-      },
-    })
-  }
-
-  private removeMagnet(magnet: MagnetData) {
-    const scene = this.scene
-    this._magnets = this._magnets.filter((m) => m !== magnet)
-    scene.tweens.killTweensOf(magnet.emoji)
-    scene.tweens.killTweensOf(magnet.container)
-    scene.tweens.add({
-      targets: magnet.container,
-      scale: 0,
-      alpha: 0,
-      duration: 180,
-      ease: 'Power2.easeIn',
-      onComplete: () => magnet.container.destroy(),
-    })
-  }
-
-  private updateMagnets() {
-    const scene = this.scene
-    const now = Date.now()
-
-    // Сбрасываем флаг притяжения — переустановим у целевой пары
-    for (const f of scene.frogs) f.isAttracted = false
-
-    for (const m of [...this._magnets]) {
-      if (now >= m.expiresAt) {
-        this.removeMagnet(m)
-        continue
+    // Сошлись → merge.
+    const d = Phaser.Math.Distance.Between(
+      a.container.x,
+      a.container.y,
+      b.container.x,
+      b.container.y,
+    )
+    if (d < MERGE_RADIUS * 0.7) {
+      this.merge.performMerge(a, b, sx, sy)
+      this.mergesDone += 1
+      if (this.mergesDone >= this.mergesTarget) {
+        this.endWork()
+        return
       }
-
-      const [a, b] = m.pair
-
-      // Если кто-то из пары уничтожен / в drag / merge — отменяем магнит
-      if (
-        !scene.frogs.includes(a) ||
-        !scene.frogs.includes(b) ||
-        a.isDragging ||
-        a.isMerging ||
-        b.isDragging ||
-        b.isMerging
-      ) {
-        this.removeMagnet(m)
-        continue
-      }
-
-      // Пока дрон ещё летит к паре (approach) — не тянем лягушек, ждём прилёта.
-      if (m.arriving) continue
-
-      // Притягиваем именно эту пару к точке магнита
-      const pull = 0.06
-      a.container.x = Phaser.Math.Linear(a.container.x, m.x, pull)
-      a.container.y = Phaser.Math.Linear(a.container.y, m.y, pull)
-      b.container.x = Phaser.Math.Linear(b.container.x, m.x, pull)
-      b.container.y = Phaser.Math.Linear(b.container.y, m.y, pull)
-      a.isAttracted = true
-      b.isAttracted = true
-
-      // Когда сошлись — мерджим в точке магнита
-      const d = Phaser.Math.Distance.Between(
-        a.container.x,
-        a.container.y,
-        b.container.x,
-        b.container.y,
-      )
-      if (d < MERGE_RADIUS * 0.7) {
-        this.merge.performMerge(a, b, m.x, m.y)
-        m.mergesDone += 1
-
-        if (m.mergesDone >= m.mergesTarget) {
-          this.removeMagnet(m)
-          continue
-        }
-
-        // Ищем следующую пару — если есть, переезжаем магнит к ней
-        const next = this.merge.findClosestSameLevelPair()
-        if (!next) {
-          this.removeMagnet(m)
-          continue
-        }
-        const [na, nb] = next
-        for (const f of [na, nb]) {
-          scene.tweens.killTweensOf(f.container)
-          f.isMoving = false
-        }
-        const newX = (na.container.x + nb.container.x) / 2
-        const newY = (na.container.y + nb.container.y) / 2
-        m.pair = next
-        m.x = newX
-        m.y = newY
-        // Дрон летит к новой паре с наклоном; пока летит — не тянет (arriving).
-        m.arriving = true
-        this.flyTo(m, newX, newY, Math.abs(m.emoji.scaleX), () => {
-          m.arriving = false
-        })
+      // Следующая пара того же цикла.
+      const next = this.merge.findClosestSameLevelPair()
+      if (next) {
+        this.pair = next
+      } else {
+        this.endWork()
       }
     }
+  }
+
+  private endWork(): void {
+    // Сбрасываем isAttracted у бывшей пары.
+    if (this.pair) {
+      for (const f of this.pair) {
+        if (this.scene.frogs.includes(f)) f.isAttracted = false
+      }
+    }
+    this.pair = null
+    this.mode = 'WANDER'
+    this.workAccum = 0
+    this.wanderTimer = 0
+    this.pickWanderTarget()
   }
 }
