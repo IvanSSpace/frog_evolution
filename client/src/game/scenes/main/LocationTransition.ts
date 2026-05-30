@@ -511,9 +511,9 @@ export class LocationTransition {
       }
       scene.poops = []
 
-      // newContainer с map4 как фоном (full screen)
+      // newContainer с toxic_map4 как фоном (full screen)
       const newContainer = scene.add.container(cx, cy)
-      const newBg = scene.add.image(0, 0, 'map4')
+      const newBg = scene.add.image(0, 0, 'toxic_map4')
       newBg.setDisplaySize(width, height)
       newContainer.add(newBg)
       newContainer.setScale(8)

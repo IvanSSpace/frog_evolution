@@ -63,6 +63,8 @@ class DroneInstance {
   private scene: MainScene
   private box: BoxController
   private index: number
+  // Общий набор «занятых» боксов (один бокс = один дрон).
+  private claimed: Set<BoxData>
 
   private sprite: Phaser.GameObjects.Image | null = null
   private shadow: Phaser.GameObjects.Image | null = null
@@ -84,14 +86,24 @@ class DroneInstance {
   private chargeBg: Phaser.GameObjects.Rectangle | null = null
   private chargeFill: Phaser.GameObjects.Rectangle | null = null
 
-  constructor(scene: MainScene, box: BoxController, index: number) {
+  constructor(scene: MainScene, box: BoxController, index: number, claimed: Set<BoxData>) {
     this.scene = scene
     this.box = box
     this.index = index
+    this.claimed = claimed
   }
 
   getBattery(): number {
     return this.battery
+  }
+
+  // Назначить/снять цель + синхронно claim/release в общем наборе.
+  private setCollectTarget(box: BoxData | null): void {
+    if (this.collectTarget && this.collectTarget !== box) {
+      this.claimed.delete(this.collectTarget)
+    }
+    this.collectTarget = box
+    if (box) this.claimed.add(box)
   }
 
   ensureSpawned(): void {
@@ -123,6 +135,8 @@ class DroneInstance {
     this.sprite.setDepth(DRONE_DEPTH)
     this.shadow.setScale(this.baseScale)
     this.baselineY = cy
+    // Десинк парения: рандомная стартовая фаза bob — дроны качаются вразнобой.
+    this.bobPhase = Math.random() * BOB_PERIOD_MS
 
     this.sprite.setInteractive({ useHandCursor: true })
     this.scene.input.setDraggable(this.sprite)
@@ -138,7 +152,7 @@ class DroneInstance {
       this.scene.tweens.killTweensOf(this.sprite)
       this.isHopping = false
       this.mode = 'WANDER'
-      this.collectTarget = null
+      this.setCollectTarget(null)
       this.lastDragX = this.sprite.x
     })
     this.sprite.on('drag', (_p: Phaser.Input.Pointer, dragX: number, dragY: number) => {
@@ -184,7 +198,7 @@ class DroneInstance {
     this.cooldownAccum = 0
     this.targetTilt = 0
     this.mode = 'WANDER'
-    this.collectTarget = null
+    this.setCollectTarget(null)
     this.isHopping = false
     this.bobPhase = 0
     this.baselineY = 0
@@ -226,7 +240,7 @@ class DroneInstance {
     if (this.prePauseTimer) { this.prePauseTimer.remove(false); this.prePauseTimer = null }
     this.scene.tweens.killTweensOf(this.sprite)
     this.isHopping = false
-    this.collectTarget = null
+    this.setCollectTarget(null)
 
     const { width, height } = this.scene.scale
     const toW = (f: { xf: number; yf: number }) => ({ x: f.xf * width, y: height + f.yf * height })
@@ -396,13 +410,15 @@ class DroneInstance {
       ) {
         const nearest = this.findNearestNormalBox(sprite.x, sprite.y)
         if (nearest) {
-          this.collectTarget = nearest
-          if (this.isHopping) { this.scene.tweens.killTweensOf(sprite); this.isHopping = false }
+          this.setCollectTarget(nearest)
+          if (this.isHopping) { this.scene.tweens.killTweensOf(sprite); this.isHopping = false; this.baselineY = sprite.y }
           this.startHop()
         } else {
-          if (this.isHopping) { this.scene.tweens.killTweensOf(sprite); this.isHopping = false }
+          // Отмена hop'а: фиксируем baselineY на текущую позицию — иначе bob в
+          // WANDER снапнет дрон к старому baselineY (отбрасывание назад).
+          if (this.isHopping) { this.scene.tweens.killTweensOf(sprite); this.isHopping = false; this.baselineY = sprite.y }
           this.mode = 'WANDER'
-          this.collectTarget = null
+          this.setCollectTarget(null)
           this.cooldownAccum = cooldown
         }
       }
@@ -412,7 +428,7 @@ class DroneInstance {
       const nearest = this.findNearestNormalBox(sprite.x, sprite.y)
       if (nearest) {
         this.mode = 'COLLECT'
-        this.collectTarget = nearest
+        this.setCollectTarget(nearest)
         if (!this.isHopping) {
           if (this.restTimer) { this.restTimer.remove(false); this.restTimer = null }
           this.startHop()
@@ -496,7 +512,7 @@ class DroneInstance {
               this.box.onBoxTapped(this.collectTarget)
               this.cooldownAccum = 0
               this.mode = 'WANDER'
-              this.collectTarget = null
+              this.setCollectTarget(null)
               this.restTimer = this.scene.time.delayedCall(Phaser.Math.Between(2000, 4000), () => {
                 this.restTimer = null
                 if (this.sprite) this.startHop()
@@ -524,7 +540,11 @@ class DroneInstance {
 
   private findNearestNormalBox(x: number, y: number): BoxData | null {
     const normalBoxes = this.scene.boxes.filter(
-      (b) => !b.isRare && b.img.active && !b.isLanding,
+      (b) =>
+        !b.isRare &&
+        b.img.active &&
+        !b.isLanding &&
+        (b === this.collectTarget || !this.claimed.has(b)),
     )
     if (normalBoxes.length === 0) return null
     let closest = normalBoxes[0]
@@ -542,6 +562,8 @@ export class DroneController {
   private scene: MainScene
   private box: BoxController
   private instances: DroneInstance[] = []
+  // Один бокс = один дрон. Общий набор для всех инстансов.
+  private claimed: Set<BoxData> = new Set()
 
   constructor(scene: MainScene, box: BoxController) {
     this.scene = scene
@@ -557,7 +579,7 @@ export class DroneController {
 
   private sync(want: number): void {
     while (this.instances.length < want) {
-      const inst = new DroneInstance(this.scene, this.box, this.instances.length)
+      const inst = new DroneInstance(this.scene, this.box, this.instances.length, this.claimed)
       inst.ensureSpawned()
       this.instances.push(inst)
     }
@@ -573,6 +595,10 @@ export class DroneController {
 
   tick(level: number, delta: number): void {
     this.sync(this.targetCount())
+    // Снимаем claim с боксов, которых уже нет на поле (защита от утечки).
+    for (const b of this.claimed) {
+      if (!this.scene.boxes.includes(b) || !b.img.active) this.claimed.delete(b)
+    }
     for (const d of this.instances) d.tick(level, delta)
     // В store кладём минимальный заряд активных дронов (для модалки).
     const bats = this.instances.map((d) => d.getBattery())
@@ -584,6 +610,7 @@ export class DroneController {
   despawn(): void {
     for (const d of this.instances) d.despawn()
     this.instances = []
+    this.claimed.clear()
     useGameStore.getState().setDroneBattery(-1)
   }
 

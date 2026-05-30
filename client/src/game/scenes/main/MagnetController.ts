@@ -180,6 +180,8 @@ class MagnetInstance {
     this.sprite.setDepth(MAGNET_DEPTH)
     this.shadow.setScale(this.baseScale)
     this.baselineY = cy
+    // Десинк парения: рандомная стартовая фаза bob — дроны качаются вразнобой.
+    this.bobPhase = Math.random() * BOB_PERIOD_MS
 
     // Перетаскивание (как goo_collector): берём в любой точке, тянем.
     this.sprite.setInteractive({ useHandCursor: true })
