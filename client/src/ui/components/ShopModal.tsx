@@ -344,8 +344,9 @@ function DropSpeedCard() {
           src="/box.webp"
           alt=""
           style={{
-            width: '78%',
-            height: '78%',
+            width: 'auto',
+            height: '74%',
+            maxWidth: '100%',
             objectFit: 'contain',
             filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
           }}
@@ -391,12 +392,11 @@ function GooCollectorCard() {
           src="/goo_collector_icon.png"
           alt=""
           style={{
-            height: '90%',
+            height: '74%',
             width: 'auto',
             maxWidth: '100%',
             objectFit: 'contain',
             display: 'block',
-            margin: 'auto',
             filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
           }}
         />
@@ -522,12 +522,11 @@ function MagnetCard({
           src="/magnet_drone_icon.png"
           alt=""
           style={{
-            height: '90%',
+            height: '74%',
             width: 'auto',
             maxWidth: '100%',
             objectFit: 'contain',
             display: 'block',
-            margin: 'auto',
             filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
           }}
         />
@@ -576,8 +575,9 @@ function CrateQualityCard() {
           src="/box.webp"
           alt=""
           style={{
-            width: '78%',
-            height: '78%',
+            width: 'auto',
+            height: '74%',
+            maxWidth: '100%',
             objectFit: 'contain',
             filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
           }}
@@ -622,8 +622,9 @@ function RareBoxSpeedCard() {
           src="/box.webp"
           alt=""
           style={{
-            width: '100%',
-            height: '100%',
+            width: 'auto',
+            height: '74%',
+            maxWidth: '100%',
             objectFit: 'contain',
             filter:
               'brightness(1.15) sepia(0.85) saturate(2.6) hue-rotate(-12deg) drop-shadow(0 1px 1px rgba(0,0,0,0.45))',
