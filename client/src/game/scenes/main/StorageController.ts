@@ -13,11 +13,11 @@ import { DPR } from './types'
 import type { MainScene } from '../MainScene'
 
 // Доля ширины экрана под спрайт склада (меньше фабрики).
-const STORAGE_WIDTH_FRAC = 0.28
+const STORAGE_WIDTH_FRAC = 0.2
 // Горизонтальная позиция (доля ширины) — справа от фабрики (она в центре).
 const STORAGE_X_FRAC = 0.76
-// Отступ верхнего края от верха зоны строений (px) — как у фабрики.
-const STORAGE_TOP_Y = 100 * DPR
+// Отступ от верха зоны строений (px). Больше = ниже по экрану.
+const STORAGE_TOP_Y = 170 * DPR
 // Глубина — фоновый объект, под лягушками/боксами.
 const STORAGE_DEPTH = 0
 
