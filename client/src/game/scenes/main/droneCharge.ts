@@ -14,6 +14,8 @@ const RECHARGE_MS = 60000
 
 interface Saved {
   b: number[]
+  // Фаза каждого дрона на момент сохранения: true = заряжается на базе.
+  ch: boolean[]
   ts: number
 }
 
@@ -25,11 +27,16 @@ function clamp(v: number): number {
   return Math.max(0, Math.min(100, v))
 }
 
-// Прокручивает заряд на elapsedMs вперёд по пиле (старт в фазе разряда).
-export function advanceBattery(start: number, elapsedMs: number): number {
+// Прокручивает заряд на elapsedMs вперёд по пиле. startCharging — была ли фаза
+// зарядки на момент сохранения (иначе разряд).
+export function advanceBattery(
+  start: number,
+  elapsedMs: number,
+  startCharging = false,
+): number {
   let b = clamp(start)
   let rem = Math.max(0, elapsedMs)
-  let charging = false
+  let charging = startCharging
   let guard = 0
   while (rem > 0 && guard++ < 10000) {
     if (!charging) {
@@ -57,17 +64,26 @@ export function advanceBattery(start: number, elapsedMs: number): number {
   return Math.round(clamp(b))
 }
 
-export function saveDroneBatteries(type: 'c' | 'm', batteries: number[]): void {
+export function saveDroneBatteries(
+  type: 'c' | 'm',
+  batteries: number[],
+  charging: boolean[],
+): void {
   try {
-    const payload: Saved = { b: batteries.map((x) => Math.round(clamp(x))), ts: Date.now() }
+    const payload: Saved = {
+      b: batteries.map((x) => Math.round(clamp(x))),
+      ch: batteries.map((_, i) => charging[i] ?? false),
+      ts: Date.now(),
+    }
     localStorage.setItem(keyFor(type), JSON.stringify(payload))
   } catch {
     /* ignore */
   }
 }
 
-// Возвращает восстановленные (досчитанные) заряды по индексу дрона. Пустой массив
-// если нет сохранения — caller использует случайный стартовый заряд.
+// Возвращает восстановленные (досчитанные) заряды по индексу дрона. Учитывает
+// фазу зарядки на момент сохранения. Пустой массив если нет сохранения —
+// caller использует случайный стартовый заряд.
 export function loadDroneBatteries(type: 'c' | 'm'): number[] {
   try {
     const raw = localStorage.getItem(keyFor(type))
@@ -75,7 +91,8 @@ export function loadDroneBatteries(type: 'c' | 'm'): number[] {
     const parsed = JSON.parse(raw) as Saved
     if (!Array.isArray(parsed.b) || typeof parsed.ts !== 'number') return []
     const elapsed = Date.now() - parsed.ts
-    return parsed.b.map((x) => advanceBattery(x, elapsed))
+    const ch = Array.isArray(parsed.ch) ? parsed.ch : []
+    return parsed.b.map((x, i) => advanceBattery(x, elapsed, ch[i] ?? false))
   } catch {
     return []
   }

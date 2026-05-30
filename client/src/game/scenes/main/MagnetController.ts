@@ -132,6 +132,10 @@ class MagnetInstance {
     return this.battery
   }
 
+  getCharging(): boolean {
+    return this.mode === 'CHARGING'
+  }
+
   resetSpawnTimer(): void {
     this.workAccum = 0
   }
@@ -748,7 +752,11 @@ export class MagnetController {
 
   private persist(): void {
     if (this.instances.length > 0) {
-      saveDroneBatteries('m', this.instances.map((m) => m.getBattery()))
+      saveDroneBatteries(
+        'm',
+        this.instances.map((m) => m.getBattery()),
+        this.instances.map((m) => m.getCharging()),
+      )
     }
   }
 

@@ -115,6 +115,10 @@ class DroneInstance {
     return this.battery
   }
 
+  getCharging(): boolean {
+    return this.mode === 'CHARGING'
+  }
+
   // Назначить/снять цель + синхронно claim/release в общем наборе.
   private setCollectTarget(box: BoxData | null): void {
     if (this.collectTarget && this.collectTarget !== box) {
@@ -605,7 +609,11 @@ export class DroneController {
 
   private persist(): void {
     if (this.instances.length > 0) {
-      saveDroneBatteries('c', this.instances.map((d) => d.getBattery()))
+      saveDroneBatteries(
+        'c',
+        this.instances.map((d) => d.getBattery()),
+        this.instances.map((d) => d.getCharging()),
+      )
     }
   }
 
