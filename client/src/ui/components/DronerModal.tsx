@@ -1,4 +1,3 @@
-import { createPortal } from 'react-dom'
 import { useGameStore } from '../../store/gameStore'
 import { useModalLock } from '../../utils/modalLock'
 
@@ -66,14 +65,14 @@ export function DronerModal({ onClose }: Props) {
   const droneBattery = useGameStore((s) => s.droneBattery)
   const magnetBattery = useGameStore((s) => s.magnetBattery)
 
-  return createPortal(
+  return (
     <div
       onClick={onClose}
       className="ff-backdrop ff-fade"
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 150,
+        zIndex: 100,
         display: 'flex',
         alignItems: 'flex-end',
         justifyContent: 'center',
@@ -149,7 +148,6 @@ export function DronerModal({ onClose }: Props) {
           </div>
         </div>
       </div>
-    </div>,
-    document.body,
+    </div>
   )
 }
