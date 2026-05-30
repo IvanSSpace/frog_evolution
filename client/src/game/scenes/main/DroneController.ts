@@ -8,7 +8,7 @@
 //   - despawn(): уничтожить спрайт (при смене локации / level=0 / destroy сцены).
 
 import Phaser from 'phaser'
-import { getAutoCollectCooldownMs } from '../../../store/gameStore'
+import { getAutoCollectCooldownMs, useGameStore } from '../../../store/gameStore'
 import {
   BOX_DISPLAY_SIZE,
   DASH_RADIUS,
@@ -114,6 +114,8 @@ export class DroneController {
   // Зарядная шкала (вертикальный прямоугольник, заполняется зелёным по battery).
   private chargeBg: Phaser.GameObjects.Rectangle | null = null
   private chargeFill: Phaser.GameObjects.Rectangle | null = null
+  // Throttle синка battery → store (для модалки droner).
+  private batterySyncMs = 0
 
 
   constructor(scene: MainScene, box: BoxController) {
@@ -191,6 +193,7 @@ export class DroneController {
 
     this.hideTooltip()
     this.hideChargeBar()
+    useGameStore.getState().setDroneBattery(-1) // не активен
     // Убиваем все таймеры
     if (this.restTimer) {
       this.restTimer.remove(false)
@@ -452,6 +455,13 @@ export class DroneController {
     }
     // Тултип следует за дроном пока открыт.
     if (this.tooltip) this.positionTooltip()
+
+    // Throttled синк заряда в store (для модалки droner) — ~раз в 700мс.
+    this.batterySyncMs += delta
+    if (this.batterySyncMs >= 700) {
+      this.batterySyncMs = 0
+      useGameStore.getState().setDroneBattery(Math.round(this.battery))
+    }
 
     sprite.rotation = Phaser.Math.Linear(sprite.rotation, this.targetTilt, TILT_LERP)
 

@@ -130,6 +130,13 @@ interface GameStateBase {
   entityCount: number
   setEntityCount: (n: number) => void
 
+  // 2026-05-30: заряд дронов (0..100, real-time из DroneController/MagnetController,
+  // throttled). Для модалки droner. -1 = дрон не активен/не куплен.
+  droneBattery: number
+  magnetBattery: number
+  setDroneBattery: (n: number) => void
+  setMagnetBattery: (n: number) => void
+
   // Суммарный пассивный доход монет/сек (real-time, обновляется из MainScene)
   incomePerSec: number
   setIncomePerSec: (n: number) => void
@@ -353,6 +360,11 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   entityCount: 0,
   setEntityCount: (n) => set({ entityCount: n }),
+
+  droneBattery: -1,
+  magnetBattery: -1,
+  setDroneBattery: (n) => set({ droneBattery: n }),
+  setMagnetBattery: (n) => set({ magnetBattery: n }),
 
   incomePerSec: 0,
   setIncomePerSec: (n) => set({ incomePerSec: n }),

@@ -16,6 +16,7 @@ import Phaser from 'phaser'
 import {
   getMagnetSpawnInterval,
   getMagnetMergesPerCycle,
+  useGameStore,
 } from '../../../store/gameStore'
 import {
   MERGE_RADIUS,
@@ -92,6 +93,7 @@ export class MagnetController {
   private tooltipTimer: Phaser.Time.TimerEvent | null = null
   private chargeBg: Phaser.GameObjects.Rectangle | null = null
   private chargeFill: Phaser.GameObjects.Rectangle | null = null
+  private batterySyncMs = 0
 
   // Рабочий кулдаун (мс).
   private workAccum = 0
@@ -117,6 +119,7 @@ export class MagnetController {
     const scene = this.scene
     this.hideTooltip()
     this.hideChargeBar()
+    useGameStore.getState().setMagnetBattery(-1)
     if (this.restTimer) {
       this.restTimer.remove(false)
       this.restTimer = null
@@ -420,6 +423,12 @@ export class MagnetController {
       if (this.battery >= 100) this.startEmerge()
     }
     if (this.tooltip) this.positionTooltip()
+
+    this.batterySyncMs += delta
+    if (this.batterySyncMs >= 700) {
+      this.batterySyncMs = 0
+      useGameStore.getState().setMagnetBattery(Math.round(this.battery))
+    }
 
     sprite.rotation = Phaser.Math.Linear(sprite.rotation, this.targetTilt, TILT_LERP)
 
