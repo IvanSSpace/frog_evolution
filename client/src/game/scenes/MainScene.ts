@@ -45,6 +45,7 @@ import { PoopController } from './main/PoopController'
 import { MagnetController } from './main/MagnetController'
 import { DroneController } from './main/DroneController'
 import { FactoryController } from './main/FactoryController'
+import { StorageController } from './main/StorageController'
 import { LocationTransition } from './main/LocationTransition'
 import { FrogInteraction } from './main/FrogInteraction'
 
@@ -130,6 +131,8 @@ export class MainScene extends Phaser.Scene {
 
   // Фабрика (статичный спрайт). Только на локации 1.
   private factory!: FactoryController
+  // Склад (статичный спрайт). Только на локации 1, рядом с фабрикой.
+  private storage!: StorageController
 
   // Phase 21-05 (Wave 5): location transition (clearField + dual-container zoom).
   // Package-public — game/index.ts вызывает runOpen/CloseStarMapTransition при
@@ -200,6 +203,7 @@ export class MainScene extends Phaser.Scene {
     this.load.image('magnet', '/magnet.png')
     this.load.image('goo_collector', '/goo_collector.png')
     this.load.image('factory3_shadow', '/factory/factory3_shadow.png')
+    this.load.image('storage', '/storage.png')
     this.load.image('toxic_map2size', '/maps/toxic_map2size.png')
   }
 
@@ -270,6 +274,7 @@ export class MainScene extends Phaser.Scene {
     this.drone = new DroneController(this, this.box)
     // Фабрика — статичный спрайт на локации 1.
     this.factory = new FactoryController(this)
+    this.storage = new StorageController(this)
     // Phase 21-05 (Wave 5): location-transition + interaction controllers.
     this.locTransition = new LocationTransition(
       this,
@@ -708,11 +713,13 @@ export class MainScene extends Phaser.Scene {
       const locId = storeForTimer.currentLocation
       if (locId === 1) {
         this.factory.show()
+        this.storage.show()
         if ((storeForTimer.upgrades.autoCollect ?? 0) > 0) {
           this.drone.ensureSpawned()
         }
       } else {
         this.factory.hide()
+        this.storage.hide()
         this.drone.despawn()
       }
     }
@@ -951,6 +958,7 @@ export class MainScene extends Phaser.Scene {
     this.drone?.despawn()
     // Фабрика — destroy при уничтожении сцены.
     this.factory?.destroy()
+    this.storage?.destroy()
     // Phase 21-05: subscribe / DnD pointer listeners — в FrogInteraction.teardown().
     this.interaction.teardown()
     // Phase 23 Plan 23-05: очищаем window.__mainScene reference
