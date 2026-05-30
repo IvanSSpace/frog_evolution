@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import { prisma } from '../prisma'
-import { MAX_INCOME_PER_SEC, getGooCollectorCapMs } from '../config/economy'
+import { MAX_INCOME_PER_SEC, getGooCollectorCapMs, DRONE_OFFLINE_BONUS_MS } from '../config/economy'
 
 // Anti-cheat threshold для idle income.
 // 100B gold/sec — заведомо больше любого realistic дохода.
@@ -32,7 +32,9 @@ export async function gameStateRoutes(app: FastifyInstance) {
       const upgrades = state.upgrades as Record<string, number>
       const gooCollectorLevel = upgrades.gooCollector ?? upgrades.tractor ?? 0
       const elapsedMs = Date.now() - state.lastSessionAt.getTime()
-      const capMs = getGooCollectorCapMs(gooCollectorLevel)
+      // Дроны автосбора продлевают офлайн-работу: +6ч к капу если куплен autoCollect.
+      const droneBonusMs = (upgrades.autoCollect ?? 0) > 0 ? DRONE_OFFLINE_BONUS_MS : 0
+      const capMs = getGooCollectorCapMs(gooCollectorLevel) + droneBonusMs
       const earnedMs = Math.min(Math.max(0, elapsedMs), capMs)
       const earnedSec = Math.floor(earnedMs / 1000)
       const offlineIncome = BigInt(Math.floor(earnedSec * state.incomePerSec))

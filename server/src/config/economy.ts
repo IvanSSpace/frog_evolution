@@ -165,6 +165,10 @@ export function getGooCollectorCapMs(level: number): number {
   return hours * 3600 * 1000
 }
 
+// 2026-05-30: дроны автосбора (autoCollect>0) продолжают работать офлайн —
+// +6ч к капу офлайн-дохода. «Онлайн-сбор» механика привязана к дронам.
+export const DRONE_OFFLINE_BONUS_MS = 6 * 3600 * 1000
+
 // Возвращает locationId куда переезжает лягушка level (1..18).
 // L1-6 → Болото (1), L7-12 → Лес (2), L13-18 → Планета (3).
 // Для L19 (sentinel) → не используется, special-case в merge endpoint.
