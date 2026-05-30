@@ -51,8 +51,8 @@ const RECHARGE_MS = 60000
 // Раскладка зданий (SYNC с BuildingsController).
 const MAIN_X_FRAC = 0.5
 const MAIN_Y_FRAC = 0.34
-const DRONER_X_FRAC = 0.24
-const DRONER_Y_FRAC = 0.82
+const DRONER_X_FRAC = 0.34
+const DRONER_Y_FRAC = 0.68
 
 type MagnetMode = 'WANDER' | 'WORK' | 'PULLING' | 'RTB' | 'CHARGING' | 'EMERGING'
 

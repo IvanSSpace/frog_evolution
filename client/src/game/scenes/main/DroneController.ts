@@ -50,8 +50,8 @@ const RECHARGE_MS = 60000
 // Раскладка зданий (SYNC с BuildingsController): main центр, droner слева.
 const MAIN_X_FRAC = 0.5
 const MAIN_Y_FRAC = 0.34
-const DRONER_X_FRAC = 0.24
-const DRONER_Y_FRAC = 0.82
+const DRONER_X_FRAC = 0.34
+const DRONER_Y_FRAC = 0.68
 
 export class DroneController {
   private scene: MainScene
@@ -109,8 +109,11 @@ export class DroneController {
   private spawn(): void {
     if (this.sprite) return
     const { width, height } = this.scene.scale
-    const cx = Phaser.Math.Between(FIELD_PAD_X + 10 * DPR, width - FIELD_PAD_X - 10 * DPR)
-    const cy = Phaser.Math.Between(FIELD_PAD_Y + 10 * DPR, height - FIELD_PAD_Y_BOTTOM - 10 * DPR)
+    // TEST: спавн на входе droner для подгонки позиции. Вернуть на random:
+    //   const cx = Phaser.Math.Between(FIELD_PAD_X+10*DPR, width-FIELD_PAD_X-10*DPR)
+    //   const cy = Phaser.Math.Between(FIELD_PAD_Y+10*DPR, height-FIELD_PAD_Y_BOTTOM-10*DPR)
+    const cx = width * DRONER_X_FRAC
+    const cy = height + height * DRONER_Y_FRAC
 
     // Тень — создаём ПЕРВОЙ (ниже дрона по z), чёрный силуэт того же спрайта.
     this.shadow = this.scene.add.image(cx, cy, 'goo_collector')
