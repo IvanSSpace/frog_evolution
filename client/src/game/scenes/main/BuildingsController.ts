@@ -26,7 +26,7 @@ interface BuildingDef {
 // Раскладка по референсу: main↑центр, collector←, storage→,
 // droner↙, space↘, scaner↓центр. yFrac = позиция «ног» здания в зоне.
 const BUILDINGS: readonly BuildingDef[] = [
-  { key: 'bld_main', src: '/builds/main.png', xFrac: 0.5, yFrac: 0.34, widthFrac: 0.44 },
+  { key: 'bld_main', src: '/builds/main.png', xFrac: 0.5, yFrac: 0.34, widthFrac: 0.40 },
   { key: 'bld_collector', src: '/builds/collector.png', xFrac: 0.24, yFrac: 0.54, widthFrac: 0.27 },
   { key: 'bld_storage', src: '/builds/storage.png', xFrac: 0.77, yFrac: 0.54, widthFrac: 0.29 },
   { key: 'bld_droner', src: '/builds/droner.png', xFrac: 0.24, yFrac: 0.82, widthFrac: 0.29 },
