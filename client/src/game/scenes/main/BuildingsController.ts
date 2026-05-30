@@ -60,12 +60,41 @@ export class BuildingsController {
     for (const b of BUILDINGS) {
       const sp = this.scene.add.image(0, 0, b.key)
       sp.setOrigin(0.5, 1) // низ-центр = «ноги» на земле
-      sp.setScale((width * b.widthFrac) / sp.width)
+      const baseScale = (width * b.widthFrac) / sp.width
+      sp.setScale(baseScale)
       sp.setPosition(width * b.xFrac, zoneTop + zoneH * b.yFrac)
       // Iso-сортировка между зданиями: ниже по y = ближе к зрителю.
       sp.setDepth(b.yFrac * 100)
+      // Тап → squash-jiggle (origin низ → сжатие к земле, как «толкнули»).
+      sp.setInteractive({ useHandCursor: true })
+      sp.on('pointerdown', () => this.jiggle(sp, baseScale))
       this.sprites.push(sp)
     }
+  }
+
+  /** Squash-jiggle при тапе: быстрое сжатие по вертикали + раздача вширь,
+   *  затем пружинный возврат. Origin низ-центр → «приседает» к земле. */
+  private jiggle(sp: Phaser.GameObjects.Image, baseScale: number): void {
+    this.scene.tweens.killTweensOf(sp)
+    sp.setScale(baseScale)
+    this.scene.tweens.add({
+      targets: sp,
+      scaleY: baseScale * 0.9,
+      scaleX: baseScale * 1.06,
+      duration: 80,
+      ease: 'Quad.easeOut',
+      yoyo: true,
+      onComplete: () => {
+        if (!sp.active) return
+        this.scene.tweens.add({
+          targets: sp,
+          scaleX: baseScale,
+          scaleY: baseScale,
+          duration: 160,
+          ease: 'Back.easeOut',
+        })
+      },
+    })
   }
 
   hide(): void {
