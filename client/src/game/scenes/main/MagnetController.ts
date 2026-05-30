@@ -52,7 +52,7 @@ const RECHARGE_MS = 60000
 const MAIN_X_FRAC = 0.5
 const MAIN_Y_FRAC = 0.34
 const DRONER_X_FRAC = 0.32
-const DRONER_Y_FRAC = 0.70
+const DRONER_Y_FRAC = 0.74
 
 type MagnetMode = 'WANDER' | 'WORK' | 'PULLING' | 'RTB' | 'CHARGING' | 'EMERGING'
 
