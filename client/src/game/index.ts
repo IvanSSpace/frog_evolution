@@ -27,6 +27,16 @@ export function setPhaserInputEnabled(enabled: boolean): void {
   if (canvas) {
     canvas.style.pointerEvents = enabled ? '' : 'none'
   }
+  // Сброс «застрявших» pointer'ов: если input выключили между pointerdown и
+  // pointerup (тап по зданию открыл модалку), Phaser не получит up → pointer
+  // остаётся isDown, и через пару циклов ввод поля ломается. Обнуляем при каждом
+  // переключении, чтобы состояние не накапливалось.
+  const im = game.input
+  if (im && Array.isArray(im.pointers)) {
+    for (const p of im.pointers) {
+      if (p) p.isDown = false
+    }
+  }
 }
 
 // Экспорт для React-HUD overlay
