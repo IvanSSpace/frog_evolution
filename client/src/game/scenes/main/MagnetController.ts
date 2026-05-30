@@ -185,8 +185,9 @@ class MagnetInstance {
   private spawn(): void {
     const scene = this.scene
     const { width, height } = scene.scale
-    const cx = Phaser.Math.Between(FIELD_PAD_X + 10 * DPR, width - FIELD_PAD_X - 10 * DPR)
-    const cy = Phaser.Math.Between(FIELD_PAD_Y + 10 * DPR, height - FIELD_PAD_Y_BOTTOM - 10 * DPR)
+    // Появляемся у двери droner-здания, дальше startEmerge выводит на поле.
+    const cx = width * DRONER_X_FRAC
+    const cy = height + height * DRONER_Y_FRAC
 
     this.shadow = scene.add.image(cx, cy, 'magnet_drone')
     ;(this.shadow as unknown as { tintFill: boolean }).tintFill = true
@@ -245,7 +246,8 @@ class MagnetInstance {
       this.scheduleNextHop()
     })
 
-    this.scheduleNextHop()
+    // Выходим из здания (emerge-маршрут дверь→подъём→развилка→поле).
+    this.startEmerge()
   }
 
   /** Тап → тултип заряда. Auto-hide 2.5с, toggle повторным тапом. */
@@ -449,8 +451,9 @@ class MagnetInstance {
   }
 
   tick(level: number, delta: number): void {
-    if (!this.sprite) this.spawn()
-    const sprite = this.sprite!
+    // Не спавним из tick — спавн только через ensureSpawned (staggered менеджером).
+    if (!this.sprite) return
+    const sprite = this.sprite
 
     // Разряд только в активных режимах.
     const active = this.mode === 'WANDER' || this.mode === 'WORK' || this.mode === 'PULLING'
@@ -742,6 +745,9 @@ export class MagnetController {
   // Восстановленные (досчитанные офлайн) заряды по индексу.
   private restored: number[] = loadDroneBatteries('m')
   private persistMs = 0
+  // Очередь спавна: новые магниты выходят из здания по одному.
+  private spawnQueue: MagnetInstance[] = []
+  private spawnAccum = 0
 
   constructor(scene: MainScene, merge: MergeController) {
     this.scene = scene
@@ -776,11 +782,25 @@ export class MagnetController {
     while (this.instances.length < want) {
       const idx = this.instances.length
       const inst = new MagnetInstance(this.scene, this.merge, idx, this.initialBatteryFor(idx))
-      inst.ensureSpawned()
+      // НЕ спавним сразу — в очередь, выходят по одному (drainSpawnQueue).
       this.instances.push(inst)
+      this.spawnQueue.push(inst)
     }
     while (this.instances.length > want) {
-      this.instances.pop()!.despawn()
+      const removed = this.instances.pop()!
+      const qi = this.spawnQueue.indexOf(removed)
+      if (qi >= 0) this.spawnQueue.splice(qi, 1)
+      removed.despawn()
+    }
+  }
+
+  private drainSpawnQueue(delta: number): void {
+    if (this.spawnQueue.length === 0) return
+    const STAGGER_MS = 450
+    this.spawnAccum += delta
+    if (this.spawnAccum >= STAGGER_MS) {
+      this.spawnAccum = 0
+      this.spawnQueue.shift()!.ensureSpawned()
     }
   }
 
@@ -790,6 +810,7 @@ export class MagnetController {
 
   tick(level: number, delta: number): void {
     this.sync(this.targetCount())
+    this.drainSpawnQueue(delta)
     for (const m of this.instances) m.tick(level, delta)
     // В store кладём заряд каждого дрона (для модалки). Throttle ~500мс.
     this.syncMs += delta
@@ -811,6 +832,7 @@ export class MagnetController {
     this.persist() // сохраняем перед уходом с локации
     for (const m of this.instances) m.despawn()
     this.instances = []
+    this.spawnQueue = []
     useGameStore.getState().setMagnetBatteries([])
   }
 }
