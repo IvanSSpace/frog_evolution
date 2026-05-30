@@ -493,7 +493,7 @@ function MagnetCard({
     <UpgradeCard
       icon={
         <img
-          src="/magnet.png"
+          src="/magnet_drone.png"
           alt=""
           style={{
             width: '100%',

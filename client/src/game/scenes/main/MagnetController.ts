@@ -60,6 +60,8 @@ export class MagnetController {
   private bobPhase = 0
   private baselineY = 0
   private isHopping = false
+  private isDragging = false
+  private lastDragX = 0
   private restTimer: Phaser.Time.TimerEvent | null = null
   private prePauseTimer: Phaser.Time.TimerEvent | null = null
 
@@ -131,6 +133,41 @@ export class MagnetController {
     this.shadow.setScale(this.baseScale)
     this.baselineY = cy
 
+    // Перетаскивание (как goo_collector): берём в любой точке, тянем.
+    this.sprite.setInteractive({ useHandCursor: true })
+    scene.input.setDraggable(this.sprite)
+    this.sprite.on('dragstart', () => {
+      if (!this.sprite) return
+      this.isDragging = true
+      if (this.restTimer) { this.restTimer.remove(false); this.restTimer = null }
+      if (this.prePauseTimer) { this.prePauseTimer.remove(false); this.prePauseTimer = null }
+      scene.tweens.killTweensOf(this.sprite)
+      this.isHopping = false
+      this.mode = 'WANDER'
+      this.pair = null
+      this.lastDragX = this.sprite.x
+    })
+    this.sprite.on('drag', (_p: Phaser.Input.Pointer, dragX: number, dragY: number) => {
+      if (!this.sprite) return
+      const { width: w, height: h } = scene.scale
+      const cxX = Phaser.Math.Clamp(dragX, FIELD_PAD_X + 10 * DPR, w - FIELD_PAD_X - 10 * DPR)
+      const cyY = Phaser.Math.Clamp(dragY, FIELD_PAD_Y + 10 * DPR, h - FIELD_PAD_Y_BOTTOM - 10 * DPR)
+      const dx = cxX - this.lastDragX
+      this.lastDragX = cxX
+      if (Math.abs(dx) > 0.5) {
+        this.targetTilt = Math.sign(dx) * MAX_TILT
+        this.sprite.scaleX = (dx > 0 ? -1 : 1) * this.baseScale
+      }
+      this.sprite.x = cxX
+      this.sprite.y = cyY
+    })
+    this.sprite.on('dragend', () => {
+      if (!this.sprite) return
+      this.isDragging = false
+      this.baselineY = this.sprite.y
+      this.scheduleNextHop()
+    })
+
     this.scheduleNextHop()
   }
 
@@ -147,6 +184,12 @@ export class MagnetController {
       this.shadow.rotation = sprite.rotation
       this.shadow.scaleX = sprite.scaleX * 0.85
       this.shadow.scaleY = sprite.scaleY * 0.85
+    }
+
+    // При перетаскивании — наклон гасим, остальную логику пропускаем.
+    if (this.isDragging) {
+      this.targetTilt = Phaser.Math.Linear(this.targetTilt, 0, TILT_LERP)
+      return
     }
 
     const spawnInterval = getMagnetSpawnInterval(level)
