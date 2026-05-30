@@ -187,9 +187,7 @@ export class MainScene extends Phaser.Scene {
       width: 18 * TEXTURE_QUALITY,
       height: 18 * TEXTURE_QUALITY,
     })
-    this.load.image('map', '/maps/map.webp')
-    this.load.image('map2', '/maps/map2.webp')
-    this.load.image('map3', '/maps/map3.webp')
+    // map/map2/map3 удалены (не используются: mapKeyForLocation → toxic_*).
     this.load.image('map4', '/maps/map4.webp')
     // 2026-05-28: тестовые toxic_mapN для всех локаций (см. mapKeyForLocation).
     this.load.image('toxic_map', '/maps/toxic_map.webp')
