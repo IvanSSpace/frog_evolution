@@ -87,17 +87,52 @@ export class BoxController {
     saveFieldBoxCount(this.scene.boxes.filter((b) => b.img.active).length)
   }
 
+  // Сетка спавна боксов: бокс падает в случайную СВОБОДНУЮ ячейку наклонной
+  // сетки (шаги/сдвиги подобраны визуально). Соседние боксы ложатся вплотную
+  // со ступенчатым сдвигом. Перебираем индексы ячеек, оставляем только те, что
+  // внутри поля и не заняты; берём случайную. Если всё занято — fallback random.
+  private pickGridPos(width: number, height: number): { x: number; y: number } {
+    const stepX = Math.round(BOX_DISPLAY_SIZE * 0.72)
+    const stepY = Math.round(BOX_DISPLAY_SIZE * 0.32)
+    const staggerY = 8 * DPR // каждый следующий по горизонтали — ниже (диагональ)
+    const staggerX = 18 * DPR // каждый следующий ряд — сдвиг влево
+
+    const x0 = FIELD_PAD_X + 40 * DPR
+    const x1 = width - FIELD_PAD_X - 40 * DPR
+    const y0 = FIELD_PAD_Y + 40 * DPR
+    const y1 = height - FIELD_PAD_Y_BOTTOM - 40 * DPR
+
+    const rows = Math.max(1, Math.ceil((y1 - y0) / stepY) + 1)
+    const cols = Math.max(1, Math.ceil((x1 - x0) / stepX) + 1)
+
+    const occupied = (cx: number, cy: number): boolean =>
+      this.scene.boxes.some(
+        (b) =>
+          Math.abs(b.img.x - cx) < stepX * 0.5 &&
+          Math.abs(b.baseY - cy) < stepY * 0.5,
+      )
+
+    const free: { x: number; y: number }[] = []
+    for (let r = 0; r < rows; r++) {
+      // широкий диапазон c — покрывает сдвиг влево (r*staggerX) и наклон.
+      for (let c = -rows; c < cols + rows; c++) {
+        const x = x0 + c * stepX - r * staggerX
+        const y = y0 + r * stepY + c * staggerY
+        if (x < x0 || x > x1 || y < y0 || y > y1) continue
+        if (!occupied(x, y)) free.push({ x, y })
+      }
+    }
+
+    if (free.length === 0) {
+      return { x: Phaser.Math.Between(x0, x1), y: Phaser.Math.Between(y0, y1) }
+    }
+    return free[Phaser.Math.Between(0, free.length - 1)]
+  }
+
   spawnBox(isRare = false, preLanded = false) {
     const scene = this.scene
     const { width, height } = scene.scale
-    const x = Phaser.Math.Between(
-      FIELD_PAD_X + 40 * DPR,
-      width - FIELD_PAD_X - 40 * DPR,
-    )
-    const targetY = Phaser.Math.Between(
-      FIELD_PAD_Y + 40 * DPR,
-      height - FIELD_PAD_Y_BOTTOM - 40 * DPR,
-    )
+    const { x, y: targetY } = this.pickGridPos(width, height)
 
     // Стартуем выше канваса — коробка просто влетает в кадр без fade.
     // Если preLanded — стартуем сразу на целевой Y, без анимации падения.
