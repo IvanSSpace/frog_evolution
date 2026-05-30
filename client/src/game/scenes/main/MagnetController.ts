@@ -31,6 +31,7 @@ import {
   FIELD_PAD_Y_BOTTOM,
   type FrogData,
 } from './types'
+import { loadDroneBatteries, saveDroneBatteries } from './droneCharge'
 import type { MainScene } from '../MainScene'
 import type { MergeController } from './MergeController'
 
@@ -115,10 +116,16 @@ class MagnetInstance {
     return Math.round(Phaser.Math.Between(2000, 4000) * this.restBias)
   }
 
-  constructor(scene: MainScene, merge: MergeController, index: number) {
+  constructor(
+    scene: MainScene,
+    merge: MergeController,
+    index: number,
+    initialBattery: number,
+  ) {
     this.scene = scene
     this.merge = merge
     this.index = index
+    this.battery = initialBattery
   }
 
   getBattery(): number {
@@ -194,8 +201,6 @@ class MagnetInstance {
     // Рассинхрон работы: отрицательный стартовый кулдаун — магниты выходят на
     // работу не одновременно.
     this.workAccum = -Phaser.Math.Between(0, 6000)
-    // Рассинхрон зарядки: случайный стартовый заряд — разряжаются вразнобой.
-    this.battery = Phaser.Math.Between(45, 100)
 
     // Перетаскивание (как goo_collector): берём в любой точке, тянем.
     this.sprite.setInteractive({ useHandCursor: true })
@@ -727,10 +732,24 @@ export class MagnetController {
   private instances: MagnetInstance[] = []
   // Throttle синка зарядов в store (для модалки).
   private syncMs = 0
+  // Восстановленные (досчитанные офлайн) заряды по индексу.
+  private restored: number[] = loadDroneBatteries('m')
+  private persistMs = 0
 
   constructor(scene: MainScene, merge: MergeController) {
     this.scene = scene
     this.merge = merge
+  }
+
+  private initialBatteryFor(index: number): number {
+    const r = this.restored[index]
+    return typeof r === 'number' ? r : Phaser.Math.Between(45, 100)
+  }
+
+  private persist(): void {
+    if (this.instances.length > 0) {
+      saveDroneBatteries('m', this.instances.map((m) => m.getBattery()))
+    }
   }
 
   get magnets(): readonly never[] {
@@ -744,7 +763,8 @@ export class MagnetController {
 
   private sync(want: number): void {
     while (this.instances.length < want) {
-      const inst = new MagnetInstance(this.scene, this.merge, this.instances.length)
+      const idx = this.instances.length
+      const inst = new MagnetInstance(this.scene, this.merge, idx, this.initialBatteryFor(idx))
       inst.ensureSpawned()
       this.instances.push(inst)
     }
@@ -768,9 +788,16 @@ export class MagnetController {
         .getState()
         .setMagnetBatteries(this.instances.map((m) => Math.round(m.getBattery())))
     }
+    // Персист заряда ~ раз в 3с (для восстановления после reload).
+    this.persistMs += delta
+    if (this.persistMs >= 3000) {
+      this.persistMs = 0
+      this.persist()
+    }
   }
 
   clearAll(): void {
+    this.persist() // сохраняем перед уходом с локации
     for (const m of this.instances) m.despawn()
     this.instances = []
     useGameStore.getState().setMagnetBatteries([])

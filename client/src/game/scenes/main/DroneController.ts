@@ -21,6 +21,7 @@ import {
   FIELD_PAD_Y_BOTTOM,
   type BoxData,
 } from './types'
+import { loadDroneBatteries, saveDroneBatteries } from './droneCharge'
 import type { MainScene } from '../MainScene'
 import type { BoxController } from './BoxController'
 
@@ -96,11 +97,18 @@ class DroneInstance {
     return Math.round(Phaser.Math.Between(2000, 4000) * this.restBias)
   }
 
-  constructor(scene: MainScene, box: BoxController, index: number, claimed: Set<BoxData>) {
+  constructor(
+    scene: MainScene,
+    box: BoxController,
+    index: number,
+    claimed: Set<BoxData>,
+    initialBattery: number,
+  ) {
     this.scene = scene
     this.box = box
     this.index = index
     this.claimed = claimed
+    this.battery = initialBattery
   }
 
   getBattery(): number {
@@ -150,8 +158,6 @@ class DroneInstance {
     // Рассинхрон работы: отрицательный стартовый cooldown — дроны выходят на
     // сбор не одновременно (одни раньше, другие позже).
     this.cooldownAccum = -Phaser.Math.Between(0, 6000)
-    // Рассинхрон зарядки: случайный стартовый заряд — разряжаются вразнобой.
-    this.battery = Phaser.Math.Between(45, 100)
 
     this.sprite.setInteractive({ useHandCursor: true })
     this.scene.input.setDraggable(this.sprite)
@@ -581,10 +587,26 @@ export class DroneController {
   private claimed: Set<BoxData> = new Set()
   // Throttle синка зарядов в store (для модалки).
   private syncMs = 0
+  // Восстановленные (досчитанные офлайн) заряды по индексу. Раздаём новым
+  // инстансам; для индексов сверх массива — случайный заряд.
+  private restored: number[] = loadDroneBatteries('c')
+  // Throttle персиста заряда в localStorage.
+  private persistMs = 0
 
   constructor(scene: MainScene, box: BoxController) {
     this.scene = scene
     this.box = box
+  }
+
+  private initialBatteryFor(index: number): number {
+    const r = this.restored[index]
+    return typeof r === 'number' ? r : Phaser.Math.Between(45, 100)
+  }
+
+  private persist(): void {
+    if (this.instances.length > 0) {
+      saveDroneBatteries('c', this.instances.map((d) => d.getBattery()))
+    }
   }
 
   // Желаемое число дронов-сборщиков: 0 если autoCollect не куплен, иначе
@@ -597,7 +619,8 @@ export class DroneController {
 
   private sync(want: number): void {
     while (this.instances.length < want) {
-      const inst = new DroneInstance(this.scene, this.box, this.instances.length, this.claimed)
+      const idx = this.instances.length
+      const inst = new DroneInstance(this.scene, this.box, idx, this.claimed, this.initialBatteryFor(idx))
       inst.ensureSpawned()
       this.instances.push(inst)
     }
@@ -626,9 +649,16 @@ export class DroneController {
         .getState()
         .setDroneBatteries(this.instances.map((d) => Math.round(d.getBattery())))
     }
+    // Персист заряда ~ раз в 3с (для восстановления после reload).
+    this.persistMs += delta
+    if (this.persistMs >= 3000) {
+      this.persistMs = 0
+      this.persist()
+    }
   }
 
   despawn(): void {
+    this.persist() // сохраняем перед уходом с локации
     for (const d of this.instances) d.despawn()
     this.instances = []
     this.claimed.clear()
