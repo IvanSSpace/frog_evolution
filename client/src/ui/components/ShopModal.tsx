@@ -197,6 +197,7 @@ function ShipCard() {
     <UpgradeCard
       icon="🚀"
       title="Космический корабль"
+      theme="ship"
       effect={
         isMax
           ? `Кораблей: ${level} (макс)`
@@ -218,6 +219,17 @@ function ShipCard() {
   )
 }
 
+// Тематический окрас иконки-плашки по типу апгрейда.
+type CardTheme = { from: string; to: string; border: string }
+const THEME: Record<string, CardTheme> = {
+  box: { from: '#fef3c7', to: '#fbbf24', border: '#b45309' }, // боксы — янтарь
+  magnet: { from: '#ede9fe', to: '#c084fc', border: '#7c3aed' }, // магнит — фиолет
+  drone: { from: '#ccfbf1', to: '#5eead4', border: '#0d9488' }, // дрон — teal
+  rare: { from: '#fef9c3', to: '#facc15', border: '#a16207' }, // редкие — золото
+  slime: { from: '#ecfccb', to: '#bef264', border: '#4d7c0f' }, // слизь — зелёный
+  ship: { from: '#dbeafe', to: '#60a5fa', border: '#1d4ed8' }, // корабль — синий
+}
+
 type GenericCardProps = {
   icon: ReactNode
   title: string
@@ -231,6 +243,8 @@ type GenericCardProps = {
   // Locked: requirement not met yet (progression gate). Shows 🔒 + label.
   locked?: boolean
   lockLabel?: string
+  // Тематический окрас иконки-плашки (ключ THEME). Default — slime (зелёный).
+  theme?: keyof typeof THEME
 }
 
 function UpgradeCard({
@@ -245,16 +259,18 @@ function UpgradeCard({
   onBuy,
   locked = false,
   lockLabel = '',
+  theme = 'slime',
 }: GenericCardProps) {
   const { t } = useTranslation()
   useGameStore((s) => s.numberFormat) // subscribe to format changes
+  const th = THEME[theme] ?? THEME.slime
   return (
     <div className="ff-card p-3 flex items-center gap-3">
       <div
         className="flex-shrink-0 w-14 h-14 flex items-center justify-center text-3xl rounded-2xl"
         style={{
-          background: 'linear-gradient(180deg, #ecfccb 0%, #bef264 100%)',
-          border: '2px solid #4d7c0f',
+          background: `linear-gradient(180deg, ${th.from} 0%, ${th.to} 100%)`,
+          border: `2px solid ${th.border}`,
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)',
         }}
       >
@@ -328,14 +344,15 @@ function DropSpeedCard() {
           src="/box.webp"
           alt=""
           style={{
-            width: '100%',
-            height: '100%',
+            width: '78%',
+            height: '78%',
             objectFit: 'contain',
             filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
           }}
         />
       }
       title={t('shop.drop_speed.name')}
+      theme="box"
       effect={isMax ? `${cur}s` : `${cur}s → ${next}s`}
       level={level}
       maxLevel={cfg.maxLevel}
@@ -371,17 +388,18 @@ function GooCollectorCard() {
     <UpgradeCard
       icon={
         <img
-          src="/goo_collector.png"
+          src="/goo_collector_icon.png"
           alt=""
           style={{
-            width: '100%',
-            height: '100%',
+            width: '82%',
+            height: '82%',
             objectFit: 'contain',
             filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
           }}
         />
       }
       title={t('shop.gooCollector.name')}
+      theme="drone"
       effect={isMax ? cur : `${cur} → ${next}`}
       level={level}
       maxLevel={cfg.maxLevel}
@@ -419,17 +437,18 @@ function AutoCollectCard() {
     <UpgradeCard
       icon={
         <img
-          src="/goo_collector.png"
+          src="/goo_collector_icon.png"
           alt=""
           style={{
-            width: '100%',
-            height: '100%',
+            width: '82%',
+            height: '82%',
             objectFit: 'contain',
             filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
           }}
         />
       }
       title={t('shop.autoCollect.name')}
+      theme="drone"
       effect={isMax ? cur : `${cur} → ${next}`}
       level={level}
       maxLevel={cfg.maxLevel}
@@ -494,17 +513,18 @@ function MagnetCard({
     <UpgradeCard
       icon={
         <img
-          src="/magnet_drone.png"
+          src="/magnet_drone_icon.png"
           alt=""
           style={{
-            width: '100%',
-            height: '100%',
+            width: '82%',
+            height: '82%',
             objectFit: 'contain',
             filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
           }}
         />
       }
       title={titleSuffix ? `${baseTitle} (${titleSuffix})` : baseTitle}
+      theme="magnet"
       effect={isMax ? cur : `${cur} → ${next}`}
       level={level}
       maxLevel={cfg.maxLevel}
@@ -547,14 +567,15 @@ function CrateQualityCard() {
           src="/box.webp"
           alt=""
           style={{
-            width: '100%',
-            height: '100%',
+            width: '78%',
+            height: '78%',
             objectFit: 'contain',
             filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
           }}
         />
       }
       title={t('shop.crate.name')}
+      theme="box"
       effect={effect}
       level={level}
       maxLevel={cfg.maxLevel}
@@ -601,6 +622,7 @@ function RareBoxSpeedCard() {
         />
       }
       title={t('shop.rare_box_speed.name')}
+      theme="rare"
       effect={effect}
       level={level}
       maxLevel={cfg.maxLevel}
