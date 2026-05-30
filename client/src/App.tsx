@@ -187,6 +187,7 @@ function App() {
     // Клик по зданию зоны строений → открыть соответствующую модалку.
     const onBuildingOpen = ({ modal }: { modal: string }) => {
       if (modal === 'inventory') setInventoryOpen(true)
+      else if (modal === 'shop') setShopOpen(true)
     }
     eventBus.on('building:open', onBuildingOpen)
 
