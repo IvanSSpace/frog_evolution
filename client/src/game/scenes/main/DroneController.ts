@@ -40,6 +40,8 @@ const BOB_PERIOD_MS = 3000
 // Плавный полёт к боксу в режиме сбора (px/с) + мин. длительность
 const FLY_SPEED = 70 * DPR
 const FLY_MIN_MS = 250
+// Полный заряд (100%) тратится за это время активной работы.
+const BATTERY_FULL_MS = 120000
 
 type DroneMode = 'WANDER' | 'COLLECT'
 
@@ -83,6 +85,12 @@ export class DroneController {
   // Последняя X при перетаскивании — для расчёта направления наклона
   private lastDragX = 0
 
+  // 2026-05-30: заряд дрона (0..100). Тратится со временем работы; при 0 дрон
+  // улетит на базу заряжаться (RTB — отдельный шаг). Тултип по тапу показывает %.
+  private battery = 100
+  private tooltip: Phaser.GameObjects.Text | null = null
+  private tooltipTimer: Phaser.Time.TimerEvent | null = null
+
 
   constructor(scene: MainScene, box: BoxController) {
     this.scene = scene
@@ -111,6 +119,11 @@ export class DroneController {
 
     this.sprite.setInteractive({ useHandCursor: true })
     this.scene.input.setDraggable(this.sprite)
+
+    // Тап (pointerup без drag) → тултип заряда.
+    this.sprite.on('pointerup', () => {
+      if (!this.isDragging) this.toggleTooltip()
+    })
 
     this.sprite.on('dragstart', () => {
       if (!this.sprite) return
@@ -152,6 +165,7 @@ export class DroneController {
   despawn(): void {
     if (!this.sprite) return
 
+    this.hideTooltip()
     // Убиваем все таймеры
     if (this.restTimer) {
       this.restTimer.remove(false)
@@ -197,9 +211,58 @@ export class DroneController {
     return out
   }
 
+  /** Тап по дрону → показать/скрыть тултип с зарядом. Auto-hide 2.5с. */
+  private toggleTooltip(): void {
+    if (!this.sprite) return
+    if (this.tooltip) {
+      this.hideTooltip()
+      return
+    }
+    const scene = this.scene
+    this.tooltip = scene.add
+      .text(this.sprite.x, this.sprite.y, `🔋 ${Math.round(this.battery)}%`, {
+        fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+        fontSize: `${Math.round(13 * DPR)}px`,
+        color: '#eaf5e6',
+        backgroundColor: '#0c1611',
+        padding: { x: 6 * DPR, y: 3 * DPR },
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(DRONE_DEPTH + 10)
+    this.positionTooltip()
+    this.tooltipTimer = scene.time.delayedCall(2500, () => this.hideTooltip())
+  }
+
+  private hideTooltip(): void {
+    if (this.tooltipTimer) {
+      this.tooltipTimer.remove(false)
+      this.tooltipTimer = null
+    }
+    if (this.tooltip) {
+      this.tooltip.destroy()
+      this.tooltip = null
+    }
+  }
+
+  private positionTooltip(): void {
+    if (!this.tooltip || !this.sprite) return
+    this.tooltip.setPosition(
+      this.sprite.x,
+      this.sprite.y - this.sprite.displayHeight * 0.55,
+    )
+    this.tooltip.setText(`🔋 ${Math.round(this.battery)}%`)
+  }
+
   tick(level: number, delta: number): void {
     if (!this.sprite) this.spawn()
     const sprite = this.sprite!
+
+    // Разряд батареи во время работы (не при перетаскивании).
+    if (!this.isDragging) {
+      this.battery = Math.max(0, this.battery - (100 * delta) / BATTERY_FULL_MS)
+    }
+    // Тултип следует за дроном пока открыт.
+    if (this.tooltip) this.positionTooltip()
 
     sprite.rotation = Phaser.Math.Linear(sprite.rotation, this.targetTilt, TILT_LERP)
 
