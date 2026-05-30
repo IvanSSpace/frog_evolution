@@ -106,6 +106,8 @@ type Events = {
   'cosmic:box-opened': { boxId: string; element: Element }
   // Тап по боксу на поле (раз на жест, не per-box) → лёгкий boxPop sfx.
   'box:tapOpened': Record<string, never>
+  // Клик по зданию зоны строений → открыть связанную модалку (React слушает в App.tsx).
+  'building:open': { modal: string }
   // Server-authoritative goo collector offline income (boot-time).
   'server:welcome-back': { earned: number; durationMs: number }
   // Gallery — open detail panel for a specific archetype/rarity (UI-only, legacy rarity)

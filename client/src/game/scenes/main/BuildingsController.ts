@@ -12,6 +12,7 @@
 
 import Phaser from 'phaser'
 import type { MainScene } from '../MainScene'
+import { eventBus } from '../../../store/eventBus'
 
 interface BuildingDef {
   key: string
@@ -21,6 +22,8 @@ interface BuildingDef {
   yFrac: number
   // Ширина спрайта как доля ширины экрана.
   widthFrac: number
+  // Какую модалку открывает клик по зданию (если есть). Слушает App.tsx.
+  opens?: string
 }
 
 // Раскладка по референсу: main↑центр, collector←, storage→,
@@ -28,9 +31,9 @@ interface BuildingDef {
 const BUILDINGS: readonly BuildingDef[] = [
   { key: 'bld_main', src: '/builds/main.png', xFrac: 0.5, yFrac: 0.34, widthFrac: 0.40 },
   { key: 'bld_collector', src: '/builds/collector.png', xFrac: 0.24, yFrac: 0.54, widthFrac: 0.27 },
-  { key: 'bld_storage', src: '/builds/storage.png', xFrac: 0.77, yFrac: 0.54, widthFrac: 0.29 },
+  { key: 'bld_storage', src: '/builds/storage.png', xFrac: 0.77, yFrac: 0.54, widthFrac: 0.29, opens: 'inventory' },
   { key: 'bld_droner', src: '/builds/droner.png', xFrac: 0.24, yFrac: 0.82, widthFrac: 0.29 },
-  { key: 'bld_space', src: '/builds/space.png', xFrac: 0.77, yFrac: 0.8, widthFrac: 0.32 },
+  { key: 'bld_space', src: '/builds/space.png', xFrac: 0.77, yFrac: 0.78, widthFrac: 0.32 },
   { key: 'bld_scaner', src: '/builds/scaner.png', xFrac: 0.5, yFrac: 0.97, widthFrac: 0.27 },
 ] as const
 
@@ -67,7 +70,10 @@ export class BuildingsController {
       sp.setDepth(b.yFrac * 100)
       // Тап → squash-jiggle (origin низ → сжатие к земле, как «толкнули»).
       sp.setInteractive({ useHandCursor: true })
-      sp.on('pointerdown', () => this.jiggle(sp, baseScale))
+      sp.on('pointerdown', () => {
+        this.jiggle(sp, baseScale)
+        if (b.opens) eventBus.emit('building:open', { modal: b.opens })
+      })
       this.sprites.push(sp)
     }
   }

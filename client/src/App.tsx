@@ -184,11 +184,18 @@ function App() {
     }
     eventBus.on('server:welcome-back', onWelcomeBack)
 
+    // Клик по зданию зоны строений → открыть соответствующую модалку.
+    const onBuildingOpen = ({ modal }: { modal: string }) => {
+      if (modal === 'inventory') setInventoryOpen(true)
+    }
+    eventBus.on('building:open', onBuildingOpen)
+
     return () => {
       cancelled = true
       eventBus.off('frog:discovered', onDiscovered)
       eventBus.off('rareCrate:opened', handleRareCrateOpened)
       eventBus.off('server:welcome-back', onWelcomeBack)
+      eventBus.off('building:open', onBuildingOpen)
       stopSync()
     }
   }, [])
