@@ -87,7 +87,7 @@ export function DronerModal({ onClose }: Props) {
         style={{
           width: '100%',
           maxWidth: 380,
-          height: '75vh',
+          maxHeight: '75vh',
           display: 'flex',
           flexDirection: 'column',
         }}
