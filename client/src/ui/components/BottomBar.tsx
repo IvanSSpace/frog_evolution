@@ -17,6 +17,8 @@ type TileProps = {
   // Emoji-фолбэк: рисуется вместо Icon, когда в iconRegistry нет подходящей
   // иконки (напр. инвентарь 🎒). `icon` всё равно обязателен для lock-стейта.
   emoji?: string
+  // Кастомная картинка вместо Icon/emoji (напр. grid/grid2 для зоны).
+  imgSrc?: string
   skin: TileSkin
   size?: 'md' | 'lg'
   // badge: number → показать число (если > 0); boolean → показать "!" если true.
@@ -69,6 +71,7 @@ const SKIN_VARS: Record<TileSkin, React.CSSProperties> = {
 function Tile({
   icon,
   emoji,
+  imgSrc,
   skin,
   size = 'md',
   badge,
@@ -101,7 +104,19 @@ function Tile({
       }}
       className={`ff-tile flex-shrink-0 ${dim}`}
     >
-      {emoji && !disabled ? (
+      {imgSrc && !disabled ? (
+        <img
+          src={imgSrc}
+          alt=""
+          style={{
+            width: iconPx,
+            height: iconPx,
+            objectFit: 'contain',
+            pointerEvents: 'none',
+            filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
+          }}
+        />
+      ) : emoji && !disabled ? (
         <span
           style={{
             fontSize: iconPx,
@@ -182,7 +197,11 @@ export function BottomBar({
         {isLoc1 && (
           <Tile
             icon="inventory"
-            emoji={zone === 'frogs' ? '🏭' : '🐸'}
+            imgSrc={
+              zone === 'frogs'
+                ? '/footer_icons/grid2.png'
+                : '/footer_icons/grid.png'
+            }
             skin="amber"
             title={zone === 'frogs' ? 'Здания' : 'Лягушки'}
             onClick={() => eventBus.emit('field:toggleZone')}
