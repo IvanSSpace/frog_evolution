@@ -92,8 +92,8 @@ export class DroneController {
   private spawn(): void {
     if (this.sprite) return
     const { width, height } = this.scene.scale
-    const cx = width / 2
-    const cy = (FIELD_PAD_Y + (height - FIELD_PAD_Y_BOTTOM)) / 2
+    const cx = Phaser.Math.Between(FIELD_PAD_X + 10 * DPR, width - FIELD_PAD_X - 10 * DPR)
+    const cy = Phaser.Math.Between(FIELD_PAD_Y + 10 * DPR, height - FIELD_PAD_Y_BOTTOM - 10 * DPR)
 
     // Тень — создаём ПЕРВОЙ (ниже дрона по z), чёрный силуэт того же спрайта.
     this.shadow = this.scene.add.image(cx, cy, 'goo_collector')
