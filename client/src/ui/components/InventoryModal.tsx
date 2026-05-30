@@ -321,7 +321,7 @@ export function InventoryModal({ onClose }: Props) {
             className="ff-display ff-stroke-white text-2xl"
             style={{ color: '#16a34a', letterSpacing: 1 }}
           >
-            🎒 Инвентарь
+            📦 Склад
           </h2>
           <button
             onClick={handleClose}

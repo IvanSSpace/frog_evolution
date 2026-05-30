@@ -137,7 +137,6 @@ export function BottomBar({
   onOpenFrogShop,
   onOpenSettings,
   onOpenExpedition,
-  onOpenInventory,
   onOpenClan,
 }: BottomBarProps) {
   // Badge «новый контент» на 🐸 и 📖. true когда есть discoveredLevel,
@@ -179,13 +178,6 @@ export function BottomBar({
       <div className="flex gap-2 items-center" style={{ marginTop: -16 }}>
         <Tile icon="upgrade-shop" skin="green" onClick={onOpenShop} />
         {/* 📊 Доходы (gallery) перенесён в Header — открывается кликом по сумме. */}
-        {/* 🎒 Инвентарь — иконка-рюкзак из /footer_icons/. */}
-        <Tile
-          icon="inventory"
-          skin="amber"
-          title="Инвентарь"
-          onClick={onOpenInventory}
-        />
         {/* Two-zone toggle: only on loc 1. */}
         {isLoc1 && (
           <Tile
