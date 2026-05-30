@@ -14,8 +14,10 @@ import {
   getCrateLevel,
   getRareBoxThreshold,
   getAutoCollectCooldownMs,
+  droneCapacity,
   toUpgrades,
   type Upgrades,
+  type PurchasableUpgrade,
 } from '../game/config/upgrades'
 import {
   LOCATIONS,
@@ -110,7 +112,10 @@ interface GameStateBase {
   spendGold: (amount: number) => boolean
 
   upgrades: Upgrades
-  buyUpgrade: (key: keyof Upgrades) => Promise<boolean>
+  buyUpgrade: (key: PurchasableUpgrade) => Promise<boolean>
+  // Распределение слотов дронов по типам (бесплатно). Клампится ёмкостью
+  // (2 + droneSlots) и >=0. Персист через подписку gameSync (throttled PUT).
+  setDroneDistribution: (collectors: number, magnets: number) => void
   devResetUpgrades: () => void
   devClearAllFrogs: () => void
 
@@ -300,8 +305,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       rareBoxSpeed: 0,
       ships: 0,
       autoCollect: 0,
-      droneCount: 0,
-      magnetCount: 0,
+      droneSlots: 0,
+      collectorDrones: 1,
+      magnetDrones: 1,
     }
     saveUpgrades(defaults)
     set({ upgrades: defaults })
@@ -346,6 +352,22 @@ export const useGameStore = create<GameState>((set, get) => ({
       })
       return false
     }
+  },
+
+  setDroneDistribution: (collectors, magnets) => {
+    const prev = get().upgrades
+    const cap = droneCapacity(prev.droneSlots)
+    let c = Math.max(0, Math.floor(collectors))
+    let m = Math.max(0, Math.floor(magnets))
+    // Если сумма превышает ёмкость — режем магниты, затем сборщиков.
+    if (c + m > cap) {
+      m = Math.min(m, cap - c)
+      if (c + m > cap) c = cap - m
+    }
+    if (c === prev.collectorDrones && m === prev.magnetDrones) return
+    const next = { ...prev, collectorDrones: c, magnetDrones: m }
+    saveUpgrades(next)
+    set({ upgrades: next }) // подписка gameSync → throttled PUT
   },
 
   // Current user info — populated после auth в App.tsx boot().

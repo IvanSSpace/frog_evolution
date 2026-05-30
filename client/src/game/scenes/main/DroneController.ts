@@ -1,7 +1,7 @@
 // DroneController: дроны-сборщики для апгрейда autoCollect (локация 1, Болото).
 //
 // 2026-05-30: multi-drone. DroneController — менеджер массива DroneInstance.
-// Число дронов = dronesFromCount(upgrades.droneCount) если autoCollect>0.
+// Число дронов = upgrades.collectorDrones если autoCollect>0.
 // Каждый DroneInstance — независимый дрон (своё движение/заряд/RTB/charge).
 //
 // Public API (без изменений для MainScene):
@@ -12,7 +12,6 @@ import {
   getAutoCollectCooldownMs,
   useGameStore,
 } from '../../../store/gameStore'
-import { dronesFromCount } from '../../config/upgrades'
 import {
   BOX_DISPLAY_SIZE,
   DASH_RADIUS,
@@ -588,11 +587,12 @@ export class DroneController {
     this.box = box
   }
 
-  // Желаемое число дронов: 0 если autoCollect не куплен, иначе 1..4 по droneCount.
+  // Желаемое число дронов-сборщиков: 0 если autoCollect не куплен, иначе
+  // collectorDrones (сколько слотов отдано под сборщиков).
   private targetCount(): number {
     const s = useGameStore.getState()
     if ((s.upgrades.autoCollect ?? 0) <= 0) return 0
-    return dronesFromCount(s.upgrades.droneCount)
+    return Math.max(0, s.upgrades.collectorDrones ?? 0)
   }
 
   private sync(want: number): void {

@@ -7,7 +7,7 @@
 // стягивает их (PULLING) и мерджит.
 //
 // 2026-05-30: multi-drone. MagnetController — менеджер массива MagnetInstance.
-// Число магнит-дронов = dronesFromCount(upgrades.magnetCount). Гейт активности
+// Число магнит-дронов = upgrades.magnetDrones. Гейт активности
 // (magnetEnabled / болото / !serumPaused) делает MainScene через tick/clearAll.
 //
 // Public API (без изменений для MainScene):
@@ -21,7 +21,6 @@ import {
   getMagnetMergesPerCycle,
   useGameStore,
 } from '../../../store/gameStore'
-import { dronesFromCount } from '../../config/upgrades'
 import {
   MERGE_RADIUS,
   BOX_DISPLAY_SIZE,
@@ -740,7 +739,7 @@ export class MagnetController {
 
   // Желаемое число магнит-дронов (гейт активности — у вызывающего: tick vs clearAll).
   private targetCount(): number {
-    return dronesFromCount(useGameStore.getState().upgrades.magnetCount)
+    return Math.max(0, useGameStore.getState().upgrades.magnetDrones ?? 0)
   }
 
   private sync(want: number): void {

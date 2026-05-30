@@ -1,56 +1,138 @@
 import { useState, type ReactNode } from 'react'
 import { useGameStore, UPGRADE_CONFIG, getUpgradeCost } from '../../store/gameStore'
+import { droneCapacity } from '../../game/config/upgrades'
 import { useModalLock } from '../../utils/modalLock'
-import { hapticNotification } from '../../utils/telegram'
+import { hapticImpact, hapticNotification } from '../../utils/telegram'
 import { AutoCollectCard, MagnetCard, UpgradeCard } from './ShopModal'
 
-// Карточка покупки доп. дронов (количество). level 0=1 дрон … 3=4 дрона.
-function DroneCountCard({
-  upgradeKey,
-  icon,
-  title,
-}: {
-  upgradeKey: 'droneCount' | 'magnetCount'
-  icon: string
-  title: string
-}) {
-  const level = useGameStore((s) => s.upgrades[upgradeKey])
+// Карточка покупки слотов дронов (ёмкость). База 2, докупаешь до 8.
+function DroneSlotsCard() {
+  const level = useGameStore((s) => s.upgrades.droneSlots)
   const gold = useGameStore((s) => s.gold)
   const buyUpgrade = useGameStore((s) => s.buyUpgrade)
-  const cfg = UPGRADE_CONFIG[upgradeKey]
+  const cfg = UPGRADE_CONFIG.droneSlots
   const isMax = level >= cfg.maxLevel
-  const cost = isMax ? 0 : getUpgradeCost(upgradeKey, level)
-  const count = level + 1
+  const cost = isMax ? 0 : getUpgradeCost('droneSlots', level)
+  const cap = droneCapacity(level)
   return (
     <UpgradeCard
-      icon={
-        <img
-          src={icon}
-          alt=""
-          style={{
-            height: '90%',
-            width: 'auto',
-            maxWidth: '100%',
-            objectFit: 'contain',
-            display: 'block',
-            margin: 'auto',
-          }}
-        />
-      }
-      title={title}
+      icon={<span style={{ fontSize: 26 }}>🛖</span>}
+      title="Слоты дронов"
       theme="drone"
-      effect={isMax ? `${count}/4 (макс)` : `${count}/4 → ${count + 1}/4`}
+      effect={isMax ? `${cap} слотов (макс)` : `${cap} → ${cap + 1} слотов`}
       level={level}
       maxLevel={cfg.maxLevel}
       cost={cost}
       isMax={isMax}
       canAfford={gold >= cost}
       onBuy={() =>
-        void buyUpgrade(upgradeKey).then((ok) =>
+        void buyUpgrade('droneSlots').then((ok) =>
           hapticNotification(ok ? 'success' : 'error'),
         )
       }
     />
+  )
+}
+
+// Строка распределения одного типа: иконка + имя + −/счётчик/+.
+function DistributionRow({
+  icon,
+  name,
+  count,
+  canAdd,
+  onAdd,
+  onSub,
+}: {
+  icon: string
+  name: string
+  count: number
+  canAdd: boolean
+  onAdd: () => void
+  onSub: () => void
+}) {
+  const btn = (enabled: boolean): React.CSSProperties => ({
+    width: 32,
+    height: 32,
+    opacity: enabled ? 1 : 0.35,
+    pointerEvents: enabled ? 'auto' : 'none',
+  })
+  return (
+    <div className="flex items-center gap-3">
+      <img src={icon} alt="" style={{ height: 34, width: 'auto', objectFit: 'contain' }} />
+      <div className="ff-display text-sm flex-1" style={{ color: 'var(--ff-text-light)' }}>
+        {name}
+      </div>
+      <button
+        className="ff-tile text-lg"
+        style={btn(count > 0)}
+        onClick={() => {
+          onSub()
+          hapticImpact('light')
+        }}
+        aria-label="Убрать"
+      >
+        −
+      </button>
+      <div
+        className="ff-display tabular-nums text-lg text-center"
+        style={{ minWidth: 24, color: '#86f25a' }}
+      >
+        {count}
+      </div>
+      <button
+        className="ff-tile text-lg"
+        style={btn(canAdd)}
+        onClick={() => {
+          onAdd()
+          hapticImpact('light')
+        }}
+        aria-label="Добавить"
+      >
+        +
+      </button>
+    </div>
+  )
+}
+
+// Распределение слотов между сборщиками и магнитами (бесплатно).
+function DroneDistribution() {
+  const collectors = useGameStore((s) => s.upgrades.collectorDrones)
+  const magnets = useGameStore((s) => s.upgrades.magnetDrones)
+  const slots = useGameStore((s) => s.upgrades.droneSlots)
+  const setDist = useGameStore((s) => s.setDroneDistribution)
+  const cap = droneCapacity(slots)
+  const used = collectors + magnets
+  const free = cap - used
+  return (
+    <div className="ff-card p-3 flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <div className="ff-display text-sm" style={{ color: 'var(--ff-text-light)' }}>
+          Распределение слотов
+        </div>
+        <div
+          className="ff-display tabular-nums text-sm"
+          style={{ color: free > 0 ? '#86f25a' : 'var(--ff-text-dim)' }}
+        >
+          {used}/{cap}
+        </div>
+      </div>
+      <DistributionRow
+        icon="/goo_collector_icon.png"
+        name="Сборщики"
+        count={collectors}
+        canAdd={free > 0}
+        onAdd={() => setDist(collectors + 1, magnets)}
+        onSub={() => setDist(collectors - 1, magnets)}
+      />
+      <DistributionRow
+        icon="/magnet_drone_icon.png"
+        name="Магниты"
+        count={magnets}
+        canAdd={free > 0}
+        onAdd={() => setDist(collectors, magnets + 1)}
+        onSub={() => setDist(collectors, magnets - 1)}
+      />
+    </div>
   )
 }
 
@@ -254,16 +336,8 @@ export function DronerModal({ onClose }: Props) {
             </>
           ) : (
             <>
-              <DroneCountCard
-                upgradeKey="droneCount"
-                icon="/goo_collector_icon.png"
-                title="Дроны-сборщики"
-              />
-              <DroneCountCard
-                upgradeKey="magnetCount"
-                icon="/magnet_drone_icon.png"
-                title="Магнит-дроны"
-              />
+              <DroneSlotsCard />
+              <DroneDistribution />
               <AutoCollectCard />
               <MagnetCard />
               <MagnetCard upgradeKey="magnet2" titleSuffix="Лес" />

@@ -17,15 +17,21 @@ export interface Upgrades {
   ships: number
   // Автосбор: дрон на Болоте (локация 1) открывает обычные боксы онлайн.
   autoCollect: number
-  // 2026-05-30: доп. дроны. level 0 = 1 дрон (базовый), level 3 = 4 дрона.
-  // Фактическое число = level + 1 (если базовый дрон активен).
-  droneCount: number
-  magnetCount: number
+  // 2026-05-30: слоты дронов. Здание droner: 2 базовых слота + droneSlots
+  // докупаемых. Ёмкость = 2 + droneSlots. Слоты распределяются между типами:
+  // collectorDrones (сборщики) + magnetDrones (магниты) ≤ ёмкость. Распределение
+  // бесплатно (± в модалке), платится только droneSlots.
+  droneSlots: number
+  collectorDrones: number
+  magnetDrones: number
 }
 
-// Число дронов по count-level: 0→1, 1→2, 2→3, 3→4.
-export function dronesFromCount(countLevel: number): number {
-  return Math.max(1, Math.min(4, (countLevel ?? 0) + 1))
+// Базовое число слотов (бесплатных).
+export const BASE_DRONE_SLOTS = 2
+
+// Общая ёмкость слотов = база + докупленные.
+export function droneCapacity(slotsLevel: number): number {
+  return BASE_DRONE_SLOTS + Math.max(0, slotsLevel ?? 0)
 }
 
 // Прогрессивный анлок кораблей: чтобы купить корабль №(i+1), max discoveredLevel
@@ -60,8 +66,10 @@ export function toUpgrades(
     rareBoxSpeed: r.rareBoxSpeed ?? 0,
     ships: r.ships ?? 0,
     autoCollect: r.autoCollect ?? 0,
-    droneCount: r.droneCount ?? 0,
-    magnetCount: r.magnetCount ?? 0,
+    droneSlots: r.droneSlots ?? 0,
+    // Дефолт 1/1 — 2 базовых слота заняты одним сборщиком и одним магнитом.
+    collectorDrones: r.collectorDrones ?? 1,
+    magnetDrones: r.magnetDrones ?? 1,
   }
 }
 
@@ -156,23 +164,26 @@ export const UPGRADE_CONFIG = {
       300_000, 1_500_000, 8_000_000, 60_000_000, 500_000_000, 4_000_000_000,
     ],
   },
-  // Доп. дроны-сборщики (level 0=1 дрон … 3=4 дрона). 3 покупки.
-  droneCount: {
-    maxLevel: 3,
-    costs: [10_000_000, 120_000_000, 1_500_000_000],
-  },
-  // Доп. магнит-дроны.
-  magnetCount: {
-    maxLevel: 3,
-    costs: [15_000_000, 180_000_000, 2_000_000_000],
+  // Слоты дронов: докупаемые сверх 2 базовых. maxLevel 6 → ёмкость до 8.
+  // Цена растёт. Слот любого типа (сборщик/магнит) — распределение бесплатно.
+  droneSlots: {
+    maxLevel: 6,
+    costs: [
+      10_000_000, 40_000_000, 150_000_000, 500_000_000, 1_500_000_000,
+      4_000_000_000,
+    ],
   },
 } as const
 
 export const ENTITY_CAP = 16 // total cap of frogs + boxes on field
 
+// Покупаемые за gold апгрейды (есть в UPGRADE_CONFIG). collectorDrones/
+// magnetDrones в Upgrades, но НЕ покупаются — меняются распределением слотов.
+export type PurchasableUpgrade = keyof typeof UPGRADE_CONFIG
+
 // ─── accessors ───────────────────────────────────────────────────────────────
 
-export function getUpgradeCost(key: keyof Upgrades, level: number): number {
+export function getUpgradeCost(key: PurchasableUpgrade, level: number): number {
   const arr = UPGRADE_CONFIG[key].costs
   if (level >= arr.length) return Infinity
   return arr[level]
