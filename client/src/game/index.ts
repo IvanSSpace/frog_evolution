@@ -57,9 +57,10 @@ export function getStarMapHUD(): {
 export function startGame(): Phaser.Game {
   if (game) return game
 
-  // DPR cap=2: на mobile WebView (особенно TG) DPR=3 даёт 9× pixels и убивает GPU.
-  // Cap=2 — индустриальный стандарт для mobile canvas-игр (Phaser/PixiJS recommend).
-  const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2))
+  // DPR cap=1.5: понижено качество ради FPS на mobile WebView (TG). Cap=2 давал
+  // ~44% больше пикселей/кадр; 1.5 заметно легче для GPU, картинка чуть мягче.
+  // scale.zoom = 1/dpr компенсирует — CSS-размер канваса и раскладка не меняются.
+  const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 1.5))
   const parent = document.getElementById('game-canvas') as HTMLElement
 
   // Размеры CSS-родителя (game-canvas div занимает между Header и BottomBar)
