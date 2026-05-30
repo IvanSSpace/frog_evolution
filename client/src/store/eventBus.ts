@@ -201,6 +201,8 @@ type Events = {
   }
   'field:toggleZone': void
   'field:zoneChanged': { zone: 'frogs' | 'buildings' }
+  // MainScene.create завершён — базовые ассеты загружены, можно убрать лоадер.
+  'game:ready': void
 }
 
 export const eventBus = mitt<Events>()

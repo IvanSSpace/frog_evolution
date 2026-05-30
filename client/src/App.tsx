@@ -77,6 +77,8 @@ function App() {
   const [bootState, setBootState] = useState<'loading' | 'ready' | 'offline'>(
     'loading',
   )
+  // Phaser догрузил базовые ассеты (MainScene.create) — убираем лоадер-оверлей.
+  const [gameReady, setGameReady] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -209,6 +211,19 @@ function App() {
     if (bootState === 'loading') return
     startGame()
   }, [bootState])
+
+  // Лоадер-оверлей висит пока MainScene.create не отработает (базовые ассеты,
+  // вкл. тяжёлый toxic_map2size, загружены). Safety-таймаут на случай если
+  // event не придёт — не оставляем юзера на вечном лоадере.
+  useEffect(() => {
+    const onReady = () => setGameReady(true)
+    eventBus.on('game:ready', onReady)
+    const safety = window.setTimeout(() => setGameReady(true), 20000)
+    return () => {
+      eventBus.off('game:ready', onReady)
+      window.clearTimeout(safety)
+    }
+  }, [])
 
   // Phase 24 Plan 24-04: install Captain birth Beat 4 + Beat 5 coordinator.
   // Production-critical (НЕ DEV-only). Idempotent — повторный mount/StrictMode
@@ -353,6 +368,13 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <OrientationLock />
+      {/* Лоадер поверх всего пока Phaser не догрузил базовые ассеты. UI снизу
+          уже смонтирован (нужен #game-canvas), оверлей прячет pop-in. */}
+      {!gameReady && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
+          <LoadingScreen />
+        </div>
+      )}
       {bootState === 'offline' && !import.meta.env.DEV && (
         <div className="fixed top-4 left-4 z-50 bg-amber-700/90 text-white px-3 py-2 rounded text-xs">
           Offline режим — изменения не сохраняются

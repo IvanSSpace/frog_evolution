@@ -454,6 +454,10 @@ export class MainScene extends Phaser.Scene {
       const w = window as unknown as { __mainScene?: MainScene }
       w.__mainScene = this
     }
+
+    // Сигнал React'у что базовые ассеты загружены (preload завершён) и сцена
+    // отрисована — можно убирать загрузочный оверлей.
+    eventBus.emit('game:ready', undefined)
   }
 
   // Phase 21-05: subscribeSerumState / onPointerDownGlobal перенесены в FrogInteraction.
