@@ -40,8 +40,8 @@ const BOB_PERIOD_MS = 3000
 // Плавный полёт к боксу в режиме сбора (px/с) + мин. длительность
 const FLY_SPEED = 70 * DPR
 const FLY_MIN_MS = 250
-// Полный заряд (100%) тратится за это время активной работы.
-const BATTERY_FULL_MS = 120000
+// Полный заряд (100%) тратится за это время активной работы (8 минут).
+const BATTERY_FULL_MS = 480000
 
 type DroneMode = 'WANDER' | 'COLLECT'
 

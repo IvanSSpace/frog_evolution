@@ -44,6 +44,8 @@ const MAGNET_DEPTH = 96000
 const PULL = 0.08
 // Размер дрона.
 const DRONE_SCALE_MULT = 0.7
+// Полный заряд (100%) тратится за 8 минут активной работы.
+const BATTERY_FULL_MS = 480000
 
 type MagnetMode = 'WANDER' | 'WORK' | 'PULLING'
 
@@ -64,6 +66,11 @@ export class MagnetController {
   private lastDragX = 0
   private restTimer: Phaser.Time.TimerEvent | null = null
   private prePauseTimer: Phaser.Time.TimerEvent | null = null
+
+  // 2026-05-30: заряд + тултип по тапу (как goo_collector).
+  private battery = 100
+  private tooltip: Phaser.GameObjects.Text | null = null
+  private tooltipTimer: Phaser.Time.TimerEvent | null = null
 
   // Рабочий кулдаун (мс).
   private workAccum = 0
@@ -87,6 +94,7 @@ export class MagnetController {
 
   clearAll(): void {
     const scene = this.scene
+    this.hideTooltip()
     if (this.restTimer) {
       this.restTimer.remove(false)
       this.restTimer = null
@@ -136,6 +144,10 @@ export class MagnetController {
     // Перетаскивание (как goo_collector): берём в любой точке, тянем.
     this.sprite.setInteractive({ useHandCursor: true })
     scene.input.setDraggable(this.sprite)
+    // Тап (pointerup без drag) → тултип заряда.
+    this.sprite.on('pointerup', () => {
+      if (!this.isDragging) this.toggleTooltip()
+    })
     this.sprite.on('dragstart', () => {
       if (!this.sprite) return
       this.isDragging = true
@@ -171,9 +183,56 @@ export class MagnetController {
     this.scheduleNextHop()
   }
 
+  /** Тап → тултип заряда. Auto-hide 2.5с, toggle повторным тапом. */
+  private toggleTooltip(): void {
+    if (!this.sprite) return
+    if (this.tooltip) {
+      this.hideTooltip()
+      return
+    }
+    this.tooltip = this.scene.add
+      .text(this.sprite.x, this.sprite.y, `🔋 ${Math.round(this.battery)}%`, {
+        fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+        fontSize: `${Math.round(13 * DPR)}px`,
+        color: '#eaf5e6',
+        backgroundColor: '#0c1611',
+        padding: { x: 6 * DPR, y: 3 * DPR },
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(MAGNET_DEPTH + 10)
+    this.positionTooltip()
+    this.tooltipTimer = this.scene.time.delayedCall(2500, () => this.hideTooltip())
+  }
+
+  private hideTooltip(): void {
+    if (this.tooltipTimer) {
+      this.tooltipTimer.remove(false)
+      this.tooltipTimer = null
+    }
+    if (this.tooltip) {
+      this.tooltip.destroy()
+      this.tooltip = null
+    }
+  }
+
+  private positionTooltip(): void {
+    if (!this.tooltip || !this.sprite) return
+    this.tooltip.setPosition(
+      this.sprite.x,
+      this.sprite.y - this.sprite.displayHeight * 0.55,
+    )
+    this.tooltip.setText(`🔋 ${Math.round(this.battery)}%`)
+  }
+
   tick(level: number, delta: number): void {
     if (!this.sprite) this.spawn()
     const sprite = this.sprite!
+
+    // Разряд батареи во время работы (не при перетаскивании).
+    if (!this.isDragging) {
+      this.battery = Math.max(0, this.battery - (100 * delta) / BATTERY_FULL_MS)
+    }
+    if (this.tooltip) this.positionTooltip()
 
     sprite.rotation = Phaser.Math.Linear(sprite.rotation, this.targetTilt, TILT_LERP)
 
