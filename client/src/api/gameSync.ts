@@ -11,7 +11,11 @@
 // делает запросы к локальному dev-серверу, который автоматически использует
 // dev-юзера. Если /game/state недоступен — синк просто молча выключается.
 
-import { useGameStore } from '../store/gameStore'
+import {
+  useGameStore,
+  getDropIntervalMs,
+  getAutoCollectCooldownMs,
+} from '../store/gameStore'
 import { useOnboardingStore } from '../store/onboarding/onboardingSlice'
 import { getServerGameState, putServerGameState } from './gameState'
 import { ApiError } from './client'
@@ -377,7 +381,26 @@ export async function loadGameState(): Promise<boolean> {
       }
     }
 
-    // Offline box drops удалены: боксы спавнятся только по таймеру, без очереди.
+    // Offline box fill: боксы, накопившиеся за AFK (минус собранные дронами),
+    // выкладываем на поле при заходе. MainScene слушает 'boxes:offline-fill'.
+    {
+      const elapsedMs = typeof data.elapsedMs === 'number' ? data.elapsedMs : 0
+      const OFFLINE_FILL_THRESHOLD_MS = 60_000
+      if (elapsedMs > OFFLINE_FILL_THRESHOLD_MS) {
+        const s = useGameStore.getState()
+        const dropInterval = getDropIntervalMs(s.upgrades.dropSpeed)
+        const spawned = dropInterval > 0 ? Math.floor(elapsedMs / dropInterval) : 0
+        const autoLvl = s.upgrades.autoCollect ?? 0
+        const drones = autoLvl > 0 ? (s.upgrades.collectorDrones ?? 0) : 0
+        const cooldown = getAutoCollectCooldownMs(autoLvl)
+        const collected =
+          drones > 0 && cooldown > 0
+            ? drones * Math.floor(elapsedMs / cooldown)
+            : 0
+        const count = Math.max(0, spawned - collected)
+        if (count > 0) eventBus.emit('boxes:offline-fill', { count })
+      }
+    }
 
     devLog('[gameSync] loaded state from server')
     return true

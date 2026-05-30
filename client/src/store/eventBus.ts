@@ -108,6 +108,8 @@ type Events = {
   'box:tapOpened': Record<string, never>
   // Клик по зданию зоны строений → открыть связанную модалку (React слушает в App.tsx).
   'building:open': { modal: string }
+  // Offline box fill: gameSync считает сколько боксов накопилось за AFK, MainScene выкладывает на поле.
+  'boxes:offline-fill': { count: number }
   // Server-authoritative goo collector offline income (boot-time).
   'server:welcome-back': { earned: number; durationMs: number }
   // Gallery — open detail panel for a specific archetype/rarity (UI-only, legacy rarity)

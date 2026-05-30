@@ -48,6 +48,13 @@ import { BuildingsController } from './main/BuildingsController'
 import { LocationTransition } from './main/LocationTransition'
 import { FrogInteraction } from './main/FrogInteraction'
 
+// Буфер offline box fill: gameSync эмитит 'boxes:offline-fill' с числом боксов,
+// накопившихся за AFK. Модульный listener ловит emit даже если он пришёл до
+// create() сцены; create() выкладывает их на поле (capped по слотам).
+let _offlineBoxFill = 0
+eventBus.on('boxes:offline-fill', ({ count }: { count: number }) => {
+  _offlineBoxFill += count
+})
 
 const SWIPE_SLOP = 90 * DPR   // палец должен сдвинуться на столько, прежде чем начнётся скролл
 const SWIPE_FLICK_V = 0.5   // |velocity.y| (px/ms) выше — считаем фликом, переключаем по направлению
@@ -340,6 +347,7 @@ export class MainScene extends Phaser.Scene {
       }
     })
     this.events.once(Phaser.Scenes.Events.DESTROY, () => unsubTiers())
+    eventBus.on('boxes:offline-fill', this.onOfflineBoxFill)
     // Phase 21-05: location-changed + dev-clear перенесены в LocationTransition.
     eventBus.on('location:changed', this.locTransition.onLocationChanged)
     eventBus.on('dev:clearAllFrogs', this.locTransition.onDevClearAllFrogs)
@@ -389,6 +397,10 @@ export class MainScene extends Phaser.Scene {
     })
 
     this.spawnLocationFrogs()
+
+    // Offline box fill: выкладываем накопленные за AFK боксы на поле (preLanded,
+    // по сетке). canSpawnBox() ограничивает по свободным слотам — лишнее теряется.
+    this.drainOfflineBoxFill()
 
     // Phase 12: overlay manager — создаётся ПОСЛЕ spawnLocationFrogs так что
     // первый sync видит уже живых лягушек, и для их frogId-match с CarrierData.
@@ -727,6 +739,20 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
+  private onOfflineBoxFill = (_evt: { count: number }) => {
+    this.drainOfflineBoxFill()
+  }
+
+  private drainOfflineBoxFill(): void {
+    if (_offlineBoxFill <= 0) return
+    let n = _offlineBoxFill
+    _offlineBoxFill = 0
+    while (n > 0 && this.box.canSpawnBox()) {
+      this.box.spawnBox(false, true) // preLanded, по сетке (pickGridPos)
+      n--
+    }
+  }
+
   // Phase 21-01: package-public — вызывается FrogSpawner (after spawn/remove).
   syncEntityCount() {
     useGameStore
@@ -981,6 +1007,7 @@ export class MainScene extends Phaser.Scene {
     this.input.off('pointermove', this.onSwipePointerMove, this)
     this.input.off('pointerup', this.onSwipePointerUp, this)
     eventBus.off('frog:purchased', this.onFrogPurchased)
+    eventBus.off('boxes:offline-fill', this.onOfflineBoxFill)
     // Phase 21-05: location handlers живут в LocationTransition; отписываем
     // bound-методы которые регистрировали в create().
     eventBus.off('location:changed', this.locTransition.onLocationChanged)
