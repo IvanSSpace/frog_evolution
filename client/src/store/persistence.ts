@@ -91,6 +91,14 @@ export function loadUpgrades(): Upgrades {
           (parsed as unknown as Record<string, number>).autoCollect ?? 0,
           UPGRADE_CONFIG.autoCollect.maxLevel,
         ),
+        droneCount: Math.min(
+          (parsed as unknown as Record<string, number>).droneCount ?? 0,
+          UPGRADE_CONFIG.droneCount.maxLevel,
+        ),
+        magnetCount: Math.min(
+          (parsed as unknown as Record<string, number>).magnetCount ?? 0,
+          UPGRADE_CONFIG.magnetCount.maxLevel,
+        ),
       }
     }
   } catch {

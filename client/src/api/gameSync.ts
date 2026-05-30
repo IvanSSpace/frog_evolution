@@ -170,6 +170,8 @@ export async function loadGameState(): Promise<boolean> {
         rareBoxSpeed: upg?.rareBoxSpeed ?? 0,
         ships: upg?.ships ?? 0,
         autoCollect: upg?.autoCollect ?? 0,
+        droneCount: upg?.droneCount ?? 0,
+        magnetCount: upg?.magnetCount ?? 0,
       },
       frogPurchases: Array.isArray(data.frogPurchases)
         ? data.frogPurchases

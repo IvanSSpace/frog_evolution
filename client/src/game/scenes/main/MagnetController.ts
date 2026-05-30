@@ -6,11 +6,14 @@
 // сбора бокса (COLLECT) — летит к паре одноуровневых лягушек (WORK), долетев
 // стягивает их (PULLING) и мерджит.
 //
-// Public API:
-//   - tick(level, delta): per-frame (caller проверил magnetEnabled/болото/
-//     !serumPaused). Спавнит дрон при первом вызове.
-//   - resetSpawnTimer(): сброс рабочего кулдауна.
-//   - clearAll(): despawn дрона.
+// 2026-05-30: multi-drone. MagnetController — менеджер массива MagnetInstance.
+// Число магнит-дронов = dronesFromCount(upgrades.magnetCount). Гейт активности
+// (magnetEnabled / болото / !serumPaused) делает MainScene через tick/clearAll.
+//
+// Public API (без изменений для MainScene):
+//   - tick(level, delta): per-frame. Спавнит/синкает дронов.
+//   - resetSpawnTimer(): сброс рабочего кулдауна всех дронов.
+//   - clearAll(): despawn всех дронов.
 
 import Phaser from 'phaser'
 import {
@@ -18,6 +21,7 @@ import {
   getMagnetMergesPerCycle,
   useGameStore,
 } from '../../../store/gameStore'
+import { dronesFromCount } from '../../config/upgrades'
 import {
   MERGE_RADIUS,
   BOX_DISPLAY_SIZE,
@@ -68,9 +72,11 @@ const BRANCH_RIGHT = [
 
 type MagnetMode = 'WANDER' | 'WORK' | 'PULLING' | 'RTB' | 'CHARGING' | 'EMERGING'
 
-export class MagnetController {
+// ─── Один магнит-дрон ──────────────────────────────────────────────────────────
+class MagnetInstance {
   private scene: MainScene
   private merge: MergeController
+  private index: number
 
   private sprite: Phaser.GameObjects.Image | null = null
   private shadow: Phaser.GameObjects.Image | null = null
@@ -93,7 +99,6 @@ export class MagnetController {
   private tooltipTimer: Phaser.Time.TimerEvent | null = null
   private chargeBg: Phaser.GameObjects.Rectangle | null = null
   private chargeFill: Phaser.GameObjects.Rectangle | null = null
-  private batterySyncMs = 0
 
   // Рабочий кулдаун (мс).
   private workAccum = 0
@@ -102,24 +107,28 @@ export class MagnetController {
   private mergesDone = 0
   private mergesTarget = 1
 
-  constructor(scene: MainScene, merge: MergeController) {
+  constructor(scene: MainScene, merge: MergeController, index: number) {
     this.scene = scene
     this.merge = merge
+    this.index = index
   }
 
-  get magnets(): readonly never[] {
-    return []
+  getBattery(): number {
+    return this.battery
   }
 
   resetSpawnTimer(): void {
     this.workAccum = 0
   }
 
-  clearAll(): void {
+  ensureSpawned(): void {
+    if (!this.sprite) this.spawn()
+  }
+
+  despawn(): void {
     const scene = this.scene
     this.hideTooltip()
     this.hideChargeBar()
-    useGameStore.getState().setMagnetBattery(-1)
     if (this.restTimer) {
       this.restTimer.remove(false)
       this.restTimer = null
@@ -127,6 +136,13 @@ export class MagnetController {
     if (this.prePauseTimer) {
       this.prePauseTimer.remove(false)
       this.prePauseTimer = null
+    }
+    // Освобождаем пару если была в работе.
+    if (this.pair) {
+      for (const f of this.pair) {
+        if (scene.frogs.includes(f)) f.isAttracted = false
+      }
+      this.pair = null
     }
     if (this.sprite) {
       scene.tweens.killTweensOf(this.sprite)
@@ -139,9 +155,9 @@ export class MagnetController {
       this.shadow = null
     }
     this.mode = 'WANDER'
-    this.pair = null
     this.workAccum = 0
     this.isHopping = false
+    this.isDragging = false
     this.targetTilt = 0
     this.bobPhase = 0
     this.baselineY = 0
@@ -333,7 +349,8 @@ export class MagnetController {
   private showChargeBar(): void {
     this.hideChargeBar()
     const { width, height } = this.scene.scale
-    const x = width * DRONER_X_FRAC - 33 * DPR
+    // Бары соседних дронов раздвигаем по x (index * 13).
+    const x = width * DRONER_X_FRAC - 33 * DPR + this.index * 13 * DPR
     const y = height + height * DRONER_Y_FRAC - 75 * DPR
     const w = 9 * DPR
     const h = 48 * DPR
@@ -423,12 +440,6 @@ export class MagnetController {
       if (this.battery >= 100) this.startEmerge()
     }
     if (this.tooltip) this.positionTooltip()
-
-    this.batterySyncMs += delta
-    if (this.batterySyncMs >= 700) {
-      this.batterySyncMs = 0
-      useGameStore.getState().setMagnetBattery(Math.round(this.battery))
-    }
 
     sprite.rotation = Phaser.Math.Linear(sprite.rotation, this.targetTilt, TILT_LERP)
 
@@ -691,5 +702,57 @@ export class MagnetController {
     } else {
       doTween()
     }
+  }
+}
+
+// ─── Менеджер магнит-дронов ────────────────────────────────────────────────────
+export class MagnetController {
+  private scene: MainScene
+  private merge: MergeController
+  private instances: MagnetInstance[] = []
+
+  constructor(scene: MainScene, merge: MergeController) {
+    this.scene = scene
+    this.merge = merge
+  }
+
+  get magnets(): readonly never[] {
+    return []
+  }
+
+  // Желаемое число магнит-дронов (гейт активности — у вызывающего: tick vs clearAll).
+  private targetCount(): number {
+    return dronesFromCount(useGameStore.getState().upgrades.magnetCount)
+  }
+
+  private sync(want: number): void {
+    while (this.instances.length < want) {
+      const inst = new MagnetInstance(this.scene, this.merge, this.instances.length)
+      inst.ensureSpawned()
+      this.instances.push(inst)
+    }
+    while (this.instances.length > want) {
+      this.instances.pop()!.despawn()
+    }
+  }
+
+  resetSpawnTimer(): void {
+    for (const m of this.instances) m.resetSpawnTimer()
+  }
+
+  tick(level: number, delta: number): void {
+    this.sync(this.targetCount())
+    for (const m of this.instances) m.tick(level, delta)
+    // В store кладём минимальный заряд активных дронов (для модалки).
+    const bats = this.instances.map((m) => m.getBattery())
+    useGameStore
+      .getState()
+      .setMagnetBattery(bats.length ? Math.round(Math.min(...bats)) : -1)
+  }
+
+  clearAll(): void {
+    for (const m of this.instances) m.despawn()
+    this.instances = []
+    useGameStore.getState().setMagnetBattery(-1)
   }
 }
