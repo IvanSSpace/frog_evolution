@@ -300,6 +300,21 @@ export class LocationTransition {
       })
     }
 
+    // 2026-05-30: здания (фабрика/склад/дрон) на Болоте — reparent в
+    // newContainer, чтобы зумились вместе с лягушками. Generic-loop в
+    // onComplete вернёт их в scene root (вместе с остальными детьми). Coords
+    // переводим в локальные (минус центр).
+    if (newLoc === 1) {
+      const buildings = scene.collectBuildingSprites(newLoc)
+      for (const b of buildings) {
+        const wx = b.x
+        const wy = b.y
+        newContainer.add(b)
+        b.x = wx - cx
+        b.y = wy - cy
+      }
+    }
+
     // 4. Слой-порядок: при подъёме старая остаётся ВПЕРЕДИ (мы видим как она
     // сжимается в точку, а новая «обнимает» её сзади). При спуске наоборот —
     // новая ВПЕРЕДИ (мы зумимся внутрь маленькой карты, проходим сквозь старую).

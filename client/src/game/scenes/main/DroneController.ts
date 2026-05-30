@@ -189,6 +189,14 @@ export class DroneController {
     if (!this.sprite) this.spawn()
   }
 
+  /** Спрайты (дрон + тень) для reparent в transition-контейнер (зум). */
+  getSprites(): Phaser.GameObjects.Image[] {
+    const out: Phaser.GameObjects.Image[] = []
+    if (this.shadow) out.push(this.shadow)
+    if (this.sprite) out.push(this.sprite)
+    return out
+  }
+
   tick(level: number, delta: number): void {
     if (!this.sprite) this.spawn()
     const sprite = this.sprite!

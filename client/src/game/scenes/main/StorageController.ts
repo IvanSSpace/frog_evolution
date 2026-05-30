@@ -51,6 +51,11 @@ export class StorageController {
     }
   }
 
+  /** Спрайт для reparent в transition-контейнер (зум при смене локации). */
+  getSprite(): Phaser.GameObjects.Image | null {
+    return this.sprite
+  }
+
   destroy(): void {
     if (this.sprite) {
       this.scene.tweens.killTweensOf(this.sprite)

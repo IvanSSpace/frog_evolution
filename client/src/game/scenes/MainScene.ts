@@ -548,6 +548,37 @@ export class MainScene extends Phaser.Scene {
     this.box.spawnBox(isRare, preLanded)
   }
 
+  // Показать/скрыть здания по локации (Болото=1). Вызывается каждый кадр до
+  // transition-gate — show() идемпотентен.
+  private prepBuildings(locId: number): void {
+    if (locId === 1) {
+      this.factory.show()
+      this.storage.show()
+      if ((useGameStore.getState().upgrades.autoCollect ?? 0) > 0) {
+        this.drone.ensureSpawned()
+      }
+    } else {
+      this.factory.hide()
+      this.storage.hide()
+      this.drone.despawn()
+    }
+  }
+
+  // Package-public: спрайты зданий для reparent в transition-контейнер, чтобы
+  // они зумились вместе с лягушками. Вызывается LocationTransition при входе на
+  // Болото. Гарантирует что здания показаны (prep) перед сбором.
+  collectBuildingSprites(locId: number): Phaser.GameObjects.Image[] {
+    this.prepBuildings(locId)
+    if (locId !== 1) return []
+    const out: Phaser.GameObjects.Image[] = []
+    const f = this.factory.getSprite()
+    if (f) out.push(f)
+    const s = this.storage.getSprite()
+    if (s) out.push(s)
+    out.push(...this.drone.getSprites())
+    return out
+  }
+
   // ============== МАГНИТ ==============
   // Phase 21-04: вся логика (spawn / update / remove + state) в MagnetController.
 
@@ -705,24 +736,9 @@ export class MainScene extends Phaser.Scene {
       }
     }
 
-    // 2026-05-30: дрон + фабрика показываются ДО transition-gate, чтобы
-    // появляться синхронно с лягушками (которые спавнятся в transition-
-    // handler'е), а не через секунду после unfreeze. Только статичный show —
-    // движение дрона (tick) остаётся ниже gate.
-    {
-      const locId = storeForTimer.currentLocation
-      if (locId === 1) {
-        this.factory.show()
-        this.storage.show()
-        if ((storeForTimer.upgrades.autoCollect ?? 0) > 0) {
-          this.drone.ensureSpawned()
-        }
-      } else {
-        this.factory.hide()
-        this.storage.hide()
-        this.drone.despawn()
-      }
-    }
+    // 2026-05-30: дрон + фабрика + склад показываются ДО transition-gate,
+    // чтобы появляться синхронно с лягушками. Движение дрона (tick) — ниже gate.
+    this.prepBuildings(storeForTimer.currentLocation)
 
     // Во время перехода между локациями замораживаем всю логику —
     // лягушки в wrapper-контейнере с локальными координатами, любые расчёты
