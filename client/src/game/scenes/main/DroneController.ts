@@ -360,8 +360,8 @@ export class DroneController {
   private showChargeBar(): void {
     this.hideChargeBar()
     const { width, height } = this.scene.scale
-    const x = width * DRONER_X_FRAC - 20 * DPR
-    const y = height + height * DRONER_Y_FRAC - 50 * DPR // над дверью
+    const x = width * DRONER_X_FRAC - 45 * DPR
+    const y = height + height * DRONER_Y_FRAC - 75 * DPR // над дверью
     const w = 9 * DPR
     const h = 48 * DPR
     this.chargeBg = this.scene.add
