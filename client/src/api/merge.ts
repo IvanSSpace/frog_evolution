@@ -1,6 +1,6 @@
 import { apiJson } from './client'
 
-export interface MergeResponse {
+export interface MergeOk {
   ok: true
   gold: string
   locationFrogs: number[][]
@@ -10,6 +10,18 @@ export interface MergeResponse {
   isSentinel: boolean
   crossLocation: boolean
 }
+
+// Сервер не нашёл 2 лягушки (desync: новые ещё не синканы). HTTP 200, не 400.
+export interface MergeSkipped {
+  ok: false
+  skipped: true
+  reason: string
+  gold: string
+  locationFrogs: number[][]
+  discoveredLevels: number[]
+}
+
+export type MergeResponse = MergeOk | MergeSkipped
 
 export async function mergeApi(
   fromLevel: number,

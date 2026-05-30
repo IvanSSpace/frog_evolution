@@ -49,6 +49,7 @@ import i18next from 'i18next'
 import type { Element } from '../../../store/cosmic/types'
 import { devLog } from '../../../utils/devLog'
 import { mergeApi } from '../../../api/merge'
+import { saveGameState } from '../../../api/gameSync'
 import { BASE_SCALE, DPR, MERGE_RADIUS, type FrogData } from './types'
 import type { MainScene } from '../MainScene'
 import type { FrogSpawner } from './FrogSpawner'
@@ -322,10 +323,14 @@ export class MergeController {
         storeL25.incrementL18Merges()
         mergeApi(MAX_LEVEL, currentLocId)
           .then((res) => {
-            useGameStore.setState({
-              locationFrogs: res.locationFrogs,
-              discoveredLevels: res.discoveredLevels,
-            })
+            if (res.ok) {
+              useGameStore.setState({
+                locationFrogs: res.locationFrogs,
+                discoveredLevels: res.discoveredLevels,
+              })
+            } else {
+              void saveGameState(true)
+            }
           })
           .catch((e) => {
             console.warn('[merge] server sync failed:', e)
@@ -344,10 +349,17 @@ export class MergeController {
 
       mergeApi(oldLevel, currentLocId)
         .then((res) => {
-          useGameStore.setState({
-            locationFrogs: res.locationFrogs,
-            discoveredLevels: res.discoveredLevels,
-          })
+          if (res.ok) {
+            useGameStore.setState({
+              locationFrogs: res.locationFrogs,
+              discoveredLevels: res.discoveredLevels,
+            })
+          } else {
+            // Desync: сервер не нашёл 2 лягушек (новые ещё не синканы). Не
+            // затираем локальный стейт — форс-PUT отправит наш authoritative
+            // locationFrogs, сервер дозаполнит и след. merge совпадёт.
+            void saveGameState(true)
+          }
         })
         .catch((e) => {
           console.warn('[merge] server sync failed:', e)
