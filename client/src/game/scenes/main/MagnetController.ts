@@ -496,10 +496,13 @@ class MagnetInstance {
     // ─── Валидация WORK-цели ───
     if (this.mode === 'WORK') {
       if (!this.isPairValid()) {
-        // Пара пропала — назад в WANDER
+        // Пара пропала (другой магнит смерджил) — назад в WANDER. Фиксируем
+        // baselineY на текущую позицию: иначе bob в WANDER снапнет дрон к
+        // старому baselineY (телепорт на стартовую точку hop'а).
         if (this.isHopping) {
           this.scene.tweens.killTweensOf(sprite)
           this.isHopping = false
+          this.baselineY = sprite.y
         }
         this.mode = 'WANDER'
         this.pair = null
