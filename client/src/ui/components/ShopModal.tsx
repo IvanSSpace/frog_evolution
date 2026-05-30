@@ -149,13 +149,9 @@ function UpgradesCards() {
   // Магниты L2/L3 (Лес/Континент) — обычные улучшения, рядом с базовым магнитом.
   return (
     <div className="flex flex-col gap-3 p-4 overflow-y-auto">
+      {/* Дроны (магниты + автосбор) переехали в модалку droner. */}
       <DropSpeedCard />
       <CrateQualityCard />
-      {/* Дроны рядом: магниты (Лужа/Лес/Континент) + автосбор. */}
-      <MagnetCard />
-      <MagnetCard upgradeKey="magnet2" titleSuffix="Лес" />
-      <MagnetCard upgradeKey="magnet3" titleSuffix="Континент" />
-      <AutoCollectCard />
       <RareBoxSpeedCard />
       <GooCollectorCard />
     </div>
@@ -247,7 +243,7 @@ type GenericCardProps = {
   theme?: keyof typeof THEME
 }
 
-function UpgradeCard({
+export function UpgradeCard({
   icon,
   title,
   effect,
@@ -418,7 +414,7 @@ function GooCollectorCard() {
   )
 }
 
-function AutoCollectCard() {
+export function AutoCollectCard() {
   const { t } = useTranslation()
   const level = useGameStore((s) => s.upgrades.autoCollect)
   const gold = useGameStore((s) => s.gold)
@@ -469,7 +465,7 @@ function AutoCollectCard() {
   )
 }
 
-function MagnetCard({
+export function MagnetCard({
   upgradeKey = 'magnet',
   titleSuffix = '',
 }: {

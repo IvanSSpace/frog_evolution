@@ -1,5 +1,38 @@
+import { useState, type ReactNode } from 'react'
 import { useGameStore } from '../../store/gameStore'
 import { useModalLock } from '../../utils/modalLock'
+import { AutoCollectCard, MagnetCard } from './ShopModal'
+
+type DronerTab = 'charge' | 'buy'
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  children: ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="ff-btn text-sm flex-1"
+      style={{
+        paddingLeft: 12,
+        paddingRight: 12,
+        paddingTop: 6,
+        paddingBottom: 6,
+        opacity: active ? 1 : 0.55,
+        ['--ff-btn-from' as never]: active ? '#4ade80' : '#cbd5e1',
+        ['--ff-btn-to' as never]: active ? '#16a34a' : '#64748b',
+        ['--ff-btn-border' as never]: active ? '#14532d' : '#334155',
+      }}
+    >
+      {children}
+    </button>
+  )
+}
 
 type Props = { onClose: () => void }
 
@@ -64,6 +97,7 @@ export function DronerModal({ onClose }: Props) {
   useModalLock()
   const droneBattery = useGameStore((s) => s.droneBattery)
   const magnetBattery = useGameStore((s) => s.magnetBattery)
+  const [tab, setTab] = useState<DronerTab>('charge')
 
   return (
     <div
@@ -117,35 +151,42 @@ export function DronerModal({ onClose }: Props) {
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="flex gap-2 px-3 pt-2 flex-shrink-0">
+          <TabButton active={tab === 'charge'} onClick={() => setTab('charge')}>
+            Заряд
+          </TabButton>
+          <TabButton active={tab === 'buy'} onClick={() => setTab('buy')}>
+            Прокачка
+          </TabButton>
+        </div>
+
         {/* Body */}
         <div
           className="flex-1 min-h-0 overflow-y-auto ff-no-scrollbar px-4 py-3 flex flex-col gap-3"
           style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
         >
-          <div
-            className="ff-display text-xs"
-            style={{ color: 'var(--ff-text-dim)', letterSpacing: 1 }}
-          >
-            ЗАРЯД ДРОНОВ
-          </div>
-          <ChargeRow
-            icon="/goo_collector_icon.png"
-            name="Дрон-сборщик"
-            battery={droneBattery}
-          />
-          <ChargeRow
-            icon="/magnet_drone_icon.png"
-            name="Магнит-дрон"
-            battery={magnetBattery}
-          />
-
-          {/* Покупка дронов и апгрейды — следующий шаг (2b). */}
-          <div
-            className="ff-card p-3 text-center"
-            style={{ color: 'var(--ff-text-dim)', fontSize: 12 }}
-          >
-            Покупка дронов и апгрейды — скоро здесь.
-          </div>
+          {tab === 'charge' ? (
+            <>
+              <ChargeRow
+                icon="/goo_collector_icon.png"
+                name="Дрон-сборщик"
+                battery={droneBattery}
+              />
+              <ChargeRow
+                icon="/magnet_drone_icon.png"
+                name="Магнит-дрон"
+                battery={magnetBattery}
+              />
+            </>
+          ) : (
+            <>
+              <AutoCollectCard />
+              <MagnetCard />
+              <MagnetCard upgradeKey="magnet2" titleSuffix="Лес" />
+              <MagnetCard upgradeKey="magnet3" titleSuffix="Континент" />
+            </>
+          )}
         </div>
       </div>
     </div>
