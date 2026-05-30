@@ -117,8 +117,8 @@ export class MagnetController {
   private spawn(): void {
     const scene = this.scene
     const { width, height } = scene.scale
-    const cx = width / 2
-    const cy = (FIELD_PAD_Y + (height - FIELD_PAD_Y_BOTTOM)) / 2
+    const cx = Phaser.Math.Between(FIELD_PAD_X + 10 * DPR, width - FIELD_PAD_X - 10 * DPR)
+    const cy = Phaser.Math.Between(FIELD_PAD_Y + 10 * DPR, height - FIELD_PAD_Y_BOTTOM - 10 * DPR)
 
     this.shadow = scene.add.image(cx, cy, 'magnet_drone')
     ;(this.shadow as unknown as { tintFill: boolean }).tintFill = true
@@ -211,6 +211,17 @@ export class MagnetController {
         this.mode = 'WANDER'
         this.pair = null
         this.workAccum = spawnInterval
+      } else if (this.pair) {
+        // Замораживаем пару пока дрон летит: isAttracted=true → performDash
+        // их пропускает (см. FrogSpawner), + гасим текущий dash-tween. Иначе
+        // лягушки прыгают, midpoint убегает и дрон гоняется за ними.
+        for (const f of this.pair) {
+          f.isAttracted = true
+          if (f.isMoving) {
+            this.scene.tweens.killTweensOf(f.container)
+            f.isMoving = false
+          }
+        }
       }
     }
 
