@@ -93,8 +93,7 @@ class MagnetInstance {
   private prePauseTimer: Phaser.Time.TimerEvent | null = null
 
   // 2026-05-30: заряд + тултип по тапу (как goo_collector).
-  // TEST: стартовый 2% — быстрый RTB. Вернуть на 100.
-  private battery = 2
+  private battery = 100
   private tooltip: Phaser.GameObjects.Text | null = null
   private tooltipTimer: Phaser.Time.TimerEvent | null = null
   private chargeBg: Phaser.GameObjects.Rectangle | null = null
