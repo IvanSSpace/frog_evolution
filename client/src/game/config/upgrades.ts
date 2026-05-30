@@ -17,6 +17,15 @@ export interface Upgrades {
   ships: number
   // Автосбор: дрон на Болоте (локация 1) открывает обычные боксы онлайн.
   autoCollect: number
+  // 2026-05-30: доп. дроны. level 0 = 1 дрон (базовый), level 3 = 4 дрона.
+  // Фактическое число = level + 1 (если базовый дрон активен).
+  droneCount: number
+  magnetCount: number
+}
+
+// Число дронов по count-level: 0→1, 1→2, 2→3, 3→4.
+export function dronesFromCount(countLevel: number): number {
+  return Math.max(1, Math.min(4, (countLevel ?? 0) + 1))
 }
 
 // Прогрессивный анлок кораблей: чтобы купить корабль №(i+1), max discoveredLevel
@@ -51,6 +60,8 @@ export function toUpgrades(
     rareBoxSpeed: r.rareBoxSpeed ?? 0,
     ships: r.ships ?? 0,
     autoCollect: r.autoCollect ?? 0,
+    droneCount: r.droneCount ?? 0,
+    magnetCount: r.magnetCount ?? 0,
   }
 }
 
@@ -144,6 +155,16 @@ export const UPGRADE_CONFIG = {
     costs: [
       300_000, 1_500_000, 8_000_000, 60_000_000, 500_000_000, 4_000_000_000,
     ],
+  },
+  // Доп. дроны-сборщики (level 0=1 дрон … 3=4 дрона). 3 покупки.
+  droneCount: {
+    maxLevel: 3,
+    costs: [10_000_000, 120_000_000, 1_500_000_000],
+  },
+  // Доп. магнит-дроны.
+  magnetCount: {
+    maxLevel: 3,
+    costs: [15_000_000, 180_000_000, 2_000_000_000],
   },
 } as const
 

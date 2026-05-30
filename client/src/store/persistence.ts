@@ -59,6 +59,8 @@ export function loadUpgrades(): Upgrades {
     rareBoxSpeed: 0,
     ships: 0,
     autoCollect: 0,
+    droneCount: 0,
+    magnetCount: 0,
   }
   try {
     const raw = localStorage.getItem(UPGRADES_KEY)

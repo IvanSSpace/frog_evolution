@@ -299,6 +299,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       rareBoxSpeed: 0,
       ships: 0,
       autoCollect: 0,
+      droneCount: 0,
+      magnetCount: 0,
     }
     saveUpgrades(defaults)
     set({ upgrades: defaults })

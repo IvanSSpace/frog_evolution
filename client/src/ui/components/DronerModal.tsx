@@ -1,7 +1,58 @@
 import { useState, type ReactNode } from 'react'
-import { useGameStore } from '../../store/gameStore'
+import { useGameStore, UPGRADE_CONFIG, getUpgradeCost } from '../../store/gameStore'
 import { useModalLock } from '../../utils/modalLock'
-import { AutoCollectCard, MagnetCard } from './ShopModal'
+import { hapticNotification } from '../../utils/telegram'
+import { AutoCollectCard, MagnetCard, UpgradeCard } from './ShopModal'
+
+// Карточка покупки доп. дронов (количество). level 0=1 дрон … 3=4 дрона.
+function DroneCountCard({
+  upgradeKey,
+  icon,
+  title,
+}: {
+  upgradeKey: 'droneCount' | 'magnetCount'
+  icon: string
+  title: string
+}) {
+  const level = useGameStore((s) => s.upgrades[upgradeKey])
+  const gold = useGameStore((s) => s.gold)
+  const buyUpgrade = useGameStore((s) => s.buyUpgrade)
+  const cfg = UPGRADE_CONFIG[upgradeKey]
+  const isMax = level >= cfg.maxLevel
+  const cost = isMax ? 0 : getUpgradeCost(upgradeKey, level)
+  const count = level + 1
+  return (
+    <UpgradeCard
+      icon={
+        <img
+          src={icon}
+          alt=""
+          style={{
+            height: '90%',
+            width: 'auto',
+            maxWidth: '100%',
+            objectFit: 'contain',
+            display: 'block',
+            margin: 'auto',
+          }}
+        />
+      }
+      title={title}
+      theme="drone"
+      effect={isMax ? `${count}/4 (макс)` : `${count}/4 → ${count + 1}/4`}
+      level={level}
+      maxLevel={cfg.maxLevel}
+      cost={cost}
+      isMax={isMax}
+      canAfford={gold >= cost}
+      onBuy={() =>
+        void buyUpgrade(upgradeKey).then((ok) =>
+          hapticNotification(ok ? 'success' : 'error'),
+        )
+      }
+    />
+  )
+}
 
 type DronerTab = 'charge' | 'buy'
 
@@ -181,6 +232,16 @@ export function DronerModal({ onClose }: Props) {
             </>
           ) : (
             <>
+              <DroneCountCard
+                upgradeKey="droneCount"
+                icon="/goo_collector_icon.png"
+                title="Дроны-сборщики"
+              />
+              <DroneCountCard
+                upgradeKey="magnetCount"
+                icon="/magnet_drone_icon.png"
+                title="Магнит-дроны"
+              />
               <AutoCollectCard />
               <MagnetCard />
               <MagnetCard upgradeKey="magnet2" titleSuffix="Лес" />
