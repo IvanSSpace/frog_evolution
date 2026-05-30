@@ -73,7 +73,7 @@ export function DronerModal({ onClose }: Props) {
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 100,
+        zIndex: 150,
         display: 'flex',
         alignItems: 'flex-end',
         justifyContent: 'center',
@@ -83,11 +83,11 @@ export function DronerModal({ onClose }: Props) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="ff-panel ff-pop relative"
+        className="ff-panel ff-pop"
         style={{
           width: '100%',
           maxWidth: 380,
-          maxHeight: '75vh',
+          height: '75vh',
           display: 'flex',
           flexDirection: 'column',
         }}
