@@ -443,12 +443,11 @@ function AutoCollectCard() {
           src="/goo_collector_icon.png"
           alt=""
           style={{
-            height: '90%',
+            height: '74%',
             width: 'auto',
             maxWidth: '100%',
             objectFit: 'contain',
             display: 'block',
-            margin: 'auto',
             filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
           }}
         />
