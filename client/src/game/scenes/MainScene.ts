@@ -44,8 +44,7 @@ import { BoxController } from './main/BoxController'
 import { PoopController } from './main/PoopController'
 import { MagnetController } from './main/MagnetController'
 import { DroneController } from './main/DroneController'
-import { FactoryController } from './main/FactoryController'
-import { StorageController } from './main/StorageController'
+import { BuildingsController } from './main/BuildingsController'
 import { LocationTransition } from './main/LocationTransition'
 import { FrogInteraction } from './main/FrogInteraction'
 
@@ -129,10 +128,8 @@ export class MainScene extends Phaser.Scene {
   // Дрон автосбора (autoCollect upgrade). Существует только на локации 1.
   private drone!: DroneController
 
-  // Фабрика (статичный спрайт). Только на локации 1.
-  private factory!: FactoryController
-  // Склад (статичный спрайт). Только на локации 1, рядом с фабрикой.
-  private storage!: StorageController
+  // Здания зоны строений (набор из public/builds). Только на локации 1.
+  private buildings!: BuildingsController
 
   // Phase 21-05 (Wave 5): location transition (clearField + dual-container zoom).
   // Package-public — game/index.ts вызывает runOpen/CloseStarMapTransition при
@@ -202,8 +199,7 @@ export class MainScene extends Phaser.Scene {
     this.load.image('box', '/box.webp')
     this.load.image('magnet', '/magnet.png')
     this.load.image('goo_collector', '/goo_collector.png')
-    this.load.image('factory3_shadow', '/factory/factory3_shadow.png')
-    this.load.image('storage', '/storage.png')
+    BuildingsController.preload(this)
     this.load.image('toxic_map2size', '/maps/toxic_map2size.png')
   }
 
@@ -273,8 +269,7 @@ export class MainScene extends Phaser.Scene {
     // Дрон автосбора — box.onBoxTapped открывает обычные боксы на Болоте.
     this.drone = new DroneController(this, this.box)
     // Фабрика — статичный спрайт на локации 1.
-    this.factory = new FactoryController(this)
-    this.storage = new StorageController(this)
+    this.buildings = new BuildingsController(this)
     // Phase 21-05 (Wave 5): location-transition + interaction controllers.
     this.locTransition = new LocationTransition(
       this,
@@ -552,14 +547,12 @@ export class MainScene extends Phaser.Scene {
   // transition-gate — show() идемпотентен.
   private prepBuildings(locId: number): void {
     if (locId === 1) {
-      this.factory.show()
-      this.storage.show()
+      this.buildings.show()
       if ((useGameStore.getState().upgrades.autoCollect ?? 0) > 0) {
         this.drone.ensureSpawned()
       }
     } else {
-      this.factory.hide()
-      this.storage.hide()
+      this.buildings.hide()
       this.drone.despawn()
     }
   }
@@ -570,13 +563,7 @@ export class MainScene extends Phaser.Scene {
   collectBuildingSprites(locId: number): Phaser.GameObjects.Image[] {
     this.prepBuildings(locId)
     if (locId !== 1) return []
-    const out: Phaser.GameObjects.Image[] = []
-    const f = this.factory.getSprite()
-    if (f) out.push(f)
-    const s = this.storage.getSprite()
-    if (s) out.push(s)
-    out.push(...this.drone.getSprites())
-    return out
+    return [...this.buildings.getSprites(), ...this.drone.getSprites()]
   }
 
   // ============== МАГНИТ ==============
@@ -973,8 +960,7 @@ export class MainScene extends Phaser.Scene {
     // Дрон автосбора — despawn при уничтожении сцены.
     this.drone?.despawn()
     // Фабрика — destroy при уничтожении сцены.
-    this.factory?.destroy()
-    this.storage?.destroy()
+    this.buildings?.destroy()
     // Phase 21-05: subscribe / DnD pointer listeners — в FrogInteraction.teardown().
     this.interaction.teardown()
     // Phase 23 Plan 23-05: очищаем window.__mainScene reference
