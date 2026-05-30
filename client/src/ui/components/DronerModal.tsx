@@ -181,6 +181,9 @@ function ChargeRow({
 }) {
   const active = battery >= 0
   const pct = active ? Math.round(battery) : 0
+  // Цвет по уровню заряда: 0%=красный → 50%=жёлтый → 100%=зелёный (hue 0..120).
+  const hue = (Math.max(0, Math.min(100, pct)) / 100) * 120
+  const fillColor = `hsl(${hue}, 80%, 48%)`
   return (
     <div className="ff-card flex items-center gap-3 p-3">
       <img
@@ -209,16 +212,15 @@ function ChargeRow({
               height: '100%',
               width: `${pct}%`,
               borderRadius: 99,
-              background:
-                'linear-gradient(90deg, #86f25a 0%, #5fd83a 100%)',
-              transition: 'width 0.3s',
+              background: fillColor,
+              transition: 'width 0.3s, background 0.3s',
             }}
           />
         </div>
       </div>
       <div
         className="ff-display tabular-nums text-sm flex-shrink-0"
-        style={{ color: active ? '#86f25a' : 'var(--ff-text-dim)', minWidth: 44, textAlign: 'right' }}
+        style={{ color: active ? fillColor : 'var(--ff-text-dim)', minWidth: 44, textAlign: 'right' }}
       >
         {active ? `${pct}%` : '—'}
       </div>
