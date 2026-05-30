@@ -114,11 +114,18 @@ export class MergeController {
 
   // Ищет ближайшую пару лягушек одного уровня — кандидата для магнита
   findClosestSameLevelPair(): [FrogData, FrogData] | null {
+    // Магнит мерджит только обычные пары normal+normal. Carrier'ы исключаем
+    // полностью: carrier+normal через mergeApi даёт 400 (carrier не учтён в
+    // locationFrogs) → спам запросов по кд. Carrier'ы юзер мерджит вручную.
+    const carriers = useGameStore.getState().carriers
+    const isCarrier = (f: FrogData) => carriers.some((c) => c.frogId === f.id)
+
     const byLevel = new Map<number, FrogData[]>()
     const now = Date.now()
     for (const f of this.scene.frogs) {
       if (f.isMerging || f.isDragging || f.isAttracted) continue
       if (f.level >= MAX_LEVEL) continue
+      if (isCarrier(f)) continue
       // Свежие из бокса лягушки иммунны к магниту короткое время — иначе
       // AoE-открытие коробок = мгновенный «случайный» merge от клика.
       if (f.mergeProtectedUntil && now < f.mergeProtectedUntil) continue
@@ -126,8 +133,6 @@ export class MergeController {
       arr.push(f)
       byLevel.set(f.level, arr)
     }
-
-    const carriers = useGameStore.getState().carriers
 
     let bestPair: [FrogData, FrogData] | null = null
     let bestDist = Infinity
@@ -137,9 +142,6 @@ export class MergeController {
         for (let j = i + 1; j < frogs.length; j++) {
           const a = frogs[i]
           const b = frogs[j]
-          const aIsCarrier = carriers.some((c) => c.frogId === a.id)
-          const bIsCarrier = carriers.some((c) => c.frogId === b.id)
-          if (aIsCarrier && bIsCarrier) continue
           const d = Phaser.Math.Distance.Between(
             a.container.x,
             a.container.y,
