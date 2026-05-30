@@ -90,6 +90,8 @@ export class MagnetController {
   private battery = 2
   private tooltip: Phaser.GameObjects.Text | null = null
   private tooltipTimer: Phaser.Time.TimerEvent | null = null
+  private chargeBg: Phaser.GameObjects.Rectangle | null = null
+  private chargeFill: Phaser.GameObjects.Rectangle | null = null
 
   // Рабочий кулдаун (мс).
   private workAccum = 0
@@ -114,6 +116,7 @@ export class MagnetController {
   clearAll(): void {
     const scene = this.scene
     this.hideTooltip()
+    this.hideChargeBar()
     if (this.restTimer) {
       this.restTimer.remove(false)
       this.restTimer = null
@@ -318,11 +321,45 @@ export class MagnetController {
         if (this.sprite) this.sprite.setVisible(false)
         if (this.shadow) this.shadow.setVisible(false)
         this.mode = 'CHARGING'
+        this.showChargeBar()
       },
     })
   }
 
+  // Зарядная шкала у двери — вытянутый прямоугольник, заполняется зелёным.
+  private showChargeBar(): void {
+    this.hideChargeBar()
+    const { width, height } = this.scene.scale
+    const x = width * DRONER_X_FRAC + 22 * DPR
+    const y = height + height * DRONER_Y_FRAC - 50 * DPR
+    const w = 13 * DPR
+    const h = 70 * DPR
+    this.chargeBg = this.scene.add
+      .rectangle(x, y, w, h, 0x0c1611, 0.92)
+      .setOrigin(0.5, 1)
+      .setStrokeStyle(2 * DPR, 0x2f4a49)
+      .setDepth(210000)
+    this.chargeFill = this.scene.add
+      .rectangle(x, y, w - 4 * DPR, 0, 0x5fd83a, 1)
+      .setOrigin(0.5, 1)
+      .setDepth(210001)
+  }
+
+  private updateChargeBar(): void {
+    if (!this.chargeFill || !this.chargeBg) return
+    const fullH = (this.chargeBg.height - 4 * DPR) * (this.battery / 100)
+    this.chargeFill.setSize(this.chargeFill.width, fullH)
+  }
+
+  private hideChargeBar(): void {
+    this.chargeBg?.destroy()
+    this.chargeFill?.destroy()
+    this.chargeBg = null
+    this.chargeFill = null
+  }
+
   private startEmerge(): void {
+    this.hideChargeBar()
     if (!this.sprite) return
     this.mode = 'EMERGING'
     const { width, height } = this.scene.scale
@@ -377,6 +414,7 @@ export class MagnetController {
     }
     if (this.mode === 'CHARGING') {
       this.battery = Math.min(100, this.battery + (100 * delta) / RECHARGE_MS)
+      this.updateChargeBar()
       if (this.battery >= 100) this.startEmerge()
     }
     if (this.tooltip) this.positionTooltip()
