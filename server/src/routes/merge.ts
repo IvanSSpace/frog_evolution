@@ -43,11 +43,18 @@ export async function mergeRoutes(app: FastifyInstance) {
       })
 
       if (matches.length < 2) {
-        return reply.code(400).send({
-          error: 'not enough frogs of this level on location',
-          have: sourceLoc.filter((l) => l === fromLevel).length,
-          need: 2,
-        })
+        // Desync: клиент уже сделал merge визуально, но новые лягушки (из бокса,
+        // открытого дроном) ещё не дошли до сервера (PUT throttled 5с). НЕ 400 —
+        // иначе спам ошибок по кд. Возвращаем 200 skipped; клиент сделает форс-PUT
+        // со своим authoritative-стейтом и сервер дозаполнит locationFrogs.
+        return {
+          ok: false,
+          skipped: true,
+          reason: 'not_enough_frogs',
+          gold: state.gold.toString(),
+          locationFrogs: state.locationFrogs,
+          discoveredLevels: state.discoveredLevels,
+        }
       }
 
       // Apply merge — clone locFrogs
