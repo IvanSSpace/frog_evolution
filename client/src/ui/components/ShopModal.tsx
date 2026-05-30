@@ -391,9 +391,12 @@ function GooCollectorCard() {
           src="/goo_collector_icon.png"
           alt=""
           style={{
-            width: '82%',
-            height: '82%',
+            height: '90%',
+            width: 'auto',
+            maxWidth: '100%',
             objectFit: 'contain',
+            display: 'block',
+            margin: 'auto',
             filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
           }}
         />
@@ -440,9 +443,12 @@ function AutoCollectCard() {
           src="/goo_collector_icon.png"
           alt=""
           style={{
-            width: '82%',
-            height: '82%',
+            height: '90%',
+            width: 'auto',
+            maxWidth: '100%',
             objectFit: 'contain',
+            display: 'block',
+            margin: 'auto',
             filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
           }}
         />
@@ -516,9 +522,12 @@ function MagnetCard({
           src="/magnet_drone_icon.png"
           alt=""
           style={{
-            width: '82%',
-            height: '82%',
+            height: '90%',
+            width: 'auto',
+            maxWidth: '100%',
             objectFit: 'contain',
+            display: 'block',
+            margin: 'auto',
             filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.25))',
           }}
         />
