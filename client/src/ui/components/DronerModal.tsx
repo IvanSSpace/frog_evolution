@@ -1,5 +1,4 @@
 import { createPortal } from 'react-dom'
-import { useState, useCallback } from 'react'
 import { useGameStore } from '../../store/gameStore'
 import { useModalLock } from '../../utils/modalLock'
 
@@ -66,22 +65,15 @@ export function DronerModal({ onClose }: Props) {
   useModalLock()
   const droneBattery = useGameStore((s) => s.droneBattery)
   const magnetBattery = useGameStore((s) => s.magnetBattery)
-  const [closing, setClosing] = useState(false)
-
-  const handleClose = useCallback(() => {
-    if (closing) return
-    setClosing(true)
-    window.setTimeout(onClose, 280)
-  }, [closing, onClose])
 
   return createPortal(
     <div
-      onClick={handleClose}
+      onClick={onClose}
       className="ff-backdrop ff-fade"
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 150,
+        zIndex: 100,
         display: 'flex',
         alignItems: 'flex-end',
         justifyContent: 'center',
@@ -91,33 +83,28 @@ export function DronerModal({ onClose }: Props) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`ff-panel ff-pop ${closing ? 'ff-slide-up' : ''}`}
+        className="ff-panel ff-pop relative"
         style={{
           width: '100%',
           maxWidth: 380,
-          maxHeight: '75vh',
+          height: '75vh',
           display: 'flex',
           flexDirection: 'column',
         }}
       >
-        {/* Header */}
+        {/* Header — как FrogShop/Inventory */}
         <div
-          className="flex items-center justify-between px-5 pt-4 pb-3 flex-shrink-0"
-          style={{ borderBottom: '1px solid rgba(95,216,58,0.18)' }}
+          className="flex items-center justify-between px-5 pt-4 pb-3"
+          style={{ borderBottom: '3px dashed rgba(77,107,31,0.4)' }}
         >
           <h2
-            className="ff-display text-2xl"
-            style={{
-              color: '#e6ffd0',
-              fontWeight: 800,
-              textShadow:
-                '0 2px 0 rgba(0,0,0,0.3), 0 0 16px rgba(95,216,58,0.3)',
-            }}
+            className="ff-display ff-stroke-white text-3xl"
+            style={{ color: '#15803d', letterSpacing: 1.5 }}
           >
-            🛸 Дроны
+            Дроны
           </h2>
           <button
-            onClick={handleClose}
+            onClick={onClose}
             aria-label="Закрыть"
             className="ff-tile w-9 h-9 text-lg"
             style={{
