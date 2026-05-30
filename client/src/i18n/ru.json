@@ -79,7 +79,7 @@
       "cooldown": "кулдаун: {{sec}}с"
     },
     "magnet": {
-      "name": "Магнит",
+      "name": "Магнит дрон",
       "not_bought": "не куплен",
       "effect": "раз в {{interval}}с / {{duration}}с"
     },
