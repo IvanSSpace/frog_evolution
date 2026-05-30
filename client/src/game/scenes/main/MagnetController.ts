@@ -61,9 +61,13 @@ export class MagnetController {
   clearAll(): void {
     for (const m of [...this._magnets]) {
       this.scene.tweens.killTweensOf(m.emoji)
-      m.emoji.destroy()
+      this.scene.tweens.killTweensOf(m.container)
+      m.container.destroy(true)
     }
     this._magnets = []
+    // Позиция дрона невалидна между локациями — следующий спавн стартует свежо.
+    this.lastDroneX = null
+    this.lastDroneY = null
   }
 
   /**
@@ -106,13 +110,18 @@ export class MagnetController {
     const y = (a.container.y + b.container.y) / 2
     const duration = getMagnetDuration(level)
 
-    // 2026-05-30: магнит-дрон (magnet_drone.png) — видимый спрайт, парит между
-    // парой лягушек и соединяет их. Депт высокий (поверх лягушек).
-    const container = scene.add.container(x, y)
+    // 2026-05-30: магнит-дрон (magnet_drone.png) — видимый, ПРИЛЕТАЕТ к паре
+    // как goo_collector (наклон по ходу + flip), потом тянет/мерджит. Стартует
+    // от позиции последнего дрона (непрерывный полёт) либо сверху при первом
+    // спавне. Депт высокий (поверх лягушек).
+    const startX = this.lastDroneX ?? x + (Math.random() < 0.5 ? -1 : 1) * 120 * DPR
+    const startY = this.lastDroneY ?? y - 200 * DPR
+    const container = scene.add.container(startX, startY)
     container.setDepth(99000)
 
     const emoji = scene.add.image(0, 0, 'magnet_drone')
-    emoji.setScale((BOX_DISPLAY_SIZE * 0.7) / emoji.width)
+    const baseScale = (BOX_DISPLAY_SIZE * 0.7) / emoji.width
+    emoji.setScale(baseScale)
     container.add(emoji)
     // Лёгкое парение вверх-вниз.
     scene.tweens.add({
@@ -133,8 +142,56 @@ export class MagnetController {
       pair,
       mergesDone: 0,
       mergesTarget: getMagnetMergesPerCycle(level),
+      arriving: true,
     }
     this._magnets.push(magnet)
+    // Полёт к паре с наклоном; по прилёте снимаем arriving → начинается тяга.
+    this.flyTo(magnet, x, y, baseScale, () => {
+      magnet.arriving = false
+    })
+  }
+
+  // Позиция последнего дрона — новый стартует оттуда (непрерывный полёт).
+  private lastDroneX: number | null = null
+  private lastDroneY: number | null = null
+
+  /** Летит контейнером к (tx,ty) с наклоном по ходу и flip спрайта. */
+  private flyTo(
+    m: MagnetData,
+    tx: number,
+    ty: number,
+    baseScale: number,
+    onDone?: () => void,
+  ): void {
+    const scene = this.scene
+    const fromX = m.container.x
+    const dir = tx >= fromX ? 1 : -1
+    m.emoji.scaleX = dir * baseScale
+    scene.tweens.killTweensOf(m.container)
+    const dist = Phaser.Math.Distance.Between(fromX, m.container.y, tx, ty)
+    const dur = Phaser.Math.Clamp(dist * 1.6, 220, 700)
+    m.container.rotation = dir * 0.12
+    scene.tweens.add({
+      targets: m.container,
+      x: tx,
+      y: ty,
+      duration: dur,
+      ease: 'Sine.easeInOut',
+      onUpdate: () => {
+        this.lastDroneX = m.container.x
+        this.lastDroneY = m.container.y
+      },
+      onComplete: () => {
+        if (!m.container.active) return
+        scene.tweens.add({
+          targets: m.container,
+          rotation: 0,
+          duration: 160,
+          ease: 'Back.easeOut',
+        })
+        onDone?.()
+      },
+    })
   }
 
   private removeMagnet(magnet: MagnetData) {
@@ -180,6 +237,9 @@ export class MagnetController {
         continue
       }
 
+      // Пока дрон ещё летит к паре (approach) — не тянем лягушек, ждём прилёта.
+      if (m.arriving) continue
+
       // Притягиваем именно эту пару к точке магнита
       const pull = 0.06
       a.container.x = Phaser.Math.Linear(a.container.x, m.x, pull)
@@ -221,13 +281,10 @@ export class MagnetController {
         m.pair = next
         m.x = newX
         m.y = newY
-        // Плавный полёт магнита к новой паре
-        scene.tweens.add({
-          targets: m.container,
-          x: newX,
-          y: newY,
-          duration: 220,
-          ease: 'Power2.easeOut',
+        // Дрон летит к новой паре с наклоном; пока летит — не тянет (arriving).
+        m.arriving = true
+        this.flyTo(m, newX, newY, Math.abs(m.emoji.scaleX), () => {
+          m.arriving = false
         })
       }
     }

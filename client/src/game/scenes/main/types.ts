@@ -83,6 +83,9 @@ export interface MagnetData {
   pair: [FrogData, FrogData]
   mergesDone: number
   mergesTarget: number
+  // 2026-05-30: дрон ещё летит к паре (approach-фаза) — пока true, притяжение
+  // лягушек не запускаем (ждём прилёта).
+  arriving?: boolean
 }
 
 export interface FrogData {
