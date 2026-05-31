@@ -92,7 +92,7 @@ const BUILDINGS_LOC2: readonly BuildingDef[] = [
     key: 'bld2_factory',
     src: '/builds_loc2/frog_factory2loc.png',
     xFrac: 0.28,
-    yFrac: 0.46,
+    yFrac: 0.6,
     widthFrac: 0.46,
   },
   {
@@ -100,7 +100,7 @@ const BUILDINGS_LOC2: readonly BuildingDef[] = [
     src: '/builds_loc2/droner2loc.png',
     xFrac: 0.74,
     yFrac: 0.48,
-    widthFrac: 0.42,
+    widthFrac: 0.34,
   },
   // Капсула репликации: центральная (крупнее) + 2 позади неё слева/справа.
   // Боковые с меньшим yFrac → ниже depth → рендерятся ЗА центральной.
