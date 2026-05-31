@@ -73,7 +73,6 @@ class AudioPlayer {
   private baseTime = 0
   private realStart = 0
   private rafId: number | null = null
-  private progressSaveId: ReturnType<typeof setInterval> | null = null
 
   private wasPlayingBeforeBlur = false
 
@@ -202,7 +201,8 @@ class AudioPlayer {
       window.addEventListener('beforeunload', save)
     }
     // Периодический бэкап на случай жёсткого киллa процесса (нет clean unload).
-    this.progressSaveId = setInterval(() => {
+    // Синглтон живёт всю сессию — интервал не сбрасываем.
+    setInterval(() => {
       if (this.status === 'playing') this.persistProgress()
     }, PROGRESS_SAVE_INTERVAL_MS)
   }

@@ -14,6 +14,13 @@ import Phaser from 'phaser'
 import type { MainScene } from '../MainScene'
 import { eventBus } from '../../../store/eventBus'
 
+const DPR = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
+// Если палец между pointerdown и pointerup сдвинулся больше этого порога —
+// это был скролл/пан (смена зоны frogs↔buildings), а не тап: модалку НЕ
+// открываем. Значение совпадает со SWIPE_SLOP в MainScene (порог начала пана),
+// поэтому «любой жест, который запанил камеру, не открывает здание».
+const BUILDING_TAP_SLOP = 90 * DPR
+
 interface BuildingDef {
   key: string
   src: string
@@ -29,12 +36,51 @@ interface BuildingDef {
 // Раскладка по референсу: main↑центр, collector←, storage→,
 // droner↙, space↘, scaner↓центр. yFrac = позиция «ног» здания в зоне.
 const BUILDINGS: readonly BuildingDef[] = [
-  { key: 'bld_main', src: '/builds/main.png', xFrac: 0.53, yFrac: 0.33, widthFrac: 0.37, opens: 'shop' },
-  { key: 'bld_collector', src: '/builds/collector.png', xFrac: 0.30, yFrac: 0.54, widthFrac: 0.27 },
-  { key: 'bld_storage', src: '/builds/storage.png', xFrac: 0.77, yFrac: 0.54, widthFrac: 0.29, opens: 'inventory' },
-  { key: 'bld_droner', src: '/builds/droner.png', xFrac: 0.30, yFrac: 0.82, widthFrac: 0.37, opens: 'droner' },
-  { key: 'bld_space', src: '/builds/space.png', xFrac: 0.77, yFrac: 0.78, widthFrac: 0.32 },
-  { key: 'bld_scaner', src: '/builds/scaner.png', xFrac: 0.5, yFrac: 0.97, widthFrac: 0.27 },
+  {
+    key: 'bld_main',
+    src: '/builds/main.png',
+    xFrac: 0.53,
+    yFrac: 0.33,
+    widthFrac: 0.37,
+    opens: 'shop',
+  },
+  {
+    key: 'bld_collector',
+    src: '/builds/collector.png',
+    xFrac: 0.3,
+    yFrac: 0.54,
+    widthFrac: 0.27,
+  },
+  {
+    key: 'bld_storage',
+    src: '/builds/storage.png',
+    xFrac: 0.77,
+    yFrac: 0.54,
+    widthFrac: 0.29,
+    opens: 'inventory',
+  },
+  {
+    key: 'bld_droner',
+    src: '/builds/droner.png',
+    xFrac: 0.3,
+    yFrac: 0.82,
+    widthFrac: 0.37,
+    opens: 'droner',
+  },
+  {
+    key: 'bld_space',
+    src: '/builds/space.png',
+    xFrac: 0.77,
+    yFrac: 0.78,
+    widthFrac: 0.32,
+  },
+  {
+    key: 'bld_scaner',
+    src: '/builds/scaner.png',
+    xFrac: 0.5,
+    yFrac: 0.97,
+    widthFrac: 0.27,
+  },
 ] as const
 
 export class BuildingsController {
@@ -79,7 +125,9 @@ export class BuildingsController {
       // поверх дронов (depth > drone 96000), чтобы дрон проходил ЗА зданием
       // при обходе на RTB-маршруте.
       sp.setDepth(
-        b.key === 'bld_main' || b.key === 'bld_scaner' || b.key === 'bld_collector'
+        b.key === 'bld_main' ||
+          b.key === 'bld_scaner' ||
+          b.key === 'bld_collector'
           ? 200000
           : b.yFrac * 100,
       )
@@ -88,7 +136,18 @@ export class BuildingsController {
       sp.on('pointerdown', () => this.jiggle(sp, baseScale))
       if (b.opens) {
         const modal = b.opens
-        sp.on('pointerup', () => eventBus.emit('building:open', { modal }))
+        sp.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+          // Отличаем тап от скролла: если палец проехал больше порога — это был
+          // свайп смены зоны и палец просто оказался над зданием на отпускании.
+          const moved = Phaser.Math.Distance.Between(
+            pointer.downX,
+            pointer.downY,
+            pointer.upX,
+            pointer.upY,
+          )
+          if (moved > BUILDING_TAP_SLOP) return
+          eventBus.emit('building:open', { modal })
+        })
       }
       this.sprites.push(sp)
       // if (b.key === 'bld_collector') this.buildCollectLabel(sp) // временно скрыто
