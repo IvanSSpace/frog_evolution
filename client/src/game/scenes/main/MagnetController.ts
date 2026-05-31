@@ -70,7 +70,13 @@ const BRANCH_RIGHT = [
   { xf: 0.619, yf: -0.08 },
 ]
 
-type MagnetMode = 'WANDER' | 'WORK' | 'PULLING' | 'RTB' | 'CHARGING' | 'EMERGING'
+type MagnetMode =
+  | 'WANDER'
+  | 'WORK'
+  | 'PULLING'
+  | 'RTB'
+  | 'CHARGING'
+  | 'EMERGING'
 
 // ─── Один магнит-дрон ──────────────────────────────────────────────────────────
 class MagnetInstance {
@@ -149,6 +155,44 @@ class MagnetInstance {
     if (!this.sprite) this.spawn()
   }
 
+  getSprites(): Phaser.GameObjects.Image[] {
+    const out: Phaser.GameObjects.Image[] = []
+    if (this.shadow) out.push(this.shadow)
+    if (this.sprite) out.push(this.sprite)
+    return out
+  }
+
+  // Уход с локации в transition: sprite+shadow УЖЕ reparent'нуты в зум-контейнер
+  // (destroy(true) его уничтожит). Роняем ссылки БЕЗ destroy (иначе double-destroy)
+  // + чистим вспомогательное (tooltip/charge-bar/таймеры/пара).
+  releaseForTransition(): void {
+    const scene = this.scene
+    this.hideTooltip()
+    this.hideChargeBar()
+    if (this.restTimer) {
+      this.restTimer.remove(false)
+      this.restTimer = null
+    }
+    if (this.prePauseTimer) {
+      this.prePauseTimer.remove(false)
+      this.prePauseTimer = null
+    }
+    if (this.pair) {
+      for (const f of this.pair) {
+        if (scene.frogs.includes(f)) f.isAttracted = false
+      }
+      this.pair = null
+    }
+    if (this.sprite) {
+      scene.tweens.killTweensOf(this.sprite)
+      this.sprite = null
+    }
+    if (this.shadow) {
+      scene.tweens.killTweensOf(this.shadow)
+      this.shadow = null
+    }
+  }
+
   despawn(): void {
     const scene = this.scene
     this.hideTooltip()
@@ -225,28 +269,45 @@ class MagnetInstance {
     this.sprite.on('dragstart', () => {
       if (!this.sprite) return
       this.isDragging = true
-      if (this.restTimer) { this.restTimer.remove(false); this.restTimer = null }
-      if (this.prePauseTimer) { this.prePauseTimer.remove(false); this.prePauseTimer = null }
+      if (this.restTimer) {
+        this.restTimer.remove(false)
+        this.restTimer = null
+      }
+      if (this.prePauseTimer) {
+        this.prePauseTimer.remove(false)
+        this.prePauseTimer = null
+      }
       scene.tweens.killTweensOf(this.sprite)
       this.isHopping = false
       this.mode = 'WANDER'
       this.pair = null
       this.lastDragX = this.sprite.x
     })
-    this.sprite.on('drag', (_p: Phaser.Input.Pointer, dragX: number, dragY: number) => {
-      if (!this.sprite) return
-      const { width: w, height: h } = scene.scale
-      const cxX = Phaser.Math.Clamp(dragX, FIELD_PAD_X + 10 * DPR, w - FIELD_PAD_X - 10 * DPR)
-      const cyY = Phaser.Math.Clamp(dragY, FIELD_PAD_Y + 10 * DPR, h - FIELD_PAD_Y_BOTTOM - 10 * DPR)
-      const dx = cxX - this.lastDragX
-      this.lastDragX = cxX
-      if (Math.abs(dx) > 0.5) {
-        this.targetTilt = Math.sign(dx) * MAX_TILT
-        this.sprite.scaleX = (dx > 0 ? -1 : 1) * this.baseScale
-      }
-      this.sprite.x = cxX
-      this.sprite.y = cyY
-    })
+    this.sprite.on(
+      'drag',
+      (_p: Phaser.Input.Pointer, dragX: number, dragY: number) => {
+        if (!this.sprite) return
+        const { width: w, height: h } = scene.scale
+        const cxX = Phaser.Math.Clamp(
+          dragX,
+          FIELD_PAD_X + 10 * DPR,
+          w - FIELD_PAD_X - 10 * DPR,
+        )
+        const cyY = Phaser.Math.Clamp(
+          dragY,
+          FIELD_PAD_Y + 10 * DPR,
+          h - FIELD_PAD_Y_BOTTOM - 10 * DPR,
+        )
+        const dx = cxX - this.lastDragX
+        this.lastDragX = cxX
+        if (Math.abs(dx) > 0.5) {
+          this.targetTilt = Math.sign(dx) * MAX_TILT
+          this.sprite.scaleX = (dx > 0 ? -1 : 1) * this.baseScale
+        }
+        this.sprite.x = cxX
+        this.sprite.y = cyY
+      },
+    )
     this.sprite.on('dragend', () => {
       if (!this.sprite) return
       this.isDragging = false
@@ -287,7 +348,9 @@ class MagnetInstance {
       .setOrigin(0.5, 1)
       .setDepth(MAGNET_DEPTH + 10)
     this.positionTooltip()
-    this.tooltipTimer = this.scene.time.delayedCall(2500, () => this.hideTooltip())
+    this.tooltipTimer = this.scene.time.delayedCall(2500, () =>
+      this.hideTooltip(),
+    )
   }
 
   private hideTooltip(): void {
@@ -315,8 +378,14 @@ class MagnetInstance {
     if (!this.sprite) return
     this.mode = 'RTB'
     this.hideTooltip()
-    if (this.restTimer) { this.restTimer.remove(false); this.restTimer = null }
-    if (this.prePauseTimer) { this.prePauseTimer.remove(false); this.prePauseTimer = null }
+    if (this.restTimer) {
+      this.restTimer.remove(false)
+      this.restTimer = null
+    }
+    if (this.prePauseTimer) {
+      this.prePauseTimer.remove(false)
+      this.prePauseTimer = null
+    }
     this.scene.tweens.killTweensOf(this.sprite)
     this.isHopping = false
     // Освобождаем пару если была в работе.
@@ -358,7 +427,12 @@ class MagnetInstance {
     const dx = next.x - sprite.x
     this.targetTilt = dx !== 0 ? Math.sign(dx) * MAX_TILT : 0
     if (dx !== 0) sprite.scaleX = (dx > 0 ? -1 : 1) * this.baseScale
-    const dist = Phaser.Math.Distance.Between(sprite.x, sprite.y, next.x, next.y)
+    const dist = Phaser.Math.Distance.Between(
+      sprite.x,
+      sprite.y,
+      next.x,
+      next.y,
+    )
     this.scene.tweens.add({
       targets: sprite,
       x: next.x,
@@ -430,10 +504,16 @@ class MagnetInstance {
     const dronerX = width * DRONER_X_FRAC
     const dronerY = height + height * DRONER_Y_FRAC
     this.sprite.setPosition(dronerX, dronerY)
-    this.sprite.setAlpha(0).setScale(this.baseScale * 0.6).setVisible(true)
+    this.sprite
+      .setAlpha(0)
+      .setScale(this.baseScale * 0.6)
+      .setVisible(true)
     if (this.shadow) {
       this.shadow.setPosition(dronerX + 4 * DPR, dronerY + 26 * DPR)
-      this.shadow.setAlpha(0).setScale(this.baseScale * 0.6).setVisible(true)
+      this.shadow
+        .setAlpha(0)
+        .setScale(this.baseScale * 0.6)
+        .setVisible(true)
       this.scene.tweens.add({
         targets: this.shadow,
         alpha: 0.3,
@@ -475,9 +555,14 @@ class MagnetInstance {
     const sprite = this.sprite
 
     // Разряд только в активных режимах.
-    const active = this.mode === 'WANDER' || this.mode === 'WORK' || this.mode === 'PULLING'
+    const active =
+      this.mode === 'WANDER' || this.mode === 'WORK' || this.mode === 'PULLING'
     if (!this.isDragging && active) {
-      this.battery = Math.max(0, this.battery - ((100 * delta) / BATTERY_FULL_MS) * this.batteryDrainMult)
+      this.battery = Math.max(
+        0,
+        this.battery -
+          ((100 * delta) / BATTERY_FULL_MS) * this.batteryDrainMult,
+      )
       if (this.battery <= 0) this.startRTB()
     }
     if (this.mode === 'CHARGING') {
@@ -487,7 +572,11 @@ class MagnetInstance {
     }
     if (this.tooltip) this.positionTooltip()
 
-    sprite.rotation = Phaser.Math.Linear(sprite.rotation, this.targetTilt, TILT_LERP)
+    sprite.rotation = Phaser.Math.Linear(
+      sprite.rotation,
+      this.targetTilt,
+      TILT_LERP,
+    )
 
     // Тень (как у goo_collector: ниже + меньше = парение).
     if (this.shadow) {
@@ -643,25 +732,19 @@ class MagnetInstance {
     this.mode = 'WANDER'
     this.workAccum = 0
     if (!this.isHopping) {
-      this.restTimer = this.scene.time.delayedCall(
-        this.restDelay(),
-        () => {
-          this.restTimer = null
-          if (this.sprite) this.startHop()
-        },
-      )
+      this.restTimer = this.scene.time.delayedCall(this.restDelay(), () => {
+        this.restTimer = null
+        if (this.sprite) this.startHop()
+      })
     }
   }
 
   private scheduleNextHop(): void {
     if (!this.sprite) return
-    this.restTimer = this.scene.time.delayedCall(
-      this.restDelay(),
-      () => {
-        this.restTimer = null
-        if (this.sprite) this.startHop()
-      },
-    )
+    this.restTimer = this.scene.time.delayedCall(this.restDelay(), () => {
+      this.restTimer = null
+      if (this.sprite) this.startHop()
+    })
   }
 
   private startHop(): void {
@@ -678,20 +761,40 @@ class MagnetInstance {
     const mid = this.mode === 'WORK' ? this.pairMidpoint() : null
     if (mid) {
       // Летим прямо к паре (полная дистанция).
-      toX = Phaser.Math.Clamp(mid.x, FIELD_PAD_X + 10 * DPR, width - FIELD_PAD_X - 10 * DPR)
-      toY = Phaser.Math.Clamp(mid.y, FIELD_PAD_Y + 10 * DPR, height - FIELD_PAD_Y_BOTTOM - 10 * DPR)
+      toX = Phaser.Math.Clamp(
+        mid.x,
+        FIELD_PAD_X + 10 * DPR,
+        width - FIELD_PAD_X - 10 * DPR,
+      )
+      toY = Phaser.Math.Clamp(
+        mid.y,
+        FIELD_PAD_Y + 10 * DPR,
+        height - FIELD_PAD_Y_BOTTOM - 10 * DPR,
+      )
       prePauseMs = 0
       const dx = toX - sprite.x
       const dy = toY - sprite.y
       const dist = Math.sqrt(dx * dx + dy * dy)
-      moveDuration = Phaser.Math.Clamp((dist / FLY_SPEED) * 1000, FLY_MIN_MS, 60000)
+      moveDuration = Phaser.Math.Clamp(
+        (dist / FLY_SPEED) * 1000,
+        FLY_MIN_MS,
+        60000,
+      )
       moveEase = 'Sine.easeInOut'
     } else {
       // WANDER hop.
       const angle = Phaser.Math.FloatBetween(0, Math.PI * 2)
       const dist = Phaser.Math.FloatBetween(40 * DPR, DASH_RADIUS)
-      toX = Phaser.Math.Clamp(sprite.x + Math.cos(angle) * dist, FIELD_PAD_X + 10 * DPR, width - FIELD_PAD_X - 10 * DPR)
-      toY = Phaser.Math.Clamp(sprite.y + Math.sin(angle) * dist, FIELD_PAD_Y + 10 * DPR, height - FIELD_PAD_Y_BOTTOM - 10 * DPR)
+      toX = Phaser.Math.Clamp(
+        sprite.x + Math.cos(angle) * dist,
+        FIELD_PAD_X + 10 * DPR,
+        width - FIELD_PAD_X - 10 * DPR,
+      )
+      toY = Phaser.Math.Clamp(
+        sprite.y + Math.sin(angle) * dist,
+        FIELD_PAD_Y + 10 * DPR,
+        height - FIELD_PAD_Y_BOTTOM - 10 * DPR,
+      )
       prePauseMs = 350
       moveDuration = MOVE_MS
       moveEase = 'Power2.easeOut'
@@ -722,7 +825,12 @@ class MagnetInstance {
           if (this.mode === 'WORK' && this.pair) {
             const mp = this.pairMidpoint()
             const dist = mp
-              ? Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, mp.x, mp.y)
+              ? Phaser.Math.Distance.Between(
+                  this.sprite.x,
+                  this.sprite.y,
+                  mp.x,
+                  mp.y,
+                )
               : Infinity
             if (dist < REACH_DIST) {
               // Долетели — стягиваем пару.
@@ -802,7 +910,13 @@ export class MagnetController {
   private sync(want: number): void {
     while (this.instances.length < want) {
       const idx = this.instances.length
-      const inst = new MagnetInstance(this.scene, this.merge, idx, this.initialBatteryFor(idx), this.initialChargingFor(idx))
+      const inst = new MagnetInstance(
+        this.scene,
+        this.merge,
+        idx,
+        this.initialBatteryFor(idx),
+        this.initialChargingFor(idx),
+      )
       // Спавним сразу на поле (WANDER) — магниты живут своей жизнью, не выходят
       // по одному из домика при заходе на локацию.
       this.instances.push(inst)
@@ -818,6 +932,25 @@ export class MagnetController {
     for (const m of this.instances) m.resetSpawnTimer()
   }
 
+  // Спавн всех магнит-дронов сразу (как DroneController.ensureSpawned). Зовётся
+  // из MainScene.prepBuildings до transition-gate, чтобы магниты участвовали в
+  // зум-анимации захода на локацию, а не появлялись после неё.
+  ensureSpawned(): void {
+    this.sync(this.targetCount())
+  }
+
+  getSprites(): Phaser.GameObjects.Image[] {
+    return this.instances.flatMap((m) => m.getSprites())
+  }
+
+  // Спрайты reparent'нуты в зум-контейнер — роняем ссылки без destroy.
+  releaseForTransition(): void {
+    this.persist()
+    for (const m of this.instances) m.releaseForTransition()
+    this.instances = []
+    useGameStore.getState().setMagnetBatteries([])
+  }
+
   tick(level: number, delta: number): void {
     this.sync(this.targetCount())
     for (const m of this.instances) m.tick(level, delta)
@@ -827,7 +960,9 @@ export class MagnetController {
       this.syncMs = 0
       useGameStore
         .getState()
-        .setMagnetBatteries(this.instances.map((m) => Math.round(m.getBattery())))
+        .setMagnetBatteries(
+          this.instances.map((m) => Math.round(m.getBattery())),
+        )
     }
     // Персист заряда ~ раз в 3с (для восстановления после reload).
     this.persistMs += delta

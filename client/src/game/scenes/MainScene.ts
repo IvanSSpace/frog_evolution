@@ -614,8 +614,15 @@ export class MainScene extends Phaser.Scene {
   private prepBuildings(locId: number): void {
     if (locId === 1) {
       this.buildings.show()
-      if ((useGameStore.getState().upgrades.autoCollect ?? 0) > 0) {
+      const s = useGameStore.getState()
+      if ((s.upgrades.autoCollect ?? 0) > 0) {
         this.drone.ensureSpawned()
+      }
+      // Магниты спавним тут же (а не только из tick), чтобы они вошли в зум-
+      // анимацию захода на локацию вместе со сборщиками, а не появлялись после.
+      const magnetKey = magnetKeyForLocation(1)
+      if ((s.upgrades[magnetKey] ?? 0) > 0 && s.magnetEnabled) {
+        this.magnet.ensureSpawned()
       }
     } else {
       this.buildings.hide()
@@ -634,7 +641,9 @@ export class MainScene extends Phaser.Scene {
     if (locId !== 1) return { buildings: [], drones: [] }
     return {
       buildings: this.buildings.getSprites(),
-      drones: this.drone.getSprites(),
+      // Магниты идут вместе со сборщиками — оба в зоне frogs, одинаковая
+      // обработка видимости в зум-анимации.
+      drones: [...this.drone.getSprites(), ...this.magnet.getSprites()],
     }
   }
 
@@ -644,6 +653,7 @@ export class MainScene extends Phaser.Scene {
   releaseBuildingsForTransition(): void {
     this.buildings.releaseForTransition()
     this.drone.releaseForTransition()
+    this.magnet.releaseForTransition()
   }
 
   // ============== МАГНИТ ==============
