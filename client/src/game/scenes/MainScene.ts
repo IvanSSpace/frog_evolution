@@ -40,6 +40,7 @@ import {
 } from './main/types'
 import { FrogSpawner } from './main/FrogSpawner'
 import { MergeController } from './main/MergeController'
+import { CapsuleMergeController } from './main/CapsuleMergeController'
 import { BoxController } from './main/BoxController'
 import { PoopController } from './main/PoopController'
 import { MagnetController } from './main/MagnetController'
@@ -126,6 +127,9 @@ export class MainScene extends Phaser.Scene {
 
   // Phase 21-02 (Wave 2): merge / feed / carrier-merge в отдельном controller'е.
   private merge!: MergeController
+
+  // Loc2: авто-мердж через капсулы репликации (помощник, ручной мердж не трогает).
+  private capsuleMerge!: CapsuleMergeController
 
   // Phase 21-03 (Wave 3): box drop / open в отдельном controller'е.
   private box!: BoxController
@@ -276,6 +280,8 @@ export class MainScene extends Phaser.Scene {
     this.poop = new PoopController(this, this.merge)
     // Phase 21-04 (Wave 4): magnet controller — нужен merge.findClosestSameLevelPair / performMerge.
     this.magnet = new MagnetController(this, this.merge)
+    // Loc2: капсулы авто-мерджат пары (маршрут → колба → мердж).
+    this.capsuleMerge = new CapsuleMergeController(this, this.merge)
     // Дрон автосбора — box.onBoxTapped открывает обычные боксы на Болоте.
     this.drone = new DroneController(this, this.box)
     // Фабрика — статичный спрайт на локации 1.
@@ -930,6 +936,12 @@ export class MainScene extends Phaser.Scene {
       this.drone.tick(autoCollectLevel, delta)
     }
 
+    // Loc2: капсулы репликации авто-мерджат пары (маршрут → колба → мердж).
+    // Только на loc2, не во время serum-выбора. Transition уже отсечён выше.
+    if (currentLocId === 2 && !serumPaused) {
+      this.capsuleMerge.tick()
+    }
+
     // Фабрика show/hide — тоже в блоке выше transition-gate.
 
     // Depth sort: чем ниже лягушка/коробка, тем она поверх
@@ -998,6 +1010,8 @@ export class MainScene extends Phaser.Scene {
     this.loc1Bg.setVisible(false)
     this.loc2Bg.setVisible(false)
     this.bg.setVisible(true)
+    // Сброс капсул-мерджа loc2: вернуть едущих лягушек в норму перед clearField.
+    this.capsuleMerge.reset()
   }
 
   private onTransitionEnd = ({ id }: { id: number }) => {
@@ -1135,6 +1149,8 @@ export class MainScene extends Phaser.Scene {
     this.drone?.despawn()
     // Фабрика — destroy при уничтожении сцены.
     this.buildings?.destroy()
+    // Loc2 капсулы-мердж — сброс tween'ов/state.
+    this.capsuleMerge?.destroy()
     // Phase 21-05: subscribe / DnD pointer listeners — в FrogInteraction.teardown().
     this.interaction.teardown()
     // Phase 23 Plan 23-05: очищаем window.__mainScene reference
