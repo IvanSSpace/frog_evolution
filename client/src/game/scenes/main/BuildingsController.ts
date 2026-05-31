@@ -106,21 +106,21 @@ const BUILDINGS_LOC2: readonly BuildingDef[] = [
   // Боковые с меньшим yFrac → ниже depth → рендерятся ЗА центральной.
   {
     key: 'bld2_capsule',
-    src: '/builds_loc2/capsule1.png',
+    src: '/builds_loc2/capsule1_glass.png',
     xFrac: 0.3,
     yFrac: 0.83,
     widthFrac: 0.26,
   },
   {
     key: 'bld2_capsule',
-    src: '/builds_loc2/capsule1.png',
+    src: '/builds_loc2/capsule1_glass.png',
     xFrac: 0.74,
     yFrac: 0.83,
     widthFrac: 0.26,
   },
   {
     key: 'bld2_capsule',
-    src: '/builds_loc2/capsule1.png',
+    src: '/builds_loc2/capsule1_glass.png',
     xFrac: 0.52,
     yFrac: 0.92,
     widthFrac: 0.28,
