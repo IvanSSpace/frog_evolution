@@ -634,13 +634,19 @@ export class MainScene extends Phaser.Scene {
   // локации). Раздельно здания (зона buildings) и дроны (зона frogs) — у них
   // разная видимость в зум-анимации. Гарантирует prep (show/spawn) перед сбором.
   collectTransitionSprites(locId: number): {
-    buildings: Phaser.GameObjects.Image[]
+    buildings: (Phaser.GameObjects.Image | Phaser.GameObjects.Rectangle)[]
     drones: Phaser.GameObjects.Image[]
   } {
     this.prepBuildings(locId)
     if (locId !== 1) return { buildings: [], drones: [] }
     return {
-      buildings: this.buildings.getSprites(),
+      // Индикаторы зарядки дронов — в зоне зданий, идут с buildings (та же
+      // обработка видимости), чтобы плавно зумились, а не появлялись резко.
+      buildings: [
+        ...this.buildings.getSprites(),
+        ...this.drone.getChargeBarSprites(),
+        ...this.magnet.getChargeBarSprites(),
+      ],
       // Магниты идут вместе со сборщиками — оба в зоне frogs, одинаковая
       // обработка видимости в зум-анимации.
       drones: [...this.drone.getSprites(), ...this.magnet.getSprites()],

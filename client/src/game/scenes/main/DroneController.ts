@@ -144,6 +144,15 @@ class DroneInstance {
     return out
   }
 
+  // Индикатор зарядки (в зоне зданий). Отдаём в transition вместе со зданиями,
+  // чтобы он плавно зумился, а не появлялся резко после анимации.
+  getChargeBarSprites(): Phaser.GameObjects.Rectangle[] {
+    const out: Phaser.GameObjects.Rectangle[] = []
+    if (this.chargeBg) out.push(this.chargeBg)
+    if (this.chargeFill) out.push(this.chargeFill)
+    return out
+  }
+
   private spawn(): void {
     if (this.sprite) return
     const { width, height } = this.scene.scale
@@ -449,6 +458,10 @@ class DroneInstance {
     if (!this.chargeFill || !this.chargeBg) return
     const fullH = (this.chargeBg.height - 4 * DPR) * (this.battery / 100)
     this.chargeFill.setSize(this.chargeFill.width, fullH)
+    // Переустанавливаем видимость: в зум-переходе reparent мог скрыть бар (если
+    // приземление на зону frogs); первый post-transition tick вернёт его.
+    this.chargeBg.setVisible(true)
+    this.chargeFill.setVisible(true)
   }
 
   private hideChargeBar(): void {
@@ -883,5 +896,9 @@ export class DroneController {
 
   getSprites(): Phaser.GameObjects.Image[] {
     return this.instances.flatMap((d) => d.getSprites())
+  }
+
+  getChargeBarSprites(): Phaser.GameObjects.Rectangle[] {
+    return this.instances.flatMap((d) => d.getChargeBarSprites())
   }
 }
