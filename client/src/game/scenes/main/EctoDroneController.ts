@@ -1,118 +1,81 @@
-// EctoDroneController: дрон loc2, собирающий фиолетовую слизь (эктоплазму).
+// EctoDroneController: дрон loc2 (drone_loc2.png).
 //
-// Дрон базируется у здания (drone_loc2.png), и когда на поле появляется ecto-
-// слизь (scene.ectoPoops) — летит к ближайшей, собирает (+эктоплазма, слизь
-// исчезает) и возвращается на базу. Прокачка (скорость/кол-во) — позже.
+// Пока что — ПРОСТО ЛЕТАЕТ по полю (патрулирует случайными точками). Сбор
+// эктоплазмы добавим следующим шагом. Размер — как у дронов loc1.
 //
 // Public API: tick() (на loc2), reset(), destroy().
 
 import Phaser from 'phaser'
 import type { MainScene } from '../MainScene'
-import { useGameStore } from '../../../store/gameStore'
-import { DPR } from './types'
+import {
+  BOX_DISPLAY_SIZE,
+  DPR,
+  FIELD_PAD_X,
+  FIELD_PAD_Y,
+  FIELD_PAD_Y_BOTTOM,
+} from './types'
 
-// Точка базы дрона у здания (xFrac, yFracZone — зона строений).
-const BASE_PT: readonly [number, number] = [0.622, 0.487]
-const FLY_SPEED = 420 * DPR // px/сек
-const COLLECT_PAUSE = 260 // мс над слизью при сборе
-const ECTO_PER_POOP = 1 // сколько эктоплазмы даёт одна слизь
-const DRONE_WIDTH_FRAC = 0.16 // размер дрона (доля ширины экрана)
-
-type DroneState = 'idle' | 'toTarget' | 'collecting' | 'toBase'
+const DRONE_PX = BOX_DISPLAY_SIZE * 0.95 // экранный размер (как дроны loc1)
+const FLY_SPEED = 90 * DPR // px/сек
+const DRONE_DEPTH = 96000 // поверх лягушек, как дроны loc1
 
 export class EctoDroneController {
   private scene: MainScene
   private sprite: Phaser.GameObjects.Image | null = null
-  private state: DroneState = 'idle'
-  private target: Phaser.GameObjects.Image | null = null
+  private wandering = false
   private tweens: Phaser.Tweens.Tween[] = []
 
   constructor(scene: MainScene) {
     this.scene = scene
   }
 
-  private base(): Phaser.Math.Vector2 {
+  private randomFieldPoint(): Phaser.Math.Vector2 {
     const { width, height } = this.scene.scale
     return new Phaser.Math.Vector2(
-      BASE_PT[0] * width,
-      height * (1 + BASE_PT[1]),
+      Phaser.Math.Between(FIELD_PAD_X + 10 * DPR, width - FIELD_PAD_X - 10 * DPR),
+      Phaser.Math.Between(
+        FIELD_PAD_Y + 10 * DPR,
+        height - FIELD_PAD_Y_BOTTOM - 10 * DPR,
+      ),
     )
   }
 
   private ensureSpawned(): void {
     if (this.sprite) return
-    const b = this.base()
-    const sp = this.scene.add.image(b.x, b.y, 'drone_loc2')
-    const scale = (this.scene.scale.width * DRONE_WIDTH_FRAC) / sp.width
-    sp.setScale(scale)
-    sp.setDepth(400000) // поверх лягушек/слизи (как капсулы на переднем плане)
+    const p = this.randomFieldPoint()
+    const sp = this.scene.add.image(p.x, p.y, 'drone_loc2')
+    sp.setScale(DRONE_PX / sp.width)
+    sp.setDepth(DRONE_DEPTH)
     this.sprite = sp
-    this.state = 'idle'
   }
 
   tick(): void {
     this.ensureSpawned()
-    if (this.state !== 'idle') return
-    // Найти ближайшую живую ecto-слизь.
-    const sp = this.sprite!
-    let best: Phaser.GameObjects.Image | null = null
-    let bestD = Infinity
-    for (const p of this.scene.ectoPoops) {
-      if (!p.active) continue
-      const d = Phaser.Math.Distance.Between(sp.x, sp.y, p.x, p.y)
-      if (d < bestD) {
-        bestD = d
-        best = p
-      }
+    if (!this.wandering) {
+      this.wandering = true
+      this.wanderStep()
     }
-    if (!best) return
-    this.target = best
-    this.flyTo(best.x, best.y, () => this.collect())
-    this.state = 'toTarget'
   }
 
-  private flyTo(x: number, y: number, onDone: () => void): void {
+  private wanderStep(): void {
     const sp = this.sprite
-    if (!sp) return
-    const dist = Phaser.Math.Distance.Between(sp.x, sp.y, x, y)
-    // лёгкий наклон по направлению
-    if (x < sp.x) sp.setFlipX(true)
-    else sp.setFlipX(false)
+    if (!sp || !sp.active) return
+    const t = this.randomFieldPoint()
+    sp.setFlipX(t.x < sp.x)
+    const dist = Phaser.Math.Distance.Between(sp.x, sp.y, t.x, t.y)
     const tw = this.scene.tweens.add({
       targets: sp,
-      x,
-      y,
-      duration: Math.max(250, (dist / FLY_SPEED) * 1000),
+      x: t.x,
+      y: t.y,
+      duration: Math.max(500, (dist / FLY_SPEED) * 1000),
       ease: 'Sine.easeInOut',
-      onComplete: onDone,
+      onComplete: () => {
+        this.scene.time.delayedCall(Phaser.Math.Between(200, 700), () =>
+          this.wanderStep(),
+        )
+      },
     })
     this.tweens.push(tw)
-  }
-
-  private collect(): void {
-    this.state = 'collecting'
-    const poop = this.target
-    this.scene.time.delayedCall(COLLECT_PAUSE, () => {
-      if (poop && poop.active) {
-        // слизь «всасывается» и исчезает
-        this.scene.tweens.add({
-          targets: poop,
-          scale: 0,
-          alpha: 0,
-          duration: 200,
-          ease: 'Back.easeIn',
-          onComplete: () => poop.destroy(),
-        })
-        this.scene.ectoPoops = this.scene.ectoPoops.filter((p) => p !== poop)
-        useGameStore.getState().addEctoplasm(ECTO_PER_POOP)
-      }
-      this.target = null
-      const b = this.base()
-      this.flyTo(b.x, b.y, () => {
-        this.state = 'idle'
-      })
-      this.state = 'toBase'
-    })
   }
 
   reset(): void {
@@ -123,8 +86,7 @@ export class EctoDroneController {
       this.sprite.destroy()
       this.sprite = null
     }
-    this.target = null
-    this.state = 'idle'
+    this.wandering = false
   }
 
   destroy(): void {
