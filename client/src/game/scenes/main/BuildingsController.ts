@@ -109,14 +109,16 @@ const BUILDINGS_LOC2: readonly BuildingDef[] = [
     src: '/builds_loc2/capsule1_semi.png',
     xFrac: 0.3,
     yFrac: 0.83,
-    widthFrac: 0.28,
+    // cyan PNG уже/выше по аспекту → widthFrac 0.31 чтобы высота совпала с
+    // центральной зелёной (одинаковый видимый размер).
+    widthFrac: 0.31,
   },
   {
     key: 'bld2_capsule',
     src: '/builds_loc2/capsule1_semi.png',
     xFrac: 0.74,
     yFrac: 0.83,
-    widthFrac: 0.28,
+    widthFrac: 0.31,
   },
   {
     key: 'bld2_capsule_green',
