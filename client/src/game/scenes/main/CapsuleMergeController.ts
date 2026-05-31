@@ -50,7 +50,7 @@ const CAPSULE_ROUTES: readonly CapsuleRoute[] = [
 const HOP_DIST = 90 * DPR // длина одного прыжка вдоль маршрута
 const HOP_DURATION = 420 // мс на прыжок
 const INTER_HOP_PAUSE = 320 // мс паузы между прыжками (естественный ритм)
-const SECOND_FROG_DELAY = 400 // мс — второй стартует позже (single-file)
+const SECOND_FROG_DELAY = 150 // мс — второй стартует чуть позже (видно что их 2)
 // merged спавнится performMerge'ом отложенно (спираль 350 + 60мс) — ждём дольше.
 const VORTEX_WAIT = 480
 const FLOAT_OFFSET_FRAC = 0.03 // разнос двух лягушек в точке парения (доля W)
