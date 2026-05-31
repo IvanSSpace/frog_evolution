@@ -17,7 +17,7 @@
 import Phaser from 'phaser'
 import type { MainScene } from '../MainScene'
 import type { MergeController } from './MergeController'
-import { BASE_SCALE } from './types'
+import { BASE_SCALE, DPR } from './types'
 import type { FrogData } from './types'
 
 // Точки маршрута: [xFrac (от ширины), yFracZone (0 = верх зоны строений =
@@ -47,7 +47,8 @@ const CAPSULE_ROUTES: readonly CapsuleRoute[] = [
   { entry: [0.757, 0.766], float: [0.752, 0.668] }, // правая
 ]
 
-const TRAVEL_SPEED = 600 // px/сек вдоль маршрута
+const HOP_DIST = 80 * DPR // длина одного прыжка вдоль маршрута
+const HOP_DURATION = 200 // мс на прыжок (как dash на поле)
 const SECOND_FROG_DELAY = 350 // мс — второй стартует позже (single-file)
 const FLOAT_OFFSET_FRAC = 0.045 // разнос двух лягушек в точке парения (доля W)
 const MERGE_PAUSE_MS = 250 // пауза «обе в колбе» перед мерджем
@@ -142,7 +143,7 @@ export class CapsuleMergeController {
       new Phaser.Math.Vector2(fl.x + floatDx, fl.y),
     ]
     const go = () =>
-      this.followPath(slot, f, pts, () => {
+      this.hopAlong(slot, f, pts, () => {
         this.startBob(slot, f)
         slot.arrived++
         if (slot.arrived >= 2) {
@@ -153,33 +154,106 @@ export class CapsuleMergeController {
     else go()
   }
 
-  // Непрерывное движение вдоль ломаной (Curves.Path), постоянная скорость.
-  private followPath(
+  // Движение ПРЫЖКАМИ вдоль маршрута: ломаную семплим через HOP_DIST и лягушка
+  // допрыгивает до каждой точки своей естественной дугой (как dash на поле).
+  private hopAlong(
     slot: CapsuleSlot,
     f: FrogData,
     pts: Phaser.Math.Vector2[],
     onDone: () => void,
   ): void {
-    if (!f.container.active || slot.state !== 'busy') return
-    const path = new Phaser.Curves.Path(pts[0].x, pts[0].y)
-    for (let i = 1; i < pts.length; i++) path.lineTo(pts[i].x, pts[i].y)
-    const len = path.getLength()
-    const proxy = { t: 0 }
-    const out = new Phaser.Math.Vector2()
+    const samples = this.sampleEvery(pts, HOP_DIST)
+    const step = (i: number) => {
+      if (!f.container.active || slot.state === 'idle') return
+      if (i >= samples.length) {
+        onDone()
+        return
+      }
+      this.hop(slot, f, samples[i].x, samples[i].y, () => step(i + 1))
+    }
+    step(0)
+  }
+
+  // Один прыжок (дуга 4t(1-t) на body.y + stretch/squish, как FrogSpawner.dash).
+  private hop(
+    slot: CapsuleSlot,
+    f: FrogData,
+    toX: number,
+    toY: number,
+    onDone: () => void,
+  ): void {
+    if (!f.container.active) return
+    const fromX = f.container.x
+    const fromY = f.container.y
+    const dist = Math.hypot(toX - fromX, toY - fromY)
+    const movingRight = toX >= fromX
+    if (movingRight !== f.facingRight) {
+      f.container.scaleX = (movingRight ? 1 : -1) * BASE_SCALE
+      f.facingRight = movingRight
+    }
+    const arcH = Math.min(22, 8 + dist * 0.18) * DPR
+    this.scene.tweens.add({
+      targets: f.body,
+      scaleY: 1.2,
+      duration: 80,
+      ease: 'Power2.easeOut',
+    })
+    const js = { t: 0 }
     const tw = this.scene.tweens.add({
-      targets: proxy,
+      targets: js,
       t: 1,
-      duration: Math.max(300, (len / TRAVEL_SPEED) * 1000),
-      ease: 'Sine.easeInOut',
+      duration: HOP_DURATION,
+      ease: 'Power2.easeOut',
       onUpdate: () => {
         if (!f.container.active) return
-        path.getPoint(proxy.t, out)
-        f.container.x = out.x
-        f.container.y = out.y
+        const t = js.t
+        f.container.x = fromX + (toX - fromX) * t
+        f.container.y = fromY + (toY - fromY) * t
+        f.body.y = -(4 * t * (1 - t) * arcH)
       },
-      onComplete: onDone,
+      onComplete: () => {
+        if (!f.container.active) return
+        f.body.y = 0
+        this.scene.tweens.add({
+          targets: f.body,
+          scaleY: 0.8,
+          duration: 60,
+          yoyo: true,
+          ease: 'Power2.easeIn',
+        })
+        onDone()
+      },
     })
     slot.tweens.push(tw)
+  }
+
+  // Семплинг ломаной по дуговой длине: точки через каждые `step` px + конец.
+  private sampleEvery(
+    pts: Phaser.Math.Vector2[],
+    step: number,
+  ): Phaser.Math.Vector2[] {
+    const out: Phaser.Math.Vector2[] = []
+    let carry = 0
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1]
+      const b = pts[i]
+      const segLen = Phaser.Math.Distance.Between(a.x, a.y, b.x, b.y)
+      let d = step - carry
+      while (d <= segLen) {
+        const t = d / segLen
+        out.push(
+          new Phaser.Math.Vector2(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t),
+        )
+        d += step
+      }
+      carry = segLen - (d - step)
+    }
+    const end = pts[pts.length - 1]
+    const last = out[out.length - 1]
+    if (!last || Phaser.Math.Distance.Between(last.x, last.y, end.x, end.y) > 4) {
+      out.push(end)
+    }
+    return out
   }
 
   // Парение в колбе: лёгкое покачивание + медленное вращение.
@@ -243,7 +317,7 @@ export class CapsuleMergeController {
       this.worldPt(slot.route.entry),
       ...[...TRUNK].reverse().map((p) => this.worldPt(p)),
     ]
-    this.followPath(slot, merged, pts, () => {
+    this.hopAlong(slot, merged, pts, () => {
       this.restoreFrog(merged)
       this.freeSlot(slot)
     })
