@@ -14,7 +14,6 @@ import { NodeBag, TimerBag } from './_helpers'
 //   lead      — saw-синт хук + соло, delay+reverb.
 //   kick/snare/snareBody/hats/shaker — хип-хоп бит.
 //   pad       — тёмный fatsaw фон.
-//   oink      — пиглинские «хрю» (случайно).
 //   crackle   — виниловый треск.
 
 const BPM = 90
@@ -79,8 +78,6 @@ const PROG: Chord[] = [
   },
 ]
 
-const OINK_NOTES = ['F#2', 'A2', 'C#3', 'D2', 'E2']
-
 interface Voices {
   bass808: ToneNS.MonoSynth
   piano: ToneNS.PolySynth
@@ -91,7 +88,6 @@ interface Voices {
   hatClosed: ToneNS.NoiseSynth
   hatOpen: ToneNS.NoiseSynth
   pad: ToneNS.PolySynth
-  oink: ToneNS.MonoSynth
   crackle: ToneNS.NoiseSynth
   shaker: ToneNS.NoiseSynth
 }
@@ -288,29 +284,6 @@ const create: CreateTrack = (Tone): TrackInstance => {
       )
       pad.volume.value = -26
 
-      // Хрю пиглина
-      const voxRev = nodes.add(
-        new Tone.Reverb({ decay: 1.2, wet: 0.3 }).connect(masterComp),
-      )
-      const voxDist = nodes.add(new Tone.Distortion(0.2).connect(voxRev))
-      const voxFilter = nodes.add(
-        new Tone.Filter({ frequency: 1200, type: 'bandpass' }).connect(voxDist),
-      )
-      const oink = nodes.add(
-        new Tone.MonoSynth({
-          oscillator: { type: 'sawtooth' },
-          envelope: { attack: 0.02, decay: 0.2, sustain: 0, release: 0.15 },
-          filterEnvelope: {
-            attack: 0.01,
-            decay: 0.15,
-            sustain: 0,
-            baseFrequency: 800,
-            octaves: -1.5,
-          },
-        }).connect(voxFilter),
-      )
-      oink.volume.value = -16
-
       // Виниловый треск
       const crackleFilter = nodes.add(
         new Tone.Filter({ frequency: 4500, type: 'bandpass' }).connect(
@@ -344,7 +317,6 @@ const create: CreateTrack = (Tone): TrackInstance => {
         pianoRev.generate(),
         leadRev.generate(),
         padRev.generate(),
-        voxRev.generate(),
       ])
 
       voices = {
@@ -357,7 +329,6 @@ const create: CreateTrack = (Tone): TrackInstance => {
         hatClosed,
         hatOpen,
         pad,
-        oink,
         crackle,
         shaker,
       }
@@ -561,20 +532,6 @@ const create: CreateTrack = (Tone): TrackInstance => {
         timers.pushTimeout(playBar, SEC_PER_BAR * 1000)
       }
       playBar()
-
-      // ─── хрю пиглинов (случайно) ───
-      timers.pushInterval(() => {
-        if (!ctx.isPlaying()) return
-        if (Math.random() < 0.15) {
-          const note = OINK_NOTES[Math.floor(Math.random() * OINK_NOTES.length)]
-          v.oink.triggerAttackRelease(
-            note,
-            D16,
-            Tone.now(),
-            0.4 + Math.random() * 0.3,
-          )
-        }
-      }, 1200)
 
       // ─── виниловый треск ───
       timers.pushInterval(() => {
