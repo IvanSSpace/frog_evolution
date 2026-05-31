@@ -304,10 +304,16 @@ export class LocationTransition {
     const newStartScale = goingUp ? 8 : 0.005
     newContainer.setScale(newStartScale)
     newContainer.setAlpha(0) // плавно проявится в начале перехода
-    // Свежий фон для новой локации. Половина зоны приземления — всегда frogs
-    // (configureWorld в onTransitionEnd сбрасывает зону в frogs), поэтому
-    // двухзонный newBg садится точно на позицию loc1Bg/loc2Bg без рывка.
-    const newBg = this.createTransitionBg(newLoc, 'frogs', width, height)
+    // Свежий фон для новой локации. Половина зоны приземления = зона выхода
+    // (configureWorld в onTransitionEnd сохраняет её), поэтому двухзонный newBg
+    // показывает в зуме ту же половину, на которую сядет камера, и стыка с
+    // loc1Bg/loc2Bg не видно (одинаковые пиксели в кадре).
+    const newBg = this.createTransitionBg(
+      newLoc,
+      scene.transitionFromZone,
+      width,
+      height,
+    )
     newContainer.add(newBg)
 
     const state = useGameStore.getState()

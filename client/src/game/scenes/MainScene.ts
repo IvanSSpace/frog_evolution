@@ -913,16 +913,23 @@ export class MainScene extends Phaser.Scene {
     return locId === 1 || locId === 2
   }
 
-  private configureWorld(locId: number): void {
+  private configureWorld(
+    locId: number,
+    zone: 'frogs' | 'buildings' = 'frogs',
+  ): void {
     const { width, height } = this.scale
     const twoZone = this.isTwoZoneLoc(locId)
     this.loc1Bg.setVisible(locId === 1)
     this.loc2Bg.setVisible(locId === 2)
     this.bg.setVisible(!twoZone)
     this.cameras.main.setBounds(0, 0, width, twoZone ? height * 2 : height)
-    this.cameras.main.setScroll(0, 0)
-    this.currentZone = 'frogs'
-    eventBus.emit('field:zoneChanged', { zone: 'frogs' })
+    // Сохраняем зону при смене локации: вошёл с зоны зданий → приземляешься
+    // на зону зданий новой локации (и наоборот). Однозонные локации — всегда
+    // frogs (зон нет).
+    const landZone = twoZone ? zone : 'frogs'
+    this.cameras.main.setScroll(0, landZone === 'buildings' ? height : 0)
+    this.currentZone = landZone
+    eventBus.emit('field:zoneChanged', { zone: landZone })
   }
 
   private onTransitionStart = () => {
@@ -941,7 +948,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private onTransitionEnd = ({ id }: { id: number }) => {
-    this.configureWorld(id)
+    this.configureWorld(id, this.transitionFromZone)
   }
 
   private setZone(zone: 'frogs' | 'buildings'): void {
