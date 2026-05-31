@@ -113,6 +113,13 @@ export class CapsuleMergeController {
     slot.arrived = 0
     slot.tweens = []
 
+    if (import.meta.env.DEV) {
+      const idx = this.slots.indexOf(slot)
+      console.log(
+        `[capsule] claim capsule#${idx} pair L${a.level} (${Math.round(a.container.x)},${Math.round(a.container.y)})+(${Math.round(b.container.x)},${Math.round(b.container.y)})`,
+      )
+    }
+
     const offset = this.scene.scale.width * FLOAT_OFFSET_FRAC
     this.prepFrog(a)
     this.prepFrog(b)
@@ -155,6 +162,11 @@ export class CapsuleMergeController {
       this.hopAlong(slot, f, pts, () => {
         this.startBob(slot, f)
         slot.arrived++
+        if (import.meta.env.DEV) {
+          console.log(
+            `[capsule] frog arrived (${slot.arrived}/2) at capsule#${this.slots.indexOf(slot)}`,
+          )
+        }
         if (slot.arrived >= 2) {
           this.scene.time.delayedCall(MERGE_PAUSE_MS, () => this.doMerge(slot))
         }
