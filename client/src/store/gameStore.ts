@@ -36,6 +36,8 @@ import {
 import {
   loadUpgrades,
   saveUpgrades,
+  loadEctoplasm,
+  saveEctoplasm,
   loadFrogPurchases,
   saveFrogPurchases,
   loadFrogTiers,
@@ -109,6 +111,10 @@ interface GameStateBase {
   gold: number
   addGold: (amount: number) => void
   spendGold: (amount: number) => boolean
+
+  // Эктоплазма (loc2): фиолетовая слизь, собирается дронами loc2. Пока локально.
+  ectoplasm: number
+  addEctoplasm: (amount: number) => void
 
   upgrades: Upgrades
   buyUpgrade: (key: PurchasableUpgrade) => Promise<boolean>
@@ -292,6 +298,14 @@ export const useGameStore = create<GameState>((set, get) => ({
     set((s) => ({ gold: s.gold - amount }))
     return true
   },
+
+  ectoplasm: loadEctoplasm(),
+  addEctoplasm: (amount) =>
+    set((s) => {
+      const next = Math.max(0, s.ectoplasm + amount)
+      saveEctoplasm(next)
+      return { ectoplasm: next }
+    }),
 
   upgrades: loadUpgrades(),
   devResetUpgrades: () => {

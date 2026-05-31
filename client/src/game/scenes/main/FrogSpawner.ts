@@ -216,8 +216,17 @@ export class FrogSpawner {
       loop: true,
       callback: () => {
         if (frog.isMerging) return
-        const type = rollPoopType(frog.level)
-        scene.spawnAutoPoop(frog, type)
+        // Loc2: с шансом 18% лягушка какает фиолетовую слизь (эктоплазму) —
+        // лежит на поле, собирается ecto-дроном. Иначе — обычная какашка.
+        if (
+          useGameStore.getState().currentLocation === 2 &&
+          Math.random() < 0.18
+        ) {
+          scene.spawnEctoPoop(frog)
+        } else {
+          const type = rollPoopType(frog.level)
+          scene.spawnAutoPoop(frog, type)
+        }
         // Лёгкое сжатие тела на каждый пук (поверх idle, не блокирует)
         scene.tweens.add({
           targets: frog.body,

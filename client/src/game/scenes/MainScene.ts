@@ -41,6 +41,7 @@ import {
 import { FrogSpawner } from './main/FrogSpawner'
 import { MergeController } from './main/MergeController'
 import { CapsuleMergeController } from './main/CapsuleMergeController'
+import { EctoDroneController } from './main/EctoDroneController'
 import { BoxController } from './main/BoxController'
 import { PoopController } from './main/PoopController'
 import { MagnetController } from './main/MagnetController'
@@ -82,6 +83,10 @@ export class MainScene extends Phaser.Scene {
   // LocationTransition (oldContainer reparent).
   // Живые какашки на сцене — трекаем чтобы переносить в oldContainer при переходе локации
   poops: Phaser.GameObjects.Image[] = []
+
+  // Loc2: фиолетовые «слизи» (эктоплазма) — лежат на поле пока их не соберёт
+  // ecto-дрон (в отличие от обычных какашек — те авто-собираются деньгами).
+  ectoPoops: Phaser.GameObjects.Image[] = []
 
   // Phase 21-05 (Wave 5): prevLocation / bg package-public — мутируется LocationTransition.
   prevLocation = 1
@@ -130,6 +135,9 @@ export class MainScene extends Phaser.Scene {
 
   // Loc2: авто-мердж через капсулы репликации (помощник, ручной мердж не трогает).
   private capsuleMerge!: CapsuleMergeController
+
+  // Loc2: дрон-сборщик эктоплазмы (фиолетовой слизи).
+  private ectoDrone!: EctoDroneController
 
   // Phase 21-03 (Wave 3): box drop / open в отдельном controller'е.
   private box!: BoxController
@@ -212,6 +220,7 @@ export class MainScene extends Phaser.Scene {
     this.load.image('magnet', '/magnet.png')
     this.load.image('magnet_drone', '/magnet_drone.png')
     this.load.image('goo_collector', '/goo_collector.png')
+    this.load.image('drone_loc2', '/drone_loc2.png')
     BuildingsController.preload(this)
     this.load.image('toxic_map2size', '/maps/toxic_map2size.png')
     this.load.image('toxic_map2_2size', '/maps/toxic_map2_2size.png')
@@ -287,6 +296,8 @@ export class MainScene extends Phaser.Scene {
     // Loc2: капсулы авто-мерджат пары (маршрут → колба → мердж). Нужен buildings
     // для FX подмены текстуры колбы во время мерджа.
     this.capsuleMerge = new CapsuleMergeController(this, this.merge, this.buildings)
+    // Loc2: дрон собирает эктоплазму (фиолетовую слизь) с поля.
+    this.ectoDrone = new EctoDroneController(this)
     // Phase 21-05 (Wave 5): location-transition + interaction controllers.
     this.locTransition = new LocationTransition(
       this,
@@ -573,6 +584,11 @@ export class MainScene extends Phaser.Scene {
   // Phase 21-01/21-03: package-public — вызывается FrogSpawner (poopTimer callback).
   spawnAutoPoop(frog: FrogData, type: PoopType) {
     this.poop.spawnAutoPoop(frog, type)
+  }
+
+  // Loc2: фиолетовая слизь (эктоплазма) — лежит, ждёт ecto-дрон.
+  spawnEctoPoop(frog: FrogData) {
+    this.poop.spawnEctoPoop(frog)
   }
 
   // ============== МЕРДЖ ==============
@@ -941,6 +957,7 @@ export class MainScene extends Phaser.Scene {
     // Только на loc2, не во время serum-выбора. Transition уже отсечён выше.
     if (currentLocId === 2 && !serumPaused) {
       this.capsuleMerge.tick()
+      this.ectoDrone.tick()
     }
 
     // Фабрика show/hide — тоже в блоке выше transition-gate.
@@ -1013,6 +1030,13 @@ export class MainScene extends Phaser.Scene {
     this.bg.setVisible(true)
     // Сброс капсул-мерджа loc2: вернуть едущих лягушек в норму перед clearField.
     this.capsuleMerge.reset()
+    // Сброс ecto-дрона + чистка лежащей эктоплазмы перед сменой локации.
+    this.ectoDrone.reset()
+    for (const p of this.ectoPoops) {
+      this.tweens.killTweensOf(p)
+      p.destroy()
+    }
+    this.ectoPoops = []
   }
 
   private onTransitionEnd = ({ id }: { id: number }) => {
@@ -1152,6 +1176,7 @@ export class MainScene extends Phaser.Scene {
     this.buildings?.destroy()
     // Loc2 капсулы-мердж — сброс tween'ов/state.
     this.capsuleMerge?.destroy()
+    this.ectoDrone?.destroy()
     // Phase 21-05: subscribe / DnD pointer listeners — в FrogInteraction.teardown().
     this.interaction.teardown()
     // Phase 23 Plan 23-05: очищаем window.__mainScene reference

@@ -30,6 +30,8 @@ export function Header({ onOpenIncome }: { onOpenIncome?: () => void }) {
     1,
   )
   const essence = useGameStore((s) => s.essence)
+  const ectoplasm = useGameStore((s) => s.ectoplasm)
+  const currentLocation = useGameStore((s) => s.currentLocation)
   const frogTiers = useGameStore((s) => s.frogTiers)
   const temporaryIncomeBuff = useGameStore((s) => s.temporaryIncomeBuff)
   useGameStore((s) => s.numberFormat) // subscribe to format changes
@@ -98,6 +100,34 @@ export function Header({ onOpenIncome }: { onOpenIncome?: () => void }) {
                 {fmt(essence)}
               </div>
             </>
+          )}
+          {(currentLocation === 2 || ectoplasm > 0) && (
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: '#c77dff',
+                textShadow: '0 1px 0 rgba(0,0,0,0.4)',
+                lineHeight: 1.2,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+              title="Эктоплазма"
+            >
+              <span
+                style={{
+                  width: '0.9em',
+                  height: '0.9em',
+                  borderRadius: '50%',
+                  background:
+                    'radial-gradient(circle at 35% 30%, #e0aaff, #9d4edd 70%)',
+                  boxShadow: '0 0 4px #9d4edd',
+                  display: 'inline-block',
+                }}
+              />
+              {fmt(ectoplasm)}
+            </div>
           )}
         </div>
 
