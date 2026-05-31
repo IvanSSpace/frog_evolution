@@ -304,6 +304,24 @@ export class BuildingsController {
     for (const s of this.sprites) s.setVisible(false)
   }
 
+  /**
+   * Уход с локации в transition: спрайты УЖЕ reparent'нуты в зум-контейнер,
+   * который уничтожит их через destroy(true). Роняем ссылки (не destroy'им —
+   * иначе double-destroy) + чистим вспомогательные оверлеи. show() при возврате
+   * на Болото пересоздаст здания с нуля.
+   */
+  releaseForTransition(): void {
+    if (this.collectLabel) {
+      this.collectLabel.destroy()
+      this.collectLabel = null
+    }
+    if (this.collectHit) {
+      this.collectHit.destroy()
+      this.collectHit = null
+    }
+    this.sprites = []
+  }
+
   /** Спрайты для reparent в transition-контейнер (зум при смене локации). */
   getSprites(): Phaser.GameObjects.Image[] {
     return this.sprites

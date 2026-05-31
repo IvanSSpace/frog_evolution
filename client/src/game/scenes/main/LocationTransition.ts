@@ -197,7 +197,12 @@ export class LocationTransition {
     const goingUp = newLoc > oldLoc
     const { width, height } = scene.scale
     const cx = width / 2
-    const cy = height / 2
+    // Anchor зума = центр ТЕКУЩЕГО вида (зоны), а не зоны frogs. Если игрок на
+    // зоне зданий (камера scrollY=height), зумим её, а не прыгаем на лягушек.
+    // transitionFromZone выставлен onTransitionStart (sync emit выше).
+    const fromBuildingsZone = scene.transitionFromZone === 'buildings'
+    const fromScrollY = fromBuildingsZone ? height : 0
+    const cy = fromScrollY + height / 2
 
     // 1. Магниты эфемерны — убиваем сразу
     this.magnet.clearAll()
@@ -298,6 +303,40 @@ export class LocationTransition {
     }
     scene.poops = []
 
+    // Zone-aware видимость: в зум-анимации показываем только контент ТЕКУЩЕЙ
+    // зоны (иначе контент другой зоны «прострелит» через кадр при сжатии до
+    // точки). frogs-зона: лягушки/коробки/какашки/дроны; buildings-зона: здания.
+    const frogZoneVisible = !fromBuildingsZone
+    for (const f of oldFrogs) f.container.setVisible(frogZoneVisible)
+    for (const b of oldBoxes) b.img.setVisible(frogZoneVisible)
+    for (const p of oldPoops) p.setVisible(frogZoneVisible)
+
+    // Здания + дроны (только Болото) — reparent в oldContainer: замораживаем и
+    // зумим вместе с полем (раньше prepBuildings мгновенно прятал/despawn'ил их).
+    // Видимость: здания — зона buildings, дроны (живут в зоне frogs) — зона
+    // frogs. После reparent контроллеры роняют ссылки: destroy(true) убьёт
+    // спрайты, show()/ensureSpawned пересоздадут на возврате.
+    if (oldLoc === 1) {
+      const { buildings, drones } = scene.collectTransitionSprites(oldLoc)
+      for (const b of buildings) {
+        const wx = b.x
+        const wy = b.y
+        oldContainer.add(b)
+        b.x = wx - cx
+        b.y = wy - cy
+        b.setVisible(fromBuildingsZone)
+      }
+      for (const d of drones) {
+        const wx = d.x
+        const wy = d.y
+        oldContainer.add(d)
+        d.x = wx - cx
+        d.y = wy - cy
+        d.setVisible(frogZoneVisible)
+      }
+      scene.releaseBuildingsForTransition()
+    }
+
     // 3. Спавним новых лягушек внутрь newContainer + добавляем СВОЙ фон
     const newContainer = scene.add.container(cx, cy)
     // Going down: стартуем буквально с точки (0.005), чтобы поле «появилось из ниоткуда»
@@ -341,21 +380,35 @@ export class LocationTransition {
         newContainer.add(frog.container)
         frog.container.x = wx - cx
         frog.container.y = wy - cy
+        // Видны в зуме только если приземляемся на зону frogs (иначе они в
+        // другой зоне и «прострелят» кадр). Видимость восстановит onComplete.
+        frog.container.setVisible(frogZoneVisible)
       })
     }
 
     // 2026-05-30: здания (фабрика/склад/дрон) на Болоте — reparent в
     // newContainer, чтобы зумились вместе с лягушками. Generic-loop в
     // onComplete вернёт их в scene root (вместе с остальными детьми). Coords
-    // переводим в локальные (минус центр).
+    // переводим в локальные (минус центр). Видимость по зоне приземления:
+    // здания — зона buildings, дроны — зона frogs (одинаково с уходящей зоной,
+    // т.к. configureWorld сохраняет зону).
     if (newLoc === 1) {
-      const buildings = scene.collectBuildingSprites(newLoc)
+      const { buildings, drones } = scene.collectTransitionSprites(newLoc)
       for (const b of buildings) {
         const wx = b.x
         const wy = b.y
         newContainer.add(b)
         b.x = wx - cx
         b.y = wy - cy
+        b.setVisible(fromBuildingsZone)
+      }
+      for (const d of drones) {
+        const wx = d.x
+        const wy = d.y
+        newContainer.add(d)
+        d.x = wx - cx
+        d.y = wy - cy
+        d.setVisible(frogZoneVisible)
       }
     }
 
@@ -432,6 +485,9 @@ export class LocationTransition {
           scene.add.existing(c)
           c.x = lx + cx
           c.y = ly + cy
+          // Восстанавливаем видимость: в зуме часть контента пряталась как
+          // «другая зона», после оседания всё видимо (off-zone просто за кадром).
+          c.setVisible(true)
         }
         newContainer.destroy(false)
 
@@ -489,6 +545,7 @@ export class LocationTransition {
       }
       scene.isLocationTransitioning = true
       scene.input.enabled = false
+      scene.prepareStarmapTransition() // зум из зоны frogs (scroll 0)
       eventBus.emit('location:transitionStart', { from: scene.prevLocation, to: -1 })
 
       const { width, height } = scene.scale
@@ -641,6 +698,7 @@ export class LocationTransition {
       scene.isLocationTransitioning = true
       scene.input.enabled = false
       scene.prevLocation = targetLocId
+      scene.prepareStarmapTransition() // зум из зоны frogs (scroll 0)
       eventBus.emit('location:transitionStart', { from: -1, to: targetLocId })
 
       const { width, height } = scene.scale

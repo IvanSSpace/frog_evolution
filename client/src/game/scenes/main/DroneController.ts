@@ -231,6 +231,19 @@ class DroneInstance {
     this.baselineY = 0
   }
 
+  // Уход с локации в transition: sprite+shadow УЖЕ reparent'нуты в зум-контейнер,
+  // который уничтожит их через destroy(true). Роняем ссылки БЕЗ destroy (иначе
+  // double-destroy) + чистим вспомогательное (tooltip/charge-bar/таймеры).
+  releaseForTransition(): void {
+    this.hideTooltip()
+    this.hideChargeBar()
+    if (this.restTimer) { this.restTimer.remove(false); this.restTimer = null }
+    if (this.prePauseTimer) { this.prePauseTimer.remove(false); this.prePauseTimer = null }
+    if (this.sprite) { this.scene.tweens.killTweensOf(this.sprite); this.sprite = null }
+    if (this.shadow) { this.scene.tweens.killTweensOf(this.shadow); this.shadow = null }
+    this.setCollectTarget(null)
+  }
+
   private toggleTooltip(): void {
     if (!this.sprite) return
     if (this.tooltip) { this.hideTooltip(); return }
@@ -689,6 +702,18 @@ export class DroneController {
   despawn(): void {
     this.persist() // сохраняем перед уходом с локации
     for (const d of this.instances) d.despawn()
+    this.instances = []
+    this.spawnQueue = []
+    this.claimed.clear()
+    useGameStore.getState().setDroneBatteries([])
+  }
+
+  // Уход с Болота в transition: спрайты дронов reparent'нуты в зум-контейнер
+  // (он их уничтожит). Persist'им заряд, роняем ссылки БЕЗ destroy, чистим
+  // менеджерское состояние. На возврате ensureSpawned() пересоздаст дронов.
+  releaseForTransition(): void {
+    this.persist()
+    for (const d of this.instances) d.releaseForTransition()
     this.instances = []
     this.spawnQueue = []
     this.claimed.clear()

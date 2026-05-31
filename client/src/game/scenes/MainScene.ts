@@ -621,13 +621,27 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
-  // Package-public: спрайты зданий для reparent в transition-контейнер, чтобы
-  // они зумились вместе с лягушками. Вызывается LocationTransition при входе на
-  // Болото. Гарантирует что здания показаны (prep) перед сбором.
-  collectBuildingSprites(locId: number): Phaser.GameObjects.Image[] {
+  // Package-public: спрайты для reparent в transition-контейнер (зум при смене
+  // локации). Раздельно здания (зона buildings) и дроны (зона frogs) — у них
+  // разная видимость в зум-анимации. Гарантирует prep (show/spawn) перед сбором.
+  collectTransitionSprites(locId: number): {
+    buildings: Phaser.GameObjects.Image[]
+    drones: Phaser.GameObjects.Image[]
+  } {
     this.prepBuildings(locId)
-    if (locId !== 1) return []
-    return [...this.buildings.getSprites(), ...this.drone.getSprites()]
+    if (locId !== 1) return { buildings: [], drones: [] }
+    return {
+      buildings: this.buildings.getSprites(),
+      drones: this.drone.getSprites(),
+    }
+  }
+
+  // Package-public: после reparent спрайтов зданий/дронов в transition-контейнер
+  // (который их уничтожит через destroy(true)) контроллеры роняют ссылки —
+  // show()/ensureSpawned пересоздадут при возврате на Болото.
+  releaseBuildingsForTransition(): void {
+    this.buildings.releaseForTransition()
+    this.drone.releaseForTransition()
   }
 
   // ============== МАГНИТ ==============
@@ -803,7 +817,13 @@ export class MainScene extends Phaser.Scene {
 
     // 2026-05-30: дрон + фабрика + склад показываются ДО transition-gate,
     // чтобы появляться синхронно с лягушками. Движение дрона (tick) — ниже gate.
-    this.prepBuildings(storeForTimer.currentLocation)
+    // Во время перехода НЕ трогаем: иначе при уходе с Болота prepBuildings(2)
+    // мгновенно hide()+despawn() (currentLocation уже = новая локация) и
+    // здания/дроны исчезают вместо заморозки+зума. Lifecycle на переходе
+    // целиком ведёт LocationTransition (reparent + release).
+    if (!this.isLocationTransitioning) {
+      this.prepBuildings(storeForTimer.currentLocation)
+    }
 
     // Во время перехода между локациями замораживаем всю логику —
     // лягушки в wrapper-контейнере с локальными координатами, любые расчёты
@@ -933,22 +953,41 @@ export class MainScene extends Phaser.Scene {
   }
 
   private onTransitionStart = () => {
-    const { width, height } = this.scale
-    // Запоминаем зону до сброса — нужна LocationTransition для выбора половины
-    // tall-фона уходящей локации.
-    this.transitionFromZone = this.currentZone
+    // Запоминаем зону — LocationTransition зумит ИМЕННО её (anchor камеры).
+    // Камеру НЕ снапаем в зону frogs: иначе при уходе с зоны зданий камера
+    // прыгала бы на лягушек (issue: «лягушки лезут при переходе с завода»).
+    // Берём зону из ФАКТИЧЕСКОГО scrollY (а не currentZone): на однозонных
+    // локациях currentZone может быть протухшим 'buildings' от прошлой
+    // двухзонной. Scroll/bounds остаются текущими; финальную зону выставит
+    // configureWorld в onTransitionEnd. Starmap сбрасывает scroll сам (frogs).
+    const height = this.scale.height
+    this.transitionFromZone =
+      this.cameras.main.scrollY > height / 2 ? 'buildings' : 'frogs'
     this.tweens.killTweensOf(this.cameras.main)
-    this.cameras.main.setScroll(0, 0)
-    this.currentZone = 'frogs'
+    // Доснапываем камеру к ближайшей зоне (на случай перехода посреди свайпа):
+    // для устоявшейся зоны это no-op (прыжка на frogs нет), для частичного
+    // скролла — фиксация, чтобы anchor зума в LocationTransition совпал с видом.
+    this.cameras.main.setScroll(
+      0,
+      this.transitionFromZone === 'buildings' ? height : 0,
+    )
     this.loc1Bg.setVisible(false)
     this.loc2Bg.setVisible(false)
     this.bg.setVisible(true)
-    this.cameras.main.setBounds(0, 0, width, height)
-    eventBus.emit('field:zoneChanged', { zone: 'frogs' })
   }
 
   private onTransitionEnd = ({ id }: { id: number }) => {
     this.configureWorld(id, this.transitionFromZone)
+  }
+
+  // Package-public: starmap-переходы (open/close) зумят из зоны frogs — их
+  // геометрия фиксирована на scrollY=0. onTransitionStart больше НЕ снапает
+  // камеру (zone-aware loc-переходы зумят текущую зону), поэтому starmap сам
+  // сбрасывает зону перед стартом. currentZone='frogs' → transitionFromZone
+  // (capture в onTransitionStart) = frogs → configureWorld приземлит на frogs.
+  prepareStarmapTransition(): void {
+    this.cameras.main.setScroll(0, 0)
+    this.currentZone = 'frogs'
   }
 
   private setZone(zone: 'frogs' | 'buildings'): void {
