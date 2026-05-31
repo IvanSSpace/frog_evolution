@@ -91,6 +91,10 @@ export class MainScene extends Phaser.Scene {
   private loc1Bg!: Phaser.GameObjects.Image
   private loc2Bg!: Phaser.GameObjects.Image
   private currentZone: 'frogs' | 'buildings' = 'frogs'
+  // Zone the player viewed when a location transition started. Captured in
+  // onTransitionStart before reset → LocationTransition shows the matching
+  // half of the tall 2size background during the dual-container zoom.
+  transitionFromZone: 'frogs' | 'buildings' = 'frogs'
   // Аккумулятор для фонового дохода с лягушек неактивных локаций
   // (на текущей локации монеты приходят через настоящие какашки visible-лягушек)
   private bgIncomeAccum = 0
@@ -923,6 +927,9 @@ export class MainScene extends Phaser.Scene {
 
   private onTransitionStart = () => {
     const { width, height } = this.scale
+    // Запоминаем зону до сброса — нужна LocationTransition для выбора половины
+    // tall-фона уходящей локации.
+    this.transitionFromZone = this.currentZone
     this.tweens.killTweensOf(this.cameras.main)
     this.cameras.main.setScroll(0, 0)
     this.currentZone = 'frogs'

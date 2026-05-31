@@ -59,6 +59,35 @@ export class LocationTransition {
     this.magnet = magnet
   }
 
+  // Фон для dual-container перехода. Двухзонные локации (Болото/Лес) используют
+  // высокую 2size-картинку (height*2), смещённую так, чтобы в кадр (height)
+  // попадала половина нужной зоны: frogs → верх, buildings → низ. Прочие
+  // локации — обычный full-screen фон через mapKeyForLocation.
+  private createTransitionBg(
+    locId: number,
+    zone: 'frogs' | 'buildings',
+    width: number,
+    height: number,
+  ): Phaser.GameObjects.Image {
+    const scene = this.scene
+    const twoZoneKey =
+      locId === 1 ? 'toxic_map2size' : locId === 2 ? 'toxic_map2_2size' : null
+    if (twoZoneKey) {
+      const img = scene.add.image(0, 0, twoZoneKey)
+      img.setDisplaySize(width, height * 2)
+      img.setTint(0xc4c8c4) // SYNC с MainScene — затемнение фона
+      // Локальный y внутри container'а (центр = центр экрана): +height/2
+      // опускает картинку так, что верхняя половина заполняет кадр (frogs);
+      // -height/2 поднимает → видна нижняя половина (buildings).
+      img.y = zone === 'buildings' ? -height / 2 : height / 2
+      return img
+    }
+    const img = scene.add.image(0, 0, mapKeyForLocation(locId))
+    img.setDisplaySize(width, height)
+    img.setTint(0xc4c8c4) // SYNC с MainScene — затемнение фона
+    return img
+  }
+
   // Полная очистка поля при смене локации
   clearField() {
     const scene = this.scene
@@ -205,11 +234,20 @@ export class LocationTransition {
     scene.lastHaptiHover = false
 
     // 2. Заворачиваем старых лягушек + коробки + фон в oldContainer (за центром экрана)
-    // Фон — кладём первым (нижний по списку → нижний по depth внутри контейнера)
-    const oldBg = scene.bg
+    // Фон — кладём первым (нижний по списку → нижний по depth внутри контейнера).
+    // Строим СВЕЖИЙ фон уходящей локации (нужная половина по зоне выхода)
+    // вместо переиспользования persistent scene.bg — тот держит leftover
+    // full-screen фон от прошлого перехода. Старый scene.bg сразу уничтожаем:
+    // его заменит newBg в onComplete (line scene.bg = newBg).
+    const oldBg = this.createTransitionBg(
+      oldLoc,
+      scene.transitionFromZone,
+      width,
+      height,
+    )
     oldContainer.add(oldBg)
     oldBg.x = 0
-    oldBg.y = 0
+    scene.bg.destroy()
     // Затем лягушки — поверх фона
     const oldFrogs = [...scene.frogs]
     // Снапшот позиций для возврата на эту локацию (см. positionCache в шапке).
@@ -266,10 +304,10 @@ export class LocationTransition {
     const newStartScale = goingUp ? 8 : 0.005
     newContainer.setScale(newStartScale)
     newContainer.setAlpha(0) // плавно проявится в начале перехода
-    // Свежий фон для новой локации
-    const newBg = scene.add.image(0, 0, mapKeyForLocation(newLoc))
-    newBg.setDisplaySize(width, height)
-    newBg.setTint(0xc4c8c4) // SYNC с MainScene.create — затемнение фона
+    // Свежий фон для новой локации. Половина зоны приземления — всегда frogs
+    // (configureWorld в onTransitionEnd сбрасывает зону в frogs), поэтому
+    // двухзонный newBg садится точно на позицию loc1Bg/loc2Bg без рывка.
+    const newBg = this.createTransitionBg(newLoc, 'frogs', width, height)
     newContainer.add(newBg)
 
     const state = useGameStore.getState()
