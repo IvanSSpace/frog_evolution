@@ -198,13 +198,12 @@ class AudioPlayer {
     this.setupVisibility()
     this.setupBootAutoplay()
     if (typeof window !== 'undefined') {
-      // Прогреваем Tone заранее (lazy import + создание узлов), чтобы к первому
-      // жесту loadTone был готов и Tone.start() в обработчике жеста сработал
-      // синхронно (autoplay policy). Без прогрева первый жест тратится на
-      // import('tone'), активация истекает → звук появлялся только со 2-го тапа.
-      void this.loadTone().catch(() => {
-        /* контекст создастся при первом жесте */
-      })
+      // Пробуем завести музыку сразу, без клика. На платформах, где autoplay
+      // разрешён (Telegram WebView обычно несёт user-activation от открытия
+      // приложения), контекст резюмится и выбранный трек играет без жеста. Где
+      // браузер блокирует — остаётся фолбэк по первому жесту (setupBootAutoplay),
+      // а Tone уже прогрет, так что старт по жесту мгновенный.
+      void this.tryBootAutoplay()
       // pagehide надёжнее beforeunload на mobile/Telegram WebView.
       const save = (): void => this.persistProgress()
       window.addEventListener('pagehide', save)
@@ -233,8 +232,6 @@ class AudioPlayer {
     // DOM-контролу (напр. кнопке смены локации).
     const opts: AddEventListenerOptions = { passive: true, capture: true }
     const start = (): void => {
-      if (this.bootPlayDone) return
-      this.bootPlayDone = true
       window.removeEventListener('pointerdown', start, opts)
       window.removeEventListener('touchstart', start, opts)
       window.removeEventListener('click', start, opts)
@@ -246,20 +243,47 @@ class AudioPlayer {
       if (this.Tone && this.Tone.context.state !== 'running') {
         void this.Tone.start()
       }
-      if (this.autoResume && this.status === 'idle') {
-        // Перезаход в течение RESUME_WINDOW_MS → продолжаем с места остановки.
-        const prog = loadProgress()
-        if (prog && Date.now() - prog.ts <= RESUME_WINDOW_MS) {
-          void this.playTrack(prog.trackId, prog.pos)
-        } else {
-          void this.playTrack()
-        }
-      }
+      this.bootPlay()
     }
     window.addEventListener('pointerdown', start, opts)
     window.addEventListener('touchstart', start, opts)
     window.addEventListener('click', start, opts)
     window.addEventListener('keydown', start, opts)
+  }
+
+  /** Старт выбранного трека один раз за сессию (boot). Idempotent. */
+  private bootPlay(): void {
+    if (this.bootPlayDone) return
+    this.bootPlayDone = true
+    if (this.autoResume && this.status === 'idle') {
+      // Перезаход в течение RESUME_WINDOW_MS → продолжаем с места остановки,
+      // иначе выбранный трек с начала.
+      const prog = loadProgress()
+      if (prog && Date.now() - prog.ts <= RESUME_WINDOW_MS) {
+        void this.playTrack(prog.trackId, prog.pos)
+      } else {
+        void this.playTrack()
+      }
+    }
+  }
+
+  /**
+   * Попытка автоплея без клика. Прогревает Tone и пробует резюмировать контекст.
+   * Если платформа разрешила (context.state === 'running') — играем выбранный
+   * трек сразу. Если заблокировано — bootPlay не зовём, ждём первый жест.
+   */
+  private async tryBootAutoplay(): Promise<void> {
+    let Tone: ToneLib | null = null
+    try {
+      Tone = await this.loadTone()
+      await Tone.start()
+    } catch {
+      /* контекст ещё suspended — ждём жест */
+    }
+    if (!this.autoResume) return
+    if (Tone && Tone.context.state === 'running') {
+      this.bootPlay()
+    }
   }
 
   on(event: PlayerEvent, cb: () => void): () => void {
