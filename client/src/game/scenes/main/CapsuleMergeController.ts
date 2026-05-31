@@ -47,9 +47,9 @@ const CAPSULE_ROUTES: readonly CapsuleRoute[] = [
   { entry: [0.757, 0.766], float: [0.752, 0.668] }, // правая
 ]
 
-const HOP_DIST = 100 * DPR // длина одного прыжка вдоль маршрута
-const HOP_DURATION = 300 // мс на прыжок
-const INTER_HOP_PAUSE = 200 // мс паузы между прыжками (естественный ритм)
+const HOP_DIST = 90 * DPR // длина одного прыжка вдоль маршрута
+const HOP_DURATION = 420 // мс на прыжок
+const INTER_HOP_PAUSE = 320 // мс паузы между прыжками (естественный ритм)
 const SECOND_FROG_DELAY = 400 // мс — второй стартует позже (single-file)
 // merged спавнится performMerge'ом отложенно (спираль 350 + 60мс) — ждём дольше.
 const VORTEX_WAIT = 480
