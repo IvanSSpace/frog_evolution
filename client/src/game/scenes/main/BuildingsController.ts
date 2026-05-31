@@ -101,6 +101,7 @@ const BUILDINGS_LOC2: readonly BuildingDef[] = [
     xFrac: 0.74,
     yFrac: 0.48,
     widthFrac: 0.34,
+    opens: 'ectoDroner',
   },
   // Капсула репликации: центральная (крупнее) + 2 позади неё слева/справа.
   // Боковые с меньшим yFrac → ниже depth → рендерятся ЗА центральной.

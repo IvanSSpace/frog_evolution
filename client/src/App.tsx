@@ -8,6 +8,7 @@ import { ExpeditionModal } from './ui/components/ExpeditionModal'
 import { JourneyMissionSelect } from './ui/components/JourneyMissionSelect'
 import { InventoryModal } from './ui/components/InventoryModal'
 import { DronerModal } from './ui/components/DronerModal'
+import { EctoDronerModal } from './ui/components/EctoDronerModal'
 import { startExpedition } from './api/expedition'
 import { WelcomeBackModal } from './ui/components/WelcomeBackModal'
 import { DiscoveryModal } from './ui/components/DiscoveryModal'
@@ -62,6 +63,7 @@ function App() {
   const [expeditionOpen, setExpeditionOpen] = useState(false)
   const [inventoryOpen, setInventoryOpen] = useState(false)
   const [dronerOpen, setDronerOpen] = useState(false)
+  const [ectoDronerOpen, setEctoDronerOpen] = useState(false)
   const [clanOpen, setClanOpen] = useState(false)
   const [journeyOpen, setJourneyOpen] = useState(false)
   const [welcomeBack, setWelcomeBack] = useState<{
@@ -192,6 +194,7 @@ function App() {
       if (modal === 'inventory') setInventoryOpen(true)
       else if (modal === 'shop') setShopOpen(true)
       else if (modal === 'droner') setDronerOpen(true)
+      else if (modal === 'ectoDroner') setEctoDronerOpen(true)
     }
     eventBus.on('building:open', onBuildingOpen)
 
@@ -418,6 +421,9 @@ function App() {
         <ExpeditionModal onClose={() => setExpeditionOpen(false)} />
       )}
       {dronerOpen && <DronerModal onClose={() => setDronerOpen(false)} />}
+      {ectoDronerOpen && (
+        <EctoDronerModal onClose={() => setEctoDronerOpen(false)} />
+      )}
       {inventoryOpen && (
         <InventoryModal onClose={() => setInventoryOpen(false)} />
       )}

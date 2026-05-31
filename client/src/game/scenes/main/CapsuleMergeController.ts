@@ -569,10 +569,18 @@ export class CapsuleMergeController {
     this.hideCharged(slot) // мердж завершён → колба плавно обратно
     this.prepFrog(merged)
     merged.container.setScale(BASE_SCALE) // performMerge оставил scale 0 → вернуть
+    // Финальная точка — ВГЛУБЬ поля (а не на край у trunk[0]), чтобы лягушка
+    // реально вернулась на поле и продолжила жить там.
+    const { width, height } = this.scene.scale
+    const fieldPt = new Phaser.Math.Vector2(
+      (0.32 + Math.random() * 0.36) * width,
+      (0.4 + Math.random() * 0.18) * height,
+    )
     const pts = [
       this.worldPt(slot.route.float),
       this.worldPt(slot.route.entry),
       ...[...TRUNK].reverse().map((p) => this.worldPt(p)),
+      fieldPt,
     ]
     this.hopAlong(slot, merged, pts, () => {
       this.restoreFrog(merged)
