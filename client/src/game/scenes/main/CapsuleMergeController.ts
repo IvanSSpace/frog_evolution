@@ -57,7 +57,7 @@ const CAPSULE_FADE_MS = 600 // плавная подмена текстуры к
 const CONVERGE_MS = 450 // схождение к центру в конце слияния
 const VORTEX_WAIT = 480 // performMerge спавнит merged отложенно (~410мс)
 const CAP_LEVEL = 12 // L12+ не авто-мерджим
-const COOLDOWN_MS = 12000 // кулдаун капсулы после цикла (3 колбы = throughput)
+const COOLDOWN_MS = 10000 // кулдаун капсулы после мерджа (3 колбы = throughput)
 
 type CapsuleState = 'idle' | 'pending' | 'busy' | 'cooldown'
 
