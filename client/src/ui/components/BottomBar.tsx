@@ -167,7 +167,9 @@ export function BottomBar({
   const forestUnlocked = discoveredLevels.some((l) => l >= 7)
 
   // Two-zone toggle: only visible on loc 1.
-  const isLoc1 = useGameStore((s) => s.currentLocation) === 1
+  const isTwoZoneLoc = useGameStore(
+    (s) => s.currentLocation === 1 || s.currentLocation === 2,
+  )
   const [zone, setZone] = useState<'frogs' | 'buildings'>('frogs')
   useEffect(() => {
     const handler = ({ zone }: { zone: 'frogs' | 'buildings' }) => setZone(zone)
@@ -193,8 +195,8 @@ export function BottomBar({
       <div className="flex gap-2 items-center" style={{ marginTop: -16 }}>
         <Tile icon="upgrade-shop" skin="green" onClick={onOpenShop} />
         {/* 📊 Доходы (gallery) перенесён в Header — открывается кликом по сумме. */}
-        {/* Two-zone toggle: only on loc 1. */}
-        {isLoc1 && (
+        {/* Two-zone toggle: loc 1 + loc 2 (свайп-поле верх лягушки / низ здания). */}
+        {isTwoZoneLoc && (
           <Tile
             icon="inventory"
             imgSrc={

@@ -89,6 +89,7 @@ export class MainScene extends Phaser.Scene {
   bg!: Phaser.GameObjects.Image
   // Two-zone loc1: tall background covering frogs zone (top) + buildings zone (bottom).
   private loc1Bg!: Phaser.GameObjects.Image
+  private loc2Bg!: Phaser.GameObjects.Image
   private currentZone: 'frogs' | 'buildings' = 'frogs'
   // Аккумулятор для фонового дохода с лягушек неактивных локаций
   // (на текущей локации монеты приходят через настоящие какашки visible-лягушек)
@@ -206,6 +207,7 @@ export class MainScene extends Phaser.Scene {
     this.load.image('goo_collector', '/goo_collector.png')
     BuildingsController.preload(this)
     this.load.image('toxic_map2size', '/maps/toxic_map2size.png')
+    this.load.image('toxic_map2_2size', '/maps/toxic_map2_2size.png')
   }
 
   /**
@@ -304,6 +306,13 @@ export class MainScene extends Phaser.Scene {
     this.loc1Bg.setDepth(-1)
     this.loc1Bg.setTint(0xc4c8c4)
     this.loc1Bg.setVisible(false)
+
+    // Two-zone loc2 background (toxic_map2_2size — frogs top + buildings bottom).
+    this.loc2Bg = this.add.image(width / 2, height, 'toxic_map2_2size')
+    this.loc2Bg.setDisplaySize(width, height * 2)
+    this.loc2Bg.setDepth(-1)
+    this.loc2Bg.setTint(0xc4c8c4)
+    this.loc2Bg.setVisible(false)
 
     this.configureWorld(useGameStore.getState().currentLocation)
 
@@ -894,17 +903,19 @@ export class MainScene extends Phaser.Scene {
     // Какашки auto-collect через onComplete твинов — никакой ручной очистки не нужно
   }
 
+  // Локации с двухзонным (свайп вверх/вниз) полем: верх = лягушки, низ = здания.
+  // toxic_map2size (loc1) / toxic_map2_2size (loc2) — tall фоны height*2.
+  private isTwoZoneLoc(locId: number): boolean {
+    return locId === 1 || locId === 2
+  }
+
   private configureWorld(locId: number): void {
     const { width, height } = this.scale
-    if (locId === 1) {
-      this.loc1Bg.setVisible(true)
-      this.bg.setVisible(false)
-      this.cameras.main.setBounds(0, 0, width, height * 2)
-    } else {
-      this.loc1Bg.setVisible(false)
-      this.bg.setVisible(true)
-      this.cameras.main.setBounds(0, 0, width, height)
-    }
+    const twoZone = this.isTwoZoneLoc(locId)
+    this.loc1Bg.setVisible(locId === 1)
+    this.loc2Bg.setVisible(locId === 2)
+    this.bg.setVisible(!twoZone)
+    this.cameras.main.setBounds(0, 0, width, twoZone ? height * 2 : height)
     this.cameras.main.setScroll(0, 0)
     this.currentZone = 'frogs'
     eventBus.emit('field:zoneChanged', { zone: 'frogs' })
@@ -916,6 +927,7 @@ export class MainScene extends Phaser.Scene {
     this.cameras.main.setScroll(0, 0)
     this.currentZone = 'frogs'
     this.loc1Bg.setVisible(false)
+    this.loc2Bg.setVisible(false)
     this.bg.setVisible(true)
     this.cameras.main.setBounds(0, 0, width, height)
     eventBus.emit('field:zoneChanged', { zone: 'frogs' })
@@ -926,7 +938,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private setZone(zone: 'frogs' | 'buildings'): void {
-    if (useGameStore.getState().currentLocation !== 1) return
+    if (!this.isTwoZoneLoc(useGameStore.getState().currentLocation)) return
     if (this.currentZone === zone) return
     const { height } = this.scale
     this.currentZone = zone
@@ -941,13 +953,13 @@ export class MainScene extends Phaser.Scene {
   }
 
   private onToggleZone = () => {
-    if (useGameStore.getState().currentLocation !== 1) return
+    if (!this.isTwoZoneLoc(useGameStore.getState().currentLocation)) return
     this.setZone(this.currentZone === 'frogs' ? 'buildings' : 'frogs')
   }
 
   private onSwipePointerDown = (pointer: Phaser.Input.Pointer, currentlyOver: Phaser.GameObjects.GameObject[]) => {
     if (
-      useGameStore.getState().currentLocation !== 1 ||
+      !this.isTwoZoneLoc(useGameStore.getState().currentLocation) ||
       this.isLocationTransitioning ||
       useGameStore.getState().serumDragActive ||
       currentlyOver.length !== 0
