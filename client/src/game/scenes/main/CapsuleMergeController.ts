@@ -47,8 +47,9 @@ const CAPSULE_ROUTES: readonly CapsuleRoute[] = [
   { entry: [0.757, 0.766], float: [0.752, 0.668] }, // правая
 ]
 
-const HOP_DIST = 80 * DPR // длина одного прыжка вдоль маршрута
-const HOP_DURATION = 200 // мс на прыжок (как dash на поле)
+const HOP_DIST = 100 * DPR // длина одного прыжка вдоль маршрута
+const HOP_DURATION = 240 // мс на прыжок (как dash на поле)
+const INTER_HOP_PAUSE = 130 // мс паузы между прыжками (естественный ритм)
 const SECOND_FROG_DELAY = 350 // мс — второй стартует позже (single-file)
 const FLOAT_OFFSET_FRAC = 0.045 // разнос двух лягушек в точке парения (доля W)
 const MERGE_PAUSE_MS = 250 // пауза «обе в колбе» перед мерджем
@@ -125,6 +126,11 @@ export class CapsuleMergeController {
       f.dashTimer = null
     }
     this.scene.tweens.killTweensOf(f.container)
+    // Глушим body-твины (idle-дыхание / scale-pop merged) — иначе конфликт с
+    // дугой прыжка по body.y/scaleY → дёрганье/«телепорт».
+    this.scene.tweens.killTweensOf(f.body)
+    f.body.y = 0
+    f.body.scaleY = 1
     // Нельзя схватить пока едет (dragstart убил бы route → колба зависла).
     if (f.body.input) f.body.input.enabled = false
   }
@@ -169,7 +175,10 @@ export class CapsuleMergeController {
         onDone()
         return
       }
-      this.hop(slot, f, samples[i].x, samples[i].y, () => step(i + 1))
+      this.hop(slot, f, samples[i].x, samples[i].y, () => {
+        // Пауза между прыжками — естественный ритм, не сплошной полёт.
+        this.scene.time.delayedCall(INTER_HOP_PAUSE, () => step(i + 1))
+      })
     }
     step(0)
   }
