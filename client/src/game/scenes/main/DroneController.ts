@@ -124,6 +124,14 @@ class DroneInstance {
     return this.mode === 'CHARGING'
   }
 
+  // Дрон на базе ИЛИ летит туда заряжаться (RTB). Используется при смене локации:
+  // такого дрона на возврате восстанавливаем сразу заряжающимся на базе, а не
+  // выбрасываем на поле с низким зарядом (иначе он повторно проигрывает RTB-полёт
+  // — «баг», что дрон опять идёт на подзарядку после захода/выхода с локации).
+  getChargingOrReturning(): boolean {
+    return this.mode === 'CHARGING' || this.mode === 'RTB'
+  }
+
   // Назначить/снять цель + синхронно claim/release в общем наборе.
   private setCollectTarget(box: BoxData | null): void {
     if (this.collectTarget && this.collectTarget !== box) {
@@ -877,10 +885,23 @@ export class DroneController {
 
   despawn(): void {
     this.persist() // сохраняем перед уходом с локации
+    this.snapshotRestored() // живое состояние → restored, чтобы возврат не сбрасывал
     for (const d of this.instances) d.despawn()
     this.instances = []
     this.claimed.clear()
     useGameStore.getState().setDroneBatteries([])
+  }
+
+  // Снимок живого заряда+фазы каждого инстанса в this.restored. Без него sync()
+  // на возврате читал бы устаревший restored (загруженный один раз при создании
+  // менеджера) → терялся прогресс заряда и фаза RTB/CHARGING, дрон повторно шёл
+  // на базу. RTB считаем «на базе» → восстанавливаем сразу заряжающимся.
+  private snapshotRestored(): void {
+    if (this.instances.length === 0) return
+    this.restored = this.instances.map((d) => ({
+      battery: d.getBattery(),
+      charging: d.getChargingOrReturning(),
+    }))
   }
 
   // Уход с Болота в transition: спрайты дронов reparent'нуты в зум-контейнер
@@ -888,6 +909,7 @@ export class DroneController {
   // менеджерское состояние. На возврате ensureSpawned() пересоздаст дронов.
   releaseForTransition(): void {
     this.persist()
+    this.snapshotRestored() // см. despawn(): сохраняем живое состояние для возврата
     for (const d of this.instances) d.releaseForTransition()
     this.instances = []
     this.claimed.clear()
