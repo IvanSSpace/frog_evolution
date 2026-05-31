@@ -28,12 +28,14 @@ function clamp(v: number): number {
 }
 
 // Прокручивает заряд на elapsedMs вперёд по пиле. startCharging — была ли фаза
-// зарядки на момент сохранения (иначе разряд).
-export function advanceBattery(
+// зарядки на момент сохранения (иначе разряд). Возвращает итоговый заряд И
+// фазу (заряжается ли дрон сейчас на базе) — нужно для восстановления дрона
+// на зарядке после reload, а не выброса его на поле.
+export function advanceBatteryState(
   start: number,
   elapsedMs: number,
   startCharging = false,
-): number {
+): { battery: number; charging: boolean } {
   let b = clamp(start)
   let rem = Math.max(0, elapsedMs)
   let charging = startCharging
@@ -61,7 +63,15 @@ export function advanceBattery(
       }
     }
   }
-  return Math.round(clamp(b))
+  return { battery: Math.round(clamp(b)), charging }
+}
+
+export function advanceBattery(
+  start: number,
+  elapsedMs: number,
+  startCharging = false,
+): number {
+  return advanceBatteryState(start, elapsedMs, startCharging).battery
 }
 
 export function saveDroneBatteries(
@@ -85,6 +95,14 @@ export function saveDroneBatteries(
 // фазу зарядки на момент сохранения. Пустой массив если нет сохранения —
 // caller использует случайный стартовый заряд.
 export function loadDroneBatteries(type: 'c' | 'm'): number[] {
+  return loadDroneStates(type).map((s) => s.battery)
+}
+
+// Как loadDroneBatteries, но возвращает и фазу (заряжается ли дрон сейчас) —
+// после офлайн-досчёта. caller восстанавливает CHARGING-дрона на базе.
+export function loadDroneStates(
+  type: 'c' | 'm',
+): { battery: number; charging: boolean }[] {
   try {
     const raw = localStorage.getItem(keyFor(type))
     if (!raw) return []
@@ -92,7 +110,7 @@ export function loadDroneBatteries(type: 'c' | 'm'): number[] {
     if (!Array.isArray(parsed.b) || typeof parsed.ts !== 'number') return []
     const elapsed = Date.now() - parsed.ts
     const ch = Array.isArray(parsed.ch) ? parsed.ch : []
-    return parsed.b.map((x, i) => advanceBattery(x, elapsed, ch[i] ?? false))
+    return parsed.b.map((x, i) => advanceBatteryState(x, elapsed, ch[i] ?? false))
   } catch {
     return []
   }

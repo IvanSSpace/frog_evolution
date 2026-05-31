@@ -408,7 +408,9 @@ export class LocationTransition {
         newContainer.add(d)
         d.x = wx - cx
         d.y = wy - cy
-        d.setVisible(frogZoneVisible)
+        // Видимость дронов НЕ трогаем: заряжающийся дрон скрыт (на базе),
+        // блуждающий — виден. onComplete тоже их не форсит — иначе скрытый
+        // заряжающийся дрон показался бы на базе. Контроллер сам управляет.
       }
     }
 
@@ -485,11 +487,14 @@ export class LocationTransition {
           scene.add.existing(c)
           c.x = lx + cx
           c.y = ly + cy
-          // Восстанавливаем видимость: в зуме часть контента пряталась как
-          // «другая зона», после оседания всё видимо (off-zone просто за кадром).
-          c.setVisible(true)
         }
         newContainer.destroy(false)
+
+        // Восстанавливаем видимость лягушек (в зуме прятались если приземление
+        // на зону зданий — иначе «прострелили» бы кадр). Здания/дроны не трогаем:
+        // их видимость восстановит prepBuildings/контроллер (заряжающийся дрон
+        // должен остаться скрытым на базе).
+        for (const f of scene.frogs) f.container.setVisible(true)
 
         // Новый фон становится текущим, ставим depth -1 чтобы был под лягушками
         newBg.setDepth(-1)

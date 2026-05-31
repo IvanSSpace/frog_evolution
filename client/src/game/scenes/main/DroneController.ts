@@ -21,7 +21,7 @@ import {
   FIELD_PAD_Y_BOTTOM,
   type BoxData,
 } from './types'
-import { loadDroneBatteries, saveDroneBatteries } from './droneCharge'
+import { loadDroneStates, saveDroneBatteries } from './droneCharge'
 import type { MainScene } from '../MainScene'
 import type { BoxController } from './BoxController'
 
@@ -81,6 +81,9 @@ class DroneInstance {
   private isDragging = false
   private lastDragX = 0
   private battery = 100
+  // Восстановлен на зарядке (reload во время зарядки на базе) → spawn появляет
+  // дрона у базы в режиме CHARGING, а не на поле.
+  private initialCharging = false
   // Рассинхрон зарядки: per-дрон множитель скорости разряда (0.8..1.2). Вместе
   // со случайным стартовым зарядом даёт устойчивый десинк RTB/зарядки (после
   // полной зарядки все = 100, но разный дрейн снова разводит их по фазе).
@@ -103,12 +106,14 @@ class DroneInstance {
     index: number,
     claimed: Set<BoxData>,
     initialBattery: number,
+    initialCharging: boolean,
   ) {
     this.scene = scene
     this.box = box
     this.index = index
     this.claimed = claimed
     this.battery = initialBattery
+    this.initialCharging = initialCharging
   }
 
   getBattery(): number {
@@ -141,10 +146,13 @@ class DroneInstance {
 
   private spawn(): void {
     if (this.sprite) return
-    // Дрон появляется СРАЗУ на поле (живёт своей жизнью), не выходит из домика
-    // при заходе в игру/на локацию. emerge оставлен только для возврата на
-    // поле после зарядки на базе (см. tick → battery>=100 → startEmerge).
-    const { x: cx, y: cy } = this.scene.randomFieldPos()
+    const { width, height } = this.scene.scale
+    // Восстановлен на зарядке → появляемся у базы (скрыт, идёт дозарядка).
+    // Иначе — СРАЗУ на поле (живём своей жизнью), не выходим из домика при
+    // заходе/перезаходе. emerge оставлен только для возврата после зарядки.
+    const { x: cx, y: cy } = this.initialCharging
+      ? { x: width * DRONER_X_FRAC, y: height + height * DRONER_Y_FRAC }
+      : this.scene.randomFieldPos()
 
     this.shadow = this.scene.add.image(cx, cy, 'goo_collector')
     ;(this.shadow as unknown as { tintFill: boolean }).tintFill = true
@@ -202,9 +210,19 @@ class DroneInstance {
       this.scheduleNextHop()
     })
 
-    // Уже на поле — сразу в WANDER, планируем первый прыжок (без emerge).
-    this.mode = 'WANDER'
-    this.scheduleNextHop()
+    if (this.initialCharging) {
+      // На базе: спрайт скрыт, видна только зарядная шкала; tick дозарядит и
+      // выпустит на поле (startEmerge) при 100%.
+      this.initialCharging = false
+      this.sprite.setVisible(false)
+      this.shadow.setVisible(false)
+      this.mode = 'CHARGING'
+      this.showChargeBar()
+    } else {
+      // Уже на поле — сразу в WANDER, планируем первый прыжок (без emerge).
+      this.mode = 'WANDER'
+      this.scheduleNextHop()
+    }
   }
 
   despawn(): void {
@@ -608,9 +626,10 @@ export class DroneController {
   private claimed: Set<BoxData> = new Set()
   // Throttle синка зарядов в store (для модалки).
   private syncMs = 0
-  // Восстановленные (досчитанные офлайн) заряды по индексу. Раздаём новым
-  // инстансам; для индексов сверх массива — случайный заряд.
-  private restored: number[] = loadDroneBatteries('c')
+  // Восстановленные (досчитанные офлайн) заряд+фаза по индексу. Раздаём новым
+  // инстансам; для индексов сверх массива — случайный заряд, не на зарядке.
+  private restored: { battery: number; charging: boolean }[] =
+    loadDroneStates('c')
   // Throttle персиста заряда в localStorage.
   private persistMs = 0
 
@@ -621,7 +640,11 @@ export class DroneController {
 
   private initialBatteryFor(index: number): number {
     const r = this.restored[index]
-    return typeof r === 'number' ? r : Phaser.Math.Between(45, 100)
+    return r ? r.battery : Phaser.Math.Between(45, 100)
+  }
+
+  private initialChargingFor(index: number): boolean {
+    return this.restored[index]?.charging ?? false
   }
 
   private persist(): void {
@@ -645,7 +668,7 @@ export class DroneController {
   private sync(want: number): void {
     while (this.instances.length < want) {
       const idx = this.instances.length
-      const inst = new DroneInstance(this.scene, this.box, idx, this.claimed, this.initialBatteryFor(idx))
+      const inst = new DroneInstance(this.scene, this.box, idx, this.claimed, this.initialBatteryFor(idx), this.initialChargingFor(idx))
       // Спавним сразу на поле (WANDER) — дроны живут своей жизнью, не выходят
       // по одному из домика при заходе на локацию.
       this.instances.push(inst)
