@@ -433,10 +433,13 @@ export class CapsuleMergeController {
   private showCharged(slot: CapsuleSlot): void {
     const sp = this.capsuleSpriteFor(slot)
     if (!sp) return
+    // Тот же scale, что у базового спрайта (а НЕ displaySize по холсту): арт
+    // капсул одинаков в пикселях, но холсты разного размера → подгонка по холсту
+    // делала зелёную крупнее. По scale арт совпадает 1:1.
     const ov = this.scene.add
       .image(sp.x, sp.y, 'bld2_capsule_full')
       .setOrigin(sp.originX, sp.originY)
-      .setDisplaySize(sp.displayWidth, sp.displayHeight)
+      .setScale(sp.scaleX, sp.scaleY)
       .setDepth(sp.depth + 0.2)
       .setAlpha(0)
     slot.fxGreen = ov
