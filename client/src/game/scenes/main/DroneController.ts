@@ -164,7 +164,11 @@ class DroneInstance {
     this.baseScale = (BOX_DISPLAY_SIZE * DRONE_SCALE_MULT) / this.sprite.width
     this.sprite.setScale(this.baseScale)
     this.sprite.setDepth(DRONE_DEPTH)
-    this.shadow.setScale(this.baseScale)
+    // Сразу ставим тень в offset-позицию и shScale (как в tick), иначе на спавне
+    // и во время зум-перехода (tick гейтнут) тень сидит точно за спрайтом и не
+    // видна — «появляется» только после анимации, когда первый tick её сдвинет.
+    this.shadow.setScale(this.baseScale * 0.85)
+    this.shadow.setPosition(cx + 4 * DPR, cy + 28 * DPR)
     this.baselineY = cy
     // Десинк парения: рандомная стартовая фаза bob — дроны качаются вразнобой.
     this.bobPhase = Math.random() * BOB_PERIOD_MS
@@ -181,28 +185,45 @@ class DroneInstance {
     this.sprite.on('dragstart', () => {
       if (!this.sprite) return
       this.isDragging = true
-      if (this.restTimer) { this.restTimer.remove(false); this.restTimer = null }
-      if (this.prePauseTimer) { this.prePauseTimer.remove(false); this.prePauseTimer = null }
+      if (this.restTimer) {
+        this.restTimer.remove(false)
+        this.restTimer = null
+      }
+      if (this.prePauseTimer) {
+        this.prePauseTimer.remove(false)
+        this.prePauseTimer = null
+      }
       this.scene.tweens.killTweensOf(this.sprite)
       this.isHopping = false
       this.mode = 'WANDER'
       this.setCollectTarget(null)
       this.lastDragX = this.sprite.x
     })
-    this.sprite.on('drag', (_p: Phaser.Input.Pointer, dragX: number, dragY: number) => {
-      if (!this.sprite) return
-      const { width: w, height: h } = this.scene.scale
-      const clampedX = Phaser.Math.Clamp(dragX, FIELD_PAD_X + 10 * DPR, w - FIELD_PAD_X - 10 * DPR)
-      const clampedY = Phaser.Math.Clamp(dragY, FIELD_PAD_Y + 10 * DPR, h - FIELD_PAD_Y_BOTTOM - 10 * DPR)
-      const dx = clampedX - this.lastDragX
-      this.lastDragX = clampedX
-      if (Math.abs(dx) > 0.5) {
-        this.targetTilt = Math.sign(dx) * MAX_TILT
-        this.sprite.scaleX = (dx > 0 ? -1 : 1) * this.baseScale
-      }
-      this.sprite.x = clampedX
-      this.sprite.y = clampedY
-    })
+    this.sprite.on(
+      'drag',
+      (_p: Phaser.Input.Pointer, dragX: number, dragY: number) => {
+        if (!this.sprite) return
+        const { width: w, height: h } = this.scene.scale
+        const clampedX = Phaser.Math.Clamp(
+          dragX,
+          FIELD_PAD_X + 10 * DPR,
+          w - FIELD_PAD_X - 10 * DPR,
+        )
+        const clampedY = Phaser.Math.Clamp(
+          dragY,
+          FIELD_PAD_Y + 10 * DPR,
+          h - FIELD_PAD_Y_BOTTOM - 10 * DPR,
+        )
+        const dx = clampedX - this.lastDragX
+        this.lastDragX = clampedX
+        if (Math.abs(dx) > 0.5) {
+          this.targetTilt = Math.sign(dx) * MAX_TILT
+          this.sprite.scaleX = (dx > 0 ? -1 : 1) * this.baseScale
+        }
+        this.sprite.x = clampedX
+        this.sprite.y = clampedY
+      },
+    )
     this.sprite.on('dragend', () => {
       if (!this.sprite) return
       this.isDragging = false
@@ -228,8 +249,14 @@ class DroneInstance {
   despawn(): void {
     this.hideTooltip()
     this.hideChargeBar()
-    if (this.restTimer) { this.restTimer.remove(false); this.restTimer = null }
-    if (this.prePauseTimer) { this.prePauseTimer.remove(false); this.prePauseTimer = null }
+    if (this.restTimer) {
+      this.restTimer.remove(false)
+      this.restTimer = null
+    }
+    if (this.prePauseTimer) {
+      this.prePauseTimer.remove(false)
+      this.prePauseTimer = null
+    }
     if (this.sprite) {
       this.scene.tweens.killTweensOf(this.sprite)
       this.sprite.destroy()
@@ -256,16 +283,31 @@ class DroneInstance {
   releaseForTransition(): void {
     this.hideTooltip()
     this.hideChargeBar()
-    if (this.restTimer) { this.restTimer.remove(false); this.restTimer = null }
-    if (this.prePauseTimer) { this.prePauseTimer.remove(false); this.prePauseTimer = null }
-    if (this.sprite) { this.scene.tweens.killTweensOf(this.sprite); this.sprite = null }
-    if (this.shadow) { this.scene.tweens.killTweensOf(this.shadow); this.shadow = null }
+    if (this.restTimer) {
+      this.restTimer.remove(false)
+      this.restTimer = null
+    }
+    if (this.prePauseTimer) {
+      this.prePauseTimer.remove(false)
+      this.prePauseTimer = null
+    }
+    if (this.sprite) {
+      this.scene.tweens.killTweensOf(this.sprite)
+      this.sprite = null
+    }
+    if (this.shadow) {
+      this.scene.tweens.killTweensOf(this.shadow)
+      this.shadow = null
+    }
     this.setCollectTarget(null)
   }
 
   private toggleTooltip(): void {
     if (!this.sprite) return
-    if (this.tooltip) { this.hideTooltip(); return }
+    if (this.tooltip) {
+      this.hideTooltip()
+      return
+    }
     this.tooltip = this.scene.add
       .text(this.sprite.x, this.sprite.y, `🔋 ${Math.round(this.battery)}%`, {
         fontFamily: 'ui-sans-serif, system-ui, sans-serif',
@@ -277,17 +319,28 @@ class DroneInstance {
       .setOrigin(0.5, 1)
       .setDepth(DRONE_DEPTH + 10)
     this.positionTooltip()
-    this.tooltipTimer = this.scene.time.delayedCall(2500, () => this.hideTooltip())
+    this.tooltipTimer = this.scene.time.delayedCall(2500, () =>
+      this.hideTooltip(),
+    )
   }
 
   private hideTooltip(): void {
-    if (this.tooltipTimer) { this.tooltipTimer.remove(false); this.tooltipTimer = null }
-    if (this.tooltip) { this.tooltip.destroy(); this.tooltip = null }
+    if (this.tooltipTimer) {
+      this.tooltipTimer.remove(false)
+      this.tooltipTimer = null
+    }
+    if (this.tooltip) {
+      this.tooltip.destroy()
+      this.tooltip = null
+    }
   }
 
   private positionTooltip(): void {
     if (!this.tooltip || !this.sprite) return
-    this.tooltip.setPosition(this.sprite.x, this.sprite.y - this.sprite.displayHeight * 0.55)
+    this.tooltip.setPosition(
+      this.sprite.x,
+      this.sprite.y - this.sprite.displayHeight * 0.55,
+    )
     this.tooltip.setText(`🔋 ${Math.round(this.battery)}%`)
   }
 
@@ -295,14 +348,23 @@ class DroneInstance {
     if (!this.sprite) return
     this.mode = 'RTB'
     this.hideTooltip()
-    if (this.restTimer) { this.restTimer.remove(false); this.restTimer = null }
-    if (this.prePauseTimer) { this.prePauseTimer.remove(false); this.prePauseTimer = null }
+    if (this.restTimer) {
+      this.restTimer.remove(false)
+      this.restTimer = null
+    }
+    if (this.prePauseTimer) {
+      this.prePauseTimer.remove(false)
+      this.prePauseTimer = null
+    }
     this.scene.tweens.killTweensOf(this.sprite)
     this.isHopping = false
     this.setCollectTarget(null)
 
     const { width, height } = this.scene.scale
-    const toW = (f: { xf: number; yf: number }) => ({ x: f.xf * width, y: height + f.yf * height })
+    const toW = (f: { xf: number; yf: number }) => ({
+      x: f.xf * width,
+      y: height + f.yf * height,
+    })
     const branch = Math.random() < 0.5 ? BRANCH_LEFT : BRANCH_RIGHT
     this.flyWaypoints(
       [
@@ -315,14 +377,25 @@ class DroneInstance {
     )
   }
 
-  private flyWaypoints(pts: { x: number; y: number }[], onDone: () => void): void {
-    if (!this.sprite || pts.length === 0) { onDone(); return }
+  private flyWaypoints(
+    pts: { x: number; y: number }[],
+    onDone: () => void,
+  ): void {
+    if (!this.sprite || pts.length === 0) {
+      onDone()
+      return
+    }
     const [next, ...rest] = pts
     const sprite = this.sprite
     const dx = next.x - sprite.x
     this.targetTilt = dx !== 0 ? Math.sign(dx) * MAX_TILT : 0
     if (dx !== 0) sprite.scaleX = (dx > 0 ? -1 : 1) * this.baseScale
-    const dist = Phaser.Math.Distance.Between(sprite.x, sprite.y, next.x, next.y)
+    const dist = Phaser.Math.Distance.Between(
+      sprite.x,
+      sprite.y,
+      next.x,
+      next.y,
+    )
     this.scene.tweens.add({
       targets: sprite,
       x: next.x,
@@ -393,10 +466,16 @@ class DroneInstance {
     const dronerX = width * DRONER_X_FRAC
     const dronerY = height + height * DRONER_Y_FRAC
     this.sprite.setPosition(dronerX, dronerY)
-    this.sprite.setAlpha(0).setScale(this.baseScale * 0.6).setVisible(true)
+    this.sprite
+      .setAlpha(0)
+      .setScale(this.baseScale * 0.6)
+      .setVisible(true)
     if (this.shadow) {
       this.shadow.setPosition(dronerX + 4 * DPR, dronerY + 28 * DPR)
-      this.shadow.setAlpha(0).setScale(this.baseScale * 0.6).setVisible(true)
+      this.shadow
+        .setAlpha(0)
+        .setScale(this.baseScale * 0.6)
+        .setVisible(true)
       this.scene.tweens.add({
         targets: this.shadow,
         alpha: 0.32,
@@ -413,7 +492,10 @@ class DroneInstance {
       ease: 'Back.easeOut',
       onComplete: () => {
         if (!this.sprite) return
-        const toW = (f: { xf: number; yf: number }) => ({ x: f.xf * width, y: height + f.yf * height })
+        const toW = (f: { xf: number; yf: number }) => ({
+          x: f.xf * width,
+          y: height + f.yf * height,
+        })
         const branch = Math.random() < 0.5 ? BRANCH_LEFT : BRANCH_RIGHT
         this.flyWaypoints([toW(ENTRY), toW(RISE), ...branch.map(toW)], () => {
           this.targetTilt = 0
@@ -431,8 +513,15 @@ class DroneInstance {
     if (!this.sprite) return
     const sprite = this.sprite
 
-    if (!this.isDragging && (this.mode === 'WANDER' || this.mode === 'COLLECT')) {
-      this.battery = Math.max(0, this.battery - ((100 * delta) / BATTERY_FULL_MS) * this.batteryDrainMult)
+    if (
+      !this.isDragging &&
+      (this.mode === 'WANDER' || this.mode === 'COLLECT')
+    ) {
+      this.battery = Math.max(
+        0,
+        this.battery -
+          ((100 * delta) / BATTERY_FULL_MS) * this.batteryDrainMult,
+      )
       if (this.battery <= 0) this.startRTB()
     }
     if (this.mode === 'CHARGING') {
@@ -442,7 +531,11 @@ class DroneInstance {
     }
     if (this.tooltip) this.positionTooltip()
 
-    sprite.rotation = Phaser.Math.Linear(sprite.rotation, this.targetTilt, TILT_LERP)
+    sprite.rotation = Phaser.Math.Linear(
+      sprite.rotation,
+      this.targetTilt,
+      TILT_LERP,
+    )
 
     if (this.shadow) {
       const shScale = 0.85
@@ -471,12 +564,20 @@ class DroneInstance {
         const nearest = this.findNearestNormalBox(sprite.x, sprite.y)
         if (nearest) {
           this.setCollectTarget(nearest)
-          if (this.isHopping) { this.scene.tweens.killTweensOf(sprite); this.isHopping = false; this.baselineY = sprite.y }
+          if (this.isHopping) {
+            this.scene.tweens.killTweensOf(sprite)
+            this.isHopping = false
+            this.baselineY = sprite.y
+          }
           this.startHop()
         } else {
           // Отмена hop'а: фиксируем baselineY на текущую позицию — иначе bob в
           // WANDER снапнет дрон к старому baselineY (отбрасывание назад).
-          if (this.isHopping) { this.scene.tweens.killTweensOf(sprite); this.isHopping = false; this.baselineY = sprite.y }
+          if (this.isHopping) {
+            this.scene.tweens.killTweensOf(sprite)
+            this.isHopping = false
+            this.baselineY = sprite.y
+          }
           this.mode = 'WANDER'
           this.setCollectTarget(null)
           this.cooldownAccum = cooldown
@@ -490,7 +591,10 @@ class DroneInstance {
         this.mode = 'COLLECT'
         this.setCollectTarget(nearest)
         if (!this.isHopping) {
-          if (this.restTimer) { this.restTimer.remove(false); this.restTimer = null }
+          if (this.restTimer) {
+            this.restTimer.remove(false)
+            this.restTimer = null
+          }
           this.startHop()
         }
       } else {
@@ -500,7 +604,8 @@ class DroneInstance {
 
     this.bobPhase += delta
     if (!this.isHopping) {
-      const bob = BOB_AMP * Math.sin((this.bobPhase * 2 * Math.PI) / BOB_PERIOD_MS)
+      const bob =
+        BOB_AMP * Math.sin((this.bobPhase * 2 * Math.PI) / BOB_PERIOD_MS)
       sprite.y = this.baselineY + bob
     }
   }
@@ -526,19 +631,39 @@ class DroneInstance {
 
     if (this.mode === 'COLLECT' && this.collectTarget) {
       const target = this.collectTarget
-      toX = Phaser.Math.Clamp(target.img.x, FIELD_PAD_X + 10 * DPR, width - FIELD_PAD_X - 10 * DPR)
-      toY = Phaser.Math.Clamp(target.img.y, FIELD_PAD_Y + 10 * DPR, height - FIELD_PAD_Y_BOTTOM - 10 * DPR)
+      toX = Phaser.Math.Clamp(
+        target.img.x,
+        FIELD_PAD_X + 10 * DPR,
+        width - FIELD_PAD_X - 10 * DPR,
+      )
+      toY = Phaser.Math.Clamp(
+        target.img.y,
+        FIELD_PAD_Y + 10 * DPR,
+        height - FIELD_PAD_Y_BOTTOM - 10 * DPR,
+      )
       prePauseMs = 0
       const dx = toX - sprite.x
       const dy = toY - sprite.y
       const dist = Math.sqrt(dx * dx + dy * dy)
-      moveDuration = Phaser.Math.Clamp((dist / FLY_SPEED) * 1000, FLY_MIN_MS, 60000)
+      moveDuration = Phaser.Math.Clamp(
+        (dist / FLY_SPEED) * 1000,
+        FLY_MIN_MS,
+        60000,
+      )
       moveEase = 'Sine.easeInOut'
     } else {
       const angle = Phaser.Math.FloatBetween(0, Math.PI * 2)
       const dist = Phaser.Math.FloatBetween(40 * DPR, DASH_RADIUS)
-      toX = Phaser.Math.Clamp(sprite.x + Math.cos(angle) * dist, FIELD_PAD_X + 10 * DPR, width - FIELD_PAD_X - 10 * DPR)
-      toY = Phaser.Math.Clamp(sprite.y + Math.sin(angle) * dist, FIELD_PAD_Y + 10 * DPR, height - FIELD_PAD_Y_BOTTOM - 10 * DPR)
+      toX = Phaser.Math.Clamp(
+        sprite.x + Math.cos(angle) * dist,
+        FIELD_PAD_X + 10 * DPR,
+        width - FIELD_PAD_X - 10 * DPR,
+      )
+      toY = Phaser.Math.Clamp(
+        sprite.y + Math.sin(angle) * dist,
+        FIELD_PAD_Y + 10 * DPR,
+        height - FIELD_PAD_Y_BOTTOM - 10 * DPR,
+      )
       prePauseMs = 350
       moveDuration = MOVE_MS
       moveEase = 'Power2.easeOut'
@@ -565,18 +690,23 @@ class DroneInstance {
 
           if (this.mode === 'COLLECT' && this.collectTarget) {
             const dist = Phaser.Math.Distance.Between(
-              this.sprite.x, this.sprite.y,
-              this.collectTarget.img.x, this.collectTarget.img.y,
+              this.sprite.x,
+              this.sprite.y,
+              this.collectTarget.img.x,
+              this.collectTarget.img.y,
             )
             if (dist < REACH_DIST) {
               this.box.onBoxTapped(this.collectTarget)
               this.cooldownAccum = 0
               this.mode = 'WANDER'
               this.setCollectTarget(null)
-              this.restTimer = this.scene.time.delayedCall(this.restDelay(), () => {
-                this.restTimer = null
-                if (this.sprite) this.startHop()
-              })
+              this.restTimer = this.scene.time.delayedCall(
+                this.restDelay(),
+                () => {
+                  this.restTimer = null
+                  if (this.sprite) this.startHop()
+                },
+              )
               return
             }
             this.startHop()
@@ -590,7 +720,10 @@ class DroneInstance {
     if (prePauseMs > 0) {
       this.prePauseTimer = this.scene.time.delayedCall(prePauseMs, () => {
         this.prePauseTimer = null
-        if (!this.sprite) { this.isHopping = false; return }
+        if (!this.sprite) {
+          this.isHopping = false
+          return
+        }
         doTween()
       })
     } else {
@@ -608,10 +741,23 @@ class DroneInstance {
     )
     if (normalBoxes.length === 0) return null
     let closest = normalBoxes[0]
-    let minDist = Phaser.Math.Distance.Between(x, y, closest.img.x, closest.img.y)
+    let minDist = Phaser.Math.Distance.Between(
+      x,
+      y,
+      closest.img.x,
+      closest.img.y,
+    )
     for (let i = 1; i < normalBoxes.length; i++) {
-      const d = Phaser.Math.Distance.Between(x, y, normalBoxes[i].img.x, normalBoxes[i].img.y)
-      if (d < minDist) { minDist = d; closest = normalBoxes[i] }
+      const d = Phaser.Math.Distance.Between(
+        x,
+        y,
+        normalBoxes[i].img.x,
+        normalBoxes[i].img.y,
+      )
+      if (d < minDist) {
+        minDist = d
+        closest = normalBoxes[i]
+      }
     }
     return closest
   }
@@ -668,7 +814,14 @@ export class DroneController {
   private sync(want: number): void {
     while (this.instances.length < want) {
       const idx = this.instances.length
-      const inst = new DroneInstance(this.scene, this.box, idx, this.claimed, this.initialBatteryFor(idx), this.initialChargingFor(idx))
+      const inst = new DroneInstance(
+        this.scene,
+        this.box,
+        idx,
+        this.claimed,
+        this.initialBatteryFor(idx),
+        this.initialChargingFor(idx),
+      )
       // Спавним сразу на поле (WANDER) — дроны живут своей жизнью, не выходят
       // по одному из домика при заходе на локацию.
       this.instances.push(inst)
@@ -697,7 +850,9 @@ export class DroneController {
       this.syncMs = 0
       useGameStore
         .getState()
-        .setDroneBatteries(this.instances.map((d) => Math.round(d.getBattery())))
+        .setDroneBatteries(
+          this.instances.map((d) => Math.round(d.getBattery())),
+        )
     }
     // Персист заряда ~ раз в 3с (для восстановления после reload).
     this.persistMs += delta

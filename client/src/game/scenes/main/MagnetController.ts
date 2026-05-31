@@ -251,7 +251,11 @@ class MagnetInstance {
     this.baseScale = (BOX_DISPLAY_SIZE * DRONE_SCALE_MULT) / this.sprite.width
     this.sprite.setScale(this.baseScale)
     this.sprite.setDepth(MAGNET_DEPTH)
-    this.shadow.setScale(this.baseScale)
+    // Сразу ставим тень в offset-позицию и shScale (как в tick), иначе на спавне
+    // и во время зум-перехода (tick гейтнут) тень сидит точно за спрайтом и не
+    // видна — «появляется» только после анимации, когда первый tick её сдвинет.
+    this.shadow.setScale(this.baseScale * 0.85)
+    this.shadow.setPosition(cx + 4 * DPR, cy + 26 * DPR)
     this.baselineY = cy
     // Десинк парения: рандомная стартовая фаза bob — дроны качаются вразнобой.
     this.bobPhase = Math.random() * BOB_PERIOD_MS
