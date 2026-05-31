@@ -17,6 +17,9 @@ import {
   saveVizEnabled,
   loadAutoResume,
   saveAutoResume,
+  loadProgress,
+  saveProgress,
+  clearProgress,
 } from './storage'
 
 const TRACK_LOADERS: Record<TrackId, () => Promise<{ default: CreateTrack }>> =
@@ -44,6 +47,10 @@ export const TRACK_TOTALS: Record<TrackId, number> = {
 const CROSSFADE_SEC = 0.15
 const RAMP_DOWN_SEC = 0.5
 const DISPOSE_DELAY_MS = 4000
+// Перезашёл в приложение в течение этого окна → музыка продолжается с места
+// остановки. Позже — стартуем трек с начала.
+const RESUME_WINDOW_MS = 4 * 60 * 1000
+const PROGRESS_SAVE_INTERVAL_MS = 5000
 
 type Events = Record<PlayerEvent, void>
 
@@ -66,6 +73,7 @@ class AudioPlayer {
   private baseTime = 0
   private realStart = 0
   private rafId: number | null = null
+  private progressSaveId: ReturnType<typeof setInterval> | null = null
 
   private wasPlayingBeforeBlur = false
 
@@ -159,6 +167,7 @@ class AudioPlayer {
     if (typeof document === 'undefined') return
     const handler = (): void => {
       if (document.hidden) {
+        this.persistProgress()
         this.wasPlayingBeforeBlur = this.status === 'playing'
         if (this.status === 'playing') void this.pause()
       } else if (this.wasPlayingBeforeBlur && this.autoResume) {
@@ -169,9 +178,33 @@ class AudioPlayer {
     document.addEventListener('visibilitychange', handler)
   }
 
+  /**
+   * Сохраняет текущую позицию + timestamp в localStorage, чтобы при
+   * перезаходе в приложение (полная перезагрузка / переоткрытие Mini App)
+   * продолжить с места остановки, если прошло не больше RESUME_WINDOW_MS.
+   * Позиция берётся по модулю длины трека (трек зациклен).
+   */
+  private persistProgress(): void {
+    if (!this.trackId) return
+    if (this.status !== 'playing' && this.status !== 'paused') return
+    const total = TRACK_TOTALS[this.trackId]
+    const pos = total > 0 ? this.getElapsed() % total : 0
+    saveProgress({ trackId: this.trackId, pos, ts: Date.now() })
+  }
+
   init(): void {
     this.setupVisibility()
     this.setupBootAutoplay()
+    if (typeof window !== 'undefined') {
+      // pagehide надёжнее beforeunload на mobile/Telegram WebView.
+      const save = (): void => this.persistProgress()
+      window.addEventListener('pagehide', save)
+      window.addEventListener('beforeunload', save)
+    }
+    // Периодический бэкап на случай жёсткого киллa процесса (нет clean unload).
+    this.progressSaveId = setInterval(() => {
+      if (this.status === 'playing') this.persistProgress()
+    }, PROGRESS_SAVE_INTERVAL_MS)
   }
 
   /**
@@ -192,7 +225,13 @@ class AudioPlayer {
       window.removeEventListener('click', start)
       window.removeEventListener('keydown', start)
       if (this.autoResume && this.status === 'idle') {
-        void this.playTrack()
+        // Перезаход в течение RESUME_WINDOW_MS → продолжаем с места остановки.
+        const prog = loadProgress()
+        if (prog && Date.now() - prog.ts <= RESUME_WINDOW_MS) {
+          void this.playTrack(prog.trackId, prog.pos)
+        } else {
+          void this.playTrack()
+        }
       }
     }
     const passiveOpts: AddEventListenerOptions = { passive: true }
@@ -312,6 +351,7 @@ class AudioPlayer {
     }
     this.stopUiTick()
     this.setStatus('paused')
+    this.persistProgress()
   }
 
   async resume(): Promise<void> {
@@ -343,6 +383,7 @@ class AudioPlayer {
     this.baseTime = 0
     this.sectionIdx = 0
     this.setStatus('idle')
+    clearProgress()
   }
 
   seekTo(sec: number): void {
