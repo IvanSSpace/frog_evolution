@@ -10,6 +10,9 @@ function NotifBadge({ children }: BadgeProps) {
   return <span className="ff-badge">{children}</span>
 }
 
+// Журней-миссии (🗺️ Поход по планете) скрыты до готовности фичи.
+const SHOW_JOURNEY = false
+
 type TileSkin = 'mint' | 'green' | 'purple' | 'red' | 'teal' | 'amber' | 'cream'
 
 type TileProps = {
@@ -225,14 +228,17 @@ export function BottomBar({
           disabled={!forestUnlocked}
           onClick={onOpenExpedition}
         />
-        {/* 🗺️ Миссия-путешествие на планете — отряд лягушек идёт по локации,
-            авто-раннер за слизь. */}
-        <Tile
-          icon="journey"
-          skin="amber"
-          title="Поход по планете"
-          onClick={onOpenJourney}
-        />
+        {/* 🗺️ Миссия-путешествие на планете — авто-раннер за слизь.
+            СКРЫТО до готовности (событий/расхода отряда нет). Поставить
+            SHOW_JOURNEY=true когда фича дозреет. Код сцены/оверлея в репо. */}
+        {SHOW_JOURNEY && (
+          <Tile
+            icon="journey"
+            skin="amber"
+            title="Поход по планете"
+            onClick={onOpenJourney}
+          />
+        )}
         <Tile
           icon="clan"
           skin="purple"
