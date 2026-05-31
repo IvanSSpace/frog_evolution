@@ -153,11 +153,13 @@ export class CapsuleMergeController {
     delay: number,
   ): void {
     const fl = this.worldPt(slot.route.float)
+    // Смещаем ВЕСЬ маршрут на floatDx по x → две лягушки едут параллельными
+    // дорожками (а не стопкой по одному пути) — видно что их две.
     const pts = [
       ...TRUNK.map((p) => this.worldPt(p)),
       this.worldPt(slot.route.entry),
-      new Phaser.Math.Vector2(fl.x + floatDx, fl.y),
-    ]
+      fl,
+    ].map((p) => new Phaser.Math.Vector2(p.x + floatDx, p.y))
     const go = () =>
       this.hopAlong(slot, f, pts, () => {
         this.startBob(slot, f)
