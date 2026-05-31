@@ -217,13 +217,18 @@ class AudioPlayer {
    */
   private setupBootAutoplay(): void {
     if (typeof window === 'undefined') return
+    // capture: true — ловим жест в фазе погружения, ДО того как Phaser-канвас
+    // (или другой обработчик) сделает stopPropagation. Иначе тапы по игровому
+    // полю не доходят до window и музыка стартовала только после клика по
+    // DOM-контролу (напр. кнопке смены локации).
+    const opts: AddEventListenerOptions = { passive: true, capture: true }
     const start = (): void => {
       if (this.bootPlayDone) return
       this.bootPlayDone = true
-      window.removeEventListener('pointerdown', start)
-      window.removeEventListener('touchstart', start)
-      window.removeEventListener('click', start)
-      window.removeEventListener('keydown', start)
+      window.removeEventListener('pointerdown', start, opts)
+      window.removeEventListener('touchstart', start, opts)
+      window.removeEventListener('click', start, opts)
+      window.removeEventListener('keydown', start, opts)
       if (this.autoResume && this.status === 'idle') {
         // Перезаход в течение RESUME_WINDOW_MS → продолжаем с места остановки.
         const prog = loadProgress()
@@ -234,11 +239,10 @@ class AudioPlayer {
         }
       }
     }
-    const passiveOpts: AddEventListenerOptions = { passive: true }
-    window.addEventListener('pointerdown', start, passiveOpts)
-    window.addEventListener('touchstart', start, passiveOpts)
-    window.addEventListener('click', start, passiveOpts)
-    window.addEventListener('keydown', start)
+    window.addEventListener('pointerdown', start, opts)
+    window.addEventListener('touchstart', start, opts)
+    window.addEventListener('click', start, opts)
+    window.addEventListener('keydown', start, opts)
   }
 
   on(event: PlayerEvent, cb: () => void): () => void {
