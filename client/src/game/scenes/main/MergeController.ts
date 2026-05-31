@@ -116,8 +116,11 @@ export class MergeController {
   // Ищет ближайшую пару лягушек одного уровня — кандидата для магнита.
   // capLevel: лягушки уровня >= capLevel исключаются (capsule auto-merge на
   // loc2 передаёт 12, чтобы L12 не авто-мерджились — это будущий currency-event).
+  // excludeIds: id'ы, которые НЕ рассматривать (capsule loc2 исключает пары,
+  // уже ждущие/едущие в колбу, чтобы не клеймить их повторно).
   findClosestSameLevelPair(
     capLevel: number = MAX_LEVEL,
+    excludeIds?: Set<string>,
   ): [FrogData, FrogData] | null {
     // Магнит мерджит только обычные пары normal+normal. Carrier'ы исключаем
     // полностью: carrier+normal через mergeApi даёт 400 (carrier не учтён в
@@ -130,6 +133,7 @@ export class MergeController {
     for (const f of this.scene.frogs) {
       if (f.isMerging || f.isDragging || f.isAttracted) continue
       if (f.level >= capLevel) continue
+      if (excludeIds && excludeIds.has(f.id)) continue
       if (isCarrier(f)) continue
       // Свежие из бокса лягушки иммунны к магниту короткое время — иначе
       // AoE-открытие коробок = мгновенный «случайный» merge от клика.

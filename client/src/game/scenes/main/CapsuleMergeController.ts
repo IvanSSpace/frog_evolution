@@ -1,18 +1,17 @@
 // CapsuleMergeController: авто-мердж через капсулы репликации (loc2).
 //
-// Когда на поле образуется пара лягушек одного уровня (L7-11), свободная
-// капсула «забирает» обе: они ПЛАВНО едут по маршруту (непрерывный путь:
-// trunk → вход капсулы → точка парения), там парят/крутятся, и когда обе
-// доехали — мердж. Результат (+1) рождается в колбе и ВОЗВРАЩАЕТСЯ по тому же
-// маршруту назад на поле. Ручной мердж на поле НЕ затрагивается — это помощник.
+// Поток:
+//   1. На поле появилась пара лягушек одного уровня (L7-11) → капсула резервирует
+//      их и ждёт 4с (PENDING). Пара всё это время НОРМАЛЬНАЯ — игрок может
+//      смерджить руками сам (приоритет игрока).
+//   2. Через 4с над парой всплывает «!» — сигнал «идём в колбу».
+//   3. Обе лягушки прыгают параллельными дорожками по маршруту в одну колбу,
+//      сходятся → мердж → новая (+1) выпрыгивает обратно на поле.
 //
-// 3 капсулы = 3 параллельных станка (берут пары независимо). L12 не трогаем
-// (capLevel=12) — это будущий currency-event анлока loc3.
+// 3 капсулы = 3 параллельных станка. L12 не трогаем (будущий currency-event).
+// Ручной мердж на поле НЕ затрагивается.
 //
-// Public API:
-//   - tick(): попытка заклеймить пары свободными капсулами (вызывать на loc2).
-//   - reset(): сброс при смене локации / переходе (вернуть лягушек в норму).
-//   - destroy().
+// Public API: tick() (вызывать на loc2), reset(), destroy().
 
 import Phaser from 'phaser'
 import type { MainScene } from '../MainScene'
@@ -20,11 +19,10 @@ import type { MergeController } from './MergeController'
 import { BASE_SCALE, DPR } from './types'
 import type { FrogData } from './types'
 
-// Точки маршрута: [xFrac (от ширины), yFracZone (0 = верх зоны строений =
-// height, 1 = низ = 2*height; отрицательные = зона лягушек выше)].
+// Точки маршрута: [xFrac, yFracZone] (yFracZone: 0 = верх зоны строений = height,
+// 1 = низ = 2*height; отрицательные = зона лягушек выше).
 type Pt = readonly [number, number]
 
-// Общий ствол (с поля вниз в зону строений).
 const TRUNK: readonly Pt[] = [
   [0.513, -0.091],
   [0.522, -0.012],
@@ -36,7 +34,6 @@ const TRUNK: readonly Pt[] = [
   [0.55, 0.559],
 ]
 
-// Ветка каждой капсулы: вход + точка парения внутри колбы.
 interface CapsuleRoute {
   entry: Pt
   float: Pt
@@ -47,33 +44,39 @@ const CAPSULE_ROUTES: readonly CapsuleRoute[] = [
   { entry: [0.757, 0.766], float: [0.752, 0.668] }, // правая
 ]
 
-const HOP_DIST = 90 * DPR // длина одного прыжка вдоль маршрута
+const PENDING_DELAY = 4000 // мс ожидания на поле до отправки в колбу
+const MARK_SHOW_MS = 600 // сколько «!» висит перед стартом маршрута
+const HOP_DIST = 90 * DPR // длина прыжка вдоль маршрута
 const HOP_DURATION = 420 // мс на прыжок
-const INTER_HOP_PAUSE = 320 // мс паузы между прыжками (естественный ритм)
-const SECOND_FROG_DELAY = 150 // мс — второй стартует чуть позже (видно что их 2)
-// merged спавнится performMerge'ом отложенно (спираль 350 + 60мс) — ждём дольше.
-const VORTEX_WAIT = 480
-const FLOAT_OFFSET_FRAC = 0.03 // разнос двух лягушек в точке парения (доля W)
-const CONVERGE_MS = 600 // схождение двух лягушек к центру перед мерджем
-const MERGE_PAUSE_MS = 500 // пауза «обе в колбе» перед мерджем
+const INTER_HOP_PAUSE = 320 // мс паузы между прыжками
+const SECOND_FROG_DELAY = 150 // мс — второй стартует чуть позже
+const FLOAT_OFFSET_FRAC = 0.04 // разнос дорожек двух лягушек (доля W)
+const CONVERGE_MS = 600 // схождение к центру перед мерджем
+const VORTEX_WAIT = 480 // performMerge спавнит merged отложенно (~410мс)
 const CAP_LEVEL = 12 // L12+ не авто-мерджим
-const COOLDOWN_MS = 400 // пауза капсулы после полного цикла
+const COOLDOWN_MS = 400 // пауза капсулы после цикла
 
-type CapsuleState = 'idle' | 'busy' | 'cooldown'
+type CapsuleState = 'idle' | 'pending' | 'busy' | 'cooldown'
 
 interface CapsuleSlot {
   route: CapsuleRoute
   state: CapsuleState
   frogs: FrogData[]
+  reservedIds: string[]
   arrived: number
   cooldownUntil: number
   tweens: Phaser.Tweens.Tween[]
+  pendingTimer: Phaser.Time.TimerEvent | null
+  mark: Phaser.GameObjects.Text | null
 }
 
 export class CapsuleMergeController {
   private scene: MainScene
   private merge: MergeController
   private slots: CapsuleSlot[]
+  // id'ы лягушек, уже зарезервированных капсулами (pending/busy) — исключаем из
+  // поиска новых пар.
+  private reserved = new Set<string>()
 
   constructor(scene: MainScene, merge: MergeController) {
     this.scene = scene
@@ -82,9 +85,12 @@ export class CapsuleMergeController {
       route,
       state: 'idle' as CapsuleState,
       frogs: [],
+      reservedIds: [],
       arrived: 0,
       cooldownUntil: 0,
       tweens: [],
+      pendingTimer: null,
+      mark: null,
     }))
   }
 
@@ -93,7 +99,8 @@ export class CapsuleMergeController {
     return new Phaser.Math.Vector2(p[0] * width, height * (1 + p[1]))
   }
 
-  // Каждый кадр: свободные капсулы пытаются забрать пару.
+  // ───────────────────────── tick / резерв пары ─────────────────────────
+
   tick(): void {
     const now = this.scene.time.now
     for (const slot of this.slots) {
@@ -101,25 +108,108 @@ export class CapsuleMergeController {
         slot.state = 'idle'
       }
       if (slot.state !== 'idle') continue
-      const pair = this.merge.findClosestSameLevelPair(CAP_LEVEL)
+      const pair = this.merge.findClosestSameLevelPair(CAP_LEVEL, this.reserved)
       if (!pair) break
-      this.claim(slot, pair)
+      this.startPending(slot, pair)
     }
   }
 
-  private claim(slot: CapsuleSlot, [a, b]: [FrogData, FrogData]): void {
-    slot.state = 'busy'
+  // Пара найдена → резервируем, ждём 4с (лягушки остаются нормальными).
+  private startPending(slot: CapsuleSlot, [a, b]: [FrogData, FrogData]): void {
+    slot.state = 'pending'
     slot.frogs = [a, b]
+    slot.reservedIds = [a.id, b.id]
+    this.reserved.add(a.id)
+    this.reserved.add(b.id)
+    slot.pendingTimer = this.scene.time.delayedCall(PENDING_DELAY, () =>
+      this.onPendingFire(slot),
+    )
+  }
+
+  // 4с прошло: пара всё ещё валидна? → «!» + маршрут. Иначе — отмена.
+  private onPendingFire(slot: CapsuleSlot): void {
+    slot.pendingTimer = null
+    if (!this.pairValid(slot)) {
+      this.freeSlot(slot)
+      return
+    }
+    this.showMark(slot)
+    this.scene.time.delayedCall(MARK_SHOW_MS, () => {
+      if (slot.state !== 'pending' || !this.pairValid(slot)) {
+        this.clearMark(slot)
+        this.freeSlot(slot)
+        return
+      }
+      this.clearMark(slot)
+      this.beginRouting(slot)
+    })
+  }
+
+  private pairValid(slot: CapsuleSlot): boolean {
+    const [a, b] = slot.frogs
+    return (
+      !!a &&
+      !!b &&
+      a.container.active &&
+      b.container.active &&
+      this.scene.frogs.includes(a) &&
+      this.scene.frogs.includes(b) &&
+      a.level === b.level &&
+      a.level < CAP_LEVEL &&
+      !a.isAttracted &&
+      !b.isAttracted &&
+      !a.isDragging &&
+      !b.isDragging &&
+      !a.isMerging &&
+      !b.isMerging
+    )
+  }
+
+  // «!» над серединой пары — сигнал «идём в колбу».
+  private showMark(slot: CapsuleSlot): void {
+    const [a, b] = slot.frogs
+    const mx = (a.container.x + b.container.x) / 2
+    const my = Math.min(a.container.y, b.container.y) - 48 * DPR
+    const txt = this.scene.add
+      .text(mx, my, '!', {
+        fontFamily: "'Russo One', system-ui, sans-serif",
+        fontSize: `${Math.round(40 * DPR)}px`,
+        color: '#ffe14d',
+      })
+      .setOrigin(0.5)
+      .setDepth(1000000)
+    txt.setStroke('#7a4b00', 6 * DPR)
+    txt.setScale(0)
+    slot.mark = txt
+    this.scene.tweens.add({
+      targets: txt,
+      scale: 1,
+      duration: 200,
+      ease: 'Back.easeOut',
+    })
+    this.scene.tweens.add({
+      targets: txt,
+      y: my - 10 * DPR,
+      duration: MARK_SHOW_MS,
+      ease: 'Sine.easeOut',
+    })
+  }
+
+  private clearMark(slot: CapsuleSlot): void {
+    if (slot.mark) {
+      this.scene.tweens.killTweensOf(slot.mark)
+      slot.mark.destroy()
+      slot.mark = null
+    }
+  }
+
+  // ───────────────────────── маршрут в колбу ─────────────────────────
+
+  private beginRouting(slot: CapsuleSlot): void {
+    slot.state = 'busy'
     slot.arrived = 0
     slot.tweens = []
-
-    if (import.meta.env.DEV) {
-      const idx = this.slots.indexOf(slot)
-      console.log(
-        `[capsule] claim capsule#${idx} pair L${a.level} (${Math.round(a.container.x)},${Math.round(a.container.y)})+(${Math.round(b.container.x)},${Math.round(b.container.y)})`,
-      )
-    }
-
+    const [a, b] = slot.frogs
     const offset = this.scene.scale.width * FLOAT_OFFSET_FRAC
     this.prepFrog(a)
     this.prepFrog(b)
@@ -136,49 +226,36 @@ export class CapsuleMergeController {
       f.dashTimer = null
     }
     this.scene.tweens.killTweensOf(f.container)
-    // Глушим body-твины (idle-дыхание / scale-pop merged) — иначе конфликт с
-    // дугой прыжка по body.y/scaleY → дёрганье/«телепорт».
     this.scene.tweens.killTweensOf(f.body)
     f.body.y = 0
     f.body.scaleY = 1
-    // Нельзя схватить пока едет (dragstart убил бы route → колба зависла).
     if (f.body.input) f.body.input.enabled = false
   }
 
-  // Прямой маршрут: trunk → вход → точка парения (со смещением dx).
+  // Прямой маршрут (вся ломаная смещена на floatDx → параллельные дорожки).
   private routeIn(
     slot: CapsuleSlot,
     f: FrogData,
     floatDx: number,
     delay: number,
   ): void {
-    const fl = this.worldPt(slot.route.float)
-    // Смещаем ВЕСЬ маршрут на floatDx по x → две лягушки едут параллельными
-    // дорожками (а не стопкой по одному пути) — видно что их две.
     const pts = [
       ...TRUNK.map((p) => this.worldPt(p)),
       this.worldPt(slot.route.entry),
-      fl,
+      this.worldPt(slot.route.float),
     ].map((p) => new Phaser.Math.Vector2(p.x + floatDx, p.y))
     const go = () =>
       this.hopAlong(slot, f, pts, () => {
         this.startBob(slot, f)
         slot.arrived++
-        if (import.meta.env.DEV) {
-          console.log(
-            `[capsule] frog arrived (${slot.arrived}/2) at capsule#${this.slots.indexOf(slot)}`,
-          )
-        }
-        if (slot.arrived >= 2) {
-          this.scene.time.delayedCall(MERGE_PAUSE_MS, () => this.doMerge(slot))
-        }
+        if (slot.arrived >= 2) this.doMerge(slot)
       })
     if (delay > 0) this.scene.time.delayedCall(delay, go)
     else go()
   }
 
-  // Движение ПРЫЖКАМИ вдоль маршрута: ломаную семплим через HOP_DIST и лягушка
-  // допрыгивает до каждой точки своей естественной дугой (как dash на поле).
+  // Движение ПРЫЖКАМИ: ломаную семплим через HOP_DIST, лягушка допрыгивает до
+  // каждой точки естественной дугой (как dash на поле).
   private hopAlong(
     slot: CapsuleSlot,
     f: FrogData,
@@ -187,20 +264,18 @@ export class CapsuleMergeController {
   ): void {
     const samples = this.sampleEvery(pts, HOP_DIST)
     const step = (i: number) => {
-      if (!f.container.active || slot.state === 'idle') return
+      if (!f.container.active || slot.state !== 'busy') return
       if (i >= samples.length) {
         onDone()
         return
       }
       this.hop(slot, f, samples[i].x, samples[i].y, () => {
-        // Пауза между прыжками — естественный ритм, не сплошной полёт.
         this.scene.time.delayedCall(INTER_HOP_PAUSE, () => step(i + 1))
       })
     }
     step(0)
   }
 
-  // Один прыжок (дуга 4t(1-t) на body.y + stretch/squish, как FrogSpawner.dash).
   private hop(
     slot: CapsuleSlot,
     f: FrogData,
@@ -221,7 +296,7 @@ export class CapsuleMergeController {
     this.scene.tweens.add({
       targets: f.body,
       scaleY: 1.2,
-      duration: 80,
+      duration: 90,
       ease: 'Power2.easeOut',
     })
     const js = { t: 0 }
@@ -242,8 +317,8 @@ export class CapsuleMergeController {
         f.body.y = 0
         this.scene.tweens.add({
           targets: f.body,
-          scaleY: 0.8,
-          duration: 60,
+          scaleY: 0.85,
+          duration: 70,
           yoyo: true,
           ease: 'Power2.easeIn',
         })
@@ -253,10 +328,9 @@ export class CapsuleMergeController {
     slot.tweens.push(tw)
   }
 
-  // Семплинг ломаной по дуговой длине: точки через каждые `step` px + конец.
   private sampleEvery(
     pts: Phaser.Math.Vector2[],
-    step: number,
+    stepLen: number,
   ): Phaser.Math.Vector2[] {
     const out: Phaser.Math.Vector2[] = []
     let carry = 0
@@ -264,25 +338,28 @@ export class CapsuleMergeController {
       const a = pts[i - 1]
       const b = pts[i]
       const segLen = Phaser.Math.Distance.Between(a.x, a.y, b.x, b.y)
-      let d = step - carry
+      let d = stepLen - carry
       while (d <= segLen) {
         const t = d / segLen
         out.push(
           new Phaser.Math.Vector2(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t),
         )
-        d += step
+        d += stepLen
       }
-      carry = segLen - (d - step)
+      carry = segLen - (d - stepLen)
     }
     const end = pts[pts.length - 1]
     const last = out[out.length - 1]
-    if (!last || Phaser.Math.Distance.Between(last.x, last.y, end.x, end.y) > 4) {
+    if (
+      !last ||
+      Phaser.Math.Distance.Between(last.x, last.y, end.x, end.y) > 4
+    ) {
       out.push(end)
     }
     return out
   }
 
-  // Парение в колбе: лёгкое покачивание + медленное вращение.
+  // Парение в колбе: покачивание + медленное вращение.
   private startBob(slot: CapsuleSlot, f: FrogData): void {
     if (!f.container.active) return
     slot.tweens.push(
@@ -303,14 +380,16 @@ export class CapsuleMergeController {
     )
   }
 
+  // ───────────────────────── мердж + выход ─────────────────────────
+
   private doMerge(slot: CapsuleSlot): void {
     const [a, b] = slot.frogs
-    const alive =
-      a?.container.active &&
-      b?.container.active &&
-      this.scene.frogs.includes(a) &&
-      this.scene.frogs.includes(b)
-    if (!alive) {
+    if (
+      !a?.container.active ||
+      !b?.container.active ||
+      !this.scene.frogs.includes(a) ||
+      !this.scene.frogs.includes(b)
+    ) {
       this.releaseSurvivors(slot)
       this.freeSlot(slot)
       return
@@ -320,8 +399,7 @@ export class CapsuleMergeController {
     b.container.angle = 0
     const fl = this.worldPt(slot.route.float)
 
-    // Фаза слияния (подольше): обе лягушки медленно сходятся к центру колбы +
-    // пульс по body — видимый момент «соединения», потом performMerge.
+    // Слияние (подольше): обе медленно сходятся к центру + пульс body.
     slot.tweens.push(
       this.scene.tweens.add({
         targets: [a.container, b.container],
@@ -332,8 +410,8 @@ export class CapsuleMergeController {
       }),
       this.scene.tweens.add({
         targets: [a.body, b.body],
-        scaleY: 1.15,
         scaleX: 1.15,
+        scaleY: 1.15,
         duration: CONVERGE_MS / 2,
         yoyo: true,
         ease: 'Sine.easeInOut',
@@ -348,26 +426,15 @@ export class CapsuleMergeController {
         return
       }
       // performMerge: спираль + removeFrog + spawnFrog ОТЛОЖЕННО (~410мс).
-      // Ловим новую лягушку ПОСЛЕ спавна (ближайшую к точке колбы).
       const beforeIds = new Set(this.scene.frogs.map((f) => f.id))
       this.merge.performMerge(a, b, fl.x, fl.y)
       this.scene.time.delayedCall(VORTEX_WAIT, () => {
-        if (slot.state !== 'busy') return // случился reset
+        if (slot.state !== 'busy') return
         const fresh = this.scene.frogs.filter((f) => !beforeIds.has(f.id))
         const merged = fresh.sort(
           (p, q) =>
-            Phaser.Math.Distance.Between(
-              p.container.x,
-              p.container.y,
-              fl.x,
-              fl.y,
-            ) -
-            Phaser.Math.Distance.Between(
-              q.container.x,
-              q.container.y,
-              fl.x,
-              fl.y,
-            ),
+            Phaser.Math.Distance.Between(p.container.x, p.container.y, fl.x, fl.y) -
+            Phaser.Math.Distance.Between(q.container.x, q.container.y, fl.x, fl.y),
         )[0]
         if (!merged) {
           this.freeSlot(slot)
@@ -378,15 +445,12 @@ export class CapsuleMergeController {
     })
   }
 
-  // Обратный маршрут: merged едет из колбы назад на поле (реверс пути).
+  // merged едет из колбы назад на поле (реверс маршрута).
   private routeOut(slot: CapsuleSlot, merged: FrogData): void {
     this.prepFrog(merged)
-    // performMerge спавнит merged со scale 0 + tween роста; prepFrog убил tween —
-    // выставляем нормальный масштаб явно, иначе лягушка осталась бы невидимой.
-    merged.container.setScale(BASE_SCALE)
-    const fl = this.worldPt(slot.route.float)
+    merged.container.setScale(BASE_SCALE) // performMerge оставил scale 0 → вернуть
     const pts = [
-      fl,
+      this.worldPt(slot.route.float),
       this.worldPt(slot.route.entry),
       ...[...TRUNK].reverse().map((p) => this.worldPt(p)),
     ]
@@ -396,8 +460,17 @@ export class CapsuleMergeController {
     })
   }
 
+  // ───────────────────────── teardown / helpers ─────────────────────────
+
   private freeSlot(slot: CapsuleSlot): void {
     this.killSlotTweens(slot)
+    this.clearMark(slot)
+    if (slot.pendingTimer) {
+      slot.pendingTimer.remove()
+      slot.pendingTimer = null
+    }
+    for (const id of slot.reservedIds) this.reserved.delete(id)
+    slot.reservedIds = []
     slot.frogs = []
     slot.arrived = 0
     slot.state = 'cooldown'
@@ -412,7 +485,7 @@ export class CapsuleMergeController {
   private releaseSurvivors(slot: CapsuleSlot): void {
     this.killSlotTweens(slot)
     for (const f of slot.frogs) {
-      if (f && f.container.active) this.restoreFrog(f)
+      if (f && f.container.active && f.isAttracted) this.restoreFrog(f)
     }
   }
 
@@ -423,15 +496,21 @@ export class CapsuleMergeController {
     if (f.body.input) f.body.input.enabled = true
   }
 
-  // Сброс при смене локации/переходе.
   reset(): void {
     for (const slot of this.slots) {
+      if (slot.pendingTimer) {
+        slot.pendingTimer.remove()
+        slot.pendingTimer = null
+      }
+      this.clearMark(slot)
       this.releaseSurvivors(slot)
       slot.frogs = []
+      slot.reservedIds = []
       slot.arrived = 0
       slot.state = 'idle'
       slot.cooldownUntil = 0
     }
+    this.reserved.clear()
   }
 
   destroy(): void {
