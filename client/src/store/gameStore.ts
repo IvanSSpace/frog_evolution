@@ -55,7 +55,6 @@ import {
   loadCurrentLocation,
   saveCurrentLocation,
   loadMagnetEnabled,
-  saveMagnetEnabled,
   loadCosmicSlice,
   saveCosmicSlice,
   loadNumberFormat,
@@ -177,9 +176,10 @@ interface GameStateBase {
   markBestiarySeen: () => void
   markDiscovered: (level: number) => boolean
 
-  // Включён ли магнит (юзер может выключить кнопкой)
+  // Сохранённый флаг магнита (legacy). Тумблер убран 2026-05-31 — магнит
+  // работает всегда когда куплен апгрейд (сбором заведуют дроны). Поле
+  // оставлено для совместимости с server-sync/persistence.
   magnetEnabled: boolean
-  toggleMagnet: () => void
 
   // Текущая локация (1=Болото, 2=Лес, 3=Континент)
   currentLocation: number
@@ -419,12 +419,6 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   magnetEnabled: loadMagnetEnabled(),
-  toggleMagnet: () =>
-    set((s) => {
-      const next = !s.magnetEnabled
-      saveMagnetEnabled(next)
-      return { magnetEnabled: next }
-    }),
 
   currentLocation: loadCurrentLocation(),
   setCurrentLocation: (id) => {

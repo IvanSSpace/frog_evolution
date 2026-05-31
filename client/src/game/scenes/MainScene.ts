@@ -621,7 +621,7 @@ export class MainScene extends Phaser.Scene {
       // Магниты спавним тут же (а не только из tick), чтобы они вошли в зум-
       // анимацию захода на локацию вместе со сборщиками, а не появлялись после.
       const magnetKey = magnetKeyForLocation(1)
-      if ((s.upgrades[magnetKey] ?? 0) > 0 && s.magnetEnabled) {
+      if ((s.upgrades[magnetKey] ?? 0) > 0) {
         this.magnet.ensureSpawned()
       }
     } else {
@@ -906,13 +906,14 @@ export class MainScene extends Phaser.Scene {
     const magnetKey = magnetKeyForLocation(store.currentLocation)
     const magnetLevel = store.upgrades[magnetKey]
     const serumPaused = store.serumDragActive
-    if (currentLocId === 1 && magnetLevel > 0 && store.magnetEnabled) {
-      // Куплен и включён: tick (движение), при serum-pause — замирание (дрон
-      // остаётся на поле, не despawn — иначе мигал бы).
+    if (currentLocId === 1 && magnetLevel > 0) {
+      // Куплен: tick (движение), при serum-pause — замирание (дрон остаётся
+      // на поле, не despawn — иначе мигал бы). Тумблер вкл/выкл убран —
+      // магнит работает всегда когда куплен (сбором заведуют дроны).
       if (!serumPaused) this.magnet.tick(magnetLevel, delta)
       else this.magnet.resetSpawnTimer()
     } else {
-      // Не куплен / выключен тумблером → убрать дрон с поля.
+      // Не куплен → убрать дрон с поля.
       this.magnet.clearAll()
     }
 

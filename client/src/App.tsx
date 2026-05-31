@@ -15,7 +15,6 @@ import { RareCrateModal } from './ui/components/RareCrateModal'
 import { SettingsModal } from './ui/components/SettingsModal'
 import { LocationStack } from './ui/components/LocationStack'
 import { StarMapHUD } from './ui/components/StarMapHUD'
-import { MagnetToggle } from './ui/components/MagnetToggle'
 import { ShipFollowButton } from './ui/components/ShipFollowButton'
 import { OrientationLock } from './ui/components/OrientationLock'
 import { LoadingScreen } from './ui/components/LoadingScreen'
@@ -402,7 +401,6 @@ function App() {
         </div>
       </div>
 
-      <MagnetToggle />
       <StarMapHUD />
       <ShipFollowButton />
       {/* 2026-05-29: SerumBar убран с поля — серумы теперь применяются только
