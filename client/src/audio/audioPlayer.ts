@@ -198,6 +198,13 @@ class AudioPlayer {
     this.setupVisibility()
     this.setupBootAutoplay()
     if (typeof window !== 'undefined') {
+      // Прогреваем Tone заранее (lazy import + создание узлов), чтобы к первому
+      // жесту loadTone был готов и Tone.start() в обработчике жеста сработал
+      // синхронно (autoplay policy). Без прогрева первый жест тратится на
+      // import('tone'), активация истекает → звук появлялся только со 2-го тапа.
+      void this.loadTone().catch(() => {
+        /* контекст создастся при первом жесте */
+      })
       // pagehide надёжнее beforeunload на mobile/Telegram WebView.
       const save = (): void => this.persistProgress()
       window.addEventListener('pagehide', save)
@@ -232,6 +239,13 @@ class AudioPlayer {
       window.removeEventListener('touchstart', start, opts)
       window.removeEventListener('click', start, opts)
       window.removeEventListener('keydown', start, opts)
+      // Резюмим AudioContext СИНХРОННО внутри жеста: в playTrack первый
+      // await loadTone()/import('tone') съедает активацию жеста, и последующий
+      // context.resume() игнорируется браузером — звук не появлялся до
+      // следующего тапа (смены локации). Tone прогрет в init → this.Tone есть.
+      if (this.Tone && this.Tone.context.state !== 'running') {
+        void this.Tone.start()
+      }
       if (this.autoResume && this.status === 'idle') {
         // Перезаход в течение RESUME_WINDOW_MS → продолжаем с места остановки.
         const prog = loadProgress()
