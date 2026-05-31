@@ -204,8 +204,11 @@ export class LocationTransition {
     const fromScrollY = fromBuildingsZone ? height : 0
     const cy = fromScrollY + height / 2
 
-    // 1. Магниты эфемерны — убиваем сразу
-    this.magnet.clearAll()
+    // Магниты НЕ убиваем здесь: иначе collectTransitionSprites(oldLoc) ниже
+    // через prepBuildings заново заспавнит их на случайных позициях — видно как
+    // дроны «телепортируются» перед зумом. Теперь они, как и сборщики, reparent'ятся
+    // в oldContainer с текущими позициями и чистятся releaseBuildingsForTransition
+    // + oldContainer.destroy(true).
 
     // Phase 22-fix: detach overlay manager БЕЗ release/drain. Overlay containers
     // остаются вложенными в frog.container → масштабируются вместе с oldContainer
@@ -551,7 +554,10 @@ export class LocationTransition {
       scene.isLocationTransitioning = true
       scene.input.enabled = false
       scene.prepareStarmapTransition() // зум из зоны frogs (scroll 0)
-      eventBus.emit('location:transitionStart', { from: scene.prevLocation, to: -1 })
+      eventBus.emit('location:transitionStart', {
+        from: scene.prevLocation,
+        to: -1,
+      })
 
       const { width, height } = scene.scale
       const cx = width / 2
@@ -800,7 +806,10 @@ export class LocationTransition {
             this.spawner.startIdleAnim(f)
           }
 
-          scene.overlayManager = new FrogOverlayManager(scene, () => scene.frogs)
+          scene.overlayManager = new FrogOverlayManager(
+            scene,
+            () => scene.frogs,
+          )
           scene.createElementAuras()
           this.spawner.rebindCarriers()
           scene.selectionLayer = new SerumSelectionLayer(scene)
