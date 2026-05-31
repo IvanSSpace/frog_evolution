@@ -53,7 +53,8 @@ const INTER_HOP_PAUSE = 200 // мс паузы между прыжками (ес
 const SECOND_FROG_DELAY = 400 // мс — второй стартует позже (single-file)
 // merged спавнится performMerge'ом отложенно (спираль 350 + 60мс) — ждём дольше.
 const VORTEX_WAIT = 480
-const FLOAT_OFFSET_FRAC = 0.045 // разнос двух лягушек в точке парения (доля W)
+const FLOAT_OFFSET_FRAC = 0.03 // разнос двух лягушек в точке парения (доля W)
+const CONVERGE_MS = 600 // схождение двух лягушек к центру перед мерджем
 const MERGE_PAUSE_MS = 500 // пауза «обе в колбе» перед мерджем
 const CAP_LEVEL = 12 // L12+ не авто-мерджим
 const COOLDOWN_MS = 400 // пауза капсулы после полного цикла
@@ -304,24 +305,62 @@ export class CapsuleMergeController {
     a.container.angle = 0
     b.container.angle = 0
     const fl = this.worldPt(slot.route.float)
-    // performMerge делает спираль + removeFrog + spawnFrog ОТЛОЖЕННО (~410мс).
-    // Ловим новую лягушку ПОСЛЕ спавна (ближайшую к точке колбы — её и спавнят).
-    const beforeIds = new Set(this.scene.frogs.map((f) => f.id))
-    this.merge.performMerge(a, b, fl.x, fl.y)
-    this.scene.time.delayedCall(VORTEX_WAIT, () => {
-      if (slot.state !== 'busy') return // случился reset
-      const fresh = this.scene.frogs.filter((f) => !beforeIds.has(f.id))
-      const merged = fresh.sort(
-        (p, q) =>
-          Phaser.Math.Distance.Between(p.container.x, p.container.y, fl.x, fl.y) -
-          Phaser.Math.Distance.Between(q.container.x, q.container.y, fl.x, fl.y),
-      )[0]
-      if (!merged) {
-        // cross-location / L18-sentinel / blocked — на поле ничего, освобождаем.
+
+    // Фаза слияния (подольше): обе лягушки медленно сходятся к центру колбы +
+    // пульс по body — видимый момент «соединения», потом performMerge.
+    slot.tweens.push(
+      this.scene.tweens.add({
+        targets: [a.container, b.container],
+        x: fl.x,
+        y: fl.y,
+        duration: CONVERGE_MS,
+        ease: 'Sine.easeInOut',
+      }),
+      this.scene.tweens.add({
+        targets: [a.body, b.body],
+        scaleY: 1.15,
+        scaleX: 1.15,
+        duration: CONVERGE_MS / 2,
+        yoyo: true,
+        ease: 'Sine.easeInOut',
+      }),
+    )
+
+    this.scene.time.delayedCall(CONVERGE_MS, () => {
+      if (slot.state !== 'busy') return
+      if (!a.container.active || !b.container.active) {
+        this.releaseSurvivors(slot)
         this.freeSlot(slot)
         return
       }
-      this.routeOut(slot, merged)
+      // performMerge: спираль + removeFrog + spawnFrog ОТЛОЖЕННО (~410мс).
+      // Ловим новую лягушку ПОСЛЕ спавна (ближайшую к точке колбы).
+      const beforeIds = new Set(this.scene.frogs.map((f) => f.id))
+      this.merge.performMerge(a, b, fl.x, fl.y)
+      this.scene.time.delayedCall(VORTEX_WAIT, () => {
+        if (slot.state !== 'busy') return // случился reset
+        const fresh = this.scene.frogs.filter((f) => !beforeIds.has(f.id))
+        const merged = fresh.sort(
+          (p, q) =>
+            Phaser.Math.Distance.Between(
+              p.container.x,
+              p.container.y,
+              fl.x,
+              fl.y,
+            ) -
+            Phaser.Math.Distance.Between(
+              q.container.x,
+              q.container.y,
+              fl.x,
+              fl.y,
+            ),
+        )[0]
+        if (!merged) {
+          this.freeSlot(slot)
+          return
+        }
+        this.routeOut(slot, merged)
+      })
     })
   }
 
