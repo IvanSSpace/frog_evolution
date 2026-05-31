@@ -155,6 +155,10 @@
     "on": "On",
     "off": "Off",
     "tracks": {
+      "hogstep": {
+        "name": "Hogstep",
+        "desc": "2.3 minutes · lo-fi nether anthem · 808 + piglin oink"
+      },
       "beyondHorizon": {
         "name": "Beyond the Horizon",
         "desc": "7 minutes · 7 sections · cinematic epic"

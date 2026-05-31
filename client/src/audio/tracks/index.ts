@@ -1,6 +1,22 @@
 import type { TrackId, TrackMeta } from '../types'
 
 export const TRACK_META: Record<TrackId, TrackMeta> = {
+  hogstep: {
+    id: 'hogstep',
+    nameKey: 'player.tracks.hogstep.name',
+    descKey: 'player.tracks.hogstep.desc',
+    totalSec: 139,
+    sections: [
+      { start: 0, label: 'INTRO · DROP', key: 'F# minor' },
+      { start: 11, label: 'VERSE · GROOVE', key: 'F# minor' },
+      { start: 32, label: 'PIANO · DREAMS', key: 'F# minor' },
+      { start: 53, label: 'DROP · HARD', key: 'F# minor' },
+      { start: 75, label: 'BREAK · HALF', key: 'F# minor' },
+      { start: 85, label: 'DROP · HARDER', key: 'F# minor' },
+      { start: 107, label: 'LEAD · SOLO', key: 'F# minor' },
+      { start: 128, label: 'OUTRO · FADE', key: 'F# minor' },
+    ],
+  },
   beyondHorizon: {
     id: 'beyondHorizon',
     nameKey: 'player.tracks.beyondHorizon.name',
