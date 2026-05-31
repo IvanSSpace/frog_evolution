@@ -20,6 +20,7 @@ import {
   loadProgress,
   saveProgress,
   clearProgress,
+  ensureDefaultTrack,
 } from './storage'
 
 const TRACK_LOADERS: Record<TrackId, () => Promise<{ default: CreateTrack }>> =
@@ -552,6 +553,10 @@ class AudioPlayer {
     return this.on('section', cb)
   }
 }
+
+// Миграция дефолта ДО конструктора: поля trackId/cachedSnapshot читают
+// loadSelectedTrack() при создании инстанса.
+if (typeof window !== 'undefined') ensureDefaultTrack()
 
 export const audioPlayer = new AudioPlayer()
 

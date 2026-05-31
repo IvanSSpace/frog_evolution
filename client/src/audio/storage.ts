@@ -89,3 +89,21 @@ export function saveProgress(p: AudioProgress): void {
 export function clearProgress(): void {
   localStorage.removeItem(KEY_PROGRESS)
 }
+
+const KEY_DEFAULT_TRACK_V2 = 'audio.defaultTrackV2'
+
+/**
+ * Одноразовая миграция дефолта на hogstep. У существующих юзеров в
+ * audio.selectedTrack лежит старый авто-дефолт (записан playTrack до появления
+ * hogstep), из-за чего hogstep не играет. Один раз перетираем выбор на hogstep;
+ * дальше осознанный выбор юзера сохраняется как обычно и не трогается.
+ */
+export function ensureDefaultTrack(): void {
+  try {
+    if (localStorage.getItem(KEY_DEFAULT_TRACK_V2) === '1') return
+    localStorage.setItem(KEY_DEFAULT_TRACK_V2, '1')
+    localStorage.setItem(KEY_TRACK, 'hogstep')
+  } catch {
+    /* нет localStorage — дефолт и так hogstep через TRACK_ORDER[0] */
+  }
+}
