@@ -141,10 +141,10 @@ class DroneInstance {
 
   private spawn(): void {
     if (this.sprite) return
-    const { width, height } = this.scene.scale
-    // Появляемся у двери droner-здания, дальше startEmerge выводит на поле.
-    const cx = width * DRONER_X_FRAC
-    const cy = height + height * DRONER_Y_FRAC
+    // Дрон появляется СРАЗУ на поле (живёт своей жизнью), не выходит из домика
+    // при заходе в игру/на локацию. emerge оставлен только для возврата на
+    // поле после зарядки на базе (см. tick → battery>=100 → startEmerge).
+    const { x: cx, y: cy } = this.scene.randomFieldPos()
 
     this.shadow = this.scene.add.image(cx, cy, 'goo_collector')
     ;(this.shadow as unknown as { tintFill: boolean }).tintFill = true
@@ -202,8 +202,9 @@ class DroneInstance {
       this.scheduleNextHop()
     })
 
-    // Выходим из здания (emerge-маршрут дверь→подъём→развилка→поле).
-    this.startEmerge()
+    // Уже на поле — сразу в WANDER, планируем первый прыжок (без emerge).
+    this.mode = 'WANDER'
+    this.scheduleNextHop()
   }
 
   despawn(): void {
@@ -612,9 +613,6 @@ export class DroneController {
   private restored: number[] = loadDroneBatteries('c')
   // Throttle персиста заряда в localStorage.
   private persistMs = 0
-  // Очередь спавна: новые дроны выходят из здания по одному (не все разом).
-  private spawnQueue: DroneInstance[] = []
-  private spawnAccum = 0
 
   constructor(scene: MainScene, box: BoxController) {
     this.scene = scene
@@ -648,26 +646,14 @@ export class DroneController {
     while (this.instances.length < want) {
       const idx = this.instances.length
       const inst = new DroneInstance(this.scene, this.box, idx, this.claimed, this.initialBatteryFor(idx))
-      // НЕ спавним сразу — ставим в очередь, выходят по одному (см. drainSpawnQueue).
+      // Спавним сразу на поле (WANDER) — дроны живут своей жизнью, не выходят
+      // по одному из домика при заходе на локацию.
       this.instances.push(inst)
-      this.spawnQueue.push(inst)
+      inst.ensureSpawned()
     }
     while (this.instances.length > want) {
       const removed = this.instances.pop()!
-      const qi = this.spawnQueue.indexOf(removed)
-      if (qi >= 0) this.spawnQueue.splice(qi, 1)
       removed.despawn()
-    }
-  }
-
-  // Выпускаем из очереди по одному дрону раз в STAGGER (выход из здания).
-  private drainSpawnQueue(delta: number): void {
-    if (this.spawnQueue.length === 0) return
-    const STAGGER_MS = 450
-    this.spawnAccum += delta
-    if (this.spawnAccum >= STAGGER_MS) {
-      this.spawnAccum = 0
-      this.spawnQueue.shift()!.ensureSpawned()
     }
   }
 
@@ -677,7 +663,6 @@ export class DroneController {
 
   tick(level: number, delta: number): void {
     this.sync(this.targetCount())
-    this.drainSpawnQueue(delta)
     // Снимаем claim с боксов, которых уже нет на поле (защита от утечки).
     for (const b of this.claimed) {
       if (!this.scene.boxes.includes(b) || !b.img.active) this.claimed.delete(b)
@@ -703,7 +688,6 @@ export class DroneController {
     this.persist() // сохраняем перед уходом с локации
     for (const d of this.instances) d.despawn()
     this.instances = []
-    this.spawnQueue = []
     this.claimed.clear()
     useGameStore.getState().setDroneBatteries([])
   }
@@ -715,7 +699,6 @@ export class DroneController {
     this.persist()
     for (const d of this.instances) d.releaseForTransition()
     this.instances = []
-    this.spawnQueue = []
     this.claimed.clear()
     useGameStore.getState().setDroneBatteries([])
   }
