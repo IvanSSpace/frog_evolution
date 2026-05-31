@@ -131,24 +131,23 @@ export class BuildingsController {
           ? 200000
           : b.yFrac * 100,
       )
-      // Тап → squash-jiggle (origin низ → сжатие к земле, как «толкнули»).
+      // Squash-jiggle + открытие модалки — на ОТПУСКАНИЕ (pointerup), не на
+      // нажатие: иначе анимация дёргается при старте скролла. И только если это
+      // тап, а не скролл (палец проехал меньше порога): свайп смены зоны мог
+      // начаться прямо со здания и палец просто оказался над ним на отпускании.
       sp.setInteractive({ useHandCursor: true })
-      sp.on('pointerdown', () => this.jiggle(sp, baseScale))
-      if (b.opens) {
-        const modal = b.opens
-        sp.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-          // Отличаем тап от скролла: если палец проехал больше порога — это был
-          // свайп смены зоны и палец просто оказался над зданием на отпускании.
-          const moved = Phaser.Math.Distance.Between(
-            pointer.downX,
-            pointer.downY,
-            pointer.upX,
-            pointer.upY,
-          )
-          if (moved > BUILDING_TAP_SLOP) return
-          eventBus.emit('building:open', { modal })
-        })
-      }
+      const modal = b.opens
+      sp.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+        const moved = Phaser.Math.Distance.Between(
+          pointer.downX,
+          pointer.downY,
+          pointer.upX,
+          pointer.upY,
+        )
+        if (moved > BUILDING_TAP_SLOP) return
+        this.jiggle(sp, baseScale)
+        if (modal) eventBus.emit('building:open', { modal })
+      })
       this.sprites.push(sp)
       // if (b.key === 'bld_collector') this.buildCollectLabel(sp) // временно скрыто
     }

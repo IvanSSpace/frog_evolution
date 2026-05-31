@@ -56,9 +56,8 @@ eventBus.on('boxes:offline-fill', ({ count }: { count: number }) => {
   _offlineBoxFill += count
 })
 
-const SWIPE_SLOP = 90 * DPR   // палец должен сдвинуться на столько, прежде чем начнётся скролл
-const SWIPE_FLICK_V = 0.5   // |velocity.y| (px/ms) выше — считаем фликом, переключаем по направлению
-
+const SWIPE_SLOP = 90 * DPR // палец должен сдвинуться на столько, прежде чем начнётся скролл
+const SWIPE_FLICK_V = 0.5 // |velocity.y| (px/ms) выше — считаем фликом, переключаем по направлению
 
 export class MainScene extends Phaser.Scene {
   // Phase 21 (Wave 1+): несколько полей переведены с `private` на package-public,
@@ -437,7 +436,10 @@ export class MainScene extends Phaser.Scene {
     // world x/y + доли (xFrac=x/width; yFracZone=(y-height)/height для зоны
     // строений) — для подгонки waypoints дрон-маршрута.
     {
-      const w = window as unknown as { __coords?: () => void; __coordsOn?: boolean }
+      const w = window as unknown as {
+        __coords?: () => void
+        __coordsOn?: boolean
+      }
       w.__coords = () => {
         w.__coordsOn = !w.__coordsOn
         // eslint-disable-next-line no-console
@@ -1010,12 +1012,18 @@ export class MainScene extends Phaser.Scene {
     this.setZone(this.currentZone === 'frogs' ? 'buildings' : 'frogs')
   }
 
-  private onSwipePointerDown = (pointer: Phaser.Input.Pointer, currentlyOver: Phaser.GameObjects.GameObject[]) => {
+  private onSwipePointerDown = (
+    pointer: Phaser.Input.Pointer,
+    currentlyOver: Phaser.GameObjects.GameObject[],
+  ) => {
+    // Свайп разрешаем даже если палец на здании (здания не draggable). Блокируем
+    // только над draggable-объектами (лягушки) — там палец нужен для drag-merge.
+    const overDraggable = currentlyOver.some((o) => o.input?.draggable === true)
     if (
       !this.isTwoZoneLoc(useGameStore.getState().currentLocation) ||
       this.isLocationTransitioning ||
       useGameStore.getState().serumDragActive ||
-      currentlyOver.length !== 0
+      overDraggable
     ) {
       this.swipeArmed = false
       return
@@ -1037,7 +1045,11 @@ export class MainScene extends Phaser.Scene {
       this.swipeStartScrollY = this.cameras.main.scrollY
     }
     const { height } = this.scale
-    const ns = Phaser.Math.Clamp(this.swipeStartScrollY - (pointer.y - this.swipeStartY), 0, height)
+    const ns = Phaser.Math.Clamp(
+      this.swipeStartScrollY - (pointer.y - this.swipeStartY),
+      0,
+      height,
+    )
     this.cameras.main.setScroll(0, ns)
   }
 
@@ -1051,16 +1063,21 @@ export class MainScene extends Phaser.Scene {
     const vy = pointer.velocity.y
     let target: number
     if (vy < -SWIPE_FLICK_V) {
-      target = height            // флик вверх → зона строений (низ)
+      target = height // флик вверх → зона строений (низ)
     } else if (vy > SWIPE_FLICK_V) {
-      target = 0                 // флик вниз → зона лягушек (верх)
+      target = 0 // флик вниз → зона лягушек (верх)
     } else {
-      target = this.cameras.main.scrollY < height / 2 ? 0 : height   // медленно → ближайшая
+      target = this.cameras.main.scrollY < height / 2 ? 0 : height // медленно → ближайшая
     }
     const zone: 'frogs' | 'buildings' = target === 0 ? 'frogs' : 'buildings'
     this.currentZone = zone
     this.tweens.killTweensOf(this.cameras.main)
-    this.tweens.add({ targets: this.cameras.main, scrollY: target, duration: 220, ease: 'Sine.easeOut' })
+    this.tweens.add({
+      targets: this.cameras.main,
+      scrollY: target,
+      duration: 220,
+      ease: 'Sine.easeOut',
+    })
     eventBus.emit('field:zoneChanged', { zone })
   }
 
@@ -1167,5 +1184,4 @@ export class MainScene extends Phaser.Scene {
     this.overlayManager?.markDirty()
     devLog('[debug] spawned 16 carrier frogs on each of 4 locations (64 total)')
   }
-
 }
