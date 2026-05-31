@@ -158,7 +158,8 @@ export class BuildingsController {
     scene.load.image('bld_collector_empty', '/builds/collector_empty.png')
     scene.load.image('bld_collector_full', '/builds/collector_full.png')
     // Капсула репликации loc2: alt-state (заряжена) для будущей анимации.
-    scene.load.image('bld2_capsule_full', '/builds_loc2/capsule2.png')
+    // semi-версия — жидкость полупрозрачная, как у основной капсулы.
+    scene.load.image('bld2_capsule_full', '/builds_loc2/capsule2_semi.png')
   }
 
   show(locId: number): void {
