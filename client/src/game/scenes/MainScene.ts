@@ -858,13 +858,13 @@ export class MainScene extends Phaser.Scene {
       store.setBoxWaiting(waiting)
     }
 
-    // Магнит per-location. 2026-05-23: для L2/L3 свои upgrade-ключи (magnet2/magnet3),
-    // покупка открывается после cosmos. Активен если level > 0 (gate сам собой через
-    // отсутствие покупки). Phase 14 (SERUM-06): auto-pause во время serum selection.
+    // Магнит — только на Луже (loc1). L2 уходит на building-based merge (новый
+    // дизайн), L3 без магнита. magnet2/magnet3 более не активируют дрон.
+    // Phase 14 (SERUM-06): auto-pause во время serum selection.
     const magnetKey = magnetKeyForLocation(store.currentLocation)
     const magnetLevel = store.upgrades[magnetKey]
     const serumPaused = store.serumDragActive
-    if (magnetLevel > 0 && store.magnetEnabled) {
+    if (currentLocId === 1 && magnetLevel > 0 && store.magnetEnabled) {
       // Куплен и включён: tick (движение), при serum-pause — замирание (дрон
       // остаётся на поле, не despawn — иначе мигал бы).
       if (!serumPaused) this.magnet.tick(magnetLevel, delta)
