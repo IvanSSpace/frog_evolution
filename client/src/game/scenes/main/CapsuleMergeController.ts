@@ -48,11 +48,13 @@ const CAPSULE_ROUTES: readonly CapsuleRoute[] = [
 ]
 
 const HOP_DIST = 100 * DPR // длина одного прыжка вдоль маршрута
-const HOP_DURATION = 240 // мс на прыжок (как dash на поле)
-const INTER_HOP_PAUSE = 130 // мс паузы между прыжками (естественный ритм)
-const SECOND_FROG_DELAY = 350 // мс — второй стартует позже (single-file)
+const HOP_DURATION = 300 // мс на прыжок
+const INTER_HOP_PAUSE = 200 // мс паузы между прыжками (естественный ритм)
+const SECOND_FROG_DELAY = 400 // мс — второй стартует позже (single-file)
+// merged спавнится performMerge'ом отложенно (спираль 350 + 60мс) — ждём дольше.
+const VORTEX_WAIT = 480
 const FLOAT_OFFSET_FRAC = 0.045 // разнос двух лягушек в точке парения (доля W)
-const MERGE_PAUSE_MS = 250 // пауза «обе в колбе» перед мерджем
+const MERGE_PAUSE_MS = 500 // пауза «обе в колбе» перед мерджем
 const CAP_LEVEL = 12 // L12+ не авто-мерджим
 const COOLDOWN_MS = 400 // пауза капсулы после полного цикла
 
@@ -302,16 +304,25 @@ export class CapsuleMergeController {
     a.container.angle = 0
     b.container.angle = 0
     const fl = this.worldPt(slot.route.float)
-    // performMerge сам removeFrog(a)/(b) + spawnFrog(+1) в (fl) — ловим новую.
-    const before = new Set(this.scene.frogs)
+    // performMerge делает спираль + removeFrog + spawnFrog ОТЛОЖЕННО (~410мс).
+    // Ловим новую лягушку ПОСЛЕ спавна (ближайшую к точке колбы — её и спавнят).
+    const beforeIds = new Set(this.scene.frogs.map((f) => f.id))
     this.merge.performMerge(a, b, fl.x, fl.y)
-    const merged = this.scene.frogs.find((f) => !before.has(f))
-    if (!merged) {
-      // cross-location / blocked — мерджа на поле нет, просто освобождаем.
-      this.freeSlot(slot)
-      return
-    }
-    this.routeOut(slot, merged)
+    this.scene.time.delayedCall(VORTEX_WAIT, () => {
+      if (slot.state !== 'busy') return // случился reset
+      const fresh = this.scene.frogs.filter((f) => !beforeIds.has(f.id))
+      const merged = fresh.sort(
+        (p, q) =>
+          Phaser.Math.Distance.Between(p.container.x, p.container.y, fl.x, fl.y) -
+          Phaser.Math.Distance.Between(q.container.x, q.container.y, fl.x, fl.y),
+      )[0]
+      if (!merged) {
+        // cross-location / L18-sentinel / blocked — на поле ничего, освобождаем.
+        this.freeSlot(slot)
+        return
+      }
+      this.routeOut(slot, merged)
+    })
   }
 
   // Обратный маршрут: merged едет из колбы назад на поле (реверс пути).
