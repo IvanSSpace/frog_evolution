@@ -538,6 +538,9 @@ export class FrogSpawner {
         duration: 200,
         ease: 'Power2.easeOut',
         onUpdate: () => {
+          // Капсула loc2 «забрала» лягушку (isAttracted) → dash больше НЕ двигает
+          // её (иначе борется с маршрутом капсулы — позиция дёргается).
+          if (frog.isAttracted) return
           const t = jumpState.t
           frog.container.x = fromX + (toX - fromX) * t
           // Контейнер идёт по земле линейно — тень остаётся на земле.
@@ -548,7 +551,7 @@ export class FrogSpawner {
           frog.body.y = -arc
         },
         onComplete: () => {
-          if (frog.isDragging) return
+          if (frog.isDragging || frog.isAttracted) return
 
           scene.tweens.killTweensOf(frog.body)
 
