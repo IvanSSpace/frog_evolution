@@ -75,6 +75,9 @@ class AudioPlayer {
   private rafId: number | null = null
 
   private wasPlayingBeforeBlur = false
+  // Sync-флаг: playTrack уже выполняется (await loadTone/Tone.start/build).
+  // Блокирует параллельные вызовы → не плодим второй scheduler / track-граф.
+  private playInFlight = false
 
   private cachedSnapshot: PlayerSnapshot = {
     status: 'idle',
@@ -311,39 +314,62 @@ class AudioPlayer {
 
   async playTrack(id?: TrackId, fromSec = 0): Promise<void> {
     const targetId = id ?? this.trackId ?? TRACK_ORDER[0]
-    const Tone = await this.loadTone()
-    if (Tone.context.state !== 'running') {
-      await Tone.start()
-    }
 
-    if (this.current && this.trackId === targetId && this.status === 'paused') {
-      return this.resume()
+    // Уже играет ровно этот трек — повторный запуск создал бы второй scheduler
+    // поверх первого (наложение = «несколько песен одновременно»). No-op.
+    if (
+      this.current &&
+      this.trackId === targetId &&
+      this.status === 'playing'
+    ) {
+      return
     }
+    // Загрузка/запуск уже идёт — не плодим параллельные графы из-за гонки на
+    // await (loadTone/Tone.start/build). Текущий запуск доведёт дело сам.
+    if (this.playInFlight) return
+    this.playInFlight = true
+    try {
+      const Tone = await this.loadTone()
+      if (Tone.context.state !== 'running') {
+        await Tone.start()
+      }
 
-    if (!this.current || this.trackId !== targetId) {
-      // Crossfade if currently playing another track
-      if (this.current && this.status === 'playing') {
-        await this.crossfadeTo(targetId, fromSec)
+      if (
+        this.current &&
+        this.trackId === targetId &&
+        this.status === 'paused'
+      ) {
+        await this.resume()
         return
       }
-      await this.loadTrack(targetId)
-    }
 
-    if (!this.current) return
+      if (!this.current || this.trackId !== targetId) {
+        // Crossfade if currently playing another track
+        if (this.current && this.status === 'playing') {
+          await this.crossfadeTo(targetId, fromSec)
+          return
+        }
+        await this.loadTrack(targetId)
+      }
 
-    this.baseTime = Math.max(0, Math.min(fromSec, TRACK_TOTALS[targetId] - 1))
-    this.realStart = Date.now()
-    this.setStatus('playing')
-    if (this.trackOut) {
-      this.trackOut.volume.cancelScheduledValues(Tone.now())
-      this.trackOut.volume.value = 0
+      if (!this.current) return
+
+      this.baseTime = Math.max(0, Math.min(fromSec, TRACK_TOTALS[targetId] - 1))
+      this.realStart = Date.now()
+      this.setStatus('playing')
+      if (this.trackOut) {
+        this.trackOut.volume.cancelScheduledValues(Tone.now())
+        this.trackOut.volume.value = 0
+      }
+      this.current.startScheduler(this.baseTime, {
+        getElapsed: () => this.getElapsed(),
+        isPlaying: () => this.status === 'playing',
+        onSectionChange: (idx) => this.setSection(idx),
+      })
+      this.startUiTick()
+    } finally {
+      this.playInFlight = false
     }
-    this.current.startScheduler(this.baseTime, {
-      getElapsed: () => this.getElapsed(),
-      isPlaying: () => this.status === 'playing',
-      onSectionChange: (idx) => this.setSection(idx),
-    })
-    this.startUiTick()
   }
 
   async pause(): Promise<void> {
