@@ -39,6 +39,12 @@ type Events = {
   }
   'shipdeck:launch': { shipId: number; crew: number[]; demo: boolean }
   'shipdeck:cancel': Record<string, never>
+  // Миссии-путешествия (авто-раннер). JourneyMissionSelect (React) собирает отряд
+  // и эмитит journey:start → JourneyScene. По завершении сцена шлёт journey:complete
+  // (награда уже начислена), выход — journey:exit (✕ или «На ферму»).
+  'journey:start': { crew: number[]; missionId: string }
+  'journey:complete': { missionId: string; reward: number; survivors: number }
+  'journey:exit': Record<string, never>
   'starmap:planet-select': { planetId: string; name: string; archetype: string }
   'starmap:request-fly': { planetId: string }
   'starmap:planet-tapped': {

@@ -13,6 +13,7 @@ export type IconName =
   | 'upgrade-shop'
   | 'gallery'
   | 'ship'
+  | 'journey'
   | 'cosmic-hub'
   | 'bestiary'
   | 'inventory'
@@ -46,6 +47,7 @@ export const ICON_EMOJI: Record<IconName, string> = {
   'upgrade-shop': '⬆️',
   gallery: '📊',
   ship: '🚀',
+  journey: '🗺️',
   'cosmic-hub': '🧬',
   bestiary: '📖',
   inventory: '🎒',

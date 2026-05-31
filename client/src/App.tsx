@@ -5,6 +5,7 @@ import { BottomBar } from './ui/components/BottomBar'
 import { ShopModal } from './ui/components/ShopModal'
 import { FrogShopModal } from './ui/components/FrogShopModal'
 import { ExpeditionModal } from './ui/components/ExpeditionModal'
+import { JourneyMissionSelect } from './ui/components/JourneyMissionSelect'
 import { InventoryModal } from './ui/components/InventoryModal'
 import { DronerModal } from './ui/components/DronerModal'
 import { startExpedition } from './api/expedition'
@@ -63,6 +64,7 @@ function App() {
   const [inventoryOpen, setInventoryOpen] = useState(false)
   const [dronerOpen, setDronerOpen] = useState(false)
   const [clanOpen, setClanOpen] = useState(false)
+  const [journeyOpen, setJourneyOpen] = useState(false)
   const [welcomeBack, setWelcomeBack] = useState<{
     earned: number
     hours: number
@@ -395,6 +397,7 @@ function App() {
             onOpenExpedition={() => setExpeditionOpen(true)}
             onOpenInventory={() => setInventoryOpen(true)}
             onOpenClan={() => setClanOpen(true)}
+            onOpenJourney={() => setJourneyOpen(true)}
           />
         </div>
       </div>
@@ -410,6 +413,9 @@ function App() {
       <GalleryDetailModal />
       {shopOpen && <ShopModal onClose={() => setShopOpen(false)} />}
       {frogShopOpen && <FrogShopModal onClose={() => setFrogShopOpen(false)} />}
+      {journeyOpen && (
+        <JourneyMissionSelect onClose={() => setJourneyOpen(false)} />
+      )}
       {expeditionOpen && (
         <ExpeditionModal onClose={() => setExpeditionOpen(false)} />
       )}

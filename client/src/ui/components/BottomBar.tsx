@@ -145,6 +145,7 @@ type BottomBarProps = {
   onOpenExpedition?: () => void
   onOpenInventory?: () => void
   onOpenClan?: () => void
+  onOpenJourney?: () => void
 }
 
 export function BottomBar({
@@ -153,6 +154,7 @@ export function BottomBar({
   onOpenSettings,
   onOpenExpedition,
   onOpenClan,
+  onOpenJourney,
 }: BottomBarProps) {
   // Badge «новый контент» на 🐸 и 📖. true когда есть discoveredLevel,
   // которого ещё нет в соответствующем seenLevels массиве.
@@ -174,7 +176,9 @@ export function BottomBar({
   useEffect(() => {
     const handler = ({ zone }: { zone: 'frogs' | 'buildings' }) => setZone(zone)
     eventBus.on('field:zoneChanged', handler)
-    return () => { eventBus.off('field:zoneChanged', handler) }
+    return () => {
+      eventBus.off('field:zoneChanged', handler)
+    }
   }, [])
 
   return (
@@ -220,6 +224,14 @@ export function BottomBar({
           }
           disabled={!forestUnlocked}
           onClick={onOpenExpedition}
+        />
+        {/* 🗺️ Миссия-путешествие на планете — отряд лягушек идёт по локации,
+            авто-раннер за слизь. */}
+        <Tile
+          icon="journey"
+          skin="amber"
+          title="Поход по планете"
+          onClick={onOpenJourney}
         />
         <Tile
           icon="clan"

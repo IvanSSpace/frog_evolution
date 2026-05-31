@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { MainScene } from './scenes/MainScene'
 import { StarMapScene } from './scenes/StarMapScene'
 import { ShipDeckScene } from './scenes/ship/ShipDeckScene'
+import { JourneyScene } from './scenes/journey/JourneyScene'
 import { eventBus } from '../store/eventBus'
 import { useGameStore } from '../store/gameStore'
 
@@ -101,11 +102,7 @@ export function startGame(): Phaser.Game {
     },
     // MainScene стартует автоматически. StarMapScene регистрируется,
     // но автостарт=false — запускается вручную через event bus.
-    scene: [
-      MainScene,
-      StarMapScene,
-      ShipDeckScene,
-    ],
+    scene: [MainScene, StarMapScene, ShipDeckScene, JourneyScene],
     physics: {
       default: 'arcade',
       arcade: { gravity: { x: 0, y: 0 }, debug: false },
@@ -228,6 +225,25 @@ export function startGame(): Phaser.Game {
   })
   eventBus.on('shipdeck:launch', closeShipDeck)
   eventBus.on('shipdeck:cancel', closeShipDeck)
+
+  // Миссия-путешествие (JourneyScene). Открывается из JourneyMissionSelect (React,
+  // поверх фермы): sleep MainScene → сцена-раннер. journey:exit → wake MainScene.
+  eventBus.on('journey:start', (p) => {
+    if (sm().isActive('MainScene')) sm().sleep('MainScene')
+    if (sm().isSleeping('JourneyScene')) {
+      sm().wake('JourneyScene')
+    } else {
+      sm().start('JourneyScene')
+    }
+    const scene = sm().getScene('JourneyScene') as JourneyScene
+    scene.setParams({ crew: p.crew, missionId: p.missionId })
+    useGameStore.getState().setBattleSceneActive(true)
+  })
+  eventBus.on('journey:exit', () => {
+    if (sm().isActive('JourneyScene')) sm().stop('JourneyScene')
+    if (sm().isSleeping('MainScene')) sm().wake('MainScene')
+    useGameStore.getState().setBattleSceneActive(false)
+  })
 
   // Подгоняем размер игры при ресайзе окна
   window.addEventListener('resize', () => {
