@@ -83,9 +83,46 @@ const BUILDINGS: readonly BuildingDef[] = [
   },
 ] as const
 
+// Loc2 (Лес) — 3 здания по референсу toxic_map2_2size_bottom.png:
+//   фабрика фрогов L7 (верх-лево, конвейер) / фабрика дронов-с-пушкой (верх-право,
+//   купол) / капсула репликации (низ-центр, Y-кластер). Геймплей пока не реализован
+//   (только визуал, как loc1). Позиции приблизительные — подстраиваются итеративно.
+const BUILDINGS_LOC2: readonly BuildingDef[] = [
+  {
+    key: 'bld2_factory',
+    src: '/builds_loc2/frog_factory2loc.png',
+    xFrac: 0.28,
+    yFrac: 0.46,
+    widthFrac: 0.34,
+  },
+  {
+    key: 'bld2_droner',
+    src: '/builds_loc2/droner2loc.png',
+    xFrac: 0.74,
+    yFrac: 0.48,
+    widthFrac: 0.42,
+  },
+  {
+    key: 'bld2_capsule',
+    src: '/builds_loc2/capsule1.png',
+    xFrac: 0.52,
+    yFrac: 0.9,
+    widthFrac: 0.2,
+  },
+] as const
+
+// Набор зданий по локации. Расширяется по мере добавления локаций.
+const BUILDINGS_BY_LOC: Record<number, readonly BuildingDef[]> = {
+  1: BUILDINGS,
+  2: BUILDINGS_LOC2,
+}
+
 export class BuildingsController {
   private scene: MainScene
   private sprites: Phaser.GameObjects.Image[] = []
+  // Локация, для которой сейчас построен набор зданий. При смене локации
+  // старый набор уничтожается и строится новый (loc1 ↔ loc2).
+  private builtLoc: number | null = null
   // TEMP preview (НЕ КОММИТИТЬ): надпись «Собрать» над коллектором.
   private collectLabel: Phaser.GameObjects.Container | null = null
   // TEMP preview (НЕ КОММИТИТЬ): идёт анимация сбора.
@@ -100,22 +137,32 @@ export class BuildingsController {
   /** Грузит текстуры зданий. Вызывать из MainScene.preload(). */
   static preload(scene: Phaser.Scene): void {
     for (const b of BUILDINGS) scene.load.image(b.key, b.src)
+    for (const b of BUILDINGS_LOC2) scene.load.image(b.key, b.src)
     // Состояния коллектора по заполнению (превью + будущая механика).
     scene.load.image('bld_collector_empty', '/builds/collector_empty.png')
     scene.load.image('bld_collector_full', '/builds/collector_full.png')
+    // Капсула репликации loc2: alt-state (заряжена) для будущей анимации.
+    scene.load.image('bld2_capsule_full', '/builds_loc2/capsule2.png')
   }
 
-  show(): void {
+  show(locId: number): void {
+    // Смена локации → уничтожить старый набор, построить новый.
+    if (this.builtLoc !== null && this.builtLoc !== locId) {
+      this.destroySprites()
+    }
     if (this.sprites.length > 0) {
       for (const s of this.sprites) s.setVisible(true)
       return
     }
+    const defs = BUILDINGS_BY_LOC[locId]
+    if (!defs) return
+    this.builtLoc = locId
     const { width, height } = this.scene.scale
     // Зона строений в world-координатах: y от height до 2*height (см.
-    // MainScene loc1Bg — tall bg height*2, нижняя половина = строения).
+    // MainScene loc1Bg/loc2Bg — tall bg height*2, нижняя половина = строения).
     const zoneTop = height
     const zoneH = height
-    for (const b of BUILDINGS) {
+    for (const b of defs) {
       const sp = this.scene.add.image(0, 0, b.key)
       sp.setOrigin(0.5, 1) // низ-центр = «ноги» на земле
       const baseScale = (width * b.widthFrac) / sp.width
@@ -319,11 +366,24 @@ export class BuildingsController {
       this.collectHit = null
     }
     this.sprites = []
+    // Спрайты ушли в зум-контейнер (он их уничтожит) — следующий show()
+    // должен пересобрать набор с нуля.
+    this.builtLoc = null
   }
 
   /** Спрайты для reparent в transition-контейнер (зум при смене локации). */
   getSprites(): Phaser.GameObjects.Image[] {
     return this.sprites
+  }
+
+  // Уничтожить текущий набор зданий (при смене локации loc1↔loc2 / teardown).
+  private destroySprites(): void {
+    for (const s of this.sprites) {
+      this.scene.tweens.killTweensOf(s)
+      s.destroy()
+    }
+    this.sprites = []
+    this.builtLoc = null
   }
 
   destroy(): void {
@@ -335,10 +395,6 @@ export class BuildingsController {
       this.collectHit.destroy()
       this.collectHit = null
     }
-    for (const s of this.sprites) {
-      this.scene.tweens.killTweensOf(s)
-      s.destroy()
-    }
-    this.sprites = []
+    this.destroySprites()
   }
 }

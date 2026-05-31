@@ -613,7 +613,7 @@ export class MainScene extends Phaser.Scene {
   // transition-gate — show() идемпотентен.
   private prepBuildings(locId: number): void {
     if (locId === 1) {
-      this.buildings.show()
+      this.buildings.show(1)
       const s = useGameStore.getState()
       if ((s.upgrades.autoCollect ?? 0) > 0) {
         this.drone.ensureSpawned()
@@ -624,6 +624,11 @@ export class MainScene extends Phaser.Scene {
       if ((s.upgrades[magnetKey] ?? 0) > 0) {
         this.magnet.ensureSpawned()
       }
+    } else if (locId === 2) {
+      // Loc2: здания (фабрика/дроны/капсула) — пока только визуал. Дронов/
+      // магнита тут нет (Loc2 уходит на building-based механики).
+      this.buildings.show(2)
+      this.drone.despawn()
     } else {
       this.buildings.hide()
       this.drone.despawn()
