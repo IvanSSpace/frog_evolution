@@ -92,7 +92,7 @@ const BUILDINGS_LOC2: readonly BuildingDef[] = [
     key: 'bld2_factory',
     src: '/builds_loc2/frog_factory2loc.png',
     xFrac: 0.28,
-    yFrac: 0.6,
+    yFrac: 0.54,
     widthFrac: 0.46,
   },
   {
@@ -109,14 +109,14 @@ const BUILDINGS_LOC2: readonly BuildingDef[] = [
     src: '/builds_loc2/capsule1_semi.png',
     xFrac: 0.3,
     yFrac: 0.83,
-    widthFrac: 0.26,
+    widthFrac: 0.3,
   },
   {
     key: 'bld2_capsule',
     src: '/builds_loc2/capsule1_semi.png',
     xFrac: 0.74,
     yFrac: 0.83,
-    widthFrac: 0.26,
+    widthFrac: 0.3,
   },
   {
     key: 'bld2_capsule_green',
