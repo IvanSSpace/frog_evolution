@@ -288,7 +288,7 @@ export function ExpeditionModal({ onClose }: Props) {
   const [launchPhase, setLaunchPhase] = useState<
     'idle' | 'boarding' | 'shaking' | 'liftoff'
   >('idle')
-  const [launchKind, setLaunchKind] = useState<'mission' | 'cosmos' | null>(null)
+  const [launchKind, setLaunchKind] = useState<'cosmos' | null>(null)
 
   // Сброс выбора при смене корабля.
   useEffect(() => {
@@ -866,8 +866,8 @@ interface ShipDeckBlockProps {
   setSelectedCrew: (next: Set<number>) => void
   launchPhase: 'idle' | 'boarding' | 'shaking' | 'liftoff'
   setLaunchPhase: (p: 'idle' | 'boarding' | 'shaking' | 'liftoff') => void
-  launchKind: 'mission' | 'cosmos' | null
-  setLaunchKind: (k: 'mission' | 'cosmos' | null) => void
+  launchKind: 'cosmos' | null
+  setLaunchKind: (k: 'cosmos' | null) => void
   onClose: () => void
   busy: boolean
 }
@@ -925,7 +925,7 @@ function ShipDeckBlock(props: ShipDeckBlockProps) {
     setSelectedCrew(next)
   }
 
-  const startLaunch = (kind: 'mission' | 'cosmos') => {
+  const startLaunch = (kind: 'cosmos') => {
     if (!canLaunch) return
     setLaunchKind(kind)
     setLaunchPhase('boarding')
@@ -951,9 +951,7 @@ function ShipDeckBlock(props: ShipDeckBlockProps) {
     const t = window.setTimeout(() => {
       // Эмитим событие запуска и закрываем модалку.
       const crew = [...selectedCrew].map((i) => frogList[i].level)
-      if (launchKind === 'mission') {
-        eventBus.emit('survivor:choose-mission', { crew, shipId: ship.id })
-      } else if (launchKind === 'cosmos') {
+      if (launchKind === 'cosmos') {
         eventBus.emit('shipdeck:launch', { shipId: ship.id, crew, demo: DEMO_TEMPO })
       }
       onClose()

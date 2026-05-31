@@ -214,34 +214,15 @@ export class ShipDeckScene extends Phaser.Scene {
       .setOrigin(0.5)
     this.layer.add(this.hintText)
 
-    // Две кнопки запуска в один ряд (одна высота): «⚔️ На миссию» (VS-арена)
-    // слева от «🚀 В космос» (серверная экспедиция). Обе активны только когда
-    // выбран хотя бы 1 член экипажа.
+    // 🚀 В космос (серверная экспедиция) — единственная кнопка запуска,
+    // активна только когда выбран хотя бы 1 член экипажа.
     const canLaunch = this.selected.size >= 1
     const btnY = h - 40 * DPR
 
-    // ⚔️ На миссию — слева от центра (origin справа → растёт влево).
-    const missionBtn = this.add
-      .text(w / 2 - 8 * DPR, btnY, '⚔️ На миссию', {
-        fontFamily: 'sans-serif',
-        fontSize: `${17 * DPR}px`,
-        color: '#ffffff',
-        backgroundColor: canLaunch ? '#b45309' : '#64748b',
-        padding: { x: 18 * DPR, y: 10 * DPR },
-        fontStyle: 'bold',
-      })
-      .setStroke(canLaunch ? '#7c2d12' : '#334155', 3 * DPR)
-      .setOrigin(1, 0.5)
-    if (canLaunch) {
-      missionBtn.setInteractive({ useHandCursor: true })
-      missionBtn.on('pointerup', () => this.onMission())
-    }
-    this.layer.add(missionBtn)
-
-    // 🚀 В космос — справа от центра (origin слева → растёт вправо).
+    // 🚀 В космос — по центру.
     this.launchBtn = this.add
       .text(
-        w / 2 + 8 * DPR,
+        w / 2,
         btnY,
         canLaunch ? '🚀 В космос' : 'Выбери экипаж',
         {
@@ -254,21 +235,12 @@ export class ShipDeckScene extends Phaser.Scene {
         },
       )
       .setStroke(canLaunch ? '#0f5132' : '#334155', 3 * DPR)
-      .setOrigin(0, 0.5)
+      .setOrigin(0.5, 0.5)
     if (canLaunch) {
       this.launchBtn.setInteractive({ useHandCursor: true })
       this.launchBtn.on('pointerup', () => this.onLaunch())
     }
     this.layer.add(this.launchBtn)
-  }
-
-  // ⚔️ Открыть React-выбор миссии. НЕ закрываем ShipDeck и не ставим launching —
-  // если игрок отменит выбор, он останется в снаряжении. На выбор миссии React
-  // эмитит survivor:start (см. SurvivorMissionSelect). crew = уровни жаб («жизни»).
-  private onMission() {
-    if (this.launching || this.selected.size < 1) return
-    const crew = [...this.selected].map((i) => this.frogs[i].level)
-    eventBus.emit('survivor:choose-mission', { crew, shipId: this.params.shipId })
   }
 
   private makeFrog(

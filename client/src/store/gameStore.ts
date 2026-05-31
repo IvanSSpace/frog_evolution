@@ -238,7 +238,7 @@ interface GameStateBase {
   temporaryIncomeBuff: { until: number; percent: number } | null
   activateTemporaryIncomeBuff: (percent: number, durationMs: number) => void
 
-  /** True пока активна вспомогательная Phaser-сцена (ShipDeckScene/SurvivorScene).
+  /** True пока активна вспомогательная Phaser-сцена (ShipDeckScene).
    *  HUD-элементы (magnet/location) скрываются на это время. */
   battleSceneActive: boolean
   setBattleSceneActive: (v: boolean) => void

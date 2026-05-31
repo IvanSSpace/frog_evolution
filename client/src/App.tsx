@@ -15,8 +15,6 @@ import { SettingsModal } from './ui/components/SettingsModal'
 import { LocationStack } from './ui/components/LocationStack'
 import { StarMapHUD } from './ui/components/StarMapHUD'
 import { MagnetToggle } from './ui/components/MagnetToggle'
-import { SurvivorUpgradeModal } from './ui/components/SurvivorUpgradeModal'
-import { SurvivorMissionSelect } from './ui/components/SurvivorMissionSelect'
 import { ShipFollowButton } from './ui/components/ShipFollowButton'
 import { OrientationLock } from './ui/components/OrientationLock'
 import { LoadingScreen } from './ui/components/LoadingScreen'
@@ -421,8 +419,6 @@ function App() {
       )}
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       {clanOpen && <StarUnionsModal onClose={() => setClanOpen(false)} />}
-      <SurvivorUpgradeModal />
-      <SurvivorMissionSelect />
       {/* Phase 18 (REQ BESTIARY-07): milestone toast — listens cosmic:bestiary-milestone
           event from cosmicSlice.setBestiaryBit; visible regardless of Cosmic Hub state. */}
       <MilestoneToast />

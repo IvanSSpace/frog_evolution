@@ -2,7 +2,6 @@ import Phaser from 'phaser'
 import { MainScene } from './scenes/MainScene'
 import { StarMapScene } from './scenes/StarMapScene'
 import { ShipDeckScene } from './scenes/ship/ShipDeckScene'
-import { SurvivorScene } from './scenes/survivor/SurvivorScene'
 import { eventBus } from '../store/eventBus'
 import { useGameStore } from '../store/gameStore'
 
@@ -106,7 +105,6 @@ export function startGame(): Phaser.Game {
       MainScene,
       StarMapScene,
       ShipDeckScene,
-      SurvivorScene,
     ],
     physics: {
       default: 'arcade',
@@ -230,30 +228,6 @@ export function startGame(): Phaser.Game {
   })
   eventBus.on('shipdeck:launch', closeShipDeck)
   eventBus.on('shipdeck:cancel', closeShipDeck)
-
-  // VS-арена миссии (Survivor). Запускается из ShipDeckScene кнопкой «На миссию».
-  // ShipDeck уже усыпил MainScene (shipdeck:open) → усыпляем ShipDeck, стартуем
-  // SurvivorScene с нуля (stop→start: каждый забег = свежая сцена).
-  eventBus.on('survivor:start', (p) => {
-    if (sm().isActive('SurvivorScene')) return
-    if (sm().isActive('ShipDeckScene')) sm().sleep('ShipDeckScene')
-    if (sm().isActive('MainScene')) sm().sleep('MainScene')
-    sm().stop('SurvivorScene')
-    sm().start('SurvivorScene', {
-      crew: p.crew,
-      shipId: p.shipId,
-      planetId: p.planetId,
-      missionId: p.missionId,
-    })
-    useGameStore.getState().setBattleSceneActive(true)
-  })
-
-  eventBus.on('survivor:exit', () => {
-    if (!sm().isActive('SurvivorScene')) return
-    sm().stop('SurvivorScene')
-    if (sm().isSleeping('MainScene')) sm().wake('MainScene')
-    useGameStore.getState().setBattleSceneActive(false)
-  })
 
   // Подгоняем размер игры при ресайзе окна
   window.addEventListener('resize', () => {

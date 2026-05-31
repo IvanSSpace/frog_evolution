@@ -704,7 +704,6 @@ function MechanicsTab() {
         <MechanicsItem name="Космический корабль" desc="летает по звёздной карте." />
         <MechanicsItem name="Звёздная карта" desc="карта планет и маршрутов." />
         <MechanicsItem name="Экспедиции" desc="отправь корабль с экипажем исследовать космос. Возвращается с лутом и бортовым журналом (рапортами)." />
-        <MechanicsItem name="Survivor-миссии" desc="аркадный забег (в стиле vampire survivors) за лут и предметы." />
         <MechanicsItem name="Вознесение" desc="лягушка-носитель, доведённая до L18, возносится → даёт эссенцию." />
       </MechanicsSection>
 

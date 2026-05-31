@@ -39,32 +39,6 @@ type Events = {
   }
   'shipdeck:launch': { shipId: number; crew: number[]; demo: boolean }
   'shipdeck:cancel': Record<string, never>
-  // VS-арена миссии (Survivor mode, Phase 1 прототип). Запускается из
-  // ShipDeckScene кнопкой «На миссию»; crew = уровни выбранного экипажа
-  // (= «жизни»: смерть текущей жабы → следующая, послабее).
-  'survivor:start': {
-    crew: number[]
-    shipId: number
-    planetId?: string
-    missionId?: string
-  }
-  // ShipDeck «На миссию» → открывает React-выбор миссии (SurvivorMissionSelect).
-  'survivor:choose-mission': { crew: number[]; shipId: number }
-  'survivor:complete': { result: 'win' | 'lose'; reward: number; kills: number }
-  'survivor:exit': Record<string, never>
-  // Левелап: сцена замирает и шлёт 3 варианта апгрейда (2 атака + 1 защита) в
-  // React-оверлей (SurvivorUpgradeModal). Игрок выбирает → survivor:pick-upgrade.
-  'survivor:level-up': {
-    level: number
-    choices: {
-      id: string
-      icon: string
-      title: string
-      desc: string
-      kind: 'attack' | 'defense'
-    }[]
-  }
-  'survivor:pick-upgrade': { id: string }
   'starmap:planet-select': { planetId: string; name: string; archetype: string }
   'starmap:request-fly': { planetId: string }
   'starmap:planet-tapped': {
