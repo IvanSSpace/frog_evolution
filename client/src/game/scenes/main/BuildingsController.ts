@@ -159,8 +159,9 @@ export class BuildingsController {
     // Состояния коллектора по заполнению (превью + будущая механика).
     scene.load.image('bld_collector_empty', '/builds/collector_empty.png')
     scene.load.image('bld_collector_full', '/builds/collector_full.png')
-    // Капсула репликации loc2: alt-state (заряжена) для будущей анимации.
-    scene.load.image('bld2_capsule_full', '/builds_loc2/capsule2.png')
+    // Капсула репликации loc2: «заряженная» текстура (показывается во время
+    // мерджа поверх обычной, плавно). capsule2_semi — того же размера.
+    scene.load.image('bld2_capsule_full', '/builds_loc2/capsule2_semi.png')
   }
 
   show(locId: number): void {
@@ -398,6 +399,14 @@ export class BuildingsController {
   /** Спрайты для reparent в transition-контейнер (зум при смене локации). */
   getSprites(): Phaser.GameObjects.Image[] {
     return this.sprites
+  }
+
+  /** Спрайты капсул репликации loc2 (для CapsuleMergeController — FX мерджа). */
+  getCapsuleSprites(): Phaser.GameObjects.Image[] {
+    return this.sprites.filter((s) => {
+      const k = s.texture.key
+      return k === 'bld2_capsule' || k === 'bld2_capsule_green'
+    })
   }
 
   // Уничтожить текущий набор зданий (при смене локации loc1↔loc2 / teardown).

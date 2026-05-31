@@ -16,6 +16,7 @@
 import Phaser from 'phaser'
 import type { MainScene } from '../MainScene'
 import type { MergeController } from './MergeController'
+import type { BuildingsController } from './BuildingsController'
 import { BASE_SCALE, DPR } from './types'
 import type { FrogData } from './types'
 
@@ -51,10 +52,12 @@ const HOP_DURATION = 420 // мс на прыжок
 const INTER_HOP_PAUSE = 320 // мс паузы между прыжками
 const SECOND_FROG_DELAY = 150 // мс — второй стартует чуть позже
 const FLOAT_OFFSET_FRAC = 0.04 // разнос дорожек двух лягушек (доля W)
-const CONVERGE_MS = 600 // схождение к центру перед мерджем
+const MERGE_FLOAT_MS = 2000 // «поплавать» в колбе во время слияния (~2с)
+const CAPSULE_FADE_MS = 600 // плавная подмена текстуры колбы на «заряженную»
+const CONVERGE_MS = 450 // схождение к центру в конце слияния
 const VORTEX_WAIT = 480 // performMerge спавнит merged отложенно (~410мс)
 const CAP_LEVEL = 12 // L12+ не авто-мерджим
-const COOLDOWN_MS = 400 // пауза капсулы после цикла
+const COOLDOWN_MS = 12000 // кулдаун капсулы после цикла (3 колбы = throughput)
 
 type CapsuleState = 'idle' | 'pending' | 'busy' | 'cooldown'
 
@@ -68,19 +71,27 @@ interface CapsuleSlot {
   tweens: Phaser.Tweens.Tween[]
   pendingTimer: Phaser.Time.TimerEvent | null
   marks: Phaser.GameObjects.Text[]
+  fxGreen: Phaser.GameObjects.Image | null // «заряженная» текстура поверх колбы
+  fxCool: Phaser.GameObjects.Image | null // тёмный оверлей кулдауна
 }
 
 export class CapsuleMergeController {
   private scene: MainScene
   private merge: MergeController
+  private buildings: BuildingsController
   private slots: CapsuleSlot[]
   // id'ы лягушек, уже зарезервированных капсулами (pending/busy) — исключаем из
   // поиска новых пар.
   private reserved = new Set<string>()
 
-  constructor(scene: MainScene, merge: MergeController) {
+  constructor(
+    scene: MainScene,
+    merge: MergeController,
+    buildings: BuildingsController,
+  ) {
     this.scene = scene
     this.merge = merge
+    this.buildings = buildings
     this.slots = CAPSULE_ROUTES.map((route) => ({
       route,
       state: 'idle' as CapsuleState,
@@ -91,7 +102,24 @@ export class CapsuleMergeController {
       tweens: [],
       pendingTimer: null,
       marks: [],
+      fxGreen: null,
+      fxCool: null,
     }))
+  }
+
+  // Спрайт колбы, ближайший к точке парения этого слота (для FX).
+  private capsuleSpriteFor(slot: CapsuleSlot): Phaser.GameObjects.Image | null {
+    const fx = this.worldPt(slot.route.float).x
+    let best: Phaser.GameObjects.Image | null = null
+    let bestD = Infinity
+    for (const sp of this.buildings.getCapsuleSprites()) {
+      const d = Math.abs(sp.x - fx)
+      if (d < bestD) {
+        bestD = d
+        best = sp
+      }
+    }
+    return best
   }
 
   private worldPt(p: Pt): Phaser.Math.Vector2 {
@@ -130,14 +158,14 @@ export class CapsuleMergeController {
   private onPendingFire(slot: CapsuleSlot): void {
     slot.pendingTimer = null
     if (!this.pairValid(slot)) {
-      this.freeSlot(slot)
+      this.freeSlot(slot, false)
       return
     }
     this.showMark(slot)
     this.scene.time.delayedCall(MARK_SHOW_MS, () => {
       if (slot.state !== 'pending' || !this.pairValid(slot)) {
         this.clearMark(slot)
-        this.freeSlot(slot)
+        this.freeSlot(slot, false)
         return
       }
       this.clearMark(slot)
@@ -256,7 +284,7 @@ export class CapsuleMergeController {
       this.hopAlong(slot, f, pts, () => {
         this.startBob(slot, f)
         slot.arrived++
-        if (slot.arrived >= 2) this.doMerge(slot)
+        if (slot.arrived >= 2) this.enterMerge(slot)
       })
     if (delay > 0) this.scene.time.delayedCall(delay, go)
     else go()
@@ -390,6 +418,86 @@ export class CapsuleMergeController {
 
   // ───────────────────────── мердж + выход ─────────────────────────
 
+  // Обе доехали: подменяем текстуру колбы на «заряженную» (плавно) и даём
+  // лягушкам ~2с поплавать в колбе, потом запускаем сам мердж.
+  private enterMerge(slot: CapsuleSlot): void {
+    this.showCharged(slot)
+    this.scene.time.delayedCall(MERGE_FLOAT_MS, () => {
+      if (slot.state !== 'busy') return
+      this.doMerge(slot)
+    })
+  }
+
+  // Плавная подмена текстуры колбы на «заряженную» (capsule2_semi) — оверлей
+  // поверх обычной, fade-in. Размеры идентичны → бесшовно.
+  private showCharged(slot: CapsuleSlot): void {
+    const sp = this.capsuleSpriteFor(slot)
+    if (!sp) return
+    const ov = this.scene.add
+      .image(sp.x, sp.y, 'bld2_capsule_full')
+      .setOrigin(sp.originX, sp.originY)
+      .setDisplaySize(sp.displayWidth, sp.displayHeight)
+      .setDepth(sp.depth + 0.2)
+      .setAlpha(0)
+    slot.fxGreen = ov
+    this.scene.tweens.add({
+      targets: ov,
+      alpha: 1,
+      duration: CAPSULE_FADE_MS,
+      ease: 'Sine.easeInOut',
+    })
+  }
+
+  private hideCharged(slot: CapsuleSlot): void {
+    const ov = slot.fxGreen
+    if (!ov) return
+    slot.fxGreen = null
+    this.scene.tweens.add({
+      targets: ov,
+      alpha: 0,
+      duration: CAPSULE_FADE_MS,
+      ease: 'Sine.easeInOut',
+      onComplete: () => ov.destroy(),
+    })
+  }
+
+  // Индикатор кулдауна: тёмный силуэт колбы поверх, плавно гаснет за COOLDOWN_MS.
+  private showCooldown(slot: CapsuleSlot): void {
+    const sp = this.capsuleSpriteFor(slot)
+    if (!sp) return
+    const dim = this.scene.add
+      .image(sp.x, sp.y, sp.texture.key)
+      .setOrigin(sp.originX, sp.originY)
+      .setDisplaySize(sp.displayWidth, sp.displayHeight)
+      .setDepth(sp.depth + 0.3)
+      .setTint(0x0a1f12)
+      .setAlpha(0.6)
+    slot.fxCool = dim
+    this.scene.tweens.add({
+      targets: dim,
+      alpha: 0,
+      duration: COOLDOWN_MS,
+      ease: 'Linear',
+      onComplete: () => {
+        dim.destroy()
+        if (slot.fxCool === dim) slot.fxCool = null
+      },
+    })
+  }
+
+  private clearFxImmediate(slot: CapsuleSlot): void {
+    if (slot.fxGreen) {
+      this.scene.tweens.killTweensOf(slot.fxGreen)
+      slot.fxGreen.destroy()
+      slot.fxGreen = null
+    }
+    if (slot.fxCool) {
+      this.scene.tweens.killTweensOf(slot.fxCool)
+      slot.fxCool.destroy()
+      slot.fxCool = null
+    }
+  }
+
   private doMerge(slot: CapsuleSlot): void {
     const [a, b] = slot.frogs
     if (
@@ -399,7 +507,7 @@ export class CapsuleMergeController {
       !this.scene.frogs.includes(b)
     ) {
       this.releaseSurvivors(slot)
-      this.freeSlot(slot)
+      this.freeSlot(slot, false)
       return
     }
     this.killSlotTweens(slot)
@@ -430,7 +538,7 @@ export class CapsuleMergeController {
       if (slot.state !== 'busy') return
       if (!a.container.active || !b.container.active) {
         this.releaseSurvivors(slot)
-        this.freeSlot(slot)
+        this.freeSlot(slot, false)
         return
       }
       // performMerge: спираль + removeFrog + spawnFrog ОТЛОЖЕННО (~410мс).
@@ -445,7 +553,7 @@ export class CapsuleMergeController {
             Phaser.Math.Distance.Between(q.container.x, q.container.y, fl.x, fl.y),
         )[0]
         if (!merged) {
-          this.freeSlot(slot)
+          this.freeSlot(slot, false)
           return
         }
         this.routeOut(slot, merged)
@@ -455,6 +563,7 @@ export class CapsuleMergeController {
 
   // merged едет из колбы назад на поле (реверс маршрута).
   private routeOut(slot: CapsuleSlot, merged: FrogData): void {
+    this.hideCharged(slot) // мердж завершён → колба плавно обратно
     this.prepFrog(merged)
     merged.container.setScale(BASE_SCALE) // performMerge оставил scale 0 → вернуть
     const pts = [
@@ -470,9 +579,12 @@ export class CapsuleMergeController {
 
   // ───────────────────────── teardown / helpers ─────────────────────────
 
-  private freeSlot(slot: CapsuleSlot): void {
+  // cooldown=true → 12с пауза + индикатор (после реального мерджа).
+  // cooldown=false → сразу idle (отмена pending — капсула свободна).
+  private freeSlot(slot: CapsuleSlot, cooldown = true): void {
     this.killSlotTweens(slot)
     this.clearMark(slot)
+    this.hideCharged(slot)
     if (slot.pendingTimer) {
       slot.pendingTimer.remove()
       slot.pendingTimer = null
@@ -481,8 +593,14 @@ export class CapsuleMergeController {
     slot.reservedIds = []
     slot.frogs = []
     slot.arrived = 0
-    slot.state = 'cooldown'
-    slot.cooldownUntil = this.scene.time.now + COOLDOWN_MS
+    if (cooldown) {
+      slot.state = 'cooldown'
+      slot.cooldownUntil = this.scene.time.now + COOLDOWN_MS
+      this.showCooldown(slot)
+    } else {
+      slot.state = 'idle'
+      slot.cooldownUntil = 0
+    }
   }
 
   private killSlotTweens(slot: CapsuleSlot): void {
@@ -511,6 +629,7 @@ export class CapsuleMergeController {
         slot.pendingTimer = null
       }
       this.clearMark(slot)
+      this.clearFxImmediate(slot)
       this.releaseSurvivors(slot)
       slot.frogs = []
       slot.reservedIds = []

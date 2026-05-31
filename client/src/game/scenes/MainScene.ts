@@ -280,12 +280,13 @@ export class MainScene extends Phaser.Scene {
     this.poop = new PoopController(this, this.merge)
     // Phase 21-04 (Wave 4): magnet controller — нужен merge.findClosestSameLevelPair / performMerge.
     this.magnet = new MagnetController(this, this.merge)
-    // Loc2: капсулы авто-мерджат пары (маршрут → колба → мердж).
-    this.capsuleMerge = new CapsuleMergeController(this, this.merge)
     // Дрон автосбора — box.onBoxTapped открывает обычные боксы на Болоте.
     this.drone = new DroneController(this, this.box)
     // Фабрика — статичный спрайт на локации 1.
     this.buildings = new BuildingsController(this)
+    // Loc2: капсулы авто-мерджат пары (маршрут → колба → мердж). Нужен buildings
+    // для FX подмены текстуры колбы во время мерджа.
+    this.capsuleMerge = new CapsuleMergeController(this, this.merge, this.buildings)
     // Phase 21-05 (Wave 5): location-transition + interaction controllers.
     this.locTransition = new LocationTransition(
       this,
