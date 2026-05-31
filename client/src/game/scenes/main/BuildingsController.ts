@@ -107,23 +107,23 @@ const BUILDINGS_LOC2: readonly BuildingDef[] = [
   {
     key: 'bld2_capsule',
     src: '/builds_loc2/capsule1.png',
-    xFrac: 0.4,
+    xFrac: 0.3,
     yFrac: 0.83,
-    widthFrac: 0.18,
+    widthFrac: 0.26,
   },
   {
     key: 'bld2_capsule',
     src: '/builds_loc2/capsule1.png',
-    xFrac: 0.64,
+    xFrac: 0.74,
     yFrac: 0.83,
-    widthFrac: 0.18,
+    widthFrac: 0.26,
   },
   {
     key: 'bld2_capsule',
     src: '/builds_loc2/capsule1.png',
     xFrac: 0.52,
     yFrac: 0.92,
-    widthFrac: 0.24,
+    widthFrac: 0.28,
   },
 ] as const
 
