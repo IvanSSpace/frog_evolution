@@ -93,7 +93,7 @@ const BUILDINGS_LOC2: readonly BuildingDef[] = [
     src: '/builds_loc2/frog_factory2loc.png',
     xFrac: 0.28,
     yFrac: 0.46,
-    widthFrac: 0.34,
+    widthFrac: 0.46,
   },
   {
     key: 'bld2_droner',
@@ -102,12 +102,28 @@ const BUILDINGS_LOC2: readonly BuildingDef[] = [
     yFrac: 0.48,
     widthFrac: 0.42,
   },
+  // Капсула репликации: центральная (крупнее) + 2 позади неё слева/справа.
+  // Боковые с меньшим yFrac → ниже depth → рендерятся ЗА центральной.
+  {
+    key: 'bld2_capsule',
+    src: '/builds_loc2/capsule1.png',
+    xFrac: 0.4,
+    yFrac: 0.83,
+    widthFrac: 0.18,
+  },
+  {
+    key: 'bld2_capsule',
+    src: '/builds_loc2/capsule1.png',
+    xFrac: 0.64,
+    yFrac: 0.83,
+    widthFrac: 0.18,
+  },
   {
     key: 'bld2_capsule',
     src: '/builds_loc2/capsule1.png',
     xFrac: 0.52,
-    yFrac: 0.9,
-    widthFrac: 0.2,
+    yFrac: 0.92,
+    widthFrac: 0.24,
   },
 ] as const
 
