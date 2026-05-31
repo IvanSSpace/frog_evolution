@@ -189,12 +189,18 @@ export class BuildingsController {
       // Iso-сортировка между зданиями: ниже по y = ближе к зрителю. main —
       // поверх дронов (depth > drone 96000), чтобы дрон проходил ЗА зданием
       // при обходе на RTB-маршруте.
+      // Loc2-капсулы: depth ВЫШЕ лягушек (frog depth = container.y ~1.7*H) —
+      // лягушка-мердж видна ВНУТРИ колбы (за полупрозрачным стеклом), а не поверх.
+      const isLoc2Capsule =
+        b.key === 'bld2_capsule' || b.key === 'bld2_capsule_green'
       sp.setDepth(
-        b.key === 'bld_main' ||
-          b.key === 'bld_scaner' ||
-          b.key === 'bld_collector'
-          ? 200000
-          : b.yFrac * 100,
+        isLoc2Capsule
+          ? 300000 + b.yFrac
+          : b.key === 'bld_main' ||
+              b.key === 'bld_scaner' ||
+              b.key === 'bld_collector'
+            ? 200000
+            : b.yFrac * 100,
       )
       // Squash-jiggle + открытие модалки — на ОТПУСКАНИЕ (pointerup), не на
       // нажатие: иначе анимация дёргается при старте скролла. И только если это

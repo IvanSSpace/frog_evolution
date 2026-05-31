@@ -67,7 +67,7 @@ interface CapsuleSlot {
   cooldownUntil: number
   tweens: Phaser.Tweens.Tween[]
   pendingTimer: Phaser.Time.TimerEvent | null
-  mark: Phaser.GameObjects.Text | null
+  marks: Phaser.GameObjects.Text[]
 }
 
 export class CapsuleMergeController {
@@ -90,7 +90,7 @@ export class CapsuleMergeController {
       cooldownUntil: 0,
       tweens: [],
       pendingTimer: null,
-      mark: null,
+      marks: [],
     }))
   }
 
@@ -165,42 +165,44 @@ export class CapsuleMergeController {
     )
   }
 
-  // «!» над серединой пары — сигнал «идём в колбу».
+  // «!» над КАЖДОЙ из двух лягушек — сигнал «идём в колбу».
   private showMark(slot: CapsuleSlot): void {
-    const [a, b] = slot.frogs
-    const mx = (a.container.x + b.container.x) / 2
-    const my = Math.min(a.container.y, b.container.y) - 48 * DPR
-    const txt = this.scene.add
-      .text(mx, my, '!', {
-        fontFamily: "'Russo One', system-ui, sans-serif",
-        fontSize: `${Math.round(40 * DPR)}px`,
-        color: '#ffe14d',
+    slot.marks = []
+    for (const f of slot.frogs) {
+      const mx = f.container.x
+      const my = f.container.y - 52 * DPR
+      const txt = this.scene.add
+        .text(mx, my, '!', {
+          fontFamily: "'Russo One', system-ui, sans-serif",
+          fontSize: `${Math.round(40 * DPR)}px`,
+          color: '#ffe14d',
+        })
+        .setOrigin(0.5)
+        .setDepth(1000000)
+      txt.setStroke('#7a4b00', 6 * DPR)
+      txt.setScale(0)
+      slot.marks.push(txt)
+      this.scene.tweens.add({
+        targets: txt,
+        scale: 1,
+        duration: 200,
+        ease: 'Back.easeOut',
       })
-      .setOrigin(0.5)
-      .setDepth(1000000)
-    txt.setStroke('#7a4b00', 6 * DPR)
-    txt.setScale(0)
-    slot.mark = txt
-    this.scene.tweens.add({
-      targets: txt,
-      scale: 1,
-      duration: 200,
-      ease: 'Back.easeOut',
-    })
-    this.scene.tweens.add({
-      targets: txt,
-      y: my - 10 * DPR,
-      duration: MARK_SHOW_MS,
-      ease: 'Sine.easeOut',
-    })
+      this.scene.tweens.add({
+        targets: txt,
+        y: my - 10 * DPR,
+        duration: MARK_SHOW_MS,
+        ease: 'Sine.easeOut',
+      })
+    }
   }
 
   private clearMark(slot: CapsuleSlot): void {
-    if (slot.mark) {
-      this.scene.tweens.killTweensOf(slot.mark)
-      slot.mark.destroy()
-      slot.mark = null
+    for (const m of slot.marks) {
+      this.scene.tweens.killTweensOf(m)
+      m.destroy()
     }
+    slot.marks = []
   }
 
   // ───────────────────────── маршрут в колбу ─────────────────────────
@@ -239,11 +241,17 @@ export class CapsuleMergeController {
     floatDx: number,
     delay: number,
   ): void {
-    const pts = [
+    // Маршрут начинается с ТЕКУЩЕЙ позиции лягушки — она допрыгивает до старта
+    // пути (а не телепортируется туда). Остальные точки смещены на floatDx.
+    const route = [
       ...TRUNK.map((p) => this.worldPt(p)),
       this.worldPt(slot.route.entry),
       this.worldPt(slot.route.float),
     ].map((p) => new Phaser.Math.Vector2(p.x + floatDx, p.y))
+    const pts = [
+      new Phaser.Math.Vector2(f.container.x, f.container.y),
+      ...route,
+    ]
     const go = () =>
       this.hopAlong(slot, f, pts, () => {
         this.startBob(slot, f)
