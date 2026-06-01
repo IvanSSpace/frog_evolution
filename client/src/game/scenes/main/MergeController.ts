@@ -33,6 +33,8 @@ import {
 } from '../../../store/gameStore'
 
 const SIX_HOURS_MS = 6 * 60 * 60 * 1000
+// Loc1 cap-merge L6+L6 → столько эктоплазмы (рост уходит в Loc2).
+const ECTO_PER_L6MERGE = 3
 import { useOnboardingStore } from '../../../store/onboarding/onboardingSlice'
 import { eventBus } from '../../../store/eventBus'
 import {
@@ -346,10 +348,42 @@ export class MergeController {
         return
       }
 
-      const newLevel = Math.min(a.level + 1, MAX_LEVEL)
-      const newCfg = FROG_LEVELS[newLevel - 1]
       const store = useGameStore.getState()
       const currentLocId = store.currentLocation
+
+      // Loc1 cap-merge: L6+L6 → ЭКТОПЛАЗМА (не L7). Рост уходит в Loc2 — туда же
+      // указывает направление; L7 приходят с конвейера Loc2, не отсюда.
+      if (oldLevel === 6 && currentLocId === 1) {
+        store.removeFrogFromLocation(currentLocId, 6)
+        store.removeFrogFromLocation(currentLocId, 6)
+        store.addEctoplasm(ECTO_PER_L6MERGE)
+        this.flashEctoplasm(cx, cy, ECTO_PER_L6MERGE)
+        // Первый L6+L6 открывает Loc2 (раньше это делал спавн L7; теперь L7 нет).
+        const wasNew = store.markDiscovered(7)
+        if (wasNew) {
+          eventBus.emit('frog:discovered', { level: 7 })
+          const unlockedLocId = getLocationUnlockedByLevel(7)
+          if (unlockedLocId !== null) {
+            eventBus.emit('location:unlocked', { locationId: unlockedLocId })
+          }
+        }
+        mergeApi(6, currentLocId)
+          .then((res) => {
+            if (res.ok) {
+              useGameStore.setState({
+                locationFrogs: res.locationFrogs,
+                discoveredLevels: res.discoveredLevels,
+              })
+            } else {
+              void saveGameState(true)
+            }
+          })
+          .catch((e) => console.warn('[merge] server sync failed:', e))
+        return
+      }
+
+      const newLevel = Math.min(a.level + 1, MAX_LEVEL)
+      const newCfg = FROG_LEVELS[newLevel - 1]
 
       store.removeFrogFromLocation(currentLocId, oldLevel)
       store.removeFrogFromLocation(currentLocId, oldLevel)
@@ -549,6 +583,41 @@ export class MergeController {
       alpha: 0,
       delay: 1000,
       duration: 700,
+      ease: 'Sine.easeIn',
+      onComplete: () => t.destroy(),
+    })
+  }
+
+  // Фиолетовый «+N» при L6+L6 merge (показывает что merge дал эктоплазму).
+  private flashEctoplasm(x: number, y: number, n: number) {
+    const scene = this.scene
+    const t = scene.add.text(x, y - 18 * DPR, `+${n} 🟣`, {
+      fontFamily: 'Russo One, sans-serif',
+      fontSize: `${14 * DPR}px`,
+      color: '#c77dff',
+      stroke: '#3a1a52',
+      strokeThickness: 3 * DPR,
+    })
+    t.setOrigin(0.5)
+    t.setDepth(99998)
+    t.setScale(0)
+    scene.tweens.add({
+      targets: t,
+      scale: 1,
+      duration: 200,
+      ease: 'Back.easeOut',
+    })
+    scene.tweens.add({
+      targets: t,
+      y: y - 60 * DPR,
+      duration: 1600,
+      ease: 'Sine.easeOut',
+    })
+    scene.tweens.add({
+      targets: t,
+      alpha: 0,
+      delay: 1000,
+      duration: 600,
       ease: 'Sine.easeIn',
       onComplete: () => t.destroy(),
     })
