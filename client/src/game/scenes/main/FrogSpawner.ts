@@ -216,11 +216,13 @@ export class FrogSpawner {
       loop: true,
       callback: () => {
         if (frog.isMerging) return
+        // Едет в капсулу (isAttracted) / магнит тянет → не какает (визуально).
+        if (frog.isAttracted) return
         // Loc2: с шансом 18% лягушка какает фиолетовую слизь (эктоплазму) —
         // лежит на поле, собирается ecto-дроном. Иначе — обычная какашка.
         if (
           useGameStore.getState().currentLocation === 2 &&
-          Math.random() < 0.18
+          Math.random() < 0.06
         ) {
           scene.spawnEctoPoop(frog)
         } else {
