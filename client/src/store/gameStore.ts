@@ -38,6 +38,10 @@ import {
   saveUpgrades,
   loadEctoplasm,
   saveEctoplasm,
+  loadCurrencyY,
+  saveCurrencyY,
+  loadLoc2Upgrades,
+  saveLoc2Upgrades,
   loadFrogPurchases,
   saveFrogPurchases,
   loadFrogTiers,
@@ -98,6 +102,91 @@ export type BuyFrogResult =
   | { ok: true }
   | { ok: false; reason: 'noGold' | 'capFull' | 'invalid' }
 
+// ─── Loc2/Loc3 экономика (Чанк 2) ────────────────────────────────────────────
+// Апгрейды Loc2: conveyorSpeed за gold; ecto*/capsule* за эктоплазму. Эффекты
+// (реальная скорость дрона/конвейера, число дронов, длительность капсул) читают
+// consumers в scenes/main/* — см. геттеры loc2*Effect ниже.
+// ⚠️ PLACEHOLDER balance: все costs/кривые эффектов временные, тюнинг в конце.
+
+export type EctoUpgradeKey =
+  | 'ectoDroneSpeed'
+  | 'ectoDroneCount'
+  | 'ectoDroneValue'
+  | 'capsuleSpeed'
+  | 'capsuleCooldown'
+
+export type Loc2UpgradeKey = 'conveyorSpeed' | EctoUpgradeKey
+
+export type Loc2Upgrades = Record<Loc2UpgradeKey, number>
+
+export const LOC2_UPGRADES_DEFAULT: Loc2Upgrades = {
+  conveyorSpeed: 0,
+  ectoDroneSpeed: 0,
+  ectoDroneCount: 0,
+  ectoDroneValue: 0,
+  capsuleSpeed: 0,
+  capsuleCooldown: 0,
+}
+
+// Мета апгрейдов: валюта, maxLevel, цены за уровень (i → i+1). PLACEHOLDER.
+export const LOC2_UPGRADE_META: Record<
+  Loc2UpgradeKey,
+  { currency: 'gold' | 'ecto'; maxLevel: number; costs: readonly number[] }
+> = {
+  conveyorSpeed: {
+    currency: 'gold',
+    maxLevel: 5,
+    costs: [500, 2_000, 8_000, 30_000, 100_000],
+  },
+  ectoDroneSpeed: { currency: 'ecto', maxLevel: 5, costs: [10, 25, 50, 90, 150] },
+  ectoDroneCount: { currency: 'ecto', maxLevel: 3, costs: [30, 80, 180] },
+  ectoDroneValue: { currency: 'ecto', maxLevel: 5, costs: [15, 35, 70, 120, 200] },
+  capsuleSpeed: { currency: 'ecto', maxLevel: 5, costs: [12, 30, 60, 100, 160] },
+  capsuleCooldown: {
+    currency: 'ecto',
+    maxLevel: 5,
+    costs: [12, 30, 60, 100, 160],
+  },
+}
+
+/** Цена следующего уровня апгрейда Loc2 (Infinity если макс). */
+export function loc2UpgradeCost(key: Loc2UpgradeKey, level: number): number {
+  const arr = LOC2_UPGRADE_META[key].costs
+  return level >= arr.length ? Infinity : arr[level]
+}
+
+/** Безопасная конверсия сырого Record в Loc2Upgrades (дефолт для отсутствующих). */
+export function toLoc2Upgrades(
+  raw: Record<string, number> | null | undefined,
+): Loc2Upgrades {
+  const r = raw ?? {}
+  const out = { ...LOC2_UPGRADES_DEFAULT }
+  for (const k of Object.keys(LOC2_UPGRADES_DEFAULT) as Loc2UpgradeKey[]) {
+    const v = r[k]
+    if (typeof v === 'number' && v >= 0) out[k] = Math.floor(v)
+  }
+  return out
+}
+
+// ─── Геттеры эффектов (PLACEHOLDER кривые) — читают consumers в scenes/main/* ──
+const CONVEYOR_BASE_MS = 6000 // базовый интервал выпуска L7 (см. completion-plan)
+/** Интервал конвейера (мс): база × 0.85^level. Меньше = быстрее. */
+export function conveyorIntervalMs(level: number): number {
+  return Math.round(CONVEYOR_BASE_MS * Math.pow(0.85, Math.max(0, level)))
+}
+/** Множитель скорости ecto-дрона: 1 + 0.15×level. */
+export function ectoDroneSpeedMult(level: number): number {
+  return 1 + 0.15 * Math.max(0, level)
+}
+/** Число ecto-дронов: 1 + level (ectoDroneCount). */
+export function ectoDroneCountFor(level: number): number {
+  return 1 + Math.max(0, level)
+}
+/** Множитель ценности сбора эктоплазмы: 1 + 0.25×level. */
+export function ectoDroneValueMult(level: number): number {
+  return 1 + 0.25 * Math.max(0, level)
+}
+
 // Phase 22: user preferences хранимые на сервере (cosmic.preferences).
 // Каждое поле всё ещё имеет свой "primary" source (localStorage helpers /
 // специализированные setters), но store держит snapshot для sync.
@@ -112,9 +201,22 @@ interface GameStateBase {
   addGold: (amount: number) => void
   spendGold: (amount: number) => boolean
 
-  // Эктоплазма (loc2): фиолетовая слизь, собирается дронами loc2. Пока локально.
+  // Эктоплазма (loc2): фиолетовая слизь, собирается дронами loc2.
   ectoplasm: number
   addEctoplasm: (amount: number) => void
+  // Списать эктоплазму (для покупок). false если недостаточно.
+  spendEctoplasm: (amount: number) => boolean
+
+  // Валюта Y (Loc3): выдаётся за L12+L12 merge. ⚠️ Grant вызывает MergeController
+  // (Чанк 1) → addCurrencyY. Имя/иконка — PLACEHOLDER (не финал). Persist: cosmic blob.
+  currencyY: number
+  addCurrencyY: (amount: number) => void
+
+  // Апгрейды Loc2 (conveyorSpeed=gold, ecto*/capsule*=эктоплазма). Эффекты читают
+  // consumers в scenes/main/* через геттеры conveyorIntervalMs/ectoDrone* (Чанк 1).
+  loc2Upgrades: Loc2Upgrades
+  buyConveyorSpeed: () => boolean
+  buyEctoUpgrade: (key: EctoUpgradeKey) => boolean
 
   upgrades: Upgrades
   buyUpgrade: (key: PurchasableUpgrade) => Promise<boolean>
@@ -306,6 +408,49 @@ export const useGameStore = create<GameState>((set, get) => ({
       saveEctoplasm(next)
       return { ectoplasm: next }
     }),
+  spendEctoplasm: (amount) => {
+    if (get().ectoplasm < amount) return false
+    set((s) => {
+      const next = Math.max(0, s.ectoplasm - amount)
+      saveEctoplasm(next)
+      return { ectoplasm: next }
+    })
+    return true
+  },
+
+  currencyY: loadCurrencyY(),
+  addCurrencyY: (amount) =>
+    set((s) => {
+      const next = Math.max(0, s.currencyY + amount)
+      saveCurrencyY(next)
+      return { currencyY: next }
+    }),
+
+  loc2Upgrades: toLoc2Upgrades(loadLoc2Upgrades()),
+  buyConveyorSpeed: () => {
+    const s = get()
+    const level = s.loc2Upgrades.conveyorSpeed
+    if (level >= LOC2_UPGRADE_META.conveyorSpeed.maxLevel) return false
+    const cost = loc2UpgradeCost('conveyorSpeed', level)
+    if (s.gold < cost) return false
+    const next = { ...s.loc2Upgrades, conveyorSpeed: level + 1 }
+    saveLoc2Upgrades(next)
+    set({ gold: s.gold - cost, loc2Upgrades: next })
+    return true
+  },
+  buyEctoUpgrade: (key) => {
+    const s = get()
+    const level = s.loc2Upgrades[key]
+    if (level >= LOC2_UPGRADE_META[key].maxLevel) return false
+    const cost = loc2UpgradeCost(key, level)
+    if (s.ectoplasm < cost) return false
+    const next = { ...s.loc2Upgrades, [key]: level + 1 }
+    const ectoNext = Math.max(0, s.ectoplasm - cost)
+    saveLoc2Upgrades(next)
+    saveEctoplasm(ectoNext)
+    set({ ectoplasm: ectoNext, loc2Upgrades: next })
+    return true
+  },
 
   upgrades: loadUpgrades(),
   devResetUpgrades: () => {
