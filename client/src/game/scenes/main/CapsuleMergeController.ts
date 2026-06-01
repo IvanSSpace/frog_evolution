@@ -72,7 +72,6 @@ interface CapsuleSlot {
   pendingTimer: Phaser.Time.TimerEvent | null
   marks: Phaser.GameObjects.Text[]
   fxGreen: Phaser.GameObjects.Image | null // «заряженная» текстура поверх колбы
-  fxCool: Phaser.GameObjects.Image | null // тёмный оверлей кулдауна
 }
 
 export class CapsuleMergeController {
@@ -103,7 +102,6 @@ export class CapsuleMergeController {
       pendingTimer: null,
       marks: [],
       fxGreen: null,
-      fxCool: null,
     }))
   }
 
@@ -451,40 +449,19 @@ export class CapsuleMergeController {
     })
   }
 
-  private hideCharged(slot: CapsuleSlot): void {
+  // Плавно убрать «заряженную» зелёную → проступает обычная cyan под ней.
+  // Длительность: быстрая при отмене, COOLDOWN_MS (10с) как остывание капсулы.
+  private hideCharged(slot: CapsuleSlot, durationMs: number): void {
     const ov = slot.fxGreen
     if (!ov) return
     slot.fxGreen = null
+    this.scene.tweens.killTweensOf(ov)
     this.scene.tweens.add({
       targets: ov,
       alpha: 0,
-      duration: CAPSULE_FADE_MS,
+      duration: durationMs,
       ease: 'Sine.easeInOut',
       onComplete: () => ov.destroy(),
-    })
-  }
-
-  // Индикатор кулдауна: тёмный силуэт колбы поверх, плавно гаснет за COOLDOWN_MS.
-  private showCooldown(slot: CapsuleSlot): void {
-    const sp = this.capsuleSpriteFor(slot)
-    if (!sp) return
-    const dim = this.scene.add
-      .image(sp.x, sp.y, sp.texture.key)
-      .setOrigin(sp.originX, sp.originY)
-      .setDisplaySize(sp.displayWidth, sp.displayHeight)
-      .setDepth(sp.depth + 0.3)
-      .setTint(0x0a1f12)
-      .setAlpha(0.6)
-    slot.fxCool = dim
-    this.scene.tweens.add({
-      targets: dim,
-      alpha: 0,
-      duration: COOLDOWN_MS,
-      ease: 'Linear',
-      onComplete: () => {
-        dim.destroy()
-        if (slot.fxCool === dim) slot.fxCool = null
-      },
     })
   }
 
@@ -493,11 +470,6 @@ export class CapsuleMergeController {
       this.scene.tweens.killTweensOf(slot.fxGreen)
       slot.fxGreen.destroy()
       slot.fxGreen = null
-    }
-    if (slot.fxCool) {
-      this.scene.tweens.killTweensOf(slot.fxCool)
-      slot.fxCool.destroy()
-      slot.fxCool = null
     }
   }
 
@@ -566,7 +538,8 @@ export class CapsuleMergeController {
 
   // merged едет из колбы назад на поле (реверс маршрута).
   private routeOut(slot: CapsuleSlot, merged: FrogData): void {
-    this.hideCharged(slot) // мердж завершён → колба плавно обратно
+    // Зелёную НЕ убираем здесь — она держится и плавно вернётся в cyan за 10с
+    // (остывание) в freeSlot, когда merged вернётся на поле.
     this.prepFrog(merged)
     merged.container.setScale(BASE_SCALE) // performMerge оставил scale 0 → вернуть
     // Финальная точка — ВГЛУБЬ поля (а не на край у trunk[0]), чтобы лягушка
@@ -595,7 +568,6 @@ export class CapsuleMergeController {
   private freeSlot(slot: CapsuleSlot, cooldown = true): void {
     this.killSlotTweens(slot)
     this.clearMark(slot)
-    this.hideCharged(slot)
     if (slot.pendingTimer) {
       slot.pendingTimer.remove()
       slot.pendingTimer = null
@@ -605,12 +577,14 @@ export class CapsuleMergeController {
     slot.frogs = []
     slot.arrived = 0
     if (cooldown) {
+      // Остывание: зелёная «заряженная» плавно возвращается в cyan за 10с.
       slot.state = 'cooldown'
       slot.cooldownUntil = this.scene.time.now + COOLDOWN_MS
-      this.showCooldown(slot)
+      this.hideCharged(slot, COOLDOWN_MS)
     } else {
       slot.state = 'idle'
       slot.cooldownUntil = 0
+      this.hideCharged(slot, CAPSULE_FADE_MS)
     }
   }
 
