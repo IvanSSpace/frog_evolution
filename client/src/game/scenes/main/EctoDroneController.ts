@@ -83,11 +83,19 @@ export class EctoDroneController {
     // Есть фиолетовая слизь → летим зависать НАД ней (пушка 45° вниз-влево);
     // иначе — случайная точка патруля.
     const poop = this.nearestPoop()
-    const target = poop
-      ? new Phaser.Math.Vector2(poop.x + HOVER_OFF, poop.y - HOVER_OFF)
-      : this.randomFieldPoint()
-    // К слизи дрон зависает справа от неё → всегда смотрит ВЛЕВО на неё.
-    sp.setFlipX(poop ? true : target.x < sp.x)
+    // Зависаем над слизью с БЛИЖНЕЙ стороны (меньше лёта), пушкой к ней.
+    let target: Phaser.Math.Vector2
+    if (poop) {
+      const onLeft = sp.x < poop.x // дрон слева от слизи → заходим слева
+      target = new Phaser.Math.Vector2(
+        poop.x + (onLeft ? -HOVER_OFF : HOVER_OFF),
+        poop.y - HOVER_OFF,
+      )
+      sp.setFlipX(!onLeft) // справа от слизи → смотрит влево (flipX), и наоборот
+    } else {
+      target = this.randomFieldPoint()
+      sp.setFlipX(target.x < sp.x)
+    }
     const dist = Phaser.Math.Distance.Between(sp.x, sp.y, target.x, target.y)
     const tw = this.scene.tweens.add({
       targets: sp,
@@ -119,8 +127,10 @@ export class EctoDroneController {
     // забираем из общего списка сразу (чтобы др. логика не трогала)
     this.scene.ectoPoops = this.scene.ectoPoops.filter((p) => p !== poop)
     this.scene.tweens.killTweensOf(poop)
-    sp.setFlipX(true) // смотрит на слизь (она слева-вниз) всё время сбора
-    const cannonX = sp.x - 8 * DPR
+    // Сторона слизи относительно дрона → смотрит на неё, пушка тянет в её сторону.
+    const slimeLeft = poop.x < sp.x
+    sp.setFlipX(slimeLeft)
+    const cannonX = sp.x + (slimeLeft ? -8 : 8) * DPR
     const cannonY = sp.y + sp.displayHeight * 0.46
     const suckTw = this.scene.tweens.add({
       targets: poop,
