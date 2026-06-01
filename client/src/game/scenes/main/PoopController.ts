@@ -111,6 +111,9 @@ export class PoopController {
     const behindX = x + (frog.facingRight ? -10 * DPR : 10 * DPR)
     const img = scene.add.image(behindX, y + 6 * DPR, 'goo')
     img.setTint(0x9d4edd) // фиолетовая
+    // Ценность = от уровня лягушки (выше уровень → больше эктоплазмы). Дрон
+    // читает это при сборе. L7→1, L8→2, … (max(1, level-6)).
+    img.setData('ecto', Math.max(1, frog.level - 6))
     img.setAlpha(0)
     img.setScale(0.4 * finalScale)
     img.setDepth(y) // как лягушки — iso-сортировка по y

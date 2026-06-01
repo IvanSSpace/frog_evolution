@@ -141,8 +141,10 @@ export class EctoDroneController {
       duration: SUCK_MS,
       ease: 'Sine.easeIn',
       onComplete: () => {
+        // Ценность задана на слизи при спавне (зависит от уровня лягушки).
+        const val = (poop.getData('ecto') as number) || ECTO_PER_POOP
         poop.destroy()
-        useGameStore.getState().addEctoplasm(ECTO_PER_POOP)
+        useGameStore.getState().addEctoplasm(val)
         onDone()
       },
     })
