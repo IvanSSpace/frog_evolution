@@ -7,6 +7,7 @@
 
 import Phaser from 'phaser'
 import type { MainScene } from '../MainScene'
+import { useGameStore } from '../../../store/gameStore'
 import {
   BOX_DISPLAY_SIZE,
   DPR,
@@ -18,6 +19,8 @@ import {
 const DRONE_PX = BOX_DISPLAY_SIZE * 0.95 // экранный размер (как дроны loc1)
 const FLY_SPEED = 90 * DPR // px/сек
 const DRONE_DEPTH = 96000 // поверх лягушек, как дроны loc1
+const ECTO_PER_POOP = 1 // эктоплазма за одну собранную слизь
+const COLLECT_PAUSE = 200 // мс над слизью при сборе
 
 export class EctoDroneController {
   private scene: MainScene
@@ -57,25 +60,62 @@ export class EctoDroneController {
     }
   }
 
+  private nearestPoop(): Phaser.GameObjects.Image | null {
+    const sp = this.sprite
+    if (!sp) return null
+    let best: Phaser.GameObjects.Image | null = null
+    let bestD = Infinity
+    for (const p of this.scene.ectoPoops) {
+      if (!p.active) continue
+      const d = Phaser.Math.Distance.Between(sp.x, sp.y, p.x, p.y)
+      if (d < bestD) {
+        bestD = d
+        best = p
+      }
+    }
+    return best
+  }
+
   private wanderStep(): void {
     const sp = this.sprite
     if (!sp || !sp.active) return
-    const t = this.randomFieldPoint()
-    sp.setFlipX(t.x < sp.x)
-    const dist = Phaser.Math.Distance.Between(sp.x, sp.y, t.x, t.y)
+    // Есть фиолетовая слизь → летим собирать её; иначе — случайная точка патруля.
+    const poop = this.nearestPoop()
+    const target = poop ?? this.randomFieldPoint()
+    sp.setFlipX(target.x < sp.x)
+    const dist = Phaser.Math.Distance.Between(sp.x, sp.y, target.x, target.y)
     const tw = this.scene.tweens.add({
       targets: sp,
-      x: t.x,
-      y: t.y,
-      duration: Math.max(500, (dist / FLY_SPEED) * 1000),
+      x: target.x,
+      y: target.y,
+      duration: Math.max(poop ? 250 : 500, (dist / FLY_SPEED) * 1000),
       ease: 'Sine.easeInOut',
       onComplete: () => {
-        this.scene.time.delayedCall(Phaser.Math.Between(200, 700), () =>
-          this.wanderStep(),
-        )
+        if (poop && poop.active) {
+          this.collect(poop)
+          this.scene.time.delayedCall(COLLECT_PAUSE, () => this.wanderStep())
+        } else {
+          this.scene.time.delayedCall(Phaser.Math.Between(200, 700), () =>
+            this.wanderStep(),
+          )
+        }
       },
     })
     this.tweens.push(tw)
+  }
+
+  private collect(poop: Phaser.GameObjects.Image): void {
+    this.scene.ectoPoops = this.scene.ectoPoops.filter((p) => p !== poop)
+    this.scene.tweens.killTweensOf(poop)
+    this.scene.tweens.add({
+      targets: poop,
+      scale: 0,
+      alpha: 0,
+      duration: 200,
+      ease: 'Back.easeIn',
+      onComplete: () => poop.destroy(),
+    })
+    useGameStore.getState().addEctoplasm(ECTO_PER_POOP)
   }
 
   reset(): void {
