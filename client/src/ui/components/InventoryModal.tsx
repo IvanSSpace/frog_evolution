@@ -315,7 +315,7 @@ export function InventoryModal({ onClose }: Props) {
         {/* Header — как у Shop/FrogShop */}
         <div
           className="relative flex items-center justify-between px-5 pt-4 pb-3"
-          style={{ borderBottom: '3px dashed rgba(77,107,31,0.4)' }}
+          style={{ borderBottom: '1px solid rgba(77,107,31,0.4)' }}
         >
           <h2
             className="ff-display ff-stroke-white text-2xl"
@@ -360,7 +360,7 @@ export function InventoryModal({ onClose }: Props) {
                 flexDirection: 'column',
                 gap: 12,
                 marginTop: 14,
-                borderTop: '2px dashed rgba(77,107,31,0.3)',
+                borderTop: '1px solid rgba(77,107,31,0.3)',
                 paddingTop: 12,
               }}
             >

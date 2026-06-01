@@ -60,7 +60,7 @@ export function ShopModal({ onClose }: Props) {
       >
         <div
           className="relative flex items-center justify-between px-5 pt-4 pb-3"
-          style={{ borderBottom: '3px dashed rgba(77,107,31,0.4)' }}
+          style={{ borderBottom: '1px solid rgba(77,107,31,0.4)' }}
         >
           <h2
             className="ff-display ff-stroke-white text-3xl"

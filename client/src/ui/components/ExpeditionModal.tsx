@@ -570,7 +570,7 @@ export function ExpeditionModal({ onClose }: Props) {
           {/* Header — табы кораблей слева + закрыть справа (без заголовка). */}
           <div
             className="flex items-center gap-2 px-3 pt-3 pb-2 flex-shrink-0"
-            style={{ borderBottom: '3px dashed rgba(77,107,31,0.4)' }}
+            style={{ borderBottom: '1px solid rgba(77,107,31,0.4)' }}
           >
             <div
               className="flex-1 flex items-center gap-1.5 overflow-x-auto"

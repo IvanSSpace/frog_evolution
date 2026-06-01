@@ -192,7 +192,7 @@ export function CreateRequestDialog({ clanId, onClose, onCreated }: Props) {
           {/* Header */}
           <div
             className="flex items-center gap-1.5 px-3 pt-4 pb-3 flex-shrink-0"
-            style={{ borderBottom: '3px dashed rgba(77,107,31,0.4)' }}
+            style={{ borderBottom: '1px solid rgba(77,107,31,0.4)' }}
           >
             <span className="ff-display flex-1" style={{ fontSize: 20, color: '#2f4a1f' }}>
               Новый запрос

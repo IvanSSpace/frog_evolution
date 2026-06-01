@@ -138,7 +138,7 @@ export function ClanRosterModal({ onClose }: Props) {
           {/* Header */}
           <div
             className="flex items-center gap-1.5 px-3 pt-4 pb-3 flex-shrink-0"
-            style={{ borderBottom: '3px dashed rgba(77,107,31,0.4)' }}
+            style={{ borderBottom: '1px solid rgba(77,107,31,0.4)' }}
           >
             <span className="ff-display flex-1" style={{ fontSize: 20, color: '#e6ffd0' }}>
               Участники союза
@@ -220,7 +220,7 @@ export function ClanRosterModal({ onClose }: Props) {
           {/* Footer — leave button */}
           <div
             className="flex-shrink-0 px-4 py-3"
-            style={{ borderTop: '3px dashed rgba(77,107,31,0.4)' }}
+            style={{ borderTop: '1px solid rgba(77,107,31,0.4)' }}
           >
             <button
               onClick={handleLeave}
