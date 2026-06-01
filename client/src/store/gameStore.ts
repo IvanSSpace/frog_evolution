@@ -138,10 +138,22 @@ export const LOC2_UPGRADE_META: Record<
     maxLevel: 5,
     costs: [500, 2_000, 8_000, 30_000, 100_000],
   },
-  ectoDroneSpeed: { currency: 'ecto', maxLevel: 5, costs: [10, 25, 50, 90, 150] },
+  ectoDroneSpeed: {
+    currency: 'ecto',
+    maxLevel: 5,
+    costs: [10, 25, 50, 90, 150],
+  },
   ectoDroneCount: { currency: 'ecto', maxLevel: 3, costs: [30, 80, 180] },
-  ectoDroneValue: { currency: 'ecto', maxLevel: 5, costs: [15, 35, 70, 120, 200] },
-  capsuleSpeed: { currency: 'ecto', maxLevel: 5, costs: [12, 30, 60, 100, 160] },
+  ectoDroneValue: {
+    currency: 'ecto',
+    maxLevel: 5,
+    costs: [15, 35, 70, 120, 200],
+  },
+  capsuleSpeed: {
+    currency: 'ecto',
+    maxLevel: 5,
+    costs: [12, 30, 60, 100, 160],
+  },
   capsuleCooldown: {
     currency: 'ecto',
     maxLevel: 5,
@@ -185,6 +197,17 @@ export function ectoDroneCountFor(level: number): number {
 /** Множитель ценности сбора эктоплазмы: 1 + 0.25×level. */
 export function ectoDroneValueMult(level: number): number {
   return 1 + 0.25 * Math.max(0, level)
+}
+/** Множитель скорости активной фазы капсул: 1 + 0.15×level (фазы короче). */
+export function capsuleSpeedMult(level: number): number {
+  return 1 + 0.15 * Math.max(0, level)
+}
+const CAPSULE_BASE_COOLDOWN_MS = 10000 // база green→cyan (см. completion-plan)
+/** Кулдаун капсулы (мс): база × 0.88^level. Меньше = чаще. */
+export function capsuleCooldownMs(level: number): number {
+  return Math.round(
+    CAPSULE_BASE_COOLDOWN_MS * Math.pow(0.88, Math.max(0, level)),
+  )
 }
 
 // Phase 22: user preferences хранимые на сервере (cosmic.preferences).
