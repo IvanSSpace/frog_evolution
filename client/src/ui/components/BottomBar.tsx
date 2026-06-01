@@ -167,9 +167,6 @@ export function BottomBar({
   const hasNewBestiary = useGameStore((s) =>
     s.discoveredLevels.some((l) => !s.bestiarySeenLevels.includes(l)),
   )
-  const discoveredLevels = useGameStore((s) => s.discoveredLevels)
-  // Экспедиции (корабли) доступны только после открытия Леса (discovered L7+).
-  const forestUnlocked = discoveredLevels.some((l) => l >= 7)
 
   // Two-zone toggle: only visible on loc 1.
   const isTwoZoneLoc = useGameStore(
@@ -220,15 +217,12 @@ export function BottomBar({
           />
         )}
         {/* 🛰️ Космическая экспедиция (Fallout-Shelter-style) — отправить
-            корабль, читать бортовой журнал, вовремя вернуть. Заперта 🔒 пока
-            не открыт Лес (L7): экспедиции доступны только после Леса. */}
+            корабль, читать бортовой журнал, вовремя вернуть. Гейт «Лес L7»
+            снят по запросу — доступна всегда. */}
         <Tile
           icon="ship"
           skin="teal"
-          title={
-            forestUnlocked ? 'Космическая экспедиция' : 'Откроется после Леса'
-          }
-          disabled={!forestUnlocked}
+          title="Космическая экспедиция"
           onClick={onOpenExpedition}
         />
         {/* 🗺️ Миссия-путешествие на планете — авто-раннер за слизь.
