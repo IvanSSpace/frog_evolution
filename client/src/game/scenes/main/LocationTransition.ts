@@ -71,7 +71,13 @@ export class LocationTransition {
   ): Phaser.GameObjects.Image {
     const scene = this.scene
     const twoZoneKey =
-      locId === 1 ? 'toxic_map2size' : locId === 2 ? 'toxic_map2_2size' : null
+      locId === 1
+        ? 'toxic_map2size'
+        : locId === 2
+          ? 'toxic_map2_2size'
+          : locId === 3
+            ? 'toxic_map3_2size'
+            : null
     if (twoZoneKey) {
       const img = scene.add.image(0, 0, twoZoneKey)
       img.setDisplaySize(width, height * 2)
