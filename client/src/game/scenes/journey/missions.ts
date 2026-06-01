@@ -8,18 +8,48 @@
 
 export type JourneyDomain = 'planet' | 'cosmos'
 
+// Типы препятствий на пути. Без оружия: отряд преодолевает их телом, ценой
+// лягушек (cost). icon — мультяшный спрайт-эмодзи в сцене.
+export type ObstacleType = 'rock' | 'chasm' | 'creature' | 'gate'
+
+export interface JourneyObstacle {
+  /** Позиция вдоль дистанции (0..1). Сцена считает x = atFrac * distance. */
+  atFrac: number
+  type: ObstacleType
+  /** Сколько лягушек гибнет при «продолжить» (расход отряда = риск). */
+  cost: number
+  /** Слизь за преодоление (копится; теряется при провале). */
+  loot: number
+}
+
+export const OBSTACLE_ICON: Record<ObstacleType, string> = {
+  rock: '🪨',
+  chasm: '🕳️',
+  creature: '👾',
+  gate: '⛩️',
+}
+
+export const OBSTACLE_LABEL: Record<ObstacleType, string> = {
+  rock: 'Камень',
+  chasm: 'Пропасть',
+  creature: 'Существо',
+  gate: 'Барьер',
+}
+
 export interface JourneyMission {
   id: string
   name: string
   icon: string
   domain: JourneyDomain
   desc: string
-  /** Длина забега в px мира. Влияет на длительность анимации и (позже) число событий. */
+  /** Длина забега в px мира. Влияет на длительность анимации и число событий. */
   distance: number
-  /** Базовая награда (слизь/gold) за полный проход. Скелет: фиксированная. */
+  /** Финишный бонус слизи за полный проход (сверх лута с препятствий). */
   reward: number
   /** Мин. размер отряда для старта. */
   minSquad: number
+  /** Препятствия на пути (push-your-luck: перед каждым — отступить/продолжить). */
+  obstacles: JourneyObstacle[]
 }
 
 export const JOURNEY_MISSIONS: JourneyMission[] = [
@@ -30,8 +60,12 @@ export const JOURNEY_MISSIONS: JourneyMission[] = [
     domain: 'planet',
     desc: 'Короткая вылазка по родному лугу. Спокойно и быстро.',
     distance: 2600,
-    reward: 150,
+    reward: 90,
     minSquad: 1,
+    obstacles: [
+      { atFrac: 0.45, type: 'rock', cost: 1, loot: 90 },
+      { atFrac: 0.8, type: 'creature', cost: 1, loot: 110 },
+    ],
   },
   {
     id: 'planet_forest',
@@ -40,8 +74,13 @@ export const JOURNEY_MISSIONS: JourneyMission[] = [
     domain: 'planet',
     desc: 'Подлиннее, через лесную чащу. Награда побольше.',
     distance: 4200,
-    reward: 320,
+    reward: 140,
     minSquad: 2,
+    obstacles: [
+      { atFrac: 0.3, type: 'rock', cost: 1, loot: 120 },
+      { atFrac: 0.6, type: 'gate', cost: 2, loot: 160 },
+      { atFrac: 0.85, type: 'creature', cost: 2, loot: 190 },
+    ],
   },
   {
     id: 'planet_swamp',
@@ -50,8 +89,14 @@ export const JOURNEY_MISSIONS: JourneyMission[] = [
     domain: 'planet',
     desc: 'Долгий путь по топям. Лучший улов слизи.',
     distance: 6000,
-    reward: 560,
+    reward: 200,
     minSquad: 3,
+    obstacles: [
+      { atFrac: 0.22, type: 'rock', cost: 1, loot: 150 },
+      { atFrac: 0.44, type: 'chasm', cost: 2, loot: 200 },
+      { atFrac: 0.67, type: 'creature', cost: 3, loot: 240 },
+      { atFrac: 0.88, type: 'gate', cost: 2, loot: 280 },
+    ],
   },
 ]
 
@@ -65,4 +110,14 @@ export function journeyMissionsByDomain(
 /** Миссия по id (или undefined). */
 export function journeyMissionById(id: string): JourneyMission | undefined {
   return JOURNEY_MISSIONS.find((m) => m.id === id)
+}
+
+/** Максимально возможный лут (лут всех препятствий + финишный бонус). */
+export function journeyMaxLoot(m: JourneyMission): number {
+  return m.obstacles.reduce((s, o) => s + o.loot, 0) + m.reward
+}
+
+/** Сколько лягушек минимум нужно, чтобы преодолеть все препятствия (сумма cost). */
+export function journeyTotalCost(m: JourneyMission): number {
+  return m.obstacles.reduce((s, o) => s + o.cost, 0)
 }

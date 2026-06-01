@@ -12,6 +12,8 @@ import { useModalLock } from '../../utils/modalLock'
 import { getFrogPath } from '../../game/config/frogs'
 import {
   journeyMissionsByDomain,
+  journeyMaxLoot,
+  journeyTotalCost,
   type JourneyMission,
 } from '../../game/scenes/journey/missions'
 
@@ -118,12 +120,13 @@ export function JourneyMissionSelect({ onClose }: Props) {
                     {m.icon} {m.name}
                   </span>
                   <span className="text-sm text-[#2d6a1f] font-bold">
-                    +{m.reward} 💧
+                    до +{journeyMaxLoot(m)} 💧
                   </span>
                 </div>
                 <div className="text-xs text-[#4a6b3a] mt-0.5">{m.desc}</div>
                 <div className="text-[11px] text-[#6b7d5c] mt-0.5">
-                  Мин. отряд: {m.minSquad} 🐸
+                  Мин. отряд: {m.minSquad} 🐸 · препятствий:{' '}
+                  {m.obstacles.length} (риск −{journeyTotalCost(m)} 🐸)
                 </div>
               </button>
             )
