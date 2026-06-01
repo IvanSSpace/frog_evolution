@@ -15,6 +15,7 @@ import {
   useGameStore,
   getDropIntervalMs,
   getAutoCollectCooldownMs,
+  toLoc2Upgrades,
 } from '../store/gameStore'
 import { useOnboardingStore } from '../store/onboarding/onboardingSlice'
 import { getServerGameState, putServerGameState } from './gameState'
@@ -128,6 +129,11 @@ function snapshotForSave() {
       hasCosmosUnlocked: s.hasCosmosUnlocked,
       l18MergesCount: s.l18MergesCount,
       l18AbsoluteBonusPerSec: s.l18AbsoluteBonusPerSec,
+      // Чанк 2: Loc2/Loc3 экономика — server-sync через cosmic blob (без schema
+      // change, как остальная мета). ectoplasm раньше был только localStorage.
+      ectoplasm: s.ectoplasm,
+      currencyY: s.currencyY,
+      loc2Upgrades: s.loc2Upgrades,
       // 2026-05-23: эволюция лягушек (per-level tier + cooldown timestamps).
       // Permanent progress — должен переноситься между девайсами.
       frogTiers: s.frogTiers,
@@ -270,6 +276,19 @@ export async function loadGameState(): Promise<boolean> {
       if ('frogTierCooldowns' in c && Array.isArray(c.frogTierCooldowns)) {
         cosmicUpdate.frogTierCooldowns = c.frogTierCooldowns
       }
+      // Чанк 2: Loc2/Loc3 экономика. Defensive — только корректные типы.
+      if ('ectoplasm' in c && typeof c.ectoplasm === 'number' && c.ectoplasm >= 0)
+        cosmicUpdate.ectoplasm = Math.floor(c.ectoplasm as number)
+      if ('currencyY' in c && typeof c.currencyY === 'number' && c.currencyY >= 0)
+        cosmicUpdate.currencyY = Math.floor(c.currencyY as number)
+      if (
+        'loc2Upgrades' in c &&
+        c.loc2Upgrades &&
+        typeof c.loc2Upgrades === 'object'
+      )
+        cosmicUpdate.loc2Upgrades = toLoc2Upgrades(
+          c.loc2Upgrades as Record<string, number>,
+        )
       // 2026-05-23: hydrate temporaryIncomeBuff (shape: {until, percent} | null).
       if ('temporaryIncomeBuff' in c) {
         const tb = c.temporaryIncomeBuff as unknown
@@ -313,7 +332,10 @@ export async function loadGameState(): Promise<boolean> {
         typeof cosmicUpdate.l18AbsoluteBonusPerSec === 'number' ||
         Array.isArray(cosmicUpdate.frogTiers) ||
         Array.isArray(cosmicUpdate.frogTierCooldowns) ||
-        'temporaryIncomeBuff' in cosmicUpdate
+        'temporaryIncomeBuff' in cosmicUpdate ||
+        typeof cosmicUpdate.ectoplasm === 'number' ||
+        typeof cosmicUpdate.currencyY === 'number' ||
+        'loc2Upgrades' in cosmicUpdate
       if (needsPersistenceWrite) {
         const persistence = await import('../store/persistence')
         if (cosmicUpdate.captainBirthSeen === true) {
@@ -344,6 +366,18 @@ export async function loadGameState(): Promise<boolean> {
               until: number
               percent: number
             } | null,
+          )
+        }
+        // Чанк 2: Loc2/Loc3 экономика → localStorage (primary, читается на boot).
+        if (typeof cosmicUpdate.ectoplasm === 'number') {
+          persistence.saveEctoplasm(cosmicUpdate.ectoplasm as number)
+        }
+        if (typeof cosmicUpdate.currencyY === 'number') {
+          persistence.saveCurrencyY(cosmicUpdate.currencyY as number)
+        }
+        if ('loc2Upgrades' in cosmicUpdate) {
+          persistence.saveLoc2Upgrades(
+            cosmicUpdate.loc2Upgrades as Record<string, number>,
           )
         }
       }
