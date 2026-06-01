@@ -35,6 +35,8 @@ import {
 const SIX_HOURS_MS = 6 * 60 * 60 * 1000
 // Loc1 cap-merge L6+L6 → столько эктоплазмы (рост уходит в Loc2).
 const ECTO_PER_L6MERGE = 3
+// Loc2 cap-merge L12+L12 → столько валюты Y (рост уходит в Loc3).
+const CURRENCY_Y_PER_L12MERGE = 3
 import { useOnboardingStore } from '../../../store/onboarding/onboardingSlice'
 import { eventBus } from '../../../store/eventBus'
 import {
@@ -368,6 +370,40 @@ export class MergeController {
           }
         }
         mergeApi(6, currentLocId)
+          .then((res) => {
+            if (res.ok) {
+              useGameStore.setState({
+                locationFrogs: res.locationFrogs,
+                discoveredLevels: res.discoveredLevels,
+              })
+            } else {
+              void saveGameState(true)
+            }
+          })
+          .catch((e) => console.warn('[merge] server sync failed:', e))
+        return
+      }
+
+      // Loc2 cap-merge: L12+L12 → валюта Y (не L13). Рост уходит в Loc3.
+      // Первый L12+L12 открывает Loc3 (Континент). currencyY заводит Чанк 2 —
+      // зовём через safe-cast, пока поле не появилось — no-op.
+      if (oldLevel === 12 && currentLocId === 2) {
+        store.removeFrogFromLocation(currentLocId, 12)
+        store.removeFrogFromLocation(currentLocId, 12)
+        const st = useGameStore.getState() as unknown as {
+          addCurrencyY?: (n: number) => void
+        }
+        st.addCurrencyY?.(CURRENCY_Y_PER_L12MERGE)
+        this.flashEctoplasm(cx, cy, CURRENCY_Y_PER_L12MERGE)
+        const wasNew = store.markDiscovered(13)
+        if (wasNew) {
+          eventBus.emit('frog:discovered', { level: 13 })
+          const unlockedLocId = getLocationUnlockedByLevel(13)
+          if (unlockedLocId !== null) {
+            eventBus.emit('location:unlocked', { locationId: unlockedLocId })
+          }
+        }
+        mergeApi(12, currentLocId)
           .then((res) => {
             if (res.ok) {
               useGameStore.setState({
