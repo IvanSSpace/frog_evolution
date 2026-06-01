@@ -1,36 +1,94 @@
-import { useGameStore } from '../../store/gameStore'
+import {
+  useGameStore,
+  LOC2_UPGRADE_META,
+  loc2UpgradeCost,
+  type EctoUpgradeKey,
+} from '../../store/gameStore'
 import { useModalLock } from '../../utils/modalLock'
+import { fmt } from '../../utils/formatting'
 
 type Props = { onClose: () => void }
 
-// Заглушка-строка будущей прокачки ecto-дрона.
-function SoonRow({ icon, title, desc }: { icon: string; title: string; desc: string }) {
+// i18n: TODO — модалка целиком на хардкод-RU (включая прежний код). Нужен общий
+// i18n-проход RU/EN/ES по EctoDronerModal, не только по этим строкам.
+
+// Строка покупки апгрейда за эктоплазму. Уровень-пипсы + цена + кнопка.
+function EctoBuyRow({
+  upgradeKey,
+  icon,
+  title,
+  desc,
+}: {
+  upgradeKey: EctoUpgradeKey
+  icon: string
+  title: string
+  desc: string
+}) {
+  const level = useGameStore((s) => s.loc2Upgrades[upgradeKey])
+  const ectoplasm = useGameStore((s) => s.ectoplasm)
+  const buyEctoUpgrade = useGameStore((s) => s.buyEctoUpgrade)
+  const meta = LOC2_UPGRADE_META[upgradeKey]
+  const isMax = level >= meta.maxLevel
+  const cost = loc2UpgradeCost(upgradeKey, level)
+  const affordable = !isMax && ectoplasm >= cost
+
   return (
-    <div
-      className="ff-card flex items-center gap-3 p-3"
-      style={{ opacity: 0.75 }}
-    >
+    <div className="ff-card flex items-center gap-3 p-3">
       <span style={{ fontSize: 26 }}>{icon}</span>
-      <div className="flex-1">
-        <div className="ff-display text-sm" style={{ color: 'var(--ff-text-light)' }}>
+      <div className="flex-1 min-w-0">
+        <div
+          className="ff-display text-sm"
+          style={{ color: 'var(--ff-text-light)' }}
+        >
           {title}
         </div>
-        <div className="ff-display" style={{ fontSize: 11, color: 'var(--ff-text-dim)' }}>
+        <div
+          className="ff-display"
+          style={{ fontSize: 11, color: 'var(--ff-text-dim)' }}
+        >
           {desc}
         </div>
+        {/* Пипсы уровня */}
+        <div style={{ display: 'flex', gap: 3, marginTop: 4 }}>
+          {Array.from({ length: meta.maxLevel }).map((_, i) => (
+            <span
+              key={i}
+              style={{
+                width: 14,
+                height: 5,
+                borderRadius: 3,
+                background: i < level ? '#9d4edd' : 'rgba(157,78,221,0.22)',
+              }}
+            />
+          ))}
+        </div>
       </div>
-      <span
-        className="ff-display"
+      <button
+        type="button"
+        onClick={() => buyEctoUpgrade(upgradeKey)}
+        disabled={!affordable}
+        aria-label={isMax ? 'Максимум' : `Купить за ${cost} эктоплазмы`}
+        className="ff-tile flex-shrink-0"
         style={{
-          fontSize: 11,
-          color: '#c77dff',
-          border: '2px solid #9d4edd',
-          borderRadius: 8,
-          padding: '2px 8px',
+          touchAction: 'manipulation',
+          minWidth: 64,
+          height: 40,
+          padding: '0 8px',
+          fontSize: 12,
+          fontWeight: 700,
+          color: '#fff',
+          opacity: affordable ? 1 : 0.5,
+          ['--ff-tile-from' as never]: '#c77dff',
+          ['--ff-tile-to' as never]: '#7b2cbf',
+          ['--ff-tile-border' as never]: '#5a189a',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 4,
         }}
       >
-        Скоро
-      </span>
+        {isMax ? 'MAX' : `💜 ${fmt(cost)}`}
+      </button>
     </div>
   )
 }
@@ -96,7 +154,10 @@ export function EctoDronerModal({ onClose }: Props) {
         {/* Body */}
         <div
           className="flex-1 min-h-0 overflow-y-auto ff-no-scrollbar px-4 py-3 flex flex-col gap-3"
-          style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            overscrollBehavior: 'contain',
+          }}
         >
           {/* Дрон + баланс */}
           <div className="ff-card flex items-center gap-3 p-3">
@@ -106,10 +167,16 @@ export function EctoDronerModal({ onClose }: Props) {
               style={{ height: 56, width: 'auto', objectFit: 'contain' }}
             />
             <div className="flex-1">
-              <div className="ff-display text-sm" style={{ color: 'var(--ff-text-light)' }}>
+              <div
+                className="ff-display text-sm"
+                style={{ color: 'var(--ff-text-light)' }}
+              >
                 Дрон-сборщик
               </div>
-              <div className="ff-display" style={{ fontSize: 11, color: 'var(--ff-text-dim)' }}>
+              <div
+                className="ff-display"
+                style={{ fontSize: 11, color: 'var(--ff-text-dim)' }}
+              >
                 Летает по полю и собирает эктоплазму
               </div>
             </div>
@@ -147,9 +214,36 @@ export function EctoDronerModal({ onClose }: Props) {
           >
             Прокачка
           </div>
-          <SoonRow icon="⚡" title="Скорость сбора" desc="Дрон летает быстрее" />
-          <SoonRow icon="🛸" title="Больше дронов" desc="+1 дрон-сборщик" />
-          <SoonRow icon="💜" title="Ценность слизи" desc="Больше эктоплазмы за сбор" />
+          <EctoBuyRow
+            upgradeKey="ectoDroneSpeed"
+            icon="⚡"
+            title="Скорость сбора"
+            desc="Дрон летает быстрее"
+          />
+          <EctoBuyRow
+            upgradeKey="ectoDroneCount"
+            icon="🛸"
+            title="Больше дронов"
+            desc="+1 дрон-сборщик"
+          />
+          <EctoBuyRow
+            upgradeKey="ectoDroneValue"
+            icon="💜"
+            title="Ценность слизи"
+            desc="Больше эктоплазмы за сбор"
+          />
+          <EctoBuyRow
+            upgradeKey="capsuleSpeed"
+            icon="🧪"
+            title="Скорость капсул"
+            desc="Капсулы мерджат быстрее"
+          />
+          <EctoBuyRow
+            upgradeKey="capsuleCooldown"
+            icon="⏱️"
+            title="Кулдаун капсул"
+            desc="Меньше пауза между циклами"
+          />
         </div>
       </div>
     </div>
