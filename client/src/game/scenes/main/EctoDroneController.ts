@@ -83,7 +83,7 @@ export class EctoDroneController {
     // Есть фиолетовая слизь → летим зависать НАД ней (пушка 45° вниз-влево);
     // иначе — случайная точка патруля.
     const poop = this.nearestPoop()
-    // Зависаем над слизью с БЛИЖНЕЙ стороны (меньше лёта), пушкой к ней.
+    // Зависаем над слизью с БЛИЖНЕЙ стороны (меньше лёта).
     let target: Phaser.Math.Vector2
     if (poop) {
       const onLeft = sp.x < poop.x // дрон слева от слизи → заходим слева
@@ -91,11 +91,11 @@ export class EctoDroneController {
         poop.x + (onLeft ? -HOVER_OFF : HOVER_OFF),
         poop.y - HOVER_OFF,
       )
-      sp.setFlipX(!onLeft) // справа от слизи → смотрит влево (flipX), и наоборот
     } else {
       target = this.randomFieldPoint()
-      sp.setFlipX(target.x < sp.x)
     }
+    // В полёте разворот по направлению движения (как при патруле).
+    if (Math.abs(target.x - sp.x) > 2) sp.setFlipX(target.x < sp.x)
     const dist = Phaser.Math.Distance.Between(sp.x, sp.y, target.x, target.y)
     const tw = this.scene.tweens.add({
       targets: sp,
