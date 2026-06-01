@@ -58,6 +58,8 @@ eventBus.on('boxes:offline-fill', ({ count }: { count: number }) => {
   _offlineBoxFill += count
 })
 
+// Loc2 конвейер: интервал авто-производства L7 (бесплатно). Апгрейд скорости позже.
+const CONVEYOR_INTERVAL_MS = 6000
 const SWIPE_SLOP = 90 * DPR // палец должен сдвинуться на столько, прежде чем начнётся скролл
 const SWIPE_FLICK_V = 0.5 // |velocity.y| (px/ms) выше — считаем фликом, переключаем по направлению
 
@@ -76,6 +78,10 @@ export class MainScene extends Phaser.Scene {
   // Phase 21-05 (Wave 5): boxProgressMs package-public —
   // мутируется LocationTransition (snap-end resets).
   boxProgressMs = 0
+
+  // Loc2 конвейер (фабрика лягушек): авто-производство L7 на поле по таймеру,
+  // бесплатно (как боксы Loc1). Апгрейды скорости — за gold (позже).
+  private conveyorProgressMs = 0
 
   // Phase 21-04 (Wave 4): magnet state перенесён в MagnetController.
 
@@ -591,6 +597,35 @@ export class MainScene extends Phaser.Scene {
     this.poop.spawnEctoPoop(frog)
   }
 
+  // Loc2 конвейер: выкатывает L7 на поле (у фабрики, низ-лево) с pop-анимацией.
+  private spawnConveyorFrog(): void {
+    const { width, height } = this.scale
+    const m = 24 * DPR
+    const x = Phaser.Math.Between(FIELD_PAD_X + m, Math.floor(width * 0.5))
+    const y = Phaser.Math.Between(
+      height - FIELD_PAD_Y_BOTTOM - 130 * DPR,
+      height - FIELD_PAD_Y_BOTTOM - m,
+    )
+    const frog = this.spawner.spawnFrog(x, y, 7)
+    useGameStore.getState().addFrogToLocation(2, 7)
+    frog.container.setScale(0)
+    this.tweens.add({
+      targets: frog.container,
+      scale: BASE_SCALE * 1.2,
+      duration: 160,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        if (!frog.container.active) return
+        this.tweens.add({
+          targets: frog.container,
+          scale: BASE_SCALE,
+          duration: 100,
+          ease: 'Power2.easeOut',
+        })
+      },
+    })
+  }
+
   // ============== МЕРДЖ ==============
   // Phase 21-02: вся merge-логика (standard / feed / carrier-merge), find-target,
   // vortex/flash/floating-text, locationName, fly-away — в MergeController.
@@ -958,6 +993,22 @@ export class MainScene extends Phaser.Scene {
     if (currentLocId === 2 && !serumPaused) {
       this.capsuleMerge.tick()
       this.ectoDrone.tick()
+    }
+
+    // Loc2 конвейер: авто-производство L7 на поле (бесплатно), cap-gated.
+    if (currentLocId === 2) {
+      const cInterval = CONVEYOR_INTERVAL_MS
+      this.conveyorProgressMs = Math.min(this.conveyorProgressMs + delta, cInterval)
+      if (this.conveyorProgressMs >= cInterval) {
+        if (this.canSpawnBox()) {
+          this.spawnConveyorFrog()
+          this.conveyorProgressMs = 0
+        } else {
+          this.conveyorProgressMs = cInterval // поле забито — ждём слот
+        }
+      }
+    } else {
+      this.conveyorProgressMs = 0
     }
 
     // Фабрика show/hide — тоже в блоке выше transition-gate.
