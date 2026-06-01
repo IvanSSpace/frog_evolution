@@ -608,6 +608,22 @@ export class MainScene extends Phaser.Scene {
     )
     const frog = this.spawner.spawnFrog(x, y, 7)
     useGameStore.getState().addFrogToLocation(2, 7)
+    // Лента/жёлоб: фабрика «выплёвывает» лягушку — squash-пульс по вертикали.
+    const factory = this.buildings.getFactorySprite()
+    if (factory) {
+      const fs = factory.scaleY
+      this.tweens.killTweensOf(factory)
+      this.tweens.add({
+        targets: factory,
+        scaleY: fs * 0.9,
+        duration: 90,
+        ease: 'Power2.easeOut',
+        yoyo: true,
+        onComplete: () => {
+          if (factory.active) factory.setScale(factory.scaleX, fs)
+        },
+      })
+    }
     frog.container.setScale(0)
     this.tweens.add({
       targets: frog.container,
@@ -997,7 +1013,11 @@ export class MainScene extends Phaser.Scene {
 
     // Loc2 конвейер: авто-производство L7 на поле (бесплатно), cap-gated.
     if (currentLocId === 2) {
-      const cInterval = CONVEYOR_INTERVAL_MS
+      // Скорость из апгрейда conveyorSpeed (ключ заведёт Чанк 2; пока нет → 0 →
+      // базовый интервал). Каждый уровень −500мс, минимум 2с.
+      const cSpeedLvl =
+        (store.upgrades as unknown as Record<string, number>).conveyorSpeed ?? 0
+      const cInterval = Math.max(2000, CONVEYOR_INTERVAL_MS - cSpeedLvl * 500)
       this.conveyorProgressMs = Math.min(this.conveyorProgressMs + delta, cInterval)
       if (this.conveyorProgressMs >= cInterval) {
         if (this.canSpawnBox()) {

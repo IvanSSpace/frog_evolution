@@ -400,6 +400,11 @@ export class BuildingsController {
     return this.sprites
   }
 
+  /** Спрайт фабрики лягушек loc2 (для конвейер-анимации при выпуске). */
+  getFactorySprite(): Phaser.GameObjects.Image | null {
+    return this.sprites.find((s) => s.texture.key === 'bld2_factory') ?? null
+  }
+
   /** Спрайты капсул репликации loc2 (для CapsuleMergeController — FX мерджа). */
   getCapsuleSprites(): Phaser.GameObjects.Image[] {
     return this.sprites.filter((s) => {
