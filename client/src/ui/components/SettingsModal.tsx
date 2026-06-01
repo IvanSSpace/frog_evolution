@@ -437,7 +437,7 @@ function BestiaryCard({
         className="ff-display text-center leading-tight"
         style={{
           fontSize: 26,
-          color: '#15803d',
+          color: '#a8e088',
           maxWidth: '100%',
           wordBreak: 'break-word',
           marginTop: -4,
@@ -451,7 +451,7 @@ function BestiaryCard({
         className="w-full ff-body font-bold leading-relaxed"
         style={{
           fontSize: 18,
-          color: '#166534',
+          color: '#7adb9f',
           marginTop: -8,
           paddingLeft: 36,
           paddingRight: 36,
@@ -472,7 +472,7 @@ function BestiaryCard({
         {!cfg.availableInShop && (
           <div
             className="text-center mt-2"
-            style={{ color: '#7e22ce', fontSize: 15 }}
+            style={{ color: '#d8b4fe', fontSize: 15 }}
           >
             {t('bestiary.merge_only')}
           </div>
@@ -484,7 +484,7 @@ function BestiaryCard({
         className="w-full ff-body leading-relaxed"
         style={{
           fontSize: 15,
-          color: '#365314',
+          color: '#b8d496',
           marginTop: 32,
           paddingBottom: 8,
           minHeight: 150,
@@ -553,7 +553,7 @@ function SettingsTab() {
             fontSize: 13,
             fontFamily:
               'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-            color: '#365314',
+            color: '#b8d496',
             userSelect: 'text',
           }}
         >
@@ -671,7 +671,7 @@ function MechanicsTab() {
     <div className="flex flex-col gap-4">
       <div
         className="ff-display text-center"
-        style={{ fontSize: 22, color: '#15803d' }}
+        style={{ fontSize: 22, color: '#a8e088' }}
       >
         Как всё работает
       </div>
@@ -804,7 +804,7 @@ function MechanicsSection({
     <div className="ff-card p-3 flex flex-col gap-1.5">
       <div
         className="ff-body font-bold"
-        style={{ fontSize: 15, color: '#15803d', marginBottom: 4 }}
+        style={{ fontSize: 15, color: '#a8e088', marginBottom: 4 }}
       >
         {title}
       </div>
@@ -817,7 +817,7 @@ function MechanicsItem({ name, desc }: { name: string; desc: string }) {
   return (
     <div
       className="ff-body"
-      style={{ fontSize: 13, color: '#365314', lineHeight: 1.5 }}
+      style={{ fontSize: 13, color: '#b8d496', lineHeight: 1.5 }}
     >
       <span style={{ fontWeight: 700 }}>{name}</span>
       {' — '}
