@@ -31,6 +31,7 @@ export function Header({ onOpenIncome }: { onOpenIncome?: () => void }) {
   )
   const essence = useGameStore((s) => s.essence)
   const ectoplasm = useGameStore((s) => s.ectoplasm)
+  const currencyY = useGameStore((s) => s.currencyY)
   const currentLocation = useGameStore((s) => s.currentLocation)
   const frogTiers = useGameStore((s) => s.frogTiers)
   const temporaryIncomeBuff = useGameStore((s) => s.temporaryIncomeBuff)
@@ -127,6 +128,41 @@ export function Header({ onOpenIncome }: { onOpenIncome?: () => void }) {
                 }}
               />
               {fmt(ectoplasm)}
+            </div>
+          )}
+          {/* Валюта Y (Loc3) — PLACEHOLDER: значок 'Y' + бирюзовый, имя/арт позже. */}
+          {(currentLocation === 3 || currencyY > 0) && (
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: '#2dd4bf',
+                textShadow: '0 1px 0 rgba(0,0,0,0.4)',
+                lineHeight: 1.2,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+              title="Валюта Y (Loc3)"
+            >
+              <span
+                style={{
+                  width: '0.9em',
+                  height: '0.9em',
+                  borderRadius: '50%',
+                  background:
+                    'radial-gradient(circle at 35% 30%, #99f6e4, #0d9488 70%)',
+                  boxShadow: '0 0 4px #0d9488',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.6em',
+                  color: '#fff',
+                }}
+              >
+                Y
+              </span>
+              {fmt(currencyY)}
             </div>
           )}
         </div>
