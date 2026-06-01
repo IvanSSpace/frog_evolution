@@ -1,5 +1,9 @@
 import Phaser from 'phaser'
-import { useGameStore, getDropIntervalMs } from '../../store/gameStore'
+import {
+  useGameStore,
+  getDropIntervalMs,
+  conveyorIntervalMs,
+} from '../../store/gameStore'
 import { magnetKeyForLocation } from '../config/upgrades'
 import { eventBus } from '../../store/eventBus'
 import {
@@ -58,8 +62,6 @@ eventBus.on('boxes:offline-fill', ({ count }: { count: number }) => {
   _offlineBoxFill += count
 })
 
-// Loc2 конвейер: интервал авто-производства L7 (бесплатно). Апгрейд скорости позже.
-const CONVEYOR_INTERVAL_MS = 6000
 const SWIPE_SLOP = 90 * DPR // палец должен сдвинуться на столько, прежде чем начнётся скролл
 const SWIPE_FLICK_V = 0.5 // |velocity.y| (px/ms) выше — считаем фликом, переключаем по направлению
 
@@ -101,6 +103,7 @@ export class MainScene extends Phaser.Scene {
   // Two-zone loc1: tall background covering frogs zone (top) + buildings zone (bottom).
   private loc1Bg!: Phaser.GameObjects.Image
   private loc2Bg!: Phaser.GameObjects.Image
+  private loc3Bg!: Phaser.GameObjects.Image
   private currentZone: 'frogs' | 'buildings' = 'frogs'
   // Zone the player viewed when a location transition started. Captured in
   // onTransitionStart before reset → LocationTransition shows the matching
@@ -230,6 +233,7 @@ export class MainScene extends Phaser.Scene {
     BuildingsController.preload(this)
     this.load.image('toxic_map2size', '/maps/toxic_map2size.png')
     this.load.image('toxic_map2_2size', '/maps/toxic_map2_2size.png')
+    this.load.image('toxic_map3_2size', '/maps/toxic_map3_2size.png')
   }
 
   /**
@@ -340,6 +344,13 @@ export class MainScene extends Phaser.Scene {
     this.loc2Bg.setDepth(-1)
     this.loc2Bg.setTint(0xc4c8c4)
     this.loc2Bg.setVisible(false)
+
+    // Two-zone loc3 background (toxic_map3_2size — frogs top + buildings bottom).
+    this.loc3Bg = this.add.image(width / 2, height, 'toxic_map3_2size')
+    this.loc3Bg.setDisplaySize(width, height * 2)
+    this.loc3Bg.setDepth(-1)
+    this.loc3Bg.setTint(0xc4c8c4)
+    this.loc3Bg.setVisible(false)
 
     this.configureWorld(useGameStore.getState().currentLocation)
 
@@ -1013,11 +1024,8 @@ export class MainScene extends Phaser.Scene {
 
     // Loc2 конвейер: авто-производство L7 на поле (бесплатно), cap-gated.
     if (currentLocId === 2) {
-      // Скорость из апгрейда conveyorSpeed (ключ заведёт Чанк 2; пока нет → 0 →
-      // базовый интервал). Каждый уровень −500мс, минимум 2с.
-      const cSpeedLvl =
-        (store.upgrades as unknown as Record<string, number>).conveyorSpeed ?? 0
-      const cInterval = Math.max(2000, CONVEYOR_INTERVAL_MS - cSpeedLvl * 500)
+      // Интервал из апгрейда conveyorSpeed (Чанк 2: loc2Upgrades + геттер).
+      const cInterval = conveyorIntervalMs(store.loc2Upgrades.conveyorSpeed)
       this.conveyorProgressMs = Math.min(this.conveyorProgressMs + delta, cInterval)
       if (this.conveyorProgressMs >= cInterval) {
         if (this.canSpawnBox()) {
@@ -1053,9 +1061,9 @@ export class MainScene extends Phaser.Scene {
   }
 
   // Локации с двухзонным (свайп вверх/вниз) полем: верх = лягушки, низ = здания.
-  // toxic_map2size (loc1) / toxic_map2_2size (loc2) — tall фоны height*2.
+  // toxic_map2size (loc1) / toxic_map2_2size (loc2) / toxic_map3_2size (loc3).
   private isTwoZoneLoc(locId: number): boolean {
-    return locId === 1 || locId === 2
+    return locId === 1 || locId === 2 || locId === 3
   }
 
   private configureWorld(
@@ -1066,6 +1074,7 @@ export class MainScene extends Phaser.Scene {
     const twoZone = this.isTwoZoneLoc(locId)
     this.loc1Bg.setVisible(locId === 1)
     this.loc2Bg.setVisible(locId === 2)
+    this.loc3Bg.setVisible(locId === 3)
     this.bg.setVisible(!twoZone)
     this.cameras.main.setBounds(0, 0, width, twoZone ? height * 2 : height)
     // Сохраняем зону при смене локации: вошёл с зоны зданий → приземляешься
@@ -1098,6 +1107,7 @@ export class MainScene extends Phaser.Scene {
     )
     this.loc1Bg.setVisible(false)
     this.loc2Bg.setVisible(false)
+    this.loc3Bg.setVisible(false)
     this.bg.setVisible(true)
     // Сброс капсул-мерджа loc2: вернуть едущих лягушек в норму перед clearField.
     this.capsuleMerge.reset()

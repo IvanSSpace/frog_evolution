@@ -173,7 +173,10 @@ export function BottomBar({
 
   // Two-zone toggle: only visible on loc 1.
   const isTwoZoneLoc = useGameStore(
-    (s) => s.currentLocation === 1 || s.currentLocation === 2,
+    (s) =>
+      s.currentLocation === 1 ||
+      s.currentLocation === 2 ||
+      s.currentLocation === 3,
   )
   const [zone, setZone] = useState<'frogs' | 'buildings'>('frogs')
   useEffect(() => {
