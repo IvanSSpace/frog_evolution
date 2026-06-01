@@ -95,7 +95,8 @@ export class EctoDroneController {
       target = this.randomFieldPoint()
     }
     // В полёте разворот по направлению движения (как при патруле).
-    if (Math.abs(target.x - sp.x) > 2) sp.setFlipX(target.x < sp.x)
+    // Арт смотрит вправо по умолчанию → flipX при движении ВПРАВО.
+    if (Math.abs(target.x - sp.x) > 2) sp.setFlipX(target.x > sp.x)
     const dist = Phaser.Math.Distance.Between(sp.x, sp.y, target.x, target.y)
     const tw = this.scene.tweens.add({
       targets: sp,
@@ -129,7 +130,7 @@ export class EctoDroneController {
     this.scene.tweens.killTweensOf(poop)
     // Сторона слизи относительно дрона → смотрит на неё, пушка тянет в её сторону.
     const slimeLeft = poop.x < sp.x
-    sp.setFlipX(slimeLeft)
+    sp.setFlipX(!slimeLeft) // арт смотрит вправо по умолчанию → flip когда слизь слева
     const cannonX = sp.x + (slimeLeft ? -8 : 8) * DPR
     const cannonY = sp.y + sp.displayHeight * 0.46
     const suckTw = this.scene.tweens.add({
