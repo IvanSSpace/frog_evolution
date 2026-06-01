@@ -1,10 +1,4 @@
-import {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  type ReactNode,
-} from 'react'
+import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { TintedFrog } from './TintedFrog'
@@ -368,8 +362,12 @@ function BestiaryCard({
   if (!isUnlocked) {
     return (
       <div
-        className="ff-card p-5 flex items-center justify-center"
-        style={{ minHeight: BESTIARY_CARD_MIN_HEIGHT }}
+        className="ff-card ff-scanlines p-5 flex items-center justify-center"
+        style={{
+          minHeight: BESTIARY_CARD_MIN_HEIGHT,
+          border: 'none',
+          overflow: 'hidden',
+        }}
       >
         <span
           className="ff-display"
@@ -389,8 +387,12 @@ function BestiaryCard({
 
   return (
     <div
-      className="ff-card p-5 flex flex-col items-center gap-2 relative"
-      style={{ minHeight: BESTIARY_CARD_MIN_HEIGHT }}
+      className="ff-card ff-scanlines p-5 flex flex-col items-center gap-2 relative"
+      style={{
+        minHeight: BESTIARY_CARD_MIN_HEIGHT,
+        border: 'none',
+        overflow: 'hidden',
+      }}
     >
       {/* Tier preview toggle — cycles 1 → 2 → 3 → 1 */}
       <button
@@ -412,16 +414,13 @@ function BestiaryCard({
         {previewTier + 1}
       </button>
 
-      {/* Image container */}
+      {/* Image container — без фона и рамки, лягушка на полосатом фоне карточки */}
       <div
-        className="relative flex items-center justify-center rounded-2xl"
+        className="relative flex items-center justify-center"
         style={{
           width: 130,
           height: 130,
           flexShrink: 0,
-          background: 'linear-gradient(180deg, #ecfccb 0%, #bef264 100%)',
-          border: '3px solid #4d7c0f',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)',
         }}
       >
         <TintedFrog
@@ -678,51 +677,117 @@ function MechanicsTab() {
       </div>
 
       <MechanicsSection title="🪙 Доход">
-        <MechanicsItem name="Мерджи" desc="соединяй одинаковых лягушек → уровень выше → больше дохода. Основа игры." />
-        <MechanicsItem name="Эволюция" desc="прокачка лягушки за слизь + эссенцию + мутаген. Даёт % бонус к доходу." />
-        <MechanicsItem name="Магнит / Дрон сборщик" desc="авто-сбор слизи с поля." />
-        <MechanicsItem name="Оффлайн-доход" desc="копится слизь пока тебя нет, начисляется при возврате." />
+        <MechanicsItem
+          name="Мерджи"
+          desc="соединяй одинаковых лягушек → уровень выше → больше дохода. Основа игры."
+        />
+        <MechanicsItem
+          name="Эволюция"
+          desc="прокачка лягушки за слизь + эссенцию + мутаген. Даёт % бонус к доходу."
+        />
+        <MechanicsItem
+          name="Магнит / Дрон сборщик"
+          desc="авто-сбор слизи с поля."
+        />
+        <MechanicsItem
+          name="Оффлайн-доход"
+          desc="копится слизь пока тебя нет, начисляется при возврате."
+        />
       </MechanicsSection>
 
       <MechanicsSection title="🛒 Магазины">
-        <MechanicsItem name="Магазин прокачки" desc="апгрейды за слизь (пассив/тап)." />
-        <MechanicsItem name="Магазин лягушек" desc="покупка и эволюция лягушек за слизь." />
-        <MechanicsItem name="Космический магазин" desc="перма-апгрейды за эссенцию (слоты, скорость корабля, шанс сыворотки и др.)." />
+        <MechanicsItem
+          name="Магазин прокачки"
+          desc="апгрейды за слизь (пассив/тап)."
+        />
+        <MechanicsItem
+          name="Магазин лягушек"
+          desc="покупка и эволюция лягушек за слизь."
+        />
+        <MechanicsItem
+          name="Космический магазин"
+          desc="перма-апгрейды за эссенцию (слоты, скорость корабля, шанс сыворотки и др.)."
+        />
       </MechanicsSection>
 
       <MechanicsSection title="📦 Боксы">
-        <MechanicsItem name="Боксы" desc="дропают лягушек. Бывают обычные, мега, супер, редкий крейт." />
-        <MechanicsItem name="Качество / скорость дропа" desc="влияют на то что и как часто падает." />
+        <MechanicsItem
+          name="Боксы"
+          desc="дропают лягушек. Бывают обычные, мега, супер, редкий крейт."
+        />
+        <MechanicsItem
+          name="Качество / скорость дропа"
+          desc="влияют на то что и как часто падает."
+        />
       </MechanicsSection>
 
       <MechanicsSection title="🗺️ Локации">
-        <MechanicsItem name="Локации" desc="Болото → Лес → Континент. Открываются по прогрессу, дают новых лягушек и доступ к системам." />
+        <MechanicsItem
+          name="Локации"
+          desc="Болото → Лес → Континент. Открываются по прогрессу, дают новых лягушек и доступ к системам."
+        />
       </MechanicsSection>
 
       <MechanicsSection title="🚀 Космос">
-        <MechanicsItem name="Открытие космоса" desc="гейт всего космо-контента (после двойного соединения L18+L18)." />
-        <MechanicsItem name="Космический корабль" desc="летает по звёздной карте." />
+        <MechanicsItem
+          name="Открытие космоса"
+          desc="гейт всего космо-контента (после двойного соединения L18+L18)."
+        />
+        <MechanicsItem
+          name="Космический корабль"
+          desc="летает по звёздной карте."
+        />
         <MechanicsItem name="Звёздная карта" desc="карта планет и маршрутов." />
-        <MechanicsItem name="Экспедиции" desc="отправь корабль с экипажем исследовать космос. Возвращается с лутом и бортовым журналом (рапортами)." />
-        <MechanicsItem name="Вознесение" desc="лягушка-носитель, доведённая до L18, возносится → даёт эссенцию." />
+        <MechanicsItem
+          name="Экспедиции"
+          desc="отправь корабль с экипажем исследовать космос. Возвращается с лутом и бортовым журналом (рапортами)."
+        />
+        <MechanicsItem
+          name="Вознесение"
+          desc="лягушка-носитель, доведённая до L18, возносится → даёт эссенцию."
+        />
       </MechanicsSection>
 
       <MechanicsSection title="🧪 Сыворотки и архетипы">
-        <MechanicsItem name="Сыворотки" desc="применяются на лягушку 1 уровня (с панели или из инвентаря) → она становится носителем стихии (carrier). 11 элементов." />
-        <MechanicsItem name="Архетип" desc="стихия носителя. Сейчас даёт бонусы по категориям (показаны в Cosmic Hub), механический эффект в доработке." />
-        <MechanicsItem name="Первый контакт / расы" desc="встреча инопланетных рас на планетах, отношения с ними." />
-        <MechanicsItem name="Квесты" desc="задания от рас, дают лут и сыворотки." />
+        <MechanicsItem
+          name="Сыворотки"
+          desc="применяются на лягушку 1 уровня (с панели или из инвентаря) → она становится носителем стихии (carrier). 11 элементов."
+        />
+        <MechanicsItem
+          name="Архетип"
+          desc="стихия носителя. Сейчас даёт бонусы по категориям (показаны в Cosmic Hub), механический эффект в доработке."
+        />
+        <MechanicsItem
+          name="Первый контакт / расы"
+          desc="встреча инопланетных рас на планетах, отношения с ними."
+        />
+        <MechanicsItem
+          name="Квесты"
+          desc="задания от рас, дают лут и сыворотки."
+        />
       </MechanicsSection>
 
       <MechanicsSection title="👑 Капитан">
-        <MechanicsItem name="Капитан" desc="особый этап после доведения лягушки через двойное соединение L18+L18." />
+        <MechanicsItem
+          name="Капитан"
+          desc="особый этап после доведения лягушки через двойное соединение L18+L18."
+        />
       </MechanicsSection>
 
       <MechanicsSection title="💎 Ресурсы">
         <MechanicsItem name="Слизь" desc="основная валюта (золото)." />
-        <MechanicsItem name="Эссенция" desc="космо-валюта (вознесение, квесты, L18+L18). Тратится на эволюцию и космо-магазин." />
-        <MechanicsItem name="Мутаген 🧬" desc="редкий космо-лут, нужен для эволюции." />
-        <MechanicsItem name="Сыворотки 🧪" desc="расходник, применяется на лягушку." />
+        <MechanicsItem
+          name="Эссенция"
+          desc="космо-валюта (вознесение, квесты, L18+L18). Тратится на эволюцию и космо-магазин."
+        />
+        <MechanicsItem
+          name="Мутаген 🧬"
+          desc="редкий космо-лут, нужен для эволюции."
+        />
+        <MechanicsItem
+          name="Сыворотки 🧪"
+          desc="расходник, применяется на лягушку."
+        />
       </MechanicsSection>
     </div>
   )
@@ -750,7 +815,10 @@ function MechanicsSection({
 
 function MechanicsItem({ name, desc }: { name: string; desc: string }) {
   return (
-    <div className="ff-body" style={{ fontSize: 13, color: '#365314', lineHeight: 1.5 }}>
+    <div
+      className="ff-body"
+      style={{ fontSize: 13, color: '#365314', lineHeight: 1.5 }}
+    >
       <span style={{ fontWeight: 700 }}>{name}</span>
       {' — '}
       {desc}
