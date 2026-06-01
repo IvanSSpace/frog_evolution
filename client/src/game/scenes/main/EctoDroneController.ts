@@ -86,7 +86,8 @@ export class EctoDroneController {
     const target = poop
       ? new Phaser.Math.Vector2(poop.x + HOVER_OFF, poop.y - HOVER_OFF)
       : this.randomFieldPoint()
-    sp.setFlipX(target.x < sp.x)
+    // К слизи дрон зависает справа от неё → всегда смотрит ВЛЕВО на неё.
+    sp.setFlipX(poop ? true : target.x < sp.x)
     const dist = Phaser.Math.Distance.Between(sp.x, sp.y, target.x, target.y)
     const tw = this.scene.tweens.add({
       targets: sp,
@@ -118,8 +119,9 @@ export class EctoDroneController {
     // забираем из общего списка сразу (чтобы др. логика не трогала)
     this.scene.ectoPoops = this.scene.ectoPoops.filter((p) => p !== poop)
     this.scene.tweens.killTweensOf(poop)
+    sp.setFlipX(true) // смотрит на слизь (она слева-вниз) всё время сбора
     const cannonX = sp.x - 8 * DPR
-    const cannonY = sp.y + sp.displayHeight * 0.34
+    const cannonY = sp.y + sp.displayHeight * 0.46
     const suckTw = this.scene.tweens.add({
       targets: poop,
       x: cannonX,
