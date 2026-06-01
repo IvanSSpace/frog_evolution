@@ -9,6 +9,7 @@ import { JourneyMissionSelect } from './ui/components/JourneyMissionSelect'
 import { InventoryModal } from './ui/components/InventoryModal'
 import { DronerModal } from './ui/components/DronerModal'
 import { EctoDronerModal } from './ui/components/EctoDronerModal'
+import { ConveyorModal } from './ui/components/ConveyorModal'
 import { startExpedition } from './api/expedition'
 import { WelcomeBackModal } from './ui/components/WelcomeBackModal'
 import { DiscoveryModal } from './ui/components/DiscoveryModal'
@@ -64,6 +65,7 @@ function App() {
   const [inventoryOpen, setInventoryOpen] = useState(false)
   const [dronerOpen, setDronerOpen] = useState(false)
   const [ectoDronerOpen, setEctoDronerOpen] = useState(false)
+  const [conveyorOpen, setConveyorOpen] = useState(false)
   const [clanOpen, setClanOpen] = useState(false)
   const [journeyOpen, setJourneyOpen] = useState(false)
   const [welcomeBack, setWelcomeBack] = useState<{
@@ -195,6 +197,8 @@ function App() {
       else if (modal === 'shop') setShopOpen(true)
       else if (modal === 'droner') setDronerOpen(true)
       else if (modal === 'ectoDroner') setEctoDronerOpen(true)
+      // Чанк 2: фабрика конвейера. Чанк 1 задаёт opens:'conveyor' на здании.
+      else if (modal === 'conveyor') setConveyorOpen(true)
     }
     eventBus.on('building:open', onBuildingOpen)
 
@@ -424,6 +428,7 @@ function App() {
       {ectoDronerOpen && (
         <EctoDronerModal onClose={() => setEctoDronerOpen(false)} />
       )}
+      {conveyorOpen && <ConveyorModal onClose={() => setConveyorOpen(false)} />}
       {inventoryOpen && (
         <InventoryModal onClose={() => setInventoryOpen(false)} />
       )}
