@@ -38,7 +38,7 @@ export const FIRE_LEVELS: FireLevel[] = [
 export const FIRE_COUNT = 2
 export const FIRE_NAMES = ['Левый', 'Правый']
 
-const levels: number[] = Array(FIRE_COUNT).fill(1) // дефолт — среднее
+const levels: number[] = Array(FIRE_COUNT).fill(2) // дефолт — кислотное (сильнее)
 const listeners = new Set<() => void>()
 
 export function getFireLevel(fire: number): number {

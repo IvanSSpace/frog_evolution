@@ -19,8 +19,8 @@ const LOTTIE_URL = '/loc3_anim.json'
 
 // Точки размещения (доли канваса/зоны) — заданы автором.
 const SPOTS = [
-  { xFrac: 0.419, yFrac: 0.165 },
-  { xFrac: 0.698, yFrac: 0.217 },
+  { xFrac: 0.419, yFrac: 0.15 },
+  { xFrac: 0.698, yFrac: 0.202 },
 ]
 // Размер огня = доля ширины canvas → зумится вместе с картой при ресайзе.
 const SIZE_FRAC = 0.13
