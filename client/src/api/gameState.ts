@@ -35,6 +35,7 @@ export interface ServerGameState {
   offlineIncome?: string // BigInt-string
   offlineMs?: number
   elapsedMs?: number
+  offlineBoxes?: number // server-authoritative число боксов за офлайн (AUDIT §2)
   lastSessionAt: string
   createdAt: string
   updatedAt: string

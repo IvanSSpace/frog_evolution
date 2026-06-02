@@ -1,7 +1,12 @@
 import { FastifyInstance } from 'fastify'
 import type { GameState } from '@prisma/client'
 import { prisma } from '../prisma'
-import { MAX_INCOME_PER_SEC, getGooCollectorCapMs, DRONE_OFFLINE_BONUS_MS } from '../config/economy'
+import {
+  MAX_INCOME_PER_SEC,
+  getGooCollectorCapMs,
+  DRONE_OFFLINE_BONUS_MS,
+  computeOfflineBoxes,
+} from '../config/economy'
 
 // Anti-cheat threshold для idle income.
 // 100B gold/sec — заведомо больше любого realistic дохода.
@@ -59,11 +64,21 @@ export async function gameStateRoutes(app: FastifyInstance) {
         })
       }
 
+      // Offline box fill — считаем на сервере (раньше считал клиент из сырого
+      // elapsedMs → манипулируемо, AUDIT §2). Детерминированно от upgrades.
+      const offlineBoxes = computeOfflineBoxes(
+        elapsedMs,
+        upgrades.dropSpeed ?? 0,
+        upgrades.autoCollect ?? 0,
+        upgrades.collectorDrones ?? 0,
+      )
+
       return {
         ...serializeState(state),
         offlineIncome: offlineIncome.toString(),
         offlineMs: earnedMs, // capped по goo collector
-        elapsedMs, // raw — для box drops calc на клиенте
+        elapsedMs, // raw — оставлен для совместимости
+        offlineBoxes, // server-authoritative число боксов за офлайн
       }
     },
   )

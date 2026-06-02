@@ -166,6 +166,43 @@ export function getGooCollectorCapMs(level: number): number {
 // +6ч к капу офлайн-дохода. «Онлайн-сбор» механика привязана к дронам.
 export const DRONE_OFFLINE_BONUS_MS = 6 * 3600 * 1000
 
+// === Offline box fill (перенос с клиента на сервер, AUDIT §2) ===
+// SYNC POINT: зеркало client/src/game/config/upgrades.ts UPGRADE_CONFIG.dropSpeed.intervalMs
+// и autoCollect.cooldownSec. Координировать изменения с клиентом.
+const DROP_INTERVAL_MS = [10000, 7000, 5500, 4500, 3500, 2800, 2200, 1800, 1500] as const
+const AUTO_COLLECT_COOLDOWN_SEC = [0, 20, 17, 14, 11, 8, 5] as const
+
+export function getDropIntervalMs(level: number): number {
+  return DROP_INTERVAL_MS[Math.min(Math.max(0, level), DROP_INTERVAL_MS.length - 1)]
+}
+
+export function getAutoCollectCooldownMs(level: number): number {
+  const i = Math.min(Math.max(0, level), AUTO_COLLECT_COOLDOWN_SEC.length - 1)
+  return AUTO_COLLECT_COOLDOWN_SEC[i] * 1000
+}
+
+// Кап числа боксов, выкладываемых за офлайн. Без капа долгий AFK → сотни боксов
+// на поле (raw elapsed). 64 — щедро, но защищает от флуда поля.
+export const OFFLINE_BOX_CAP = 64
+
+// Считает сколько боксов накопилось за офлайн: спавн по dropSpeed минус собранные
+// дронами автосбора (collectorDrones × циклы cooldown). Детерминированно от elapsedMs.
+export function computeOfflineBoxes(
+  elapsedMs: number,
+  dropSpeedLevel: number,
+  autoCollectLevel: number,
+  collectorDrones: number,
+): number {
+  if (elapsedMs <= 0) return 0
+  const dropInterval = getDropIntervalMs(dropSpeedLevel)
+  const spawned = dropInterval > 0 ? Math.floor(elapsedMs / dropInterval) : 0
+  const drones = autoCollectLevel > 0 ? Math.max(0, collectorDrones) : 0
+  const cooldownMs = getAutoCollectCooldownMs(autoCollectLevel)
+  const collected =
+    drones > 0 && cooldownMs > 0 ? drones * Math.floor(elapsedMs / cooldownMs) : 0
+  return Math.min(OFFLINE_BOX_CAP, Math.max(0, spawned - collected))
+}
+
 // Возвращает locationId куда переезжает лягушка level (1..18).
 // L1-6 → Болото (1), L7-12 → Лес (2), L13-18 → Планета (3).
 // Для L19 (sentinel) → не используется, special-case в merge endpoint.
