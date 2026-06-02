@@ -6,6 +6,10 @@ import { ShopModal } from './ui/components/ShopModal'
 import { FrogShopModal } from './ui/components/FrogShopModal'
 import { ExpeditionModal } from './ui/components/ExpeditionModal'
 import { JourneyMissionSelect } from './ui/components/JourneyMissionSelect'
+import {
+  startLoc2FrogFactory,
+  stopLoc2FrogFactory,
+} from './game/factory/loc2FrogFactory'
 import { InventoryModal } from './ui/components/InventoryModal'
 import { DronerModal } from './ui/components/DronerModal'
 import { EctoDronerModal } from './ui/components/EctoDronerModal'
@@ -248,6 +252,12 @@ function App() {
     const id = window.setTimeout(() => setShowLoader(false), 450)
     return () => window.clearTimeout(id)
   }, [gameReady])
+
+  // Завод loc2: пассивно производит L7-лягушек (самодостаточный модуль).
+  useEffect(() => {
+    startLoc2FrogFactory()
+    return () => stopLoc2FrogFactory()
+  }, [])
 
   // Phase 24 Plan 24-04: install Captain birth Beat 4 + Beat 5 coordinator.
   // Production-critical (НЕ DEV-only). Idempotent — повторный mount/StrictMode
