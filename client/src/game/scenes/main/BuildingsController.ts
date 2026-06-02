@@ -144,7 +144,7 @@ const BUILDINGS_LOC3: readonly BuildingDef[] = [
     xFrac: 0.5,
     yFrac: 0.9,
     widthFrac: 0.62,
-    // opens: 'evolution', // временно отключено (модалка центра эволюции)
+    opens: 'evolution',
   },
 ] as const
 
