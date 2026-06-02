@@ -150,7 +150,7 @@ const create: CreateTrack = (Tone): TrackInstance => {
           },
         }).connect(bassFilter),
       )
-      bass808.volume.value = -6
+      bass808.volume.value = -11 // приглушён (был -6) — слишком басило
 
       // Пиано (lo-fi FM)
       const pianoRev = nodes.add(
@@ -224,7 +224,7 @@ const create: CreateTrack = (Tone): TrackInstance => {
           envelope: { attack: 0.001, decay: 0.35, sustain: 0, release: 0.1 },
         }).connect(kickFilter),
       )
-      kick.volume.value = -8
+      kick.volume.value = -10 // приглушён (был -8) — меньше низа
 
       // Снэр + body
       const snareFilter = nodes.add(

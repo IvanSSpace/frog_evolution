@@ -32,30 +32,6 @@ export const TRACK_META: Record<TrackId, TrackMeta> = {
       { start: 360, label: 'VII · Eternity', key: 'C major' },
     ],
   },
-  swampDance: {
-    id: 'swampDance',
-    nameKey: 'player.tracks.swampDance.name',
-    descKey: 'player.tracks.swampDance.desc',
-    totalSec: 96,
-    sections: [
-      { start: 0, label: 'I · Утро', key: 'C major' },
-      { start: 24, label: 'II · Прыжки', key: 'C major' },
-      { start: 48, label: 'III · Хор лягушек', key: 'F major' },
-      { start: 72, label: 'IV · Закат', key: 'C major' },
-    ],
-  },
-  frogJazz: {
-    id: 'frogJazz',
-    nameKey: 'player.tracks.frogJazz.name',
-    descKey: 'player.tracks.frogJazz.desc',
-    totalSec: 108,
-    sections: [
-      { start: 0, label: 'I · Intro', key: 'A minor' },
-      { start: 27, label: 'II · Theme', key: 'D minor' },
-      { start: 54, label: 'III · Scat', key: 'A minor' },
-      { start: 81, label: 'IV · Outro', key: 'A minor' },
-    ],
-  },
   mushroomDrifter: {
     id: 'mushroomDrifter',
     nameKey: 'player.tracks.mushroomDrifter.name',

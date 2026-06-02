@@ -246,7 +246,9 @@ const create: CreateTrack = (Tone: ToneLib): TrackInstance => {
     meta: TRACK_META.mushroomDrifter,
 
     async build(_Tone, outNode) {
-      const master = nodes.add(new Tone.Gain(0.92).connect(outNode))
+      // −40% к максимальной громкости (0.92 × 0.6) — трек заметно громче
+      // остальных в оригинале, приглушаем на выходе пластинки.
+      const master = nodes.add(new Tone.Gain(0.92 * 0.6).connect(outNode))
       const reverb = nodes.add(
         new Tone.Reverb({ decay: 5, preDelay: 0.02, wet: 0.34 }).connect(master),
       )

@@ -19,8 +19,6 @@ export interface TrackMeta {
 export type TrackId =
   | 'hogstep'
   | 'beyondHorizon'
-  | 'swampDance'
-  | 'frogJazz'
   | 'mushroomDrifter'
 
 export interface RuntimeContext {
