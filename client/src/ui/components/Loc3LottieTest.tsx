@@ -19,12 +19,11 @@ const LOTTIE_URL = '/loc3_anim.json'
 
 // Точки размещения (доли канваса/зоны) — заданы автором.
 const SPOTS = [
-  { xFrac: 0.419, yFrac: 0.13 },
-  { xFrac: 0.698, yFrac: 0.182 },
+  { xFrac: 0.419, yFrac: 0.165 },
+  { xFrac: 0.698, yFrac: 0.217 },
 ]
-// Размер огня = доля ширины canvas (≈80px при референс-ширине ~827) → зумится
-// вместе с картой при ресайзе. Раньше был фикс 80px и не масштабировался.
-const SIZE_FRAC = 0.097
+// Размер огня = доля ширины canvas → зумится вместе с картой при ресайзе.
+const SIZE_FRAC = 0.13
 
 export function Loc3LottieTest() {
   const currentLocation = useGameStore((s) => s.currentLocation)
