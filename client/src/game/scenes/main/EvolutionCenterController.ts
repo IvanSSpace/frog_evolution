@@ -64,6 +64,7 @@ export class EvolutionCenterController {
   private front: Phaser.GameObjects.Image | null = null
   private swimmers: Phaser.GameObjects.Image[] = []
   private poolPoly: Phaser.Math.Vector2[] = []
+  private maskGfx: Phaser.GameObjects.Graphics | null = null
   private tweens: Phaser.Tweens.Tween[] = []
   private endsAt = 0 // Date.now() ms когда эволюция готова
   private countdown: Phaser.GameObjects.Text | null = null
@@ -186,6 +187,20 @@ export class EvolutionCenterController {
     const n = swimmerCount(level)
     const scale = BASE_SCALE * swimmerScale(n)
     this.poolPoly = POOL_POLY.map((p) => this.worldPt(p))
+    // Маска-полигон: лягушки клипаются по границе капсулы — ничего не торчит
+    // за evoblock_transparent2 (часть вне полигона просто не рендерится).
+    const g = this.scene.add.graphics()
+    g.fillStyle(0xffffff, 1)
+    g.beginPath()
+    g.moveTo(this.poolPoly[0].x, this.poolPoly[0].y)
+    for (let i = 1; i < this.poolPoly.length; i++) {
+      g.lineTo(this.poolPoly[i].x, this.poolPoly[i].y)
+    }
+    g.closePath()
+    g.fillPath()
+    g.setVisible(false)
+    this.maskGfx = g
+    const poolMask = g.createGeometryMask()
     for (let i = 0; i < n; i++) {
       const start = this.randomInPoly(this.poolPoly)
       const img = this.scene.add
@@ -193,6 +208,7 @@ export class EvolutionCenterController {
         .setScale(scale)
         .setDepth(baseDepth + 2 + i * 0.01)
         .setAlpha(0)
+      img.setMask(poolMask)
       const ang = Phaser.Math.FloatBetween(0, Math.PI * 2)
       const speed = SWIM_SPEED * Phaser.Math.FloatBetween(0.8, 1.2)
       img.setData('vx', Math.cos(ang) * speed)
@@ -349,9 +365,14 @@ export class EvolutionCenterController {
     this.tweens = []
     for (const s of this.swimmers) {
       this.scene.tweens.killTweensOf(s)
+      s.clearMask(true)
       s.destroy()
     }
     this.swimmers = []
+    if (this.maskGfx) {
+      this.maskGfx.destroy()
+      this.maskGfx = null
+    }
     if (this.back) {
       this.scene.tweens.killTweensOf(this.back)
       this.back.destroy()
