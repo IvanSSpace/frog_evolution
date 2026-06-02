@@ -3,12 +3,23 @@ import cors from '@fastify/cors'
 import formbody from '@fastify/formbody'
 import authPlugin from './plugins/auth'
 import { registerRoutes } from './routes'
+import { config, isDev } from './config'
 
 export async function buildApp() {
   const app = Fastify({ logger: true })
 
+  // CORS: в dev отражаем любой origin; в prod — allowlist из CLIENT_ORIGIN
+  // (CSV), если задан. Пусто в prod → fallback на reflect-any (не ломаем
+  // деплой), но логируем предупреждение (AUDIT §3F).
+  const corsOrigin =
+    isDev || !config.clientOrigin
+      ? true
+      : config.clientOrigin.split(',').map((s) => s.trim())
+  if (!isDev && corsOrigin === true) {
+    app.log.warn('CORS: CLIENT_ORIGIN не задан в prod — отражаем любой origin')
+  }
   await app.register(cors, {
-    origin: true,
+    origin: corsOrigin,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   })
   await app.register(formbody)

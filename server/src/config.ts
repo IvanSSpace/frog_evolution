@@ -6,6 +6,8 @@ export const config = {
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? '',
   nodeEnv: process.env.NODE_ENV ?? 'development',
   databaseUrl: process.env.DATABASE_URL ?? '',
+  // CORS allowlist для prod (CSV origins). Пусто → reflect any (как в dev).
+  clientOrigin: process.env.CLIENT_ORIGIN ?? '',
   // Admin panel auth (single super-admin)
   adminEmail: process.env.ADMIN_EMAIL ?? '',
   adminPasswordHash: process.env.ADMIN_PASSWORD_HASH ?? '',

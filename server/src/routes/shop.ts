@@ -28,49 +28,59 @@ export async function shopRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: 'frog not in shop' })
       }
 
-      const state = await prisma.gameState.findUnique({
-        where: { userId: request.user.id },
-      })
-      if (!state) {
-        return reply.code(404).send({ error: 'no game state' })
-      }
+      // Serializable tx: read gold/purchases и списание — атомарно. Без этого
+      // два параллельных buy читали один gold → двойная трата (AUDIT §3C).
+      const result = await prisma.$transaction(
+        async (tx) => {
+          const state = await tx.gameState.findUnique({
+            where: { userId: request.user.id },
+          })
+          if (!state) return { error: 'no game state', code: 404 } as const
 
-      const purchases = (state.frogPurchases as number[]) ?? []
-      const purchasesCount = purchases[level - 1] ?? 0
-      const price = getFrogPrice(level, purchasesCount)
+          const purchases = (state.frogPurchases as number[]) ?? []
+          const purchasesCount = purchases[level - 1] ?? 0
+          const price = getFrogPrice(level, purchasesCount)
 
-      const gold = state.gold
-      if (gold < BigInt(price)) {
-        return reply.code(400).send({ error: 'insufficient gold', need: price })
-      }
+          if (state.gold < BigInt(price)) {
+            return { error: 'insufficient gold', need: price, code: 400 } as const
+          }
 
-      // Cap check: total frogs across all locations
-      const locFrogs = (state.locationFrogs as number[][]) ?? []
-      const totalFrogs = locFrogs.reduce((sum, loc) => sum + (loc?.length ?? 0), 0)
-      if (totalFrogs >= ENTITY_CAP) {
-        return reply.code(400).send({ error: 'cap full' })
-      }
+          const locFrogs = (state.locationFrogs as number[][]) ?? []
+          const totalFrogs = locFrogs.reduce(
+            (sum, loc) => sum + (loc?.length ?? 0),
+            0,
+          )
+          if (totalFrogs >= ENTITY_CAP) {
+            return { error: 'cap full', code: 400 } as const
+          }
 
-      // Apply frogPurchases increment (does not write locationFrogs — client handles frog placement)
-      const nextPurchases = [...purchases]
-      while (nextPurchases.length < MAX_LEVEL) nextPurchases.push(0)
-      nextPurchases[level - 1] = purchasesCount + 1
+          const nextPurchases = [...purchases]
+          while (nextPurchases.length < MAX_LEVEL) nextPurchases.push(0)
+          nextPurchases[level - 1] = purchasesCount + 1
 
-      const updated = await prisma.gameState.update({
-        where: { userId: request.user.id },
-        data: {
-          gold: gold - BigInt(price),
-          frogPurchases: nextPurchases,
+          const updated = await tx.gameState.update({
+            where: { userId: request.user.id },
+            data: {
+              gold: state.gold - BigInt(price),
+              frogPurchases: nextPurchases,
+            },
+          })
+          return {
+            ok: true as const,
+            gold: updated.gold.toString(),
+            frogPurchases: updated.frogPurchases,
+            spent: price,
+            level,
+          }
         },
-      })
+        { isolationLevel: 'Serializable' },
+      )
 
-      return {
-        ok: true,
-        gold: updated.gold.toString(),
-        frogPurchases: updated.frogPurchases,
-        spent: price,
-        level,
+      if ('error' in result) {
+        const r = result as { error: string; code: number; need?: number }
+        return reply.code(r.code).send({ error: r.error, need: r.need })
       }
+      return result
     },
   )
 
@@ -85,51 +95,59 @@ export async function shopRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: 'invalid upgrade key' })
       }
 
-      const state = await prisma.gameState.findUnique({
-        where: { userId: request.user.id },
-      })
-      if (!state) {
-        return reply.code(404).send({ error: 'no game state' })
-      }
+      // Serializable tx — атомарное списание (AUDIT §3C).
+      const result = await prisma.$transaction(
+        async (tx) => {
+          const state = await tx.gameState.findUnique({
+            where: { userId: request.user.id },
+          })
+          if (!state) return { error: 'no game state', code: 404 } as const
 
-      const upgrades = (state.upgrades as Record<string, number>) ?? {}
-      const currentLevel = upgrades[key] ?? 0
-      const cfg = UPGRADE_CONFIG[key]
-      if (currentLevel >= cfg.maxLevel) {
-        return reply.code(400).send({ error: 'max level reached' })
-      }
+          const upgrades = (state.upgrades as Record<string, number>) ?? {}
+          const currentLevel = upgrades[key] ?? 0
+          const cfg = UPGRADE_CONFIG[key]
+          if (currentLevel >= cfg.maxLevel) {
+            return { error: 'max level reached', code: 400 } as const
+          }
 
-      // Ships gate: next ship must be unlocked by progression (Лес/Континент/L19).
-      if (key === 'ships') {
-        const discovered = (state.discoveredLevels as number[]) ?? []
-        if (!shipUnlocked(currentLevel, discovered)) {
-          return reply.code(400).send({ error: 'ship locked' })
-        }
-      }
+          // Ships gate: next ship unlocked by progression (Лес/Континент/L19).
+          if (key === 'ships') {
+            const discovered = (state.discoveredLevels as number[]) ?? []
+            if (!shipUnlocked(currentLevel, discovered)) {
+              return { error: 'ship locked', code: 400 } as const
+            }
+          }
 
-      const cost = getUpgradeCost(key, currentLevel)
-      const gold = state.gold
-      if (gold < BigInt(cost)) {
-        return reply.code(400).send({ error: 'insufficient gold', need: cost })
-      }
+          const cost = getUpgradeCost(key, currentLevel)
+          if (state.gold < BigInt(cost)) {
+            return { error: 'insufficient gold', need: cost, code: 400 } as const
+          }
 
-      const nextUpgrades = { ...upgrades, [key]: currentLevel + 1 }
-      const updated = await prisma.gameState.update({
-        where: { userId: request.user.id },
-        data: {
-          gold: gold - BigInt(cost),
-          upgrades: nextUpgrades,
+          const nextUpgrades = { ...upgrades, [key]: currentLevel + 1 }
+          const updated = await tx.gameState.update({
+            where: { userId: request.user.id },
+            data: {
+              gold: state.gold - BigInt(cost),
+              upgrades: nextUpgrades,
+            },
+          })
+          return {
+            ok: true as const,
+            gold: updated.gold.toString(),
+            upgrades: updated.upgrades,
+            spent: cost,
+            key,
+            newLevel: currentLevel + 1,
+          }
         },
-      })
+        { isolationLevel: 'Serializable' },
+      )
 
-      return {
-        ok: true,
-        gold: updated.gold.toString(),
-        upgrades: updated.upgrades,
-        spent: cost,
-        key,
-        newLevel: currentLevel + 1,
+      if ('error' in result) {
+        const r = result as { error: string; code: number; need?: number }
+        return reply.code(r.code).send({ error: r.error, need: r.need })
       }
+      return result
     },
   )
 }
