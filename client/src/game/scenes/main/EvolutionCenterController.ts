@@ -54,6 +54,28 @@ function swimmerCount(level: number): number {
 function swimmerScale(n: number): number {
   return n >= 6 ? 0.4 : n >= 3 ? 0.55 : 0.75
 }
+// Инсет полигона к центроиду (больше для крупных лягушек) — центр не доходит
+// до края, тело лягушки остаётся внутри стекла.
+function insetFactor(n: number): number {
+  return n >= 6 ? 0.82 : n >= 3 ? 0.74 : 0.6
+}
+function insetPoly(
+  poly: Phaser.Math.Vector2[],
+  k: number,
+): Phaser.Math.Vector2[] {
+  let cx = 0,
+    cy = 0
+  for (const p of poly) {
+    cx += p.x
+    cy += p.y
+  }
+  cx /= poly.length
+  cy /= poly.length
+  return poly.map(
+    (p) =>
+      new Phaser.Math.Vector2(cx + (p.x - cx) * k, cy + (p.y - cy) * k),
+  )
+}
 
 export class EvolutionCenterController {
   private scene: MainScene
@@ -186,15 +208,17 @@ export class EvolutionCenterController {
     // постоянная скорость + отскок от границ + медленное вращение (см. update).
     const n = swimmerCount(level)
     const scale = BASE_SCALE * swimmerScale(n)
-    this.poolPoly = POOL_POLY.map((p) => this.worldPt(p))
-    // Маска-полигон: лягушки клипаются по границе капсулы — ничего не торчит
-    // за evoblock_transparent2 (часть вне полигона просто не рендерится).
+    const fullPoly = POOL_POLY.map((p) => this.worldPt(p))
+    // Движение — по ИНСЕТ-полигону (центр не доходит до края на радиус тела),
+    // поэтому целая лягушка остаётся внутри стекла, не режется и не торчит.
+    this.poolPoly = insetPoly(fullPoly, insetFactor(n))
+    // Маска по ПОЛНОМУ полигону — страховка (если всё же коснётся края, обрежет).
     const g = this.scene.add.graphics()
     g.fillStyle(0xffffff, 1)
     g.beginPath()
-    g.moveTo(this.poolPoly[0].x, this.poolPoly[0].y)
-    for (let i = 1; i < this.poolPoly.length; i++) {
-      g.lineTo(this.poolPoly[i].x, this.poolPoly[i].y)
+    g.moveTo(fullPoly[0].x, fullPoly[0].y)
+    for (let i = 1; i < fullPoly.length; i++) {
+      g.lineTo(fullPoly[i].x, fullPoly[i].y)
     }
     g.closePath()
     g.fillPath()
