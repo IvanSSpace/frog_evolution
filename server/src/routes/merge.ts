@@ -1,29 +1,22 @@
 import { FastifyInstance } from 'fastify'
+import { z } from 'zod'
 import { prisma } from '../prisma'
+import { parseOr400 } from '../lib/validate'
 import { getFrogLocation, MAX_LEVEL } from '../config/economy'
+
+const MergeBody = z.object({
+  fromLevel: z.number().int().min(1).max(MAX_LEVEL),
+  locationId: z.number().int().min(1).max(3),
+})
 
 export async function mergeRoutes(app: FastifyInstance) {
   app.post(
     '/game/merge',
     { preHandler: [app.authenticate] },
     async (request, reply) => {
-      const body = request.body as {
-        fromLevel?: number
-        locationId?: number
-      }
-      const fromLevel = body.fromLevel
-      const locationId = body.locationId
-
-      if (
-        typeof fromLevel !== 'number' ||
-        fromLevel < 1 ||
-        fromLevel > MAX_LEVEL ||
-        typeof locationId !== 'number' ||
-        locationId < 1 ||
-        locationId > 3
-      ) {
-        return reply.code(400).send({ error: 'invalid merge params' })
-      }
+      const parsed = parseOr400(MergeBody, request.body, reply)
+      if (!parsed) return
+      const { fromLevel, locationId } = parsed
 
       // Serializable tx — read+merge+write атомарно (AUDIT §3C): два параллельных
       // merge на одну пару не должны срабатывать дважды.

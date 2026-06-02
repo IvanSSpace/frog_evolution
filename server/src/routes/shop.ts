@@ -1,5 +1,7 @@
 import { FastifyInstance } from 'fastify'
+import { z } from 'zod'
 import { prisma } from '../prisma'
+import { parseOr400 } from '../lib/validate'
 import {
   getFrogPrice,
   getUpgradeCost,
@@ -11,17 +13,21 @@ import {
   type UpgradeKey,
 } from '../config/economy'
 
+const BuyFrogBody = z.object({
+  level: z.number().int().min(1).max(MAX_LEVEL),
+})
+const UPGRADE_KEYS = Object.keys(UPGRADE_CONFIG) as [UpgradeKey, ...UpgradeKey[]]
+const BuyUpgradeBody = z.object({ key: z.enum(UPGRADE_KEYS) })
+
 export async function shopRoutes(app: FastifyInstance) {
   // POST /game/shop/buy-frog { level }
   app.post(
     '/game/shop/buy-frog',
     { preHandler: [app.authenticate] },
     async (request, reply) => {
-      const body = request.body as { level?: number }
-      const level = body.level
-      if (typeof level !== 'number' || level < 1 || level > MAX_LEVEL) {
-        return reply.code(400).send({ error: 'invalid level' })
-      }
+      const parsed = parseOr400(BuyFrogBody, request.body, reply)
+      if (!parsed) return
+      const { level } = parsed
 
       const cfg = FROG_ECONOMY[level - 1]
       if (!cfg.availableInShop) {
@@ -89,11 +95,9 @@ export async function shopRoutes(app: FastifyInstance) {
     '/game/shop/buy-upgrade',
     { preHandler: [app.authenticate] },
     async (request, reply) => {
-      const body = request.body as { key?: string }
-      const key = body.key as UpgradeKey | undefined
-      if (!key || !(key in UPGRADE_CONFIG)) {
-        return reply.code(400).send({ error: 'invalid upgrade key' })
-      }
+      const parsed = parseOr400(BuyUpgradeBody, request.body, reply)
+      if (!parsed) return
+      const { key } = parsed
 
       // Serializable tx — атомарное списание (AUDIT §3C).
       const result = await prisma.$transaction(

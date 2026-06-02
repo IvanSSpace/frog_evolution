@@ -1,6 +1,8 @@
 import { FastifyInstance } from 'fastify'
+import { z } from 'zod'
 import type { GameState } from '@prisma/client'
 import { prisma } from '../prisma'
+import { parseOr400 } from '../lib/validate'
 import {
   MAX_INCOME_PER_SEC,
   getGooCollectorCapMs,
@@ -12,6 +14,12 @@ import {
 // 100B gold/sec — заведомо больше любого realistic дохода.
 // Ловит только грубые читы (gold = 1e20 через DevTools), не trip'ает на legit play.
 const MAX_GOLD_PER_SEC = 100_000_000_000n // 1e11 как BigInt
+
+// PUT-снапшот валидируется loosely: обязательна только version. Остальные поля
+// проходят насквозь (passthrough) и pick'аются/клампятся в хэндлере.
+const PutStateBody = z
+  .object({ version: z.number().int().min(0) })
+  .passthrough()
 
 // Серилизация GameState для JSON-ответа: BigInt-поля (gold, ectoplasm) → строки
 // (Fastify не умеет сериализовать BigInt). Остальное as-is.
@@ -87,17 +95,13 @@ export async function gameStateRoutes(app: FastifyInstance) {
     '/game/state',
     { preHandler: [app.authenticate] },
     async (request, reply) => {
+      // PUT /game/state намеренно permissive (sync-снапшот + клампы): zod
+      // валидирует жёсткое требование (version), остальное passthrough —
+      // поля pick'аются/клампятся ниже defensive-логикой.
+      const parsed = parseOr400(PutStateBody, request.body, reply)
+      if (!parsed) return
       const body = request.body as Record<string, unknown>
-
-      // Optimistic concurrency: client must echo the version it last saw.
-      const clientVersion = body.version
-      if (
-        typeof clientVersion !== 'number' ||
-        !Number.isInteger(clientVersion) ||
-        clientVersion < 0
-      ) {
-        return reply.code(400).send({ error: 'version required (non-negative integer)' })
-      }
+      const clientVersion = parsed.version
 
       // Always fetch current — needed both for version check and idle-income clamp.
       const current = await prisma.gameState.findUnique({

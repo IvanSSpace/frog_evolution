@@ -1,5 +1,7 @@
 import { FastifyInstance } from 'fastify'
+import { z } from 'zod'
 import { prisma } from '../prisma'
+import { parseOr400 } from '../lib/validate'
 import {
   adjustSerum,
   getSerumCount,
@@ -8,11 +10,11 @@ import {
   type Element,
 } from '../config/cosmic'
 
-interface ApplySerumBody {
-  frogId?: string
-  element?: string
-  level?: number
-}
+const ApplySerumBody = z.object({
+  frogId: z.string().min(1),
+  element: z.string().refine(isValidElement, { message: 'invalid element' }),
+  level: z.number().int().min(1).max(24),
+})
 
 export async function cosmicRoutes(app: FastifyInstance) {
   // POST /game/cosmic/apply-serum
@@ -22,18 +24,10 @@ export async function cosmicRoutes(app: FastifyInstance) {
     '/game/cosmic/apply-serum',
     { preHandler: [app.authenticate] },
     async (request, reply) => {
-      const body = request.body as ApplySerumBody
-      const { frogId, element, level } = body
+      const parsed = parseOr400(ApplySerumBody, request.body, reply)
+      if (!parsed) return
+      const { frogId, element, level } = parsed
 
-      if (!frogId || typeof frogId !== 'string') {
-        return reply.code(400).send({ error: 'frogId required' })
-      }
-      if (!isValidElement(element)) {
-        return reply.code(400).send({ error: 'invalid element' })
-      }
-      if (typeof level !== 'number' || level < 1 || level > 24) {
-        return reply.code(400).send({ error: 'invalid level' })
-      }
       // 2026-05-19: серум applies только на L1 frogs.
       if (level !== 1) {
         return reply.code(400).send({ error: 'serum L1 only' })
