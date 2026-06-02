@@ -9,10 +9,11 @@
 // (overflow:hidden) обрезает их по границе игрового вида (не лезут на футер/хедер).
 // За зумом смены локаций не следят. Координаты/уровни — заданы автором.
 
-import { useEffect, useRef } from 'react'
-import lottie from 'lottie-web'
+import { useEffect, useRef, useState } from 'react'
+import lottie, { type AnimationItem } from 'lottie-web'
 import { useGameStore } from '../../store/gameStore'
 import { getFieldScroll } from '../../game/index'
+import { eventBus } from '../../store/eventBus'
 import { fireFilter, useFireLevel } from './fireLevels'
 
 const LOTTIE_URL = '/loc3_anim.json'
@@ -32,6 +33,29 @@ export function Loc3LottieTest() {
   const spotRefs = useRef<(HTMLDivElement | null)[]>([])
   const lastSize = useRef(-1) // последний применённый размер огня (px); -1 → форс первый раз
 
+  // На время zoom-перехода между локациями огонь СКРЫВАЕМ + ставим Lottie на
+  // паузу: DOM-оверлей не следует за Phaser-зумом (глючно «пропадал»), а пауза
+  // ещё и экономит CPU в момент тяжёлой анимации перехода. transitioningRef —
+  // для rAF-loop (без рестарта), state — для paused-prop детей.
+  const [transitioning, setTransitioning] = useState(false)
+  const transitioningRef = useRef(false)
+  useEffect(() => {
+    const onStart = () => {
+      transitioningRef.current = true
+      setTransitioning(true)
+    }
+    const onEnd = () => {
+      transitioningRef.current = false
+      setTransitioning(false)
+    }
+    eventBus.on('location:transitionStart', onStart)
+    eventBus.on('location:transitionEnd', onEnd)
+    return () => {
+      eventBus.off('location:transitionStart', onStart)
+      eventBus.off('location:transitionEnd', onEnd)
+    }
+  }, [])
+
   const active = currentLocation === 3
 
   // Каждый кадр: clip-контейнер = прямоугольник канваса; огни внутри = absolute
@@ -47,7 +71,14 @@ export function Loc3LottieTest() {
       const canvas = document.getElementById('game-canvas')
       const fs = getFieldScroll()
       const clip = clipRef.current
+      if (clip && transitioningRef.current) {
+        // Идёт zoom-переход — прячем огонь (не следует за зумом, иначе глюк).
+        clip.style.visibility = 'hidden'
+        raf = requestAnimationFrame(loop)
+        return
+      }
       if (canvas && fs && clip) {
+        clip.style.visibility = 'visible'
         const r = canvas.getBoundingClientRect()
         clip.style.left = `${r.left}px`
         clip.style.top = `${r.top}px`
@@ -110,16 +141,21 @@ export function Loc3LottieTest() {
             filter: fireFilter(i), // уровень горения этого огня (per-fire)
           }}
         >
-          <LottieSpot />
+          <LottieSpot paused={transitioning} />
         </div>
       ))}
     </div>
   )
 }
 
-// Один экземпляр анимации через bundled lottie-web (SVG-рендер, loop).
-function LottieSpot() {
+// Один экземпляр анимации через bundled lottie-web (canvas-рендер, loop).
+// paused — пауза проигрывания на время zoom-перехода (перф + нет глюка).
+function LottieSpot({ paused }: { paused: boolean }) {
   const ref = useRef<HTMLDivElement | null>(null)
+  const animRef = useRef<AnimationItem | null>(null)
+  const loadedRef = useRef(false)
+  const pausedRef = useRef(paused)
+  pausedRef.current = paused
 
   useEffect(() => {
     const container = ref.current
@@ -136,6 +172,7 @@ function LottieSpot() {
       autoplay: true,
       path: LOTTIE_URL,
     })
+    animRef.current = anim
     // Канвас-renderer не масштабируется сам при ресайзе контейнера — следим
     // ResizeObserver'ом и зовём anim.resize() для чёткой перерисовки под новый
     // размер. Guard: resize ТОЛЬКО после загрузки (path async) и до destroy —
@@ -145,9 +182,11 @@ function LottieSpot() {
     let alive = true
     anim.addEventListener('DOMLoaded', () => {
       loaded = true
+      loadedRef.current = true
       if (alive) {
         try {
           anim.resize()
+          if (pausedRef.current) anim.pause() // смонтировались во время перехода
         } catch {
           /* ignore */
         }
@@ -164,10 +203,24 @@ function LottieSpot() {
     ro.observe(container)
     return () => {
       alive = false
+      loadedRef.current = false
+      animRef.current = null
       ro.disconnect()
       anim.destroy()
     }
   }, [])
+
+  // Пауза/возобновление проигрывания при смене paused (zoom-переход).
+  useEffect(() => {
+    const anim = animRef.current
+    if (!anim || !loadedRef.current) return
+    try {
+      if (paused) anim.pause()
+      else anim.play()
+    } catch {
+      /* ignore */
+    }
+  }, [paused])
 
   return <div ref={ref} style={{ width: '100%', height: '100%' }} />
 }
