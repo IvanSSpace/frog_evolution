@@ -46,6 +46,7 @@ import { FrogSpawner } from './main/FrogSpawner'
 import { MergeController } from './main/MergeController'
 import { CapsuleMergeController } from './main/CapsuleMergeController'
 import { EctoDroneController } from './main/EctoDroneController'
+import { EvolutionCenterController } from './main/EvolutionCenterController'
 import { BoxController } from './main/BoxController'
 import { PoopController } from './main/PoopController'
 import { MagnetController } from './main/MagnetController'
@@ -147,6 +148,9 @@ export class MainScene extends Phaser.Scene {
 
   // Loc2: дрон-сборщик эктоплазмы (фиолетовой слизи).
   private ectoDrone!: EctoDroneController
+
+  // Loc3: центр эволюции (evoblock-капсула: положить лягушку → таймер → анлок).
+  private evoCenter!: EvolutionCenterController
 
   // Phase 21-03 (Wave 3): box drop / open в отдельном controller'е.
   private box!: BoxController
@@ -305,9 +309,15 @@ export class MainScene extends Phaser.Scene {
     this.buildings = new BuildingsController(this)
     // Loc2: капсулы авто-мерджат пары (маршрут → колба → мердж). Нужен buildings
     // для FX подмены текстуры колбы во время мерджа.
-    this.capsuleMerge = new CapsuleMergeController(this, this.merge, this.buildings)
+    this.capsuleMerge = new CapsuleMergeController(
+      this,
+      this.merge,
+      this.buildings,
+    )
     // Loc2: дрон собирает эктоплазму (фиолетовую слизь) с поля.
     this.ectoDrone = new EctoDroneController(this)
+    // Loc3: центр эволюции (тап по капсуле → лягушка внутрь → таймер → анлок).
+    this.evoCenter = new EvolutionCenterController(this, this.spawner, this.buildings)
     // Phase 21-05 (Wave 5): location-transition + interaction controllers.
     this.locTransition = new LocationTransition(
       this,
@@ -1034,11 +1044,19 @@ export class MainScene extends Phaser.Scene {
       this.ectoDrone.tick()
     }
 
+    // Loc3: центр эволюции — поддерживаем хит-зону над капсулой (тап = старт).
+    if (currentLocId === 3 && !serumPaused) {
+      this.evoCenter.ensureHitZone()
+    }
+
     // Loc2 конвейер: авто-производство L7 на поле (бесплатно), cap-gated.
     if (currentLocId === 2) {
       // Интервал из апгрейда conveyorSpeed (Чанк 2: loc2Upgrades + геттер).
       const cInterval = conveyorIntervalMs(store.loc2Upgrades.conveyorSpeed)
-      this.conveyorProgressMs = Math.min(this.conveyorProgressMs + delta, cInterval)
+      this.conveyorProgressMs = Math.min(
+        this.conveyorProgressMs + delta,
+        cInterval,
+      )
       if (this.conveyorProgressMs >= cInterval) {
         if (this.canSpawnBox()) {
           this.spawnConveyorFrog()
@@ -1130,6 +1148,8 @@ export class MainScene extends Phaser.Scene {
       p.destroy()
     }
     this.ectoPoops = []
+    // Сброс центра эволюции loc3 (вернуть лягушку, убрать FX/хит-зону).
+    this.evoCenter.reset()
   }
 
   private onTransitionEnd = ({ id }: { id: number }) => {
@@ -1270,6 +1290,7 @@ export class MainScene extends Phaser.Scene {
     // Loc2 капсулы-мердж — сброс tween'ов/state.
     this.capsuleMerge?.destroy()
     this.ectoDrone?.destroy()
+    this.evoCenter?.destroy()
     // Phase 21-05: subscribe / DnD pointer listeners — в FrogInteraction.teardown().
     this.interaction.teardown()
     // Phase 23 Plan 23-05: очищаем window.__mainScene reference

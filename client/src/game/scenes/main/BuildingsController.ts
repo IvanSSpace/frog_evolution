@@ -143,7 +143,7 @@ const BUILDINGS_LOC3: readonly BuildingDef[] = [
     src: '/builds_loc3/evoblock1_tansparent.png',
     xFrac: 0.5,
     yFrac: 0.85,
-    widthFrac: 0.44,
+    widthFrac: 0.48,
   },
 ] as const
 
@@ -176,6 +176,11 @@ export class BuildingsController {
     for (const b of BUILDINGS) scene.load.image(b.key, b.src)
     for (const b of BUILDINGS_LOC2) scene.load.image(b.key, b.src)
     for (const b of BUILDINGS_LOC3) scene.load.image(b.key, b.src)
+    // Активная текстура блока эволюции (показывается во время эволюции).
+    scene.load.image(
+      'bld3_evoblock_active',
+      '/builds_loc3/evoblock2_tansparent_Active.png',
+    )
     // Состояния коллектора по заполнению (превью + будущая механика).
     scene.load.image('bld_collector_empty', '/builds/collector_empty.png')
     scene.load.image('bld_collector_full', '/builds/collector_full.png')
@@ -424,6 +429,11 @@ export class BuildingsController {
   /** Спрайт фабрики лягушек loc2 (для конвейер-анимации при выпуске). */
   getFactorySprite(): Phaser.GameObjects.Image | null {
     return this.sprites.find((s) => s.texture.key === 'bld2_factory') ?? null
+  }
+
+  /** Спрайт блока эволюции loc3 (для EvolutionCenterController — FX/камеры). */
+  getEvoblockSprite(): Phaser.GameObjects.Image | null {
+    return this.sprites.find((s) => s.texture.key === 'bld3_evoblock') ?? null
   }
 
   /** Спрайты капсул репликации loc2 (для CapsuleMergeController — FX мерджа). */
