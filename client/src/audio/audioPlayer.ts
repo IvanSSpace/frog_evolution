@@ -29,12 +29,14 @@ const TRACK_LOADERS: Record<TrackId, () => Promise<{ default: CreateTrack }>> =
     beyondHorizon: () => import('./tracks/beyondHorizon'),
     swampDance: () => import('./tracks/swampDance'),
     frogJazz: () => import('./tracks/frogJazz'),
+    mushroomDrifter: () => import('./tracks/mushroomDrifter'),
   }
 
 export const TRACK_ORDER: TrackId[] = [
   'hogstep',
   'swampDance',
   'frogJazz',
+  'mushroomDrifter',
   'beyondHorizon',
 ]
 
@@ -43,6 +45,7 @@ export const TRACK_TOTALS: Record<TrackId, number> = {
   beyondHorizon: 420,
   swampDance: 96,
   frogJazz: 108,
+  mushroomDrifter: 181,
 }
 
 const CROSSFADE_SEC = 0.15

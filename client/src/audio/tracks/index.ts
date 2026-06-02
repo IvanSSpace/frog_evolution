@@ -56,4 +56,19 @@ export const TRACK_META: Record<TrackId, TrackMeta> = {
       { start: 81, label: 'IV · Outro', key: 'A minor' },
     ],
   },
+  mushroomDrifter: {
+    id: 'mushroomDrifter',
+    nameKey: 'player.tracks.mushroomDrifter.name',
+    descKey: 'player.tracks.mushroomDrifter.desc',
+    // ~3:01, 90 BPM, 68 тактов (T(68) ≈ 181с). Am–C–G–F.
+    totalSec: 181,
+    sections: [
+      { start: 0, label: 'I · Интро', key: 'A minor' },
+      { start: 21, label: 'II · Тема', key: 'A minor' },
+      { start: 64, label: 'III · Припев', key: 'A minor' },
+      { start: 107, label: 'IV · Брейк', key: 'A minor' },
+      { start: 128, label: 'V · Кульминация', key: 'A minor' },
+      { start: 171, label: 'VI · Концовка', key: 'A minor' },
+    ],
+  },
 }

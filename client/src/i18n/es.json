@@ -170,6 +170,10 @@
       "frogJazz": {
         "name": "Jazz de Rana",
         "desc": "1.8 minutos · walking bass + brass + scat-croak"
+      },
+      "mushroomDrifter": {
+        "name": "Mushroom Drifter",
+        "desc": "3 minutos · tema principal melancólico, Am · alt vibe"
       }
     }
   },

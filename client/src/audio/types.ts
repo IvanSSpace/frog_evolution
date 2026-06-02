@@ -16,7 +16,12 @@ export interface TrackMeta {
   sections: TrackSection[]
 }
 
-export type TrackId = 'hogstep' | 'beyondHorizon' | 'swampDance' | 'frogJazz'
+export type TrackId =
+  | 'hogstep'
+  | 'beyondHorizon'
+  | 'swampDance'
+  | 'frogJazz'
+  | 'mushroomDrifter'
 
 export interface RuntimeContext {
   getElapsed: () => number
