@@ -118,14 +118,12 @@ const COSMIC_SYNC_KEYS = [
   'hasCosmosUnlocked',
   'l18MergesCount',
   'l18AbsoluteBonusPerSec',
-  // Чанк 2: Loc2/Loc3 экономика (валюты + апгрейды локаций).
-  'ectoplasm',
-  'currencyY',
-  'loc2Upgrades',
   // 2026-05-23: эволюция лягушек (per-level tier + cooldown timestamps) + temp buff.
   'frogTiers',
   'frogTierCooldowns',
   'temporaryIncomeBuff',
+  // NB: ectoplasm/currencyY/essence/mutagen1-3/loc2Upgrades вынесены из cosmic-блоба
+  // в типизированные top-level колонки (см. AUDIT §3A) — отправляются отдельно ниже.
 ] as const satisfies readonly (keyof StoreState)[]
 
 function snapshotForSave() {
@@ -153,6 +151,15 @@ function snapshotForSave() {
     locationFrogs: s.locationFrogs,
     boxOpenCount: s.boxOpenCount,
     incomePerSec: s.incomePerSec,
+    // Валюты/прогресс локаций — top-level колонки (см. AUDIT §3A). ectoplasm
+    // как BigInt-строка (серверная колонка BigInt), остальное — целые числа.
+    ectoplasm: Math.floor(Math.max(0, s.ectoplasm)).toString(),
+    currencyY: Math.floor(Math.max(0, s.currencyY)),
+    essence: Math.floor(Math.max(0, s.essence)),
+    mutagen1: Math.floor(Math.max(0, s.mutagen1)),
+    mutagen2: Math.floor(Math.max(0, s.mutagen2)),
+    mutagen3: Math.floor(Math.max(0, s.mutagen3)),
+    loc2Upgrades: s.loc2Upgrades as unknown as Record<string, number>,
     cosmic,
     // Onboarding state — per-user, cross-device. Sync через server так чтобы
     // beats не повторялись при cache wipe в TG WebView.
@@ -229,10 +236,8 @@ export async function loadGameState(): Promise<boolean> {
       // trust blob shape для immediate hydrate).
       if ('ascendedCarriers' in c)
         cosmicUpdate.ascendedCarriers = c.ascendedCarriers
-      if ('essence' in c) cosmicUpdate.essence = c.essence
-      if ('mutagen1' in c) cosmicUpdate.mutagen1 = c.mutagen1
-      if ('mutagen2' in c) cosmicUpdate.mutagen2 = c.mutagen2
-      if ('mutagen3' in c) cosmicUpdate.mutagen3 = c.mutagen3
+      // NB: essence/mutagen1-3 теперь top-level колонки — гидрируются ниже
+      // (см. блок «Валюты/прогресс локаций»), не из cosmic-блоба.
       // Phase 22 Plan 22-05: hydrate shop perma upgrades + purchase counters.
       if ('permaSlotBonus' in c) cosmicUpdate.permaSlotBonus = c.permaSlotBonus
       if ('permaShipSpeedBonus' in c)
@@ -282,19 +287,8 @@ export async function loadGameState(): Promise<boolean> {
       if ('frogTierCooldowns' in c && Array.isArray(c.frogTierCooldowns)) {
         cosmicUpdate.frogTierCooldowns = c.frogTierCooldowns
       }
-      // Чанк 2: Loc2/Loc3 экономика. Defensive — только корректные типы.
-      if ('ectoplasm' in c && typeof c.ectoplasm === 'number' && c.ectoplasm >= 0)
-        cosmicUpdate.ectoplasm = Math.floor(c.ectoplasm as number)
-      if ('currencyY' in c && typeof c.currencyY === 'number' && c.currencyY >= 0)
-        cosmicUpdate.currencyY = Math.floor(c.currencyY as number)
-      if (
-        'loc2Upgrades' in c &&
-        c.loc2Upgrades &&
-        typeof c.loc2Upgrades === 'object'
-      )
-        cosmicUpdate.loc2Upgrades = toLoc2Upgrades(
-          c.loc2Upgrades as Record<string, number>,
-        )
+      // NB: ectoplasm/currencyY/loc2Upgrades теперь top-level колонки —
+      // гидрируются ниже (блок «Валюты/прогресс локаций»), не из cosmic-блоба.
       // 2026-05-23: hydrate temporaryIncomeBuff (shape: {until, percent} | null).
       if ('temporaryIncomeBuff' in c) {
         const tb = c.temporaryIncomeBuff as unknown
@@ -338,10 +332,7 @@ export async function loadGameState(): Promise<boolean> {
         typeof cosmicUpdate.l18AbsoluteBonusPerSec === 'number' ||
         Array.isArray(cosmicUpdate.frogTiers) ||
         Array.isArray(cosmicUpdate.frogTierCooldowns) ||
-        'temporaryIncomeBuff' in cosmicUpdate ||
-        typeof cosmicUpdate.ectoplasm === 'number' ||
-        typeof cosmicUpdate.currencyY === 'number' ||
-        'loc2Upgrades' in cosmicUpdate
+        'temporaryIncomeBuff' in cosmicUpdate
       if (needsPersistenceWrite) {
         const persistence = await import('../store/persistence')
         if (cosmicUpdate.captainBirthSeen === true) {
@@ -374,18 +365,6 @@ export async function loadGameState(): Promise<boolean> {
             } | null,
           )
         }
-        // Чанк 2: Loc2/Loc3 экономика → localStorage (primary, читается на boot).
-        if (typeof cosmicUpdate.ectoplasm === 'number') {
-          persistence.saveEctoplasm(cosmicUpdate.ectoplasm as number)
-        }
-        if (typeof cosmicUpdate.currencyY === 'number') {
-          persistence.saveCurrencyY(cosmicUpdate.currencyY as number)
-        }
-        if ('loc2Upgrades' in cosmicUpdate) {
-          persistence.saveLoc2Upgrades(
-            cosmicUpdate.loc2Upgrades as Record<string, number>,
-          )
-        }
       }
 
       // Phase 22: восстанавливаем user preferences с сервера через те же setters
@@ -407,6 +386,46 @@ export async function loadGameState(): Promise<boolean> {
         if (typeof p.sfxMuted === 'boolean' && p.sfxMuted !== sfx.isMuted()) {
           sfx.setMuted(p.sfxMuted)
         }
+      }
+    }
+
+    // ─── Валюты/прогресс локаций — top-level колонки (см. AUDIT §3A) ───
+    // Гидрируем из top-level полей сервера (НЕ из cosmic-блоба). Defensive типы.
+    // ectoplasm/currencyY/loc2Upgrades имеют свои localStorage-ключи (primary на
+    // boot) → дублируем через persistence. essence/mutagen персистятся вместе с
+    // cosmic-slice (как и раньше) — достаточно setState.
+    {
+      const update: Record<string, unknown> = {}
+      const d = data as unknown as Record<string, unknown>
+      // ectoplasm — BigInt-строка.
+      if (typeof d.ectoplasm === 'string' || typeof d.ectoplasm === 'number') {
+        const n = Math.floor(Number(d.ectoplasm))
+        if (Number.isFinite(n) && n >= 0) update.ectoplasm = n
+      }
+      // Целочисленные счётчики.
+      for (const k of ['currencyY', 'essence', 'mutagen1', 'mutagen2', 'mutagen3'] as const) {
+        const v = d[k]
+        if (typeof v === 'number' && Number.isFinite(v) && v >= 0) {
+          update[k] = Math.floor(v)
+        }
+      }
+      // loc2Upgrades — карта апгрейдов.
+      if (d.loc2Upgrades && typeof d.loc2Upgrades === 'object') {
+        update.loc2Upgrades = toLoc2Upgrades(
+          d.loc2Upgrades as Record<string, number>,
+        )
+      }
+      if (Object.keys(update).length > 0) {
+        useGameStore.setState(update as Partial<typeof store>)
+        const persistence = await import('../store/persistence')
+        if (typeof update.ectoplasm === 'number')
+          persistence.saveEctoplasm(update.ectoplasm)
+        if (typeof update.currencyY === 'number')
+          persistence.saveCurrencyY(update.currencyY)
+        if ('loc2Upgrades' in update)
+          persistence.saveLoc2Upgrades(
+            update.loc2Upgrades as Record<string, number>,
+          )
       }
     }
 

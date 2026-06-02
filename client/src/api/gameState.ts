@@ -18,6 +18,19 @@ export interface ServerGameState {
   cosmic: unknown | null
   incomePerSec: number
   version: number
+  // Валюты/прогресс локаций — типизированные колонки (вынесены из cosmic-блоба,
+  // см. server/AUDIT.md §3A). ectoplasm — BigInt-строка, остальное — числа.
+  ectoplasm?: string
+  currencyY?: number
+  essence?: number
+  mutagen1?: number
+  mutagen2?: number
+  mutagen3?: number
+  loc2Upgrades?: Record<string, number>
+  // Эволюция (Loc3) — server-authoritative wall-clock.
+  evoActive?: boolean
+  evoLevel?: number | null
+  evoEndsAt?: string | null
   // Server-computed offline income при boot (только в GET response):
   offlineIncome?: string // BigInt-string
   offlineMs?: number

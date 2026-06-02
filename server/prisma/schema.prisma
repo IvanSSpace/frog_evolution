@@ -49,6 +49,24 @@ model GameState {
   version          Int      @default(0)
   lastSessionAt    DateTime @default(now()) @map("last_session_at")
 
+  // Валюты/прогресс локаций — вынесены из cosmic JSON-блоба в типизированные
+  // колонки (см. server/AUDIT.md §3A): убирает класс багов «поле забыли в
+  // snapshot → потеря сейва» и даёт серверу first-class доступ для офлайн-accrual.
+  // ectoplasm (Loc2 фиолетовая слизь) — BigInt, копится дроном/мерджами, может расти.
+  ectoplasm    BigInt @default(0)
+  currencyY    Int    @default(0) @map("currency_y") // Loc3 валюта (L12+L12 merge)
+  essence      Int    @default(0) // космо-мета (эволюция/ascension)
+  mutagen1     Int    @default(0) @map("mutagen1")
+  mutagen2     Int    @default(0) @map("mutagen2")
+  mutagen3     Int    @default(0) @map("mutagen3")
+  loc2Upgrades Json   @default("{}") @map("loc2_upgrades") // конвейер/ecto-дрон/капсулы
+
+  // Эволюция (Loc3 центр эволюции). Server-authoritative wall-clock: завершение
+  // считает сервер (см. AUDIT §4.2), не localStorage. Один активный слот.
+  evoActive Boolean   @default(false) @map("evo_active")
+  evoLevel  Int?      @map("evo_level") // уровень эволюционирующей лягушки
+  evoEndsAt DateTime? @map("evo_ends_at") // когда эволюция завершится (server time)
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
