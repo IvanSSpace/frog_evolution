@@ -92,27 +92,31 @@ export function LoadingScreen({ subtitle }: LoadingScreenProps = {}) {
         {LOADING_PHRASES[phraseIdx]}
       </div>
 
-      {/* Анимированные точки прогресса */}
+      {/* Неоновая полоса загрузки (indeterminate) */}
       <div
         style={{
-          display: 'flex',
-          gap: '8px',
-          marginTop: '8px',
+          width: 'min(72%, 420px)',
+          height: '18px',
+          borderRadius: '999px',
+          background: 'rgba(15, 20, 35, 0.6)',
+          border: '2px solid rgba(170, 195, 255, 0.55)',
+          boxShadow:
+            '0 0 10px rgba(120, 150, 255, 0.35), inset 0 1px 2px rgba(0, 0, 0, 0.5)',
+          padding: '3px',
+          overflow: 'hidden',
         }}
       >
-        {[0, 1, 2].map((i) => (
-          <div
-            key={i}
-            style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '999px',
-              background: '#7ed957',
-              animation: 'dot-pulse 1.4s ease-in-out infinite',
-              animationDelay: `${i * 0.2}s`,
-            }}
-          />
-        ))}
+        <div
+          style={{
+            height: '100%',
+            borderRadius: '999px',
+            background:
+              'linear-gradient(90deg, #5fe3d0 0%, #6fd0e0 40%, #a78bfa 100%)',
+            boxShadow:
+              '0 0 12px rgba(110, 220, 210, 0.7), 0 0 12px rgba(167, 139, 250, 0.6)',
+            animation: 'loadbar 1.6s ease-in-out infinite',
+          }}
+        />
       </div>
 
       {/* Подзаголовок — показываем только если явно передан */}
@@ -134,9 +138,10 @@ export function LoadingScreen({ subtitle }: LoadingScreenProps = {}) {
           from { opacity: 0; transform: translateY(8px); }
           to   { opacity: 0.95; transform: translateY(0); }
         }
-        @keyframes dot-pulse {
-          0%, 80%, 100% { opacity: 0.3; transform: scale(0.85); }
-          40% { opacity: 1; transform: scale(1.15); }
+        @keyframes loadbar {
+          0%   { width: 0%;   opacity: 1; }
+          80%  { width: 100%; opacity: 1; }
+          100% { width: 100%; opacity: 0; }
         }
       `}</style>
     </div>
