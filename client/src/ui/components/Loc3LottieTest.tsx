@@ -23,9 +23,11 @@ const LOTTIE_URL = '/loc3_anim.json'
 
 // Точки размещения (xFrac от ширины, yFracZone от высоты) — заданы автором.
 const SPOTS = [
-  { xFrac: 0.417, yFrac: 0.17 },
-  { xFrac: 0.698, yFrac: 0.221 },
+  { xFrac: 0.419, yFrac: 0.174 },
+  { xFrac: 0.693, yFrac: 0.226 },
 ]
+// Размер огонька (px). Уменьшено 120→80 по запросу.
+const SIZE = 80
 
 // JSX-тип для кастом-элемента dotlottie-wc.
 declare global {
@@ -86,8 +88,8 @@ export function Loc3LottieTest() {
             left: `${s.xFrac * 100}vw`,
             top: `${s.yFrac * 100}vh`,
             transform: 'translate(-50%, -50%)',
-            width: 120,
-            height: 120,
+            width: SIZE,
+            height: SIZE,
             zIndex: 40,
             pointerEvents: 'none',
           }}
