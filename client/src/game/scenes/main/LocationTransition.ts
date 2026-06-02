@@ -399,13 +399,16 @@ export class LocationTransition {
       })
     }
 
-    // 2026-05-30: здания (фабрика/склад/дрон) на Болоте — reparent в
-    // newContainer, чтобы зумились вместе с лягушками. Generic-loop в
-    // onComplete вернёт их в scene root (вместе с остальными детьми). Coords
-    // переводим в локальные (минус центр). Видимость по зоне приземления:
-    // здания — зона buildings, дроны — зона frogs (одинаково с уходящей зоной,
-    // т.к. configureWorld сохраняет зону).
-    if (newLoc === 1) {
+    // 2026-05-30: здания (фабрика/склад/дрон) — reparent в newContainer, чтобы
+    // зумились вместе с лягушками. Generic-loop в onComplete вернёт их в scene
+    // root (вместе с остальными детьми). Coords переводим в локальные (минус
+    // центр). Видимость по зоне приземления: здания — зона buildings, дроны —
+    // зона frogs (одинаково с уходящей зоной, т.к. configureWorld сохраняет зону).
+    // 2026-06-02: гейт newLoc===1 снят — все локации с зданиями (1=Болото,
+    // 2=Лес, 3=Континент). Иначе при ВХОДЕ на Лес/Континент их здания не
+    // зумились и появлялись только после оседания. collectTransitionSprites
+    // сам отдаёт per-loc набор (loc2/3 → drones пустой, цикл no-op).
+    {
       const { buildings, drones } = scene.collectTransitionSprites(newLoc)
       for (const b of buildings) {
         const wx = b.x
