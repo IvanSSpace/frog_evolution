@@ -18,8 +18,9 @@ import { useGameStore } from '../../store/gameStore'
 const SEG_START = 60
 const SEG_END = 197
 
-const LOTTIE_URL =
-  'https://lottie.host/d9853330-fbc3-4bf6-9a69-bc69f456b746/I3cObDe6cE.lottie'
+// Локальная копия с линеаризованным easing концовки (убрано торможение
+// последних кейфреймов t>=160). Оригинал был на lottie.host.
+const LOTTIE_URL = '/loc3_anim.json'
 
 // Точки размещения (xFrac от ширины, yFracZone от высоты) — заданы автором.
 const SPOTS = [
