@@ -64,6 +64,10 @@ function ensureDotlottieLoaded(): Promise<unknown> {
   return loaderPromise
 }
 
+// Kill-switch: false = огонь полностью выключен (диагностика цикла перезагрузки).
+// CDN-импорт dotlottie-wc не происходит. Вернуть true когда причина ясна.
+const FIRE_ENABLED = false
+
 export function Loc3LottieTest() {
   const currentLocation = useGameStore((s) => s.currentLocation)
   const [ready, setReady] = useState(false)
@@ -72,7 +76,7 @@ export function Loc3LottieTest() {
   const spotRefs = useRef<(HTMLDivElement | null)[]>([])
 
   useEffect(() => {
-    if (currentLocation !== 3) return
+    if (!FIRE_ENABLED || currentLocation !== 3) return
     let alive = true
     ensureDotlottieLoaded().then(() => {
       if (alive) setReady(true)
@@ -82,7 +86,7 @@ export function Loc3LottieTest() {
     }
   }, [currentLocation])
 
-  const active = currentLocation === 3 && ready
+  const active = FIRE_ENABLED && currentLocation === 3 && ready
 
   // Каждый кадр: clip-контейнер = прямоугольник канваса (overflow:hidden обрезает
   // всё за игровым видом — огни не лезут на футер/хедер). Огни внутри = absolute
