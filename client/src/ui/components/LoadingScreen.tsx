@@ -44,7 +44,9 @@ export function LoadingScreen({ subtitle }: LoadingScreenProps = {}) {
 
   useEffect(() => {
     const id = window.setInterval(() => {
-      setPhraseIdx((i) => (i + 1 + Math.floor(Math.random() * 3)) % LOADING_PHRASES.length)
+      setPhraseIdx(
+        (i) => (i + 1 + Math.floor(Math.random() * 3)) % LOADING_PHRASES.length,
+      )
     }, 1700)
     return () => window.clearInterval(id)
   }, [])
@@ -54,8 +56,11 @@ export function LoadingScreen({ subtitle }: LoadingScreenProps = {}) {
       style={{
         position: 'fixed',
         inset: 0,
+        // Фон — арт загрузочного экрана (public/setupScreen.webp), cover.
+        // Лёгкий тёмный scrim поверх — чтобы фразы/лягушка/точки читались.
         background:
-          'radial-gradient(ellipse at center, #1a2e1a 0%, #0a1a0a 60%, #000000 100%)',
+          "linear-gradient(rgba(0,0,0,0.28), rgba(0,0,0,0.42)), url('/setupScreen.webp') center / cover no-repeat",
+        backgroundColor: '#0a1a0a',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
