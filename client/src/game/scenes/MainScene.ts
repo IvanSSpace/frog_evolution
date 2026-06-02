@@ -1138,6 +1138,8 @@ export class MainScene extends Phaser.Scene {
 
   private onTransitionEnd = ({ id }: { id: number }) => {
     this.configureWorld(id, this.transitionFromZone)
+    // Loc2: воссоздать сохранённые фабрик-боксы (persist между заходами).
+    if (id === 2) this.factoryBox.restore()
   }
 
   // Package-public: starmap-переходы (open/close) зумят из зоны frogs — их

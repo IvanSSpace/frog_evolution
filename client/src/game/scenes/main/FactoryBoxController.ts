@@ -21,6 +21,7 @@ import {
 } from '../../../store/gameStore'
 import {
   BOX_DISPLAY_SIZE,
+  BASE_SCALE,
   DPR,
   FIELD_PAD_X,
   FIELD_PAD_Y,
@@ -62,6 +63,8 @@ export class FactoryBoxController {
   private spawner: FrogSpawner
   private buildings: BuildingsController
   private boxes: FactoryBox[] = []
+  // Сохранённое состояние боксов между заходами на Loc2 (persist при смене локации).
+  private saved: { x: number; y: number; level: number; remainingMs: number }[] = []
 
   constructor(
     scene: MainScene,
@@ -172,7 +175,7 @@ export class FactoryBoxController {
     frog.container.setScale(0)
     this.scene.tweens.add({
       targets: frog.container,
-      scale: 1,
+      scale: BASE_SCALE, // правильный размер лягушки (не 1 → иначе оверсайз)
       duration: 200,
       ease: 'Back.easeOut',
     })
@@ -274,7 +277,7 @@ export class FactoryBoxController {
     frog.container.setScale(0)
     this.scene.tweens.add({
       targets: frog.container,
-      scale: 1,
+      scale: BASE_SCALE, // правильный размер лягушки (не 1 → иначе оверсайз)
       duration: 200,
       ease: 'Back.easeOut',
     })
@@ -285,8 +288,22 @@ export class FactoryBoxController {
     if (i >= 0) this.boxes.splice(i, 1)
   }
 
-  /** Сброс при смене локации — убрать все боксы (не открывая). */
+  /** Сброс при смене локации: СОХРАНЯЕМ боксы (позиция/уровень/остаток таймера),
+   *  потом убираем визуалы. На возврате restore() их воссоздаёт. Если боксов нет
+   *  (уходим НЕ с Loc2) — saved не трогаем, чтобы не затереть состояние Loc2. */
   reset(): void {
+    if (this.boxes.length > 0) {
+      const fallbackMs = boxAutoOpenMs(
+        useGameStore.getState().loc2Upgrades.boxAutoOpen,
+      )
+      this.saved = this.boxes.map((box) => ({
+        x: box.sp.x,
+        y: box.sp.y,
+        level: box.level,
+        // landed → остаток таймера; in-flight (нет таймера) → полный.
+        remainingMs: box.autoTimer ? box.autoTimer.getRemaining() : fallbackMs,
+      }))
+    }
     for (const box of this.boxes) {
       box.autoTimer?.remove()
       this.scene.tweens.killTweensOf(box.sp)
@@ -295,7 +312,30 @@ export class FactoryBoxController {
     this.boxes = []
   }
 
+  /** Воссоздать сохранённые боксы при заходе на Loc2 — сразу idle на поле
+   *  (без анимации пути), с остатком таймера авто-открытия. */
+  restore(): void {
+    if (this.saved.length === 0) return
+    const saved = this.saved
+    this.saved = []
+    for (const s of saved) {
+      const sp = this.scene.add.image(s.x, s.y, 'box')
+      sp.setScale((BOX_DISPLAY_SIZE / sp.width) * 0.85)
+      sp.setTint(BOX_TINT)
+      sp.setDepth(BOX_DEPTH)
+      const box: FactoryBox = { sp, autoTimer: null, opened: false, level: s.level }
+      this.boxes.push(box)
+      sp.setInteractive({ useHandCursor: true })
+      sp.on('pointerdown', () => this.openBox(box))
+      box.autoTimer = this.scene.time.delayedCall(
+        Math.max(500, s.remainingMs),
+        () => this.openBox(box),
+      )
+    }
+  }
+
   destroy(): void {
+    this.saved = []
     this.reset()
   }
 }
