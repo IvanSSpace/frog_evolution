@@ -250,6 +250,9 @@ export class FactoryBoxController {
     const sp = box.sp
     if (!sp.active) return
     sp.setAngle(0)
+    // На поле бокс — обычный объект: depth = y (как лягушки), чтобы лягушки ниже
+    // его перекрывали (y-сортировка). В полёте depth высокий (не нырять за здания).
+    sp.setDepth(sp.y)
     // Бокс стоит неподвижно на поле до вскрытия (без левитации).
     sp.setInteractive({ useHandCursor: true })
     sp.on('pointerdown', () => this.openBox(box))
@@ -333,7 +336,7 @@ export class FactoryBoxController {
       const sp = this.scene.add.image(s.x, s.y, 'box')
       sp.setScale((BOX_DISPLAY_SIZE / sp.width) * 0.85)
       sp.setTint(BOX_TINT)
-      sp.setDepth(BOX_DEPTH)
+      sp.setDepth(sp.y) // восстановленный = уже на поле → y-сортировка с лягушками
       const box: FactoryBox = { sp, autoTimer: null, opened: false, level: s.level }
       this.boxes.push(box)
       sp.setInteractive({ useHandCursor: true })
