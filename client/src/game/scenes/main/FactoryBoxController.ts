@@ -14,7 +14,11 @@ import Phaser from 'phaser'
 import type { MainScene } from '../MainScene'
 import type { FrogSpawner } from './FrogSpawner'
 import type { BuildingsController } from './BuildingsController'
-import { useGameStore } from '../../../store/gameStore'
+import {
+  useGameStore,
+  boxAutoOpenMs,
+  rollFactoryFrogLevel,
+} from '../../../store/gameStore'
 import { BOX_DISPLAY_SIZE, DPR } from './types'
 
 type Pt = readonly [number, number] // [xFrac, yFracZone]
@@ -30,7 +34,8 @@ const FIELD_Y_FRAC_ZONE: readonly [number, number] = [0.62, 0.82]
 
 const BOX_TINT = 0x9d4edd // фиолетовый (эктоплазма-тематика Loc2)
 const BOX_DEPTH = 90000 // выше поля, тапается
-const AUTO_OPEN_MS = 40000 // авто-открытие если не трогали (Этап 2: апгрейд ускорит)
+// Базовое авто-открытие — реальное время берётся из апгрейда boxAutoOpen
+// (boxAutoOpenMs) на момент приземления.
 const SLIDE_MS = 700 // P0→P1 проезд
 const DROP_MS = 420 // P1→P2 спрыгивание
 const HOP_LEN = 70 * DPR // длина одного прыжка к полю
@@ -95,8 +100,11 @@ export class FactoryBoxController {
     return new Phaser.Math.Vector2(xf * width, height * (1 + yf))
   }
 
-  /** Выпустить бокс из фабрики. level — уровень лягушки внутри (Этап 2: L8/L9 шанс). */
-  emit(level = 7): void {
+  /** Выпустить бокс из фабрики. level не задан → roll по апгрейду rareFrog (L7/L8/L9). */
+  emit(level?: number): void {
+    const lvl =
+      level ??
+      rollFactoryFrogLevel(useGameStore.getState().loc2Upgrades.rareFrog)
     this.pulseFactory()
     const start = this.worldPt(P0)
     const sp = this.scene.add.image(start.x, start.y, 'box')
@@ -105,7 +113,7 @@ export class FactoryBoxController {
     sp.setDepth(BOX_DEPTH)
     sp.setAngle(0)
 
-    const box: FactoryBox = { sp, autoTimer: null, opened: false, level }
+    const box: FactoryBox = { sp, autoTimer: null, opened: false, level: lvl }
     this.boxes.push(box)
 
     const p1 = this.worldPt(P1)
@@ -206,9 +214,10 @@ export class FactoryBoxController {
     })
     sp.setInteractive({ useHandCursor: true })
     sp.on('pointerdown', () => this.openBox(box))
-    box.autoTimer = this.scene.time.delayedCall(AUTO_OPEN_MS, () =>
-      this.openBox(box),
+    const autoMs = boxAutoOpenMs(
+      useGameStore.getState().loc2Upgrades.boxAutoOpen,
     )
+    box.autoTimer = this.scene.time.delayedCall(autoMs, () => this.openBox(box))
   }
 
   /** Открыть бокс → лягушка на месте + поп. */

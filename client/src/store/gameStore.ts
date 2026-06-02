@@ -114,6 +114,9 @@ export type EctoUpgradeKey =
   | 'ectoDroneValue'
   | 'capsuleSpeed'
   | 'capsuleCooldown'
+  // Фабрика (Loc2): авто-открытие боксов быстрее + шанс L8/L9 из бокса.
+  | 'boxAutoOpen'
+  | 'rareFrog'
 
 export type Loc2UpgradeKey = 'conveyorSpeed' | EctoUpgradeKey
 
@@ -126,6 +129,8 @@ export const LOC2_UPGRADES_DEFAULT: Loc2Upgrades = {
   ectoDroneValue: 0,
   capsuleSpeed: 0,
   capsuleCooldown: 0,
+  boxAutoOpen: 0,
+  rareFrog: 0,
 }
 
 // Мета апгрейдов: валюта, maxLevel, цены за уровень (i → i+1). PLACEHOLDER.
@@ -159,6 +164,18 @@ export const LOC2_UPGRADE_META: Record<
     maxLevel: 5,
     costs: [12, 30, 60, 100, 160],
   },
+  // Фабрика: быстрее авто-открытие боксов (40с × 0.7^level).
+  boxAutoOpen: {
+    currency: 'ecto',
+    maxLevel: 4,
+    costs: [40, 100, 220, 450],
+  },
+  // Фабрика: шанс произвести L8/L9 вместо L7 (растёт с уровнем).
+  rareFrog: {
+    currency: 'ecto',
+    maxLevel: 5,
+    costs: [60, 150, 320, 600, 1000],
+  },
 }
 
 /** Цена следующего уровня апгрейда Loc2 (Infinity если макс). */
@@ -189,6 +206,23 @@ export function conveyorIntervalMs(level: number): number {
 /** Множитель скорости ecto-дрона: 1 + 0.15×level. */
 export function ectoDroneSpeedMult(level: number): number {
   return 1 + 0.15 * Math.max(0, level)
+}
+// ─── Фабрика (Loc2 боксы) ───
+const BOX_AUTO_OPEN_BASE_MS = 40000 // база авто-открытия бокса (boxAutoOpen lvl 0)
+/** Время авто-открытия фабрик-бокса (мс): база × 0.7^level. Меньше = быстрее. */
+export function boxAutoOpenMs(level: number): number {
+  return Math.round(BOX_AUTO_OPEN_BASE_MS * Math.pow(0.7, Math.max(0, level)))
+}
+/** Роллит уровень лягушки из фабрик-бокса: базово L7, апгрейд rareFrog даёт шанс L8/L9. */
+export function rollFactoryFrogLevel(rareLevel: number): number {
+  const lvl = Math.max(0, rareLevel)
+  if (lvl <= 0) return 7
+  const chance9 = Math.min(0.15, 0.02 * lvl)
+  const chance8 = Math.min(0.35, 0.06 * lvl)
+  const r = Math.random()
+  if (r < chance9) return 9
+  if (r < chance9 + chance8) return 8
+  return 7
 }
 /** Число ecto-дронов: 1 + level (ectoDroneCount). */
 export function ectoDroneCountFor(level: number): number {

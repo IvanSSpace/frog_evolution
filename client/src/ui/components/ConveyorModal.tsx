@@ -13,11 +13,90 @@ import {
   LOC2_UPGRADE_META,
   loc2UpgradeCost,
   conveyorIntervalMs,
+  boxAutoOpenMs,
+  type EctoUpgradeKey,
 } from '../../store/gameStore'
 import { useModalLock } from '../../utils/modalLock'
 import { fmt } from '../../utils/formatting'
 
 type Props = { onClose: () => void }
+
+// Карточка апгрейда фабрики за эктоплазму (boxAutoOpen / rareFrog).
+function FactoryEctoUpgrade({
+  upgradeKey,
+  icon,
+  title,
+  desc,
+}: {
+  upgradeKey: EctoUpgradeKey
+  icon: string
+  title: string
+  desc: (level: number) => string
+}) {
+  const ecto = useGameStore((s) => s.ectoplasm)
+  const level = useGameStore((s) => s.loc2Upgrades[upgradeKey])
+  const buyEctoUpgrade = useGameStore((s) => s.buyEctoUpgrade)
+  const meta = LOC2_UPGRADE_META[upgradeKey]
+  const isMax = level >= meta.maxLevel
+  const cost = loc2UpgradeCost(upgradeKey, level)
+  const affordable = !isMax && ecto >= cost
+
+  return (
+    <div className="ff-card flex items-center gap-3 p-3">
+      <span style={{ fontSize: 26 }}>{icon}</span>
+      <div className="flex-1 min-w-0">
+        <div className="ff-display text-sm" style={{ color: 'var(--ff-text-light)' }}>
+          {title}
+        </div>
+        <div
+          className="ff-display"
+          style={{ fontSize: 11, color: 'var(--ff-text-dim)' }}
+        >
+          {desc(level)}
+        </div>
+        <div style={{ display: 'flex', gap: 3, marginTop: 4 }}>
+          {Array.from({ length: meta.maxLevel }).map((_, i) => (
+            <span
+              key={i}
+              style={{
+                width: 14,
+                height: 5,
+                borderRadius: 3,
+                background: i < level ? '#9d4edd' : 'rgba(157,78,221,0.22)',
+              }}
+            />
+          ))}
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => buyEctoUpgrade(upgradeKey)}
+        disabled={!affordable}
+        aria-label={isMax ? 'Максимум' : `Купить за ${cost} эктоплазмы`}
+        className="ff-tile flex-shrink-0"
+        style={{
+          touchAction: 'manipulation',
+          minWidth: 64,
+          height: 40,
+          padding: '0 8px',
+          fontSize: 12,
+          fontWeight: 700,
+          color: '#fff',
+          opacity: affordable ? 1 : 0.5,
+          ['--ff-tile-from' as never]: '#c084fc',
+          ['--ff-tile-to' as never]: '#7e22ce',
+          ['--ff-tile-border' as never]: '#4c1d95',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 4,
+        }}
+      >
+        {isMax ? 'MAX' : `🟣 ${fmt(cost)}`}
+      </button>
+    </div>
+  )
+}
 
 export function ConveyorModal({ onClose }: Props) {
   useModalLock()
@@ -154,6 +233,28 @@ export function ConveyorModal({ onClose }: Props) {
               {isMax ? 'MAX' : `🪙 ${fmt(cost)}`}
             </button>
           </div>
+
+          {/* Авто-открытие боксов (эктоплазма) */}
+          <FactoryEctoUpgrade
+            upgradeKey="boxAutoOpen"
+            icon="📦"
+            title="Авто-открытие бокса"
+            desc={(lvl) =>
+              `Бокс сам вскрывается через ${(boxAutoOpenMs(lvl) / 1000).toFixed(0)}с`
+            }
+          />
+
+          {/* Шанс редкой лягушки L8/L9 (эктоплазма) */}
+          <FactoryEctoUpgrade
+            upgradeKey="rareFrog"
+            icon="✨"
+            title="Редкая лягушка"
+            desc={(lvl) =>
+              lvl > 0
+                ? `Шанс L8/L9 из бокса (ур. ${lvl})`
+                : 'Шанс получить L8/L9 вместо L7'
+            }
+          />
         </div>
       </div>
     </div>
