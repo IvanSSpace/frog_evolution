@@ -87,6 +87,8 @@ function App() {
   )
   // Phaser догрузил базовые ассеты (MainScene.create) — убираем лоадер-оверлей.
   const [gameReady, setGameReady] = useState(false)
+  // Держим лоадер ещё чуть после gameReady, чтобы полоса добежала до 100%.
+  const [showLoader, setShowLoader] = useState(true)
 
   useEffect(() => {
     let cancelled = false
@@ -240,6 +242,13 @@ function App() {
     }
   }, [])
 
+  // После готовности даём полосе ~450мс добежать до 100%, потом прячем лоадер.
+  useEffect(() => {
+    if (!gameReady) return
+    const id = window.setTimeout(() => setShowLoader(false), 450)
+    return () => window.clearTimeout(id)
+  }, [gameReady])
+
   // Phase 24 Plan 24-04: install Captain birth Beat 4 + Beat 5 coordinator.
   // Production-critical (НЕ DEV-only). Idempotent — повторный mount/StrictMode
   // не задублирует handler (см. captainBirthController.ts internal guard).
@@ -385,9 +394,9 @@ function App() {
       <OrientationLock />
       {/* Лоадер поверх всего пока Phaser не догрузил базовые ассеты. UI снизу
           уже смонтирован (нужен #game-canvas), оверлей прячет pop-in. */}
-      {!gameReady && (
+      {showLoader && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
-          <LoadingScreen />
+          <LoadingScreen done={gameReady} />
         </div>
       )}
       {bootState === 'offline' && !import.meta.env.DEV && (

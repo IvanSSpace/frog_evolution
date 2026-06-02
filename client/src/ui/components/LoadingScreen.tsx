@@ -33,14 +33,24 @@ const LOADING_PHRASES = [
 interface LoadingScreenProps {
   /** Подзаголовок снизу. По умолчанию пуст — не показывается. */
   subtitle?: string
+  /** Загрузка завершена → бар добегает до 100%. */
+  done?: boolean
 }
 
-export function LoadingScreen({ subtitle }: LoadingScreenProps = {}) {
+// Прогресс полосы — module-level, чтобы он БЫЛ НЕПРЕРЫВНЫМ между двумя инстансами
+// LoadingScreen в App (boot-loading → overlay до gameReady), а не сбрасывался в 0.
+let barProgress = 0
+
+export function LoadingScreen({
+  subtitle,
+  done = false,
+}: LoadingScreenProps = {}) {
   // Стартовая фраза рандомная, потом ротируем по индексу — детерминированный
   // порядок чтобы не было повторов подряд.
   const [phraseIdx, setPhraseIdx] = useState(() =>
     Math.floor(Math.random() * LOADING_PHRASES.length),
   )
+  const [barWidth, setBarWidth] = useState(barProgress)
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -50,6 +60,29 @@ export function LoadingScreen({ subtitle }: LoadingScreenProps = {}) {
     }, 3000)
     return () => window.clearInterval(id)
   }, [])
+
+  // Двухфазная полоса (JS, непрерывная):
+  //   loading → быстро до 60% (~0.8с), затем медленный creep до 92% (ждём загрузку);
+  //   done    → рывок до 100%.
+  useEffect(() => {
+    let raf = 0
+    let last = performance.now()
+    const tick = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000)
+      last = now
+      if (done) {
+        barProgress = Math.min(100, barProgress + 240 * dt)
+      } else if (barProgress < 60) {
+        barProgress = Math.min(60, barProgress + 75 * dt)
+      } else if (barProgress < 92) {
+        barProgress = Math.min(92, barProgress + 4 * dt)
+      }
+      setBarWidth(barProgress)
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [done])
 
   return (
     <div
@@ -108,13 +141,14 @@ export function LoadingScreen({ subtitle }: LoadingScreenProps = {}) {
       >
         <div
           style={{
+            width: `${barWidth}%`,
             height: '100%',
             borderRadius: '999px',
             background:
               'linear-gradient(90deg, #5fe3d0 0%, #6fd0e0 40%, #a78bfa 100%)',
             boxShadow:
               '0 0 12px rgba(110, 220, 210, 0.7), 0 0 12px rgba(167, 139, 250, 0.6)',
-            animation: 'loadbar 7s ease-out forwards',
+            transition: 'width 0.12s linear',
           }}
         />
       </div>
@@ -137,10 +171,6 @@ export function LoadingScreen({ subtitle }: LoadingScreenProps = {}) {
         @keyframes phrase-in {
           from { opacity: 0; transform: translateY(8px); }
           to   { opacity: 0.95; transform: translateY(0); }
-        }
-        @keyframes loadbar {
-          from { width: 0%; }
-          to   { width: 100%; }
         }
       `}</style>
     </div>
