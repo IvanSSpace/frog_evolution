@@ -18,9 +18,19 @@ import { eventBus } from '../../../store/eventBus'
 import { textureKeyForLevel } from '../../config/frogs'
 import { BASE_SCALE } from './types'
 
-const EVO_DURATION_MS = 15000 // тест-таймер эволюции (балансим позже)
+const EVO_DURATION_MS = 24 * 60 * 60 * 1000 // эволюция ~сутки
 const FADE_MS = 500
 const SWIM_SPEED = 42 // px/сек DVD-дрейф мини-лягушек в капсуле
+const SAVE_KEY = 'frog_evolution_active_evo' // {level, endsAt} — переживает сессии
+
+function fmtRemain(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000))
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const sec = s % 60
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${p(h)}:${p(m)}:${p(sec)}`
+}
 
 // Полигон, в котором плавают лягушки внутри капсулы (xFrac, yFracZone).
 type Pt = readonly [number, number]
@@ -55,7 +65,9 @@ export class EvolutionCenterController {
   private swimmers: Phaser.GameObjects.Image[] = []
   private poolPoly: Phaser.Math.Vector2[] = []
   private tweens: Phaser.Tweens.Tween[] = []
-  private timer: Phaser.Time.TimerEvent | null = null
+  private endsAt = 0 // Date.now() ms когда эволюция готова
+  private countdown: Phaser.GameObjects.Text | null = null
+  private checkedSave = false // проверили localStorage на восстановление
 
   constructor(
     scene: MainScene,
@@ -67,15 +79,19 @@ export class EvolutionCenterController {
     this.buildings = buildings
     eventBus.on('evolution:start', this.onStart)
     if (import.meta.env.DEV) {
-      ;(window as unknown as { __startEvo?: (l?: number) => void }).__startEvo =
-        (l = 5) => eventBus.emit('evolution:start', { level: l })
+      ;(
+        window as unknown as { __startEvo?: (l?: number, ms?: number) => void }
+      ).__startEvo = (l = 5, ms = EVO_DURATION_MS) =>
+        eventBus.emit('evolution:start', { level: l, durationMs: ms })
     }
   }
 
-  private onStart = ({ level }: { level: number }): void => {
+  private onStart = (payload: { level: number; durationMs?: number }): void => {
     if (this.active) return
     if (useGameStore.getState().currentLocation !== 3) return
     if (!this.buildings.getEvoblockSprite()) return
+    const { level } = payload
+    const durationMs = payload.durationMs ?? EVO_DURATION_MS
 
     // Списываем 1 лягушку: видимую на поле Loc3 (если есть) либо из стора.
     let consumed = false
@@ -92,7 +108,36 @@ export class EvolutionCenterController {
       if (loc == null) return
       useGameStore.getState().removeFrogFromLocation(loc, level)
     }
-    this.startVisual(level)
+    const endsAt = Date.now() + durationMs
+    this.save(level, endsAt)
+    this.startVisual(level, endsAt)
+  }
+
+  // ─── persist (переживает сессии: эволюция идёт ~сутки) ───
+  private save(level: number, endsAt: number): void {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ level, endsAt }))
+    } catch {
+      /* ignore */
+    }
+  }
+  private clearSave(): void {
+    try {
+      localStorage.removeItem(SAVE_KEY)
+    } catch {
+      /* ignore */
+    }
+  }
+  private loadSave(): { level: number; endsAt: number } | null {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY)
+      if (!raw) return null
+      const o = JSON.parse(raw) as { level: number; endsAt: number }
+      if (typeof o.level === 'number' && typeof o.endsAt === 'number') return o
+    } catch {
+      /* ignore */
+    }
+    return null
   }
 
   private findOwnedLoc(level: number): number | null {
@@ -108,10 +153,11 @@ export class EvolutionCenterController {
     return new Phaser.Math.Vector2(p[0] * width, height * (1 + p[1]))
   }
 
-  private startVisual(level: number): void {
+  private startVisual(level: number, endsAt: number): void {
     const sp = this.buildings.getEvoblockSprite()
     if (!sp) return
     this.active = true
+    this.endsAt = endsAt
     const baseDepth = sp.depth // evoblock building depth (300000+)
 
     // Зад (активная текстура) поверх idle-блока.
@@ -173,15 +219,34 @@ export class EvolutionCenterController {
       }),
     )
 
-    this.timer = this.scene.time.delayedCall(EVO_DURATION_MS, () =>
-      this.complete(),
-    )
+    // Обратный отсчёт над капсулой.
+    this.countdown = this.scene.add
+      .text(sp.x, sp.y - sp.displayHeight - 6, '', {
+        fontFamily: "'Russo One', system-ui, sans-serif",
+        fontSize: '26px',
+        color: '#a7f3d0',
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(baseDepth + 4)
+      .setStroke('#0a2e1a', 6)
+    // Завершение — по истечении endsAt (проверяется в update; переживает сессии).
   }
 
-  // Per-frame: DVD-движение лягушек — постоянная скорость, отскок от границ
-  // полигона. Вызывается из MainScene на loc3.
+  // Per-frame: DVD-движение лягушек + обновление отсчёта + завершение по таймеру.
+  // Вызывается из MainScene на loc3. Также восстанавливает эволюцию из save.
   update(delta: number): void {
-    if (!this.active || this.swimmers.length === 0) return
+    if (!this.active) {
+      this.tryRestore()
+      return
+    }
+    // Истёк срок → эволюция готова.
+    const remain = this.endsAt - Date.now()
+    if (remain <= 0) {
+      this.complete()
+      return
+    }
+    if (this.countdown) this.countdown.setText(fmtRemain(remain))
+    if (this.swimmers.length === 0) return
     const dt = Math.min(delta, 50) / 1000
     const poly = this.poolPoly
     for (const img of this.swimmers) {
@@ -249,18 +314,33 @@ export class EvolutionCenterController {
     return inside
   }
 
+  // Эволюция готова: чистим сейв + визуал. TODO: реестр анлоков (открыть
+  // уникальную механику по виду/уровню эволюционировавшей лягушки).
   private complete(): void {
-    // TODO: реестр анлоков — открыть уникальную механику по виду/уровню.
+    this.clearSave()
     this.teardown()
+  }
+
+  // Восстановление активной эволюции при заходе на Loc3 (переживает сессии).
+  private tryRestore(): void {
+    if (this.checkedSave) return
+    if (useGameStore.getState().currentLocation !== 3) return
+    const sp = this.buildings.getEvoblockSprite()
+    if (!sp) return // здания ещё не показаны — попробуем в след. кадре
+    this.checkedSave = true
+    const s = this.loadSave()
+    if (!s) return
+    if (Date.now() >= s.endsAt) {
+      // успела завершиться пока был away → готово.
+      this.clearSave()
+      return
+    }
+    this.startVisual(s.level, s.endsAt)
   }
 
   private teardown(): void {
     for (const tw of this.tweens) tw.remove()
     this.tweens = []
-    if (this.timer) {
-      this.timer.remove()
-      this.timer = null
-    }
     for (const s of this.swimmers) {
       this.scene.tweens.killTweensOf(s)
       s.destroy()
@@ -276,13 +356,18 @@ export class EvolutionCenterController {
       this.front.destroy()
       this.front = null
     }
+    if (this.countdown) {
+      this.countdown.destroy()
+      this.countdown = null
+    }
     this.active = false
   }
 
-  // Смена локации: эволюция отменяется (лягушка уже списана — v1 теряется;
-  // re-add можно добавить позже). Чистим визуал.
+  // Смена локации: визуал чистим, но СЕЙВ оставляем — эволюция идёт оффлайн.
+  // На возврате tryRestore() поднимет её заново (checkedSave сброшен).
   reset(): void {
     this.teardown()
+    this.checkedSave = false
   }
 
   destroy(): void {

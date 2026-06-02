@@ -89,7 +89,8 @@ type Events = {
   // Клик по зданию зоны строений → открыть связанную модалку (React слушает в App.tsx).
   'building:open': { modal: string }
   // Loc3 центр эволюции: модалка выбрала лягушку уровня level → начать эволюцию.
-  'evolution:start': { level: number }
+  // durationMs — опц. (DEV-тест короткого таймера; по умолчанию ~сутки).
+  'evolution:start': { level: number; durationMs?: number }
   // Offline box fill: gameSync считает сколько боксов накопилось за AFK, MainScene выкладывает на поле.
   'boxes:offline-fill': { count: number }
   // Server-authoritative goo collector offline income (boot-time).
