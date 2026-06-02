@@ -325,7 +325,11 @@ export class LocationTransition {
     // Видимость: здания — зона buildings, дроны (живут в зоне frogs) — зона
     // frogs. После reparent контроллеры роняют ссылки: destroy(true) убьёт
     // спрайты, show()/ensureSpawned пересоздадут на возврате.
-    if (oldLoc === 1) {
+    // Все локации с зданиями (1=Болото, 2=Лес, 3=Континент). Раньше гейт
+    // oldLoc===1 не пускал сюда loc2/loc3 → их здания (фабрика/капсулы/тотем)
+    // не зумились и зависали на экране. collectTransitionSprites сам отдаёт
+    // нужный набор per-loc (loc1 + дроны/charge-бары; loc2/3 — только здания).
+    {
       const { buildings, drones } = scene.collectTransitionSprites(oldLoc)
       for (const b of buildings) {
         const wx = b.x
