@@ -142,8 +142,8 @@ const BUILDINGS_LOC3: readonly BuildingDef[] = [
     key: 'bld3_evoblock',
     src: '/builds_loc3/evoblock1_tansparent.png',
     xFrac: 0.5,
-    yFrac: 0.85,
-    widthFrac: 0.48,
+    yFrac: 0.9,
+    widthFrac: 0.52,
     opens: 'evolution',
   },
 ] as const
