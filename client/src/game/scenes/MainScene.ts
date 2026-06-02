@@ -732,18 +732,26 @@ export class MainScene extends Phaser.Scene {
     drones: Phaser.GameObjects.Image[]
   } {
     this.prepBuildings(locId)
-    if (locId !== 1) return { buildings: [], drones: [] }
+    if (locId === 1) {
+      return {
+        // Индикаторы зарядки дронов — в зоне зданий, идут с buildings (та же
+        // обработка видимости), чтобы плавно зумились, а не появлялись резко.
+        buildings: [
+          ...this.buildings.getSprites(),
+          ...this.drone.getChargeBarSprites(),
+          ...this.magnet.getChargeBarSprites(),
+        ],
+        // Магниты идут вместе со сборщиками — оба в зоне frogs, одинаковая
+        // обработка видимости в зум-анимации.
+        drones: [...this.drone.getSprites(), ...this.magnet.getSprites()],
+      }
+    }
+    // Loc2/Loc3: здания (фабрика/капсулы/тотем) — зона buildings. Без этого
+    // loc2/3-здания не зумились и капсулы зависали на экране при переходе.
+    // Ecto-дрон + капсульный fxGreen уже очищены reset()ом в onTransitionStart.
     return {
-      // Индикаторы зарядки дронов — в зоне зданий, идут с buildings (та же
-      // обработка видимости), чтобы плавно зумились, а не появлялись резко.
-      buildings: [
-        ...this.buildings.getSprites(),
-        ...this.drone.getChargeBarSprites(),
-        ...this.magnet.getChargeBarSprites(),
-      ],
-      // Магниты идут вместе со сборщиками — оба в зоне frogs, одинаковая
-      // обработка видимости в зум-анимации.
-      drones: [...this.drone.getSprites(), ...this.magnet.getSprites()],
+      buildings: [...this.buildings.getSprites()],
+      drones: [],
     }
   }
 
