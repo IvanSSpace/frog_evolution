@@ -13,6 +13,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../../store/gameStore'
 import { getFieldScroll } from '../../game/index'
+import { fireFilter, useFireLevel } from './fireLevels'
 
 // Файл перетаймлен в [0,84] (контент сдвинут -60, лид-ин холд убран → нет паузы
 // на стыке лупа). 84 кадра. Луп = [0, 84] = вся анимация.
@@ -66,6 +67,8 @@ function ensureDotlottieLoaded(): Promise<unknown> {
 export function Loc3LottieTest() {
   const currentLocation = useGameStore((s) => s.currentLocation)
   const [ready, setReady] = useState(false)
+  useFireLevel() // подписка: ре-рендер при смене уровня огня
+  const filter = fireFilter()
   const clipRef = useRef<HTMLDivElement | null>(null)
   const spotRefs = useRef<(HTMLDivElement | null)[]>([])
 
@@ -142,6 +145,7 @@ export function Loc3LottieTest() {
             width: SIZE,
             height: SIZE,
             pointerEvents: 'none',
+            filter, // уровень горения (CSS-фильтр поверх зелёной базы)
           }}
         >
           <LottieSpot />

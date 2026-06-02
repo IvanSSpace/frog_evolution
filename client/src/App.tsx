@@ -12,6 +12,7 @@ import { EctoDronerModal } from './ui/components/EctoDronerModal'
 import { EvolutionModal } from './ui/components/EvolutionModal'
 import { ConveyorModal } from './ui/components/ConveyorModal'
 import { Loc3LottieTest } from './ui/components/Loc3LottieTest'
+import { FireLevelsModal } from './ui/components/FireLevelsModal'
 import { startExpedition } from './api/expedition'
 import { WelcomeBackModal } from './ui/components/WelcomeBackModal'
 import { DiscoveryModal } from './ui/components/DiscoveryModal'
@@ -69,6 +70,7 @@ function App() {
   const [ectoDronerOpen, setEctoDronerOpen] = useState(false)
   const [evolutionOpen, setEvolutionOpen] = useState(false)
   const [conveyorOpen, setConveyorOpen] = useState(false)
+  const [fireLevelsOpen, setFireLevelsOpen] = useState(false)
   const [clanOpen, setClanOpen] = useState(false)
   const [journeyOpen, setJourneyOpen] = useState(false)
   const [welcomeBack, setWelcomeBack] = useState<{
@@ -204,6 +206,8 @@ function App() {
       else if (modal === 'conveyor') setConveyorOpen(true)
       // Чанк 1: центр эволюции Loc3 (evoblock opens:'evolution').
       else if (modal === 'evolution') setEvolutionOpen(true)
+      // Loc3 монумент: уровень горения огня. Чанк 1 задаёт opens:'fireLevels'.
+      else if (modal === 'fireLevels') setFireLevelsOpen(true)
     }
     eventBus.on('building:open', onBuildingOpen)
 
@@ -438,6 +442,9 @@ function App() {
       )}
       {conveyorOpen && <ConveyorModal onClose={() => setConveyorOpen(false)} />}
       <Loc3LottieTest />
+      {fireLevelsOpen && (
+        <FireLevelsModal onClose={() => setFireLevelsOpen(false)} />
+      )}
       {inventoryOpen && (
         <InventoryModal onClose={() => setInventoryOpen(false)} />
       )}
