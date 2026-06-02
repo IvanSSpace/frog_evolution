@@ -47,7 +47,7 @@ export function LoadingScreen({ subtitle }: LoadingScreenProps = {}) {
       setPhraseIdx(
         (i) => (i + 1 + Math.floor(Math.random() * 3)) % LOADING_PHRASES.length,
       )
-    }, 1700)
+    }, 3000)
     return () => window.clearInterval(id)
   }, [])
 
@@ -114,7 +114,7 @@ export function LoadingScreen({ subtitle }: LoadingScreenProps = {}) {
               'linear-gradient(90deg, #5fe3d0 0%, #6fd0e0 40%, #a78bfa 100%)',
             boxShadow:
               '0 0 12px rgba(110, 220, 210, 0.7), 0 0 12px rgba(167, 139, 250, 0.6)',
-            animation: 'loadbar 1.6s ease-in-out infinite',
+            animation: 'loadbar 7s ease-out forwards',
           }}
         />
       </div>
@@ -139,9 +139,8 @@ export function LoadingScreen({ subtitle }: LoadingScreenProps = {}) {
           to   { opacity: 0.95; transform: translateY(0); }
         }
         @keyframes loadbar {
-          0%   { width: 0%;   opacity: 1; }
-          80%  { width: 100%; opacity: 1; }
-          100% { width: 100%; opacity: 0; }
+          from { width: 0%; }
+          to   { width: 100%; }
         }
       `}</style>
     </div>
