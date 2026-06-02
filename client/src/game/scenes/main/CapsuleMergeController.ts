@@ -82,6 +82,10 @@ export class CapsuleMergeController {
   // id'ы лягушек, уже зарезервированных капсулами (pending/busy) — исключаем из
   // поиска новых пар.
   private reserved = new Set<string>()
+  // Остывающие overlay'и (capsule_full): hideCharged обнуляет slot.fxGreen сразу,
+  // но overlay ещё ~10с фейдится. Трекаем отдельно, чтобы reset() (смена локации)
+  // их уничтожил — иначе остаются в scene root и видны силуэтом на других локациях.
+  private coolingOverlays: Phaser.GameObjects.Image[] = []
 
   constructor(
     scene: MainScene,
@@ -456,12 +460,18 @@ export class CapsuleMergeController {
     if (!ov) return
     slot.fxGreen = null
     this.scene.tweens.killTweensOf(ov)
+    // Трекаем пока фейдится — reset() уничтожит, если уйдём с локации до конца.
+    this.coolingOverlays.push(ov)
     this.scene.tweens.add({
       targets: ov,
       alpha: 0,
       duration: durationMs,
       ease: 'Sine.easeInOut',
-      onComplete: () => ov.destroy(),
+      onComplete: () => {
+        const i = this.coolingOverlays.indexOf(ov)
+        if (i >= 0) this.coolingOverlays.splice(i, 1)
+        ov.destroy()
+      },
     })
   }
 
@@ -622,6 +632,13 @@ export class CapsuleMergeController {
       slot.state = 'idle'
       slot.cooldownUntil = 0
     }
+    // Остывающие overlay'и (slot.fxGreen уже null) — уничтожаем явно, иначе
+    // силуэт capsule_full утекает на другие локации после смены.
+    for (const ov of this.coolingOverlays) {
+      this.scene.tweens.killTweensOf(ov)
+      ov.destroy()
+    }
+    this.coolingOverlays = []
     this.reserved.clear()
   }
 
