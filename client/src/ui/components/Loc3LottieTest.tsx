@@ -5,12 +5,14 @@
 // игрок на Loc3. Если оставляем в проде — конвертнуть в WebM/spritesheet и
 // проигрывать Phaser-tween'ами (тогда вообще без CDN).
 //
-// ⚠️ ТЕСТ: позиционируется по fractional-координатам относительно вьюпорта и НЕ
-// следует за зумом/скроллом камеры Phaser. Точная привязка к сцене Loc3 — за
-// Чанком 1 (scenes/main). Координаты заданы автором.
+// ⚠️ ТЕСТ: позиционируется по fractional-координатам относительно игрового
+// канваса (#game-canvas rect), показывается ТОЛЬКО в зоне зданий (field:zoneChanged
+// === 'buildings'). НЕ следует за зумом/частичным скроллом — точная привязка к
+// сцене Loc3 за Чанком 1 (scenes/main). Координаты заданы автором.
 
 import { useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../../store/gameStore'
+import { eventBus } from '../../store/eventBus'
 
 // Файл перетаймлен в [0,84] (контент сдвинут -60, лид-ин холд убран → нет паузы
 // на стыке лупа). 84 кадра. Луп = [0, 84] = вся анимация.
@@ -64,6 +66,17 @@ function ensureDotlottieLoaded(): Promise<unknown> {
 export function Loc3LottieTest() {
   const currentLocation = useGameStore((s) => s.currentLocation)
   const [ready, setReady] = useState(false)
+  // Зона поля (frogs/buildings). Огни — только в зоне зданий (заводы).
+  const [zone, setZone] = useState<'frogs' | 'buildings'>('frogs')
+  // Прямоугольник игрового канваса — позиционируем относительно него, чтобы
+  // учитывать Header-офсет (иначе огни висят выше, «всегда на экране»).
+  const [rect, setRect] = useState<DOMRect | null>(null)
+
+  useEffect(() => {
+    const onZone = ({ zone: z }: { zone: 'frogs' | 'buildings' }) => setZone(z)
+    eventBus.on('field:zoneChanged', onZone)
+    return () => eventBus.off('field:zoneChanged', onZone)
+  }, [])
 
   useEffect(() => {
     if (currentLocation !== 3) return
@@ -76,7 +89,20 @@ export function Loc3LottieTest() {
     }
   }, [currentLocation])
 
-  if (currentLocation !== 3 || !ready) return null
+  // Меряем канвас при показе + на ресайз.
+  const visible = currentLocation === 3 && ready && zone === 'buildings'
+  useEffect(() => {
+    if (!visible) return
+    const measure = () => {
+      const el = document.getElementById('game-canvas')
+      if (el) setRect(el.getBoundingClientRect())
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [visible])
+
+  if (!visible || !rect) return null
 
   return (
     <>
@@ -85,8 +111,8 @@ export function Loc3LottieTest() {
           key={i}
           style={{
             position: 'fixed',
-            left: `${s.xFrac * 100}vw`,
-            top: `${s.yFrac * 100}vh`,
+            left: rect.left + s.xFrac * rect.width,
+            top: rect.top + s.yFrac * rect.height,
             transform: 'translate(-50%, -50%)',
             width: SIZE,
             height: SIZE,
