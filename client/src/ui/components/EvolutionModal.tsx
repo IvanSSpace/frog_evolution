@@ -2,6 +2,11 @@ import { useGameStore } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
 import { useModalLock } from '../../utils/modalLock'
 import { hapticImpact } from '../../utils/telegram'
+import { FROG_LEVELS } from '../../game/config/frogs'
+
+// На поле тинт лягушки запекается в рантайме (preload меняет fill #fff на tint).
+// Статичный SVG белый → в модалке красим силуэт через CSS mask цветом tint.
+const tintHex = (n: number) => '#' + n.toString(16).padStart(6, '0')
 
 type Props = { onClose: () => void }
 
@@ -108,13 +113,20 @@ export function EvolutionModal({ onClose }: Props) {
               className="ff-card flex items-center gap-3 p-3"
               style={{ touchAction: 'manipulation', cursor: 'pointer' }}
             >
-              <img
-                src={`/frogs_svg/frog${level}_t0.svg`}
-                alt=""
-                style={{ height: 44, width: 'auto', objectFit: 'contain' }}
-                onError={(e) => {
-                  ;(e.currentTarget as HTMLImageElement).style.visibility =
-                    'hidden'
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  flexShrink: 0,
+                  backgroundColor: tintHex(FROG_LEVELS[level - 1]?.tint ?? 0xffffff),
+                  WebkitMaskImage: `url(${FROG_LEVELS[level - 1]?.path})`,
+                  maskImage: `url(${FROG_LEVELS[level - 1]?.path})`,
+                  WebkitMaskSize: 'contain',
+                  maskSize: 'contain',
+                  WebkitMaskRepeat: 'no-repeat',
+                  maskRepeat: 'no-repeat',
+                  WebkitMaskPosition: 'center',
+                  maskPosition: 'center',
                 }}
               />
               <div className="flex-1 text-left">
