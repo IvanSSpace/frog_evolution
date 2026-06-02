@@ -25,8 +25,8 @@ const LOTTIE_URL = '/loc3_anim.json'
 
 // Точки размещения (xFrac от ширины, yFracZone от высоты) — заданы автором.
 const SPOTS = [
-  { xFrac: 0.419, yFrac: 0.074 },
-  { xFrac: 0.698, yFrac: 0.126 },
+  { xFrac: 0.419, yFrac: 0.130 },
+  { xFrac: 0.698, yFrac: 0.182 },
 ]
 // Размер огонька (px). Уменьшено 120→80 по запросу.
 const SIZE = 80
@@ -66,6 +66,7 @@ function ensureDotlottieLoaded(): Promise<unknown> {
 export function Loc3LottieTest() {
   const currentLocation = useGameStore((s) => s.currentLocation)
   const [ready, setReady] = useState(false)
+  const clipRef = useRef<HTMLDivElement | null>(null)
   const spotRefs = useRef<(HTMLDivElement | null)[]>([])
 
   useEffect(() => {
@@ -81,22 +82,28 @@ export function Loc3LottieTest() {
 
   const active = currentLocation === 3 && ready
 
-  // Каждый кадр: позиция = канвас rect + scroll-progress поля. progress=1 (зона
-  // зданий) → огни на yFrac зоны; progress→0 (зона лягушек) → уезжают вниз за кадр.
+  // Каждый кадр: clip-контейнер = прямоугольник канваса (overflow:hidden обрезает
+  // всё за игровым видом — огни не лезут на футер/хедер). Огни внутри = absolute
+  // от контейнера: xFrac/yFrac зоны + scroll-progress (едут с картой).
   useEffect(() => {
     if (!active) return
     let raf = 0
     const loop = () => {
       const canvas = document.getElementById('game-canvas')
       const fs = getFieldScroll()
-      if (canvas && fs) {
+      const clip = clipRef.current
+      if (canvas && fs && clip) {
         const r = canvas.getBoundingClientRect()
+        clip.style.left = `${r.left}px`
+        clip.style.top = `${r.top}px`
+        clip.style.width = `${r.width}px`
+        clip.style.height = `${r.height}px`
         const off = 1 - fs.progress // 0 в зоне зданий, 1 в зоне лягушек
         SPOTS.forEach((s, i) => {
           const el = spotRefs.current[i]
           if (!el) return
-          el.style.left = `${r.left + s.xFrac * r.width}px`
-          el.style.top = `${r.top + (s.yFrac + off) * r.height}px`
+          el.style.left = `${s.xFrac * r.width}px`
+          el.style.top = `${(s.yFrac + off) * r.height}px`
         })
       }
       raf = requestAnimationFrame(loop)
@@ -108,7 +115,19 @@ export function Loc3LottieTest() {
   if (!active) return null
 
   return (
-    <>
+    <div
+      ref={clipRef}
+      style={{
+        position: 'fixed',
+        left: -9999,
+        top: -9999,
+        width: 0,
+        height: 0,
+        overflow: 'hidden', // обрезает огни по границе игрового канваса
+        zIndex: 40,
+        pointerEvents: 'none',
+      }}
+    >
       {SPOTS.map((_s, i) => (
         <div
           key={i}
@@ -116,20 +135,19 @@ export function Loc3LottieTest() {
             spotRefs.current[i] = el
           }}
           style={{
-            position: 'fixed',
-            left: -9999, // стартовая позиция до первого кадра rAF
+            position: 'absolute',
+            left: -9999,
             top: -9999,
             transform: 'translate(-50%, -50%)',
             width: SIZE,
             height: SIZE,
-            zIndex: 40,
             pointerEvents: 'none',
           }}
         >
           <LottieSpot />
         </div>
       ))}
-    </>
+    </div>
   )
 }
 
