@@ -1,95 +1,38 @@
-// Loc3LottieTest — ТЕСТОВЫЙ DOM-оверлей с Lottie-анимацией на Loc3.
+// Loc3LottieTest — DOM-оверлей зелёного огня на Loc3.
 //
-// ⚠️ Lottie в проекте «выпилен» (см. правила). Здесь рантайм НЕ в бандле:
-// dotLottie web-component тянется лениво через CDN dynamic-import только когда
-// игрок на Loc3. Если оставляем в проде — конвертнуть в WebM/spritesheet и
-// проигрывать Phaser-tween'ами (тогда вообще без CDN).
+// Рантайм: lottie-web БАНДЛИТСЯ локально (Vite), без внешнего CDN/WASM — раньше
+// dotlottie-wc тянулся с esm.sh и, похоже, вызывал петлю перезагрузки в dev/WebView.
+// Анимация — локальный /loc3_anim.json (зелёный, перетаймлен в [0,84], loop без паузы).
 //
-// ⚠️ ТЕСТ: огни едут вместе с двухзонным полем — позиция каждый кадр считается
-// от #game-canvas rect + scroll-progress камеры (getFieldScroll). В зоне зданий
-// (progress→1) сидят на заводах; при скролле к зоне лягушек уезжают вниз за кадр.
-// За зумом перехода между локациями не следят. Координаты заданы автором.
+// Позиция: считается каждый кадр от #game-canvas rect + scroll-progress поля
+// (getFieldScroll) → огни едут вместе с двухзонной картой. Clip-контейнер
+// (overflow:hidden) обрезает их по границе игрового вида (не лезут на футер/хедер).
+// За зумом смены локаций не следят. Координаты/уровни — заданы автором.
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
+import lottie from 'lottie-web'
 import { useGameStore } from '../../store/gameStore'
 import { getFieldScroll } from '../../game/index'
 import { fireFilter, useFireLevel } from './fireLevels'
 
-// Файл перетаймлен в [0,84] (контент сдвинут -60, лид-ин холд убран → нет паузы
-// на стыке лупа). 84 кадра. Луп = [0, 84] = вся анимация.
-const SEG_START = 0
-const SEG_END = 84
-
-// Локальная копия с линеаризованным easing концовки (убрано торможение
-// последних кейфреймов t>=160). Оригинал был на lottie.host.
 const LOTTIE_URL = '/loc3_anim.json'
 
-// Точки размещения (xFrac от ширины, yFracZone от высоты) — заданы автором.
+// Точки размещения (доли канваса/зоны) — заданы автором.
 const SPOTS = [
   { xFrac: 0.419, yFrac: 0.13 },
   { xFrac: 0.698, yFrac: 0.182 },
 ]
-// Размер огонька (px). Уменьшено 120→80 по запросу.
 const SIZE = 80
-
-// JSX-тип для кастом-элемента dotlottie-wc.
-declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace JSX {
-    interface IntrinsicElements {
-      'dotlottie-wc': {
-        src?: string
-        autoplay?: boolean
-        loop?: boolean
-        // Диапазон кадров для проигрывания/лупа ("start end"). Обрезает хвостовой
-        // холд: файл ip=60 op=240 — крутим только активные 60–240.
-        segment?: string
-        ref?: React.Ref<HTMLElement>
-        style?: React.CSSProperties
-      }
-    }
-  }
-}
-
-let loaderPromise: Promise<unknown> | null = null
-// URL в переменной → vite не пытается бандлить, TS не резолвит модуль.
-const DOTLOTTIE_CDN = 'https://esm.sh/@lottiefiles/dotlottie-wc@0.9.16'
-function ensureDotlottieLoaded(): Promise<unknown> {
-  if (!loaderPromise) {
-    // Лениво из CDN — в бандл не попадает. esm.sh регистрирует custom element.
-    loaderPromise = import(/* @vite-ignore */ DOTLOTTIE_CDN).catch((e) => {
-      console.warn('[Loc3LottieTest] dotlottie-wc load failed:', e)
-    })
-  }
-  return loaderPromise
-}
-
-// Kill-switch: false = огонь полностью выключен (диагностика цикла перезагрузки).
-// CDN-импорт dotlottie-wc не происходит. Вернуть true когда причина ясна.
-const FIRE_ENABLED = false
 
 export function Loc3LottieTest() {
   const currentLocation = useGameStore((s) => s.currentLocation)
-  const [ready, setReady] = useState(false)
   useFireLevel() // подписка: ре-рендер при смене уровня любого огня
   const clipRef = useRef<HTMLDivElement | null>(null)
   const spotRefs = useRef<(HTMLDivElement | null)[]>([])
 
-  useEffect(() => {
-    if (!FIRE_ENABLED || currentLocation !== 3) return
-    let alive = true
-    ensureDotlottieLoaded().then(() => {
-      if (alive) setReady(true)
-    })
-    return () => {
-      alive = false
-    }
-  }, [currentLocation])
+  const active = currentLocation === 3
 
-  const active = FIRE_ENABLED && currentLocation === 3 && ready
-
-  // Каждый кадр: clip-контейнер = прямоугольник канваса (overflow:hidden обрезает
-  // всё за игровым видом — огни не лезут на футер/хедер). Огни внутри = absolute
+  // Каждый кадр: clip-контейнер = прямоугольник канваса; огни внутри = absolute
   // от контейнера: xFrac/yFrac зоны + scroll-progress (едут с картой).
   useEffect(() => {
     if (!active) return
@@ -158,61 +101,22 @@ export function Loc3LottieTest() {
   )
 }
 
-// Один экземпляр анимации. После готовности инстанса dotLottie выставляем луп
-// по активному сегменту [SEG_START, SEG_END] — убирает «паузу» на стыке цикла.
+// Один экземпляр анимации через bundled lottie-web (SVG-рендер, loop).
 function LottieSpot() {
-  const ref = useRef<HTMLElement | null>(null)
+  const ref = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    type Inst = {
-      isLoaded?: boolean
-      setSegment?: (s: number, e: number) => void
-      setLoop?: (v: boolean) => void
-      play?: () => void
-      addEventListener?: (ev: string, cb: () => void) => void
-    }
-    const el = ref.current as (HTMLElement & { dotLottie?: Inst }) | null
-    if (!el) return
-
-    let timer: number | undefined
-    let timeout: number | undefined
-    const configure = (inst: Inst) => {
-      try {
-        inst.setSegment?.(SEG_START, SEG_END) // луп только живой части
-        inst.setLoop?.(true)
-        inst.play?.()
-      } catch (e) {
-        console.warn('[Loc3LottieTest] segment loop config failed:', e)
-      }
-    }
-    // Инстанс dotLottie создаётся асинхронно. Ждём его, затем — событие load
-    // (segment применяется к загруженной анимации).
-    const tryGet = (): boolean => {
-      const inst = el.dotLottie
-      if (!inst) return false
-      if (inst.isLoaded) configure(inst)
-      else inst.addEventListener?.('load', () => configure(inst))
-      return true
-    }
-    if (!tryGet()) {
-      timer = window.setInterval(() => {
-        if (tryGet()) window.clearInterval(timer)
-      }, 120)
-      timeout = window.setTimeout(() => window.clearInterval(timer), 5000)
-    }
-    return () => {
-      window.clearInterval(timer)
-      window.clearTimeout(timeout)
-    }
+    const container = ref.current
+    if (!container) return
+    const anim = lottie.loadAnimation({
+      container,
+      renderer: 'svg',
+      loop: true,
+      autoplay: true,
+      path: LOTTIE_URL,
+    })
+    return () => anim.destroy()
   }, [])
 
-  return (
-    <dotlottie-wc
-      ref={ref}
-      src={LOTTIE_URL}
-      autoplay
-      loop
-      style={{ width: '100%', height: '100%' }}
-    />
-  )
+  return <div ref={ref} style={{ width: '100%', height: '100%' }} />
 }

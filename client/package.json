@@ -25,6 +25,7 @@
     "@tanstack/react-virtual": "^3.13.24",
     "husky": "^9.1.7",
     "i18next": "^26.0.8",
+    "lottie-web": "^5.13.0",
     "mitt": "^3.0.1",
     "phaser": "^4.1.0",
     "react": "^19.1.0",
