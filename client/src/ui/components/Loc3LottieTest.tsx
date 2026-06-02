@@ -33,21 +33,13 @@ export function Loc3LottieTest() {
   const spotRefs = useRef<(HTMLDivElement | null)[]>([])
   const lastSize = useRef(-1) // последний применённый размер огня (px); -1 → форс первый раз
 
-  // На время zoom-перехода между локациями огонь СКРЫВАЕМ + ставим Lottie на
-  // паузу: DOM-оверлей не следует за Phaser-зумом (глючно «пропадал»), а пауза
-  // ещё и экономит CPU в момент тяжёлой анимации перехода. transitioningRef —
-  // для rAF-loop (без рестарта), state — для paused-prop детей.
+  // На время zoom-перехода Lottie ставим на ПАУЗУ (замороженный кадр) — огни
+  // остаются на позициях, не дёргаются и не «пропадают». CPU тоже экономится в
+  // момент тяжёлой анимации перехода. Позицию rAF-loop продолжает обновлять.
   const [transitioning, setTransitioning] = useState(false)
-  const transitioningRef = useRef(false)
   useEffect(() => {
-    const onStart = () => {
-      transitioningRef.current = true
-      setTransitioning(true)
-    }
-    const onEnd = () => {
-      transitioningRef.current = false
-      setTransitioning(false)
-    }
+    const onStart = () => setTransitioning(true)
+    const onEnd = () => setTransitioning(false)
     eventBus.on('location:transitionStart', onStart)
     eventBus.on('location:transitionEnd', onEnd)
     return () => {
@@ -71,14 +63,7 @@ export function Loc3LottieTest() {
       const canvas = document.getElementById('game-canvas')
       const fs = getFieldScroll()
       const clip = clipRef.current
-      if (clip && transitioningRef.current) {
-        // Идёт zoom-переход — прячем огонь (не следует за зумом, иначе глюк).
-        clip.style.visibility = 'hidden'
-        raf = requestAnimationFrame(loop)
-        return
-      }
       if (canvas && fs && clip) {
-        clip.style.visibility = 'visible'
         const r = canvas.getBoundingClientRect()
         clip.style.left = `${r.left}px`
         clip.style.top = `${r.top}px`
