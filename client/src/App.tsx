@@ -10,6 +10,7 @@ import { InventoryModal } from './ui/components/InventoryModal'
 import { DronerModal } from './ui/components/DronerModal'
 import { EctoDronerModal } from './ui/components/EctoDronerModal'
 import { ConveyorModal } from './ui/components/ConveyorModal'
+import { Loc3LottieTest } from './ui/components/Loc3LottieTest'
 import { startExpedition } from './api/expedition'
 import { WelcomeBackModal } from './ui/components/WelcomeBackModal'
 import { DiscoveryModal } from './ui/components/DiscoveryModal'
@@ -429,6 +430,7 @@ function App() {
         <EctoDronerModal onClose={() => setEctoDronerOpen(false)} />
       )}
       {conveyorOpen && <ConveyorModal onClose={() => setConveyorOpen(false)} />}
+      <Loc3LottieTest />
       {inventoryOpen && (
         <InventoryModal onClose={() => setInventoryOpen(false)} />
       )}
