@@ -236,15 +236,7 @@ export class FactoryBoxController {
     const sp = box.sp
     if (!sp.active) return
     sp.setAngle(0)
-    // Лёгкий idle-бобинг.
-    this.scene.tweens.add({
-      targets: sp,
-      y: sp.y - 4 * DPR,
-      duration: 900,
-      ease: 'Sine.easeInOut',
-      yoyo: true,
-      repeat: -1,
-    })
+    // Бокс стоит неподвижно на поле до вскрытия (без левитации).
     sp.setInteractive({ useHandCursor: true })
     sp.on('pointerdown', () => this.openBox(box))
     const autoMs = boxAutoOpenMs(
