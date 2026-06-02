@@ -71,8 +71,76 @@ export function getLastKnownVersion(): number | null {
   return lastKnownVersion
 }
 
+// ─── cosmic sync contract ──────────────────────────────────────────────────
+// SINGLE SOURCE OF TRUTH для полей, которые сериализуются в server `cosmic`-блоб.
+//
+// snapshotForSave() строит `cosmic` ИЗ ЭТОГО СПИСКА — забыть поле физически
+// нельзя: новое поле добавляется в один массив и сразу попадает в save. Раньше
+// snapshot был ручным object-literal'ом, и поля забывали → необратимая потеря
+// сейва (2026-05-18 audit: ascendedCarriers/essence/perma* пропадали при
+// cross-device login). Этот список делает save-сторону самодокументируемой.
+//
+// `satisfies (keyof StoreState)[]` даёт compile-time гарантию: опечатка или
+// переименование/удаление поля в сторе → ошибка сборки, а не тихий потерянный
+// сейв. preferences — единственное вложенное поле (отдельная обработка ниже).
+//
+// hydrate (loadGameState) по-прежнему валидирует те же ключи явно (read-сторона
+// — следующий шаг рефакторинга к общему дескриптор-реестру + типизированные
+// колонки вместо JSON-блоба, см. server/AUDIT.md §3A / §5).
+type StoreState = ReturnType<typeof useGameStore.getState>
+const COSMIC_SYNC_KEYS = [
+  'serums',
+  'boxes',
+  'ship',
+  'carriers',
+  // Phase 22 Plan 22-03: ascension state (permanent pool + meta-currency).
+  'ascendedCarriers',
+  'essence',
+  'mutagen1',
+  'mutagen2',
+  'mutagen3',
+  // Phase 22 Plan 22-05: cosmic shop perma upgrades + cost-scaling counters.
+  'permaSlotBonus',
+  'permaShipSpeedBonus',
+  'permaSerumDropBonus',
+  'shopPurchaseCounts',
+  'bestiaryBitset',
+  'pityCounters',
+  'lastActiveTab',
+  'hasFirstFeed',
+  'hasFirstMission',
+  'hasOpenedAnyBox',
+  'frogExclusiveUnlocked',
+  'tutorialState',
+  // Phase 24 Plan 24-01: captain birth milestone.
+  'captainBirthSeen',
+  // Toplevel-but-meta progress (cosmos gate + L18 merge bonuses).
+  'hasCosmosUnlocked',
+  'l18MergesCount',
+  'l18AbsoluteBonusPerSec',
+  // Чанк 2: Loc2/Loc3 экономика (валюты + апгрейды локаций).
+  'ectoplasm',
+  'currencyY',
+  'loc2Upgrades',
+  // 2026-05-23: эволюция лягушек (per-level tier + cooldown timestamps) + temp buff.
+  'frogTiers',
+  'frogTierCooldowns',
+  'temporaryIncomeBuff',
+] as const satisfies readonly (keyof StoreState)[]
+
 function snapshotForSave() {
   const s = useGameStore.getState()
+
+  // Build cosmic-блоб из единого списка ключей (см. COSMIC_SYNC_KEYS).
+  const cosmic: Record<string, unknown> = {}
+  for (const k of COSMIC_SYNC_KEYS) cosmic[k] = s[k]
+  // preferences — единственное вложенное/derived поле (язык и mute живут вне store).
+  cosmic.preferences = {
+    numberFormat: s.numberFormat,
+    language: i18next.language || 'ru',
+    sfxMuted: sfx.isMuted(),
+  }
+
   return {
     gold: Math.floor(s.gold).toString(),
     // Upgrades — struct тип, но при сериализации идентичен Record<string,number>,
@@ -85,69 +153,7 @@ function snapshotForSave() {
     locationFrogs: s.locationFrogs,
     boxOpenCount: s.boxOpenCount,
     incomePerSec: s.incomePerSec,
-    cosmic: {
-      serums: s.serums,
-      boxes: s.boxes,
-      ship: s.ship,
-      carriers: s.carriers,
-      // Phase 22 Plan 22-03: ascension state — permanent pool + meta-currency.
-      // 2026-05-18 audit fix: WAS missing from snapshotForSave → cross-device
-      // login lost all ascended carriers + essence (irreversible save loss).
-      ascendedCarriers: s.ascendedCarriers,
-      essence: s.essence,
-      mutagen1: s.mutagen1,
-      mutagen2: s.mutagen2,
-      mutagen3: s.mutagen3,
-      // Phase 22 Plan 22-05: cosmic shop perma upgrades + per-item purchase
-      // history (used for cost scaling).
-      // 2026-05-18 audit fix: WAS missing from snapshotForSave → cross-device
-      // login lost all shop progress (slot bonuses, ship speed, serum drop %)
-      // AND reset cost-scaling counters to 0 (next purchase priced at base —
-      // exploit + economy break).
-      permaSlotBonus: s.permaSlotBonus,
-      permaShipSpeedBonus: s.permaShipSpeedBonus,
-      permaSerumDropBonus: s.permaSerumDropBonus,
-      shopPurchaseCounts: s.shopPurchaseCounts,
-      bestiaryBitset: s.bestiaryBitset,
-      pityCounters: s.pityCounters,
-      lastActiveTab: s.lastActiveTab,
-      hasFirstFeed: s.hasFirstFeed,
-      hasFirstMission: s.hasFirstMission,
-      hasOpenedAnyBox: s.hasOpenedAnyBox,
-      frogExclusiveUnlocked: s.frogExclusiveUnlocked,
-      tutorialState: s.tutorialState,
-      // Phase 24 Plan 24-01: cross-device sync captain birth milestone.
-      captainBirthSeen: s.captainBirthSeen,
-      // 2026-05-18 audit fix: toplevel-but-meta state served через cosmic blob
-      // (consistent pattern с captainBirthSeen — server schema accepts opaque
-      // cosmic JSON, no schema change). All three — per-user permanent progress:
-      //   - hasCosmosUnlocked: gate flag (Phase 22 Plan 22-06).
-      //   - l18MergesCount: L18+L18 merge bonus multiplier counter.
-      //   - l18AbsoluteBonusPerSec: absolute permanent income bonus (2× L18 income).
-      // Без sync — cross-device login обнуляет multiplier + absolute bonus и
-      // ломает cosmos gate (повторный cinematic).
-      hasCosmosUnlocked: s.hasCosmosUnlocked,
-      l18MergesCount: s.l18MergesCount,
-      l18AbsoluteBonusPerSec: s.l18AbsoluteBonusPerSec,
-      // Чанк 2: Loc2/Loc3 экономика — server-sync через cosmic blob (без schema
-      // change, как остальная мета). ectoplasm раньше был только localStorage.
-      ectoplasm: s.ectoplasm,
-      currencyY: s.currencyY,
-      loc2Upgrades: s.loc2Upgrades,
-      // 2026-05-23: эволюция лягушек (per-level tier + cooldown timestamps).
-      // Permanent progress — должен переноситься между девайсами.
-      frogTiers: s.frogTiers,
-      frogTierCooldowns: s.frogTierCooldowns,
-      // 2026-05-23: временный 6h buff к доходу после L18+L18 merge.
-      // Persist чтобы не сбрасывался при cross-device login.
-      temporaryIncomeBuff: s.temporaryIncomeBuff,
-      // Phase 22: user preferences (cross-device sync).
-      preferences: {
-        numberFormat: s.numberFormat,
-        language: i18next.language || 'ru',
-        sfxMuted: sfx.isMuted(),
-      },
-    },
+    cosmic,
     // Onboarding state — per-user, cross-device. Sync через server так чтобы
     // beats не повторялись при cache wipe в TG WebView.
     onboarding: useOnboardingStore.getState() as unknown as Record<
