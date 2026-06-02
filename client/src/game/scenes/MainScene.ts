@@ -872,11 +872,13 @@ export class MainScene extends Phaser.Scene {
 
   private drainOfflineBoxFill(): void {
     if (_offlineBoxFill <= 0) return
-    let n = _offlineBoxFill
-    _offlineBoxFill = 0
-    while (n > 0 && this.box.canSpawnBox()) {
+    // Боксы — механика Loc1. На Loc2/Loc3 НЕ выкладываем (иначе loc1-боксы видны
+    // на чужой локации при заходе). Держим в буфере до захода на Loc1 — дренится
+    // в onTransitionEnd(id=1). Буфер уменьшаем только на реально заспавненные.
+    if (useGameStore.getState().currentLocation !== 1) return
+    while (_offlineBoxFill > 0 && this.box.canSpawnBox()) {
       this.box.spawnBox(false, true) // preLanded, по сетке (pickGridPos)
-      n--
+      _offlineBoxFill--
     }
   }
 
@@ -1140,6 +1142,8 @@ export class MainScene extends Phaser.Scene {
     this.configureWorld(id, this.transitionFromZone)
     // Loc2: воссоздать сохранённые фабрик-боксы (persist между заходами).
     if (id === 2) this.factoryBox.restore()
+    // Loc1: выложить накопленные офлайн-боксы (если буфер ждал захода на Loc1).
+    if (id === 1) this.drainOfflineBoxFill()
   }
 
   // Package-public: starmap-переходы (open/close) зумят из зоны frogs — их
