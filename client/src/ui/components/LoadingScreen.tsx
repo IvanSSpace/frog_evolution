@@ -64,38 +64,28 @@ export function LoadingScreen({ subtitle }: LoadingScreenProps = {}) {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        gap: '32px',
+        justifyContent: 'flex-end',
+        gap: '28px',
         color: '#e5f5e5',
         fontFamily: "'Nunito', system-ui, sans-serif",
         padding: '32px',
+        paddingBottom: '14vh',
         textAlign: 'center',
         overflow: 'hidden',
       }}
     >
-      {/* Прыгающая лягушка */}
-      <div
-        style={{
-          fontSize: '88px',
-          lineHeight: 1,
-          animation: 'frog-bounce 1.2s ease-in-out infinite',
-          transformOrigin: '50% 100%',
-          filter: 'drop-shadow(0 8px 12px rgba(0, 0, 0, 0.4))',
-        }}
-      >
-        🐸
-      </div>
-
       {/* Динамическая фраза */}
       <div
         key={phraseIdx}
         style={{
-          fontSize: '15px',
-          opacity: 0.85,
-          maxWidth: '320px',
-          minHeight: '60px',
-          lineHeight: 1.5,
+          fontSize: '22px',
+          fontWeight: 700,
+          opacity: 0.95,
+          maxWidth: '420px',
+          minHeight: '70px',
+          lineHeight: 1.45,
           fontStyle: 'italic',
+          textShadow: '0 2px 8px rgba(0,0,0,0.6)',
           animation: 'phrase-in 0.4s ease-out',
         }}
       >
@@ -140,15 +130,9 @@ export function LoadingScreen({ subtitle }: LoadingScreenProps = {}) {
       )}
 
       <style>{`
-        @keyframes frog-bounce {
-          0%, 100% { transform: translateY(0) scaleY(1) scaleX(1); }
-          45% { transform: translateY(-22px) scaleY(1.1) scaleX(0.95); }
-          70% { transform: translateY(0) scaleY(0.85) scaleX(1.15); }
-          85% { transform: translateY(-4px) scaleY(1.02) scaleX(0.99); }
-        }
         @keyframes phrase-in {
           from { opacity: 0; transform: translateY(8px); }
-          to   { opacity: 0.85; transform: translateY(0); }
+          to   { opacity: 0.95; transform: translateY(0); }
         }
         @keyframes dot-pulse {
           0%, 80%, 100% { opacity: 0.3; transform: scale(0.85); }
