@@ -47,6 +47,7 @@ import { MergeController } from './main/MergeController'
 import { CapsuleMergeController } from './main/CapsuleMergeController'
 import { EctoDroneController } from './main/EctoDroneController'
 import { EvolutionCenterController } from './main/EvolutionCenterController'
+import { FactoryBoxController } from './main/FactoryBoxController'
 import { BoxController } from './main/BoxController'
 import { PoopController } from './main/PoopController'
 import { MagnetController } from './main/MagnetController'
@@ -159,6 +160,7 @@ export class MainScene extends Phaser.Scene {
 
   // Loc3: центр эволюции (evoblock-капсула: положить лягушку → таймер → анлок).
   private evoCenter!: EvolutionCenterController
+  private factoryBox!: FactoryBoxController
 
   // Phase 21-03 (Wave 3): box drop / open в отдельном controller'е.
   private box!: BoxController
@@ -326,6 +328,7 @@ export class MainScene extends Phaser.Scene {
     this.ectoDrone = new EctoDroneController(this)
     // Loc3: центр эволюции (тап по капсуле → лягушка внутрь → таймер → анлок).
     this.evoCenter = new EvolutionCenterController(this, this.spawner, this.buildings)
+    this.factoryBox = new FactoryBoxController(this, this.spawner, this.buildings)
     // Phase 21-05 (Wave 5): location-transition + interaction controllers.
     this.locTransition = new LocationTransition(
       this,
@@ -1073,11 +1076,13 @@ export class MainScene extends Phaser.Scene {
         cInterval,
       )
       if (this.conveyorProgressMs >= cInterval) {
-        if (this.canSpawnBox()) {
-          this.spawnConveyorFrog()
+        // Фабрика выпускает БОКС (едет → прыгает → вскрывается в L7). Лимит
+        // конкуррентных боксов в полёте, чтобы открытие не переполнило поле.
+        if (this.canSpawnBox() && this.factoryBox.count() < 4) {
+          this.factoryBox.emit()
           this.conveyorProgressMs = 0
         } else {
-          this.conveyorProgressMs = cInterval // поле забито — ждём слот
+          this.conveyorProgressMs = cInterval // поле/боксы забиты — ждём слот
         }
       }
     } else {
@@ -1165,6 +1170,8 @@ export class MainScene extends Phaser.Scene {
     this.ectoPoops = []
     // Сброс центра эволюции loc3 (вернуть лягушку, убрать FX/хит-зону).
     this.evoCenter.reset()
+    // Сброс фабрик-боксов loc2 (убрать все летящие/лежащие боксы).
+    this.factoryBox.reset()
   }
 
   private onTransitionEnd = ({ id }: { id: number }) => {
@@ -1306,6 +1313,7 @@ export class MainScene extends Phaser.Scene {
     this.capsuleMerge?.destroy()
     this.ectoDrone?.destroy()
     this.evoCenter?.destroy()
+    this.factoryBox?.destroy()
     // Phase 21-05: subscribe / DnD pointer listeners — в FrogInteraction.teardown().
     this.interaction.teardown()
     // Phase 23 Plan 23-05: очищаем window.__mainScene reference

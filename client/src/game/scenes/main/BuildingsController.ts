@@ -94,6 +94,7 @@ const BUILDINGS_LOC2: readonly BuildingDef[] = [
     xFrac: 0.28,
     yFrac: 0.54,
     widthFrac: 0.46,
+    opens: 'conveyor', // тап → ConveyorModal (прокачка скорости конвейера)
   },
   {
     key: 'bld2_droner',
