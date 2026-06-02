@@ -17,8 +17,8 @@ export const FIRE_LEVELS: FireLevel[] = [
   {
     id: 0,
     name: 'Слабое',
-    filter: 'saturate(0.55) brightness(0.7)',
-    swatch: '#2f6b3a',
+    filter: 'saturate(0.85) brightness(0.92)',
+    swatch: '#3c8f48',
   },
   {
     id: 1,
