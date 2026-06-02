@@ -12,6 +12,7 @@ import type { MainScene } from '../MainScene'
 import type { FrogSpawner } from './FrogSpawner'
 import type { BuildingsController } from './BuildingsController'
 import { useGameStore } from '../../../store/gameStore'
+import { eventBus } from '../../../store/eventBus'
 import type { FrogData } from './types'
 
 const EVO_DURATION_MS = 15000 // тест-таймер эволюции (балансим позже)
@@ -22,7 +23,6 @@ export class EvolutionCenterController {
   private spawner: FrogSpawner
   private buildings: BuildingsController
   private active = false
-  private hit: Phaser.GameObjects.Rectangle | null = null
   private overlay: Phaser.GameObjects.Image | null = null
   private frog: FrogData | null = null
   private tweens: Phaser.Tweens.Tween[] = []
@@ -36,44 +36,34 @@ export class EvolutionCenterController {
     this.scene = scene
     this.spawner = spawner
     this.buildings = buildings
+    // Модалка (EvolutionModal) выбрала лягушку уровня level → начать эволюцию.
+    eventBus.on('evolution:start', this.onStart)
   }
 
-  // Хит-зона над капсулой эволюции. Капсула пересоздаётся при входе на loc3 →
-  // зону тоже пересоздаём (reset уничтожает старую). Вызывать каждый кадр на loc3.
-  ensureHitZone(): void {
-    if (this.hit) return
-    const sp = this.buildings.getEvoblockSprite()
-    if (!sp) return
-    const r = this.scene.add.rectangle(
-      sp.x,
-      sp.y - sp.displayHeight * 0.45,
-      sp.displayWidth * 0.7,
-      sp.displayHeight * 0.7,
-      0xffffff,
-      0,
-    )
-    r.setDepth(sp.depth + 1)
-    r.setInteractive({ useHandCursor: true })
-    r.on('pointerup', () => this.onTap())
-    this.hit = r
-  }
-
-  private onTap(): void {
+  // Старт по выбору из модалки: берём с поля свободную лягушку нужного уровня
+  // (ближайшую к капсуле), помещаем в капсулу.
+  private onStart = ({ level }: { level: number }): void => {
     if (this.active) return
+    if (useGameStore.getState().currentLocation !== 3) return
     const sp = this.buildings.getEvoblockSprite()
     if (!sp) return
-    // Берём ближайшую к капсуле свободную лягушку с поля.
     let best: FrogData | null = null
     let bestD = Infinity
     for (const f of this.scene.frogs) {
+      if (f.level !== level) continue
       if (f.isDragging || f.isMerging || f.isAttracted) continue
-      const d = Phaser.Math.Distance.Between(f.container.x, f.container.y, sp.x, sp.y)
+      const d = Phaser.Math.Distance.Between(
+        f.container.x,
+        f.container.y,
+        sp.x,
+        sp.y,
+      )
       if (d < bestD) {
         bestD = d
         best = f
       }
     }
-    if (!best) return // нет свободной лягушки
+    if (!best) return // нет свободной лягушки этого уровня на поле
     this.start(best, sp)
   }
 
@@ -196,13 +186,10 @@ export class EvolutionCenterController {
       this.overlay.destroy()
       this.overlay = null
     }
-    if (this.hit) {
-      this.hit.destroy()
-      this.hit = null
-    }
   }
 
   destroy(): void {
+    eventBus.off('evolution:start', this.onStart)
     this.reset()
   }
 }

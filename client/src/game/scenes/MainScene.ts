@@ -1044,10 +1044,6 @@ export class MainScene extends Phaser.Scene {
       this.ectoDrone.tick()
     }
 
-    // Loc3: центр эволюции — поддерживаем хит-зону над капсулой (тап = старт).
-    if (currentLocId === 3 && !serumPaused) {
-      this.evoCenter.ensureHitZone()
-    }
 
     // Loc2 конвейер: авто-производство L7 на поле (бесплатно), cap-gated.
     if (currentLocId === 2) {

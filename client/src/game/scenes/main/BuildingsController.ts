@@ -144,6 +144,7 @@ const BUILDINGS_LOC3: readonly BuildingDef[] = [
     xFrac: 0.5,
     yFrac: 0.85,
     widthFrac: 0.48,
+    opens: 'evolution',
   },
 ] as const
 

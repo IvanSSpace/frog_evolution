@@ -9,6 +9,7 @@ import { JourneyMissionSelect } from './ui/components/JourneyMissionSelect'
 import { InventoryModal } from './ui/components/InventoryModal'
 import { DronerModal } from './ui/components/DronerModal'
 import { EctoDronerModal } from './ui/components/EctoDronerModal'
+import { EvolutionModal } from './ui/components/EvolutionModal'
 import { ConveyorModal } from './ui/components/ConveyorModal'
 import { Loc3LottieTest } from './ui/components/Loc3LottieTest'
 import { startExpedition } from './api/expedition'
@@ -66,6 +67,7 @@ function App() {
   const [inventoryOpen, setInventoryOpen] = useState(false)
   const [dronerOpen, setDronerOpen] = useState(false)
   const [ectoDronerOpen, setEctoDronerOpen] = useState(false)
+  const [evolutionOpen, setEvolutionOpen] = useState(false)
   const [conveyorOpen, setConveyorOpen] = useState(false)
   const [clanOpen, setClanOpen] = useState(false)
   const [journeyOpen, setJourneyOpen] = useState(false)
@@ -200,6 +202,8 @@ function App() {
       else if (modal === 'ectoDroner') setEctoDronerOpen(true)
       // Чанк 2: фабрика конвейера. Чанк 1 задаёт opens:'conveyor' на здании.
       else if (modal === 'conveyor') setConveyorOpen(true)
+      // Чанк 1: центр эволюции Loc3 (evoblock opens:'evolution').
+      else if (modal === 'evolution') setEvolutionOpen(true)
     }
     eventBus.on('building:open', onBuildingOpen)
 
@@ -428,6 +432,9 @@ function App() {
       {dronerOpen && <DronerModal onClose={() => setDronerOpen(false)} />}
       {ectoDronerOpen && (
         <EctoDronerModal onClose={() => setEctoDronerOpen(false)} />
+      )}
+      {evolutionOpen && (
+        <EvolutionModal onClose={() => setEvolutionOpen(false)} />
       )}
       {conveyorOpen && <ConveyorModal onClose={() => setConveyorOpen(false)} />}
       <Loc3LottieTest />
