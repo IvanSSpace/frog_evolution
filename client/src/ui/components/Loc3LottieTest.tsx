@@ -25,7 +25,7 @@ const LOTTIE_URL = '/loc3_anim.json'
 
 // Точки размещения (xFrac от ширины, yFracZone от высоты) — заданы автором.
 const SPOTS = [
-  { xFrac: 0.419, yFrac: 0.130 },
+  { xFrac: 0.419, yFrac: 0.13 },
   { xFrac: 0.698, yFrac: 0.182 },
 ]
 // Размер огонька (px). Уменьшено 120→80 по запросу.
