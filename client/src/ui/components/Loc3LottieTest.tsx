@@ -12,10 +12,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../../store/gameStore'
 
-// Активный диапазон кадров (файл ip=60 op=240). Зацикливаем только его — иначе
-// плеер крутит весь диапазон с лид-ин/хвостовым холдом → «пауза» на стыке.
+// Активный диапазон кадров. Файл: ip=60 op=240, fr=60. Плотное движение 60→210,
+// затем 210→240 — почти статичный «оседающий» хвост (видимая пауза в конце).
+// Зацикливаем только живую часть 60→210 (по гистограмме кейфреймов файла).
 const SEG_START = 60
-const SEG_END = 240
+const SEG_END = 210
 
 const LOTTIE_URL =
   'https://lottie.host/d9853330-fbc3-4bf6-9a69-bc69f456b746/I3cObDe6cE.lottie'
@@ -47,7 +48,7 @@ declare global {
 
 let loaderPromise: Promise<unknown> | null = null
 // URL в переменной → vite не пытается бандлить, TS не резолвит модуль.
-const DOTLOTTIE_CDN = 'https://esm.sh/@lottiefiles/dotlottie-wc@0.6.2'
+const DOTLOTTIE_CDN = 'https://esm.sh/@lottiefiles/dotlottie-wc@0.9.16'
 function ensureDotlottieLoaded(): Promise<unknown> {
   if (!loaderPromise) {
     // Лениво из CDN — в бандл не попадает. esm.sh регистрирует custom element.
@@ -104,38 +105,46 @@ function LottieSpot() {
   const ref = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
-    const el = ref.current as
-      | (HTMLElement & {
-          dotLottie?: {
-            setSegment?: (s: number, e: number) => void
-            setLoop?: (v: boolean) => void
-            play?: () => void
-          }
-        })
-      | null
+    type Inst = {
+      isLoaded?: boolean
+      setSegment?: (s: number, e: number) => void
+      setLoop?: (v: boolean) => void
+      play?: () => void
+      addEventListener?: (ev: string, cb: () => void) => void
+    }
+    const el = ref.current as (HTMLElement & { dotLottie?: Inst }) | null
     if (!el) return
 
     let timer: number | undefined
-    const apply = (): boolean => {
-      const inst = el.dotLottie
-      if (!inst) return false
+    let timeout: number | undefined
+    const configure = (inst: Inst) => {
       try {
-        inst.setSegment?.(SEG_START, SEG_END)
+        inst.setSegment?.(SEG_START, SEG_END) // луп только живой части
         inst.setLoop?.(true)
         inst.play?.()
       } catch (e) {
         console.warn('[Loc3LottieTest] segment loop config failed:', e)
       }
+    }
+    // Инстанс dotLottie создаётся асинхронно. Ждём его, затем — событие load
+    // (segment применяется к загруженной анимации).
+    const tryGet = (): boolean => {
+      const inst = el.dotLottie
+      if (!inst) return false
+      if (inst.isLoaded) configure(inst)
+      else inst.addEventListener?.('load', () => configure(inst))
       return true
     }
-    if (!apply()) {
-      // Инстанс создаётся асинхронно после рендера — опрашиваем недолго.
+    if (!tryGet()) {
       timer = window.setInterval(() => {
-        if (apply()) window.clearInterval(timer)
+        if (tryGet()) window.clearInterval(timer)
       }, 120)
-      window.setTimeout(() => window.clearInterval(timer), 5000)
+      timeout = window.setTimeout(() => window.clearInterval(timer), 5000)
     }
-    return () => window.clearInterval(timer)
+    return () => {
+      window.clearInterval(timer)
+      window.clearTimeout(timeout)
+    }
   }, [])
 
   return (
