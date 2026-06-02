@@ -110,7 +110,12 @@ function LottieSpot() {
     if (!container) return
     const anim = lottie.loadAnimation({
       container,
-      renderer: 'svg',
+      // canvas-renderer вместо svg: SVG-Lottie строит большое DOM-дерево и
+      // анимирует его атрибуты каждый кадр (тяжёлый repaint, просадка FPS на
+      // Loc3). Canvas рисует в один <canvas> 2D-контекстом — намного легче.
+      // NB: canvas не поддерживает часть SVG-фич (маски/matte) — если огонь
+      // глюканёт, откат на svg или миграция на CSS keyframes.
+      renderer: 'canvas',
       loop: true,
       autoplay: true,
       path: LOTTIE_URL,
