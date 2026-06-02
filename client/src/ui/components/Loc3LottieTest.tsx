@@ -38,6 +38,10 @@ export function Loc3LottieTest() {
   // от контейнера: xFrac/yFrac зоны + scroll-progress (едут с картой).
   useEffect(() => {
     if (!active) return
+    // При (ре)активации spot-div'ы перемонтированы с width:0 → форсим повторное
+    // применение размера в первой итерации loop (иначе размер == lastSize и не
+    // пишется → огонь остаётся 0×0 и невидим после возврата на Loc3).
+    lastSize.current = -1
     let raf = 0
     const loop = () => {
       const canvas = document.getElementById('game-canvas')
@@ -134,10 +138,32 @@ function LottieSpot() {
     })
     // Канвас-renderer не масштабируется сам при ресайзе контейнера — следим
     // ResizeObserver'ом и зовём anim.resize() для чёткой перерисовки под новый
-    // размер (контейнер ресайзит rAF-loop пропорционально canvas-карте).
-    const ro = new ResizeObserver(() => anim.resize())
+    // размер. Guard: resize ТОЛЬКО после загрузки (path async) и до destroy —
+    // иначе lottie крашится (renderer.canvas undefined). RO фаерит сразу на
+    // observe() — до DOMLoaded, поэтому флаг loaded обязателен.
+    let loaded = false
+    let alive = true
+    anim.addEventListener('DOMLoaded', () => {
+      loaded = true
+      if (alive) {
+        try {
+          anim.resize()
+        } catch {
+          /* ignore */
+        }
+      }
+    })
+    const ro = new ResizeObserver(() => {
+      if (!alive || !loaded) return
+      try {
+        anim.resize()
+      } catch {
+        /* ignore */
+      }
+    })
     ro.observe(container)
     return () => {
+      alive = false
       ro.disconnect()
       anim.destroy()
     }
