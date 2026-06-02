@@ -17,8 +17,12 @@ import { PlayerPanel } from '../../audio/components/PlayerPanel'
 import { sfx } from '../../audio/sfx'
 import { saveGameState } from '../../api/gameSync'
 import { useModalLock } from '../../utils/modalLock'
+import { useAchievementsStore } from '../../store/achievementsStore'
+import { usePremiumStore } from '../../store/premiumStore'
+import { ACHIEVEMENTS } from '../../game/achievements/config'
+import { metricValue } from '../../game/achievements/evaluator'
 
-type Tab = 'bestiary' | 'settings' | 'player' | 'mechanics'
+type Tab = 'bestiary' | 'achievements' | 'settings' | 'player' | 'mechanics'
 type Props = { onClose: () => void }
 
 export function SettingsModal({ onClose }: Props) {
@@ -34,6 +38,8 @@ export function SettingsModal({ onClose }: Props) {
   }, [closing, onClose])
 
   const markBestiarySeen = useGameStore((s) => s.markBestiarySeen)
+  // Кол-во достигнутых, но не забранных ачивок → бейдж на вкладке.
+  const achPending = useAchievementsStore((s) => s.pendingIds().length)
 
   // Mark discoveredLevels как «виденные» в бестиарии когда юзер переключается
   // на bestiary tab. Реагирует на смену tab — multi-open / tab-switch покрыты.
@@ -103,6 +109,36 @@ export function SettingsModal({ onClose }: Props) {
               {t('settings_modal.tab_settings')}
             </button>
             <button
+              type="button"
+              onClick={() => setTab('achievements')}
+              aria-label="Ачивки"
+              style={{ touchAction: 'manipulation', position: 'relative' }}
+              className={`ff-btn flex-shrink-0 text-xs py-2 px-3 ${tab === 'achievements' ? 'ff-btn-green' : 'ff-btn-grey'}`}
+            >
+              🏆
+              {achPending > 0 && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: -4,
+                    right: -4,
+                    minWidth: 16,
+                    height: 16,
+                    borderRadius: 999,
+                    background: '#dc2626',
+                    color: '#fff',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    lineHeight: '16px',
+                    textAlign: 'center',
+                    padding: '0 4px',
+                  }}
+                >
+                  {achPending}
+                </span>
+              )}
+            </button>
+            <button
               onClick={() => setTab('mechanics')}
               aria-label="Механики"
               className={`ff-btn flex-shrink-0 text-xs py-2 px-3 ${tab === 'mechanics' ? 'ff-btn-green' : 'ff-btn-grey'}`}
@@ -135,6 +171,7 @@ export function SettingsModal({ onClose }: Props) {
             }}
           >
             {tab === 'bestiary' && <BestiaryTab />}
+            {tab === 'achievements' && <AchievementsTab />}
             {tab === 'player' && <PlayerPanel />}
             {tab === 'settings' && <SettingsTab />}
             {tab === 'mechanics' && <MechanicsTab />}
@@ -660,6 +697,118 @@ function SettingsRow({
         {label}
       </span>
       <div className="flex-shrink-0">{children}</div>
+    </div>
+  )
+}
+
+// ────────────────────────── ACHIEVEMENTS TAB ──────────────────────────
+
+function AchievementsTab() {
+  // Подписка на поля, двигающие метрики — чтобы бары обновлялись вживую.
+  useGameStore((s) => s.gold)
+  useGameStore((s) => s.discoveredLevels)
+  useGameStore((s) => s.locationFrogs)
+  useGameStore((s) => s.l18MergesCount)
+  const claimed = useAchievementsStore((s) => s.claimed)
+  const claim = useAchievementsStore((s) => s.claim)
+  const stars = usePremiumStore((s) => s.stars)
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Баланс премиум-валюты */}
+      <div
+        className="ff-card p-3 flex items-center justify-between"
+        style={{ border: 'none' }}
+      >
+        <span className="ff-body font-bold" style={{ color: '#a8e088' }}>
+          Премиум-валюта
+        </span>
+        <span className="ff-display" style={{ fontSize: 20, color: '#ffd86b' }}>
+          ⭐ {stars}
+        </span>
+      </div>
+
+      {ACHIEVEMENTS.map((a) => {
+        const value = metricValue(a.metric)
+        const isClaimed = !!claimed[a.id]
+        const done = value >= a.target
+        const claimable = done && !isClaimed
+        const pct = Math.min(1, value / a.target)
+        return (
+          <div
+            key={a.id}
+            className="ff-card p-3 flex flex-col gap-2"
+            style={{ border: 'none', opacity: isClaimed ? 0.6 : 1 }}
+          >
+            <div className="flex items-center gap-2">
+              <span style={{ fontSize: 26, lineHeight: 1 }}>{a.icon}</span>
+              <div className="flex-1 min-w-0">
+                <div
+                  className="ff-body font-bold"
+                  style={{ fontSize: 15, color: '#a8e088' }}
+                >
+                  {a.title}
+                </div>
+                <div style={{ fontSize: 12, color: '#b8d496' }}>{a.desc}</div>
+              </div>
+              <span
+                className="ff-display flex-shrink-0"
+                style={{ fontSize: 15, color: '#ffd86b' }}
+              >
+                +{a.reward} ⭐
+              </span>
+            </div>
+
+            {/* Прогресс-бар */}
+            <div
+              style={{
+                height: 12,
+                borderRadius: 999,
+                background: 'rgba(0,0,0,0.4)',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  width: `${pct * 100}%`,
+                  height: '100%',
+                  borderRadius: 999,
+                  background: done
+                    ? 'linear-gradient(90deg, #5fe3d0, #a8e088)'
+                    : 'linear-gradient(90deg, #4d7c0f, #7adb9f)',
+                  transition: 'width 0.3s ease-out',
+                }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span style={{ fontSize: 12, color: '#b8d496' }}>
+                {Math.min(value, a.target)} / {a.target}
+              </span>
+              {isClaimed ? (
+                <span
+                  style={{ fontSize: 13, color: '#7adb9f', fontWeight: 700 }}
+                >
+                  ✓ Получено
+                </span>
+              ) : claimable ? (
+                <button
+                  type="button"
+                  onClick={() => claim(a.id)}
+                  style={{ touchAction: 'manipulation' }}
+                  className="ff-btn ff-btn-green text-xs px-3 py-1.5"
+                >
+                  Забрать +{a.reward} ⭐
+                </button>
+              ) : (
+                <span style={{ fontSize: 12, color: '#6b7d5c' }}>
+                  {Math.round(pct * 100)}%
+                </span>
+              )}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
