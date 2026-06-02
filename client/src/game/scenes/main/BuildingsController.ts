@@ -134,7 +134,7 @@ const BUILDINGS_LOC3: readonly BuildingDef[] = [
   {
     key: 'bld3_monument',
     src: '/builds_loc3/monument.png',
-    xFrac: 0.5,
+    xFrac: 0.56,
     yFrac: 0.52,
     widthFrac: 0.4,
   },
@@ -142,8 +142,8 @@ const BUILDINGS_LOC3: readonly BuildingDef[] = [
     key: 'bld3_evoblock',
     src: '/builds_loc3/evoblock1_tansparent.png',
     xFrac: 0.5,
-    yFrac: 0.95,
-    widthFrac: 0.34,
+    yFrac: 0.85,
+    widthFrac: 0.44,
   },
 ] as const
 
