@@ -91,6 +91,8 @@ type Events = {
   // Loc3 центр эволюции: модалка выбрала лягушку уровня level → начать эволюцию.
   // durationMs — опц. (DEV-тест короткого таймера; по умолчанию ~сутки).
   'evolution:start': { level: number; durationMs?: number }
+  // Мгновенно завершить активную эволюцию (временная кнопка).
+  'evolution:finish': void
   // Offline box fill: gameSync считает сколько боксов накопилось за AFK, MainScene выкладывает на поле.
   'boxes:offline-fill': { count: number }
   // Server-authoritative goo collector offline income (boot-time).

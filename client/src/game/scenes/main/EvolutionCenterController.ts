@@ -78,6 +78,7 @@ export class EvolutionCenterController {
     this.spawner = spawner
     this.buildings = buildings
     eventBus.on('evolution:start', this.onStart)
+    eventBus.on('evolution:finish', this.onFinish)
     if (import.meta.env.DEV) {
       ;(
         window as unknown as { __startEvo?: (l?: number, ms?: number) => void }
@@ -138,6 +139,11 @@ export class EvolutionCenterController {
       /* ignore */
     }
     return null
+  }
+
+  // Мгновенно завершить активную эволюцию (временная кнопка из модалки).
+  private onFinish = (): void => {
+    if (this.active) this.complete()
   }
 
   private findOwnedLoc(level: number): number | null {
@@ -372,6 +378,7 @@ export class EvolutionCenterController {
 
   destroy(): void {
     eventBus.off('evolution:start', this.onStart)
+    eventBus.off('evolution:finish', this.onFinish)
     this.teardown()
   }
 }

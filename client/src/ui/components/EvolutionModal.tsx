@@ -1,12 +1,46 @@
+import { useEffect, useState } from 'react'
 import { useGameStore } from '../../store/gameStore'
 import { eventBus } from '../../store/eventBus'
 import { useModalLock } from '../../utils/modalLock'
 import { hapticImpact } from '../../utils/telegram'
 import { FROG_LEVELS } from '../../game/config/frogs'
 
-// На поле тинт лягушки запекается в рантайме (preload меняет fill #fff на tint).
-// Статичный SVG белый → в модалке красим силуэт через CSS mask цветом tint.
-const tintHex = (n: number) => '#' + n.toString(16).padStart(6, '0')
+// Лягушка с правильным тинтом: как preload на поле — меняем ТОЛЬКО белый fill
+// (#ffffff/#fff) на tint, цветные детали (корона/узоры) остаются.
+function TintedFrog({ level, size }: { level: number; size: number }) {
+  const cfg = FROG_LEVELS[level - 1]
+  const [src, setSrc] = useState<string | null>(null)
+  useEffect(() => {
+    let alive = true
+    if (!cfg) return
+    fetch(cfg.path)
+      .then((r) => r.text())
+      .then((txt) => {
+        if (!alive) return
+        const tintHex = '#' + cfg.tint.toString(16).padStart(6, '0')
+        const recolored = txt
+          .replace(/fill:\s*#ffffff/gi, `fill:${tintHex}`)
+          .replace(/fill="#ffffff"/gi, `fill="${tintHex}"`)
+          .replace(/fill="#fff"/gi, `fill="${tintHex}"`)
+        setSrc('data:image/svg+xml;utf8,' + encodeURIComponent(recolored))
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [level, cfg])
+  return (
+    <div style={{ width: size, height: size, flexShrink: 0 }}>
+      {src && (
+        <img
+          src={src}
+          alt=""
+          style={{ width: size, height: size, objectFit: 'contain' }}
+        />
+      )}
+    </div>
+  )
+}
 
 type Props = { onClose: () => void }
 
@@ -96,6 +130,24 @@ export function EvolutionModal({ onClose }: Props) {
             по завершении. 🔮
           </div>
 
+          {/* Временная кнопка: мгновенно завершить активную эволюцию (тест). */}
+          <button
+            type="button"
+            onClick={() => {
+              hapticImpact('medium')
+              eventBus.emit('evolution:finish')
+              onClose()
+            }}
+            className="ff-card flex items-center justify-center gap-2 p-2"
+            style={{
+              touchAction: 'manipulation',
+              cursor: 'pointer',
+              color: '#fbbf24',
+            }}
+          >
+            ⚡ Завершить эволюцию мгновенно (тест)
+          </button>
+
           {levels.length === 0 && (
             <div
               className="ff-display text-sm text-center py-6"
@@ -113,22 +165,7 @@ export function EvolutionModal({ onClose }: Props) {
               className="ff-card flex items-center gap-3 p-3"
               style={{ touchAction: 'manipulation', cursor: 'pointer' }}
             >
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  flexShrink: 0,
-                  backgroundColor: tintHex(FROG_LEVELS[level - 1]?.tint ?? 0xffffff),
-                  WebkitMaskImage: `url(${FROG_LEVELS[level - 1]?.path})`,
-                  maskImage: `url(${FROG_LEVELS[level - 1]?.path})`,
-                  WebkitMaskSize: 'contain',
-                  maskSize: 'contain',
-                  WebkitMaskRepeat: 'no-repeat',
-                  maskRepeat: 'no-repeat',
-                  WebkitMaskPosition: 'center',
-                  maskPosition: 'center',
-                }}
-              />
+              <TintedFrog level={level} size={44} />
               <div className="flex-1 text-left">
                 <div
                   className="ff-display text-sm"
