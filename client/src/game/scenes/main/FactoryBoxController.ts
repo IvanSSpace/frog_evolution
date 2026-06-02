@@ -19,7 +19,13 @@ import {
   boxAutoOpenMs,
   rollFactoryFrogLevel,
 } from '../../../store/gameStore'
-import { BOX_DISPLAY_SIZE, DPR } from './types'
+import {
+  BOX_DISPLAY_SIZE,
+  DPR,
+  FIELD_PAD_X,
+  FIELD_PAD_Y,
+  FIELD_PAD_Y_BOTTOM,
+} from './types'
 
 type Pt = readonly [number, number] // [xFrac, yFracZone]
 
@@ -28,9 +34,11 @@ const P0: Pt = [0.296, 0.402] // выход из фабрики
 const P1: Pt = [0.432, 0.482] // едет (slide, без прыжков)
 const P2: Pt = [0.517, 0.535] // спрыгивает сюда, дальше прыжками
 
-// Зона поля куда бокс прыгает (рандомная точка). ⚠️ TUNABLE — подстроить визуально.
-const FIELD_X_FRAC: readonly [number, number] = [0.18, 0.82]
-const FIELD_Y_FRAC_ZONE: readonly [number, number] = [0.62, 0.82]
+// Поле куда бокс прыгает = ВЕРХНЯЯ frog-зона (играбельная область, где живут
+// лягушки и идёт мердж). Капсулы — в нижней зоне зданий, поэтому наложения нет.
+// Отступ от низа крупнее, чтобы не лезть к границе/капсулам. ⚠️ TUNABLE.
+const FIELD_MARGIN = 20 * DPR
+const FIELD_BOTTOM_EXTRA = 40 * DPR
 
 const BOX_TINT = 0x9d4edd // фиолетовый (эктоплазма-тематика Loc2)
 const BOX_DEPTH = 90000 // выше поля, тапается
@@ -95,9 +103,16 @@ export class FactoryBoxController {
 
   private randomFieldPoint(): Phaser.Math.Vector2 {
     const { width, height } = this.scene.scale
-    const xf = Phaser.Math.FloatBetween(FIELD_X_FRAC[0], FIELD_X_FRAC[1])
-    const yf = Phaser.Math.FloatBetween(FIELD_Y_FRAC_ZONE[0], FIELD_Y_FRAC_ZONE[1])
-    return new Phaser.Math.Vector2(xf * width, height * (1 + yf))
+    // Верхняя frog-зона (world Y < height): играбельное поле, вдали от капсул.
+    const x = Phaser.Math.Between(
+      FIELD_PAD_X + FIELD_MARGIN,
+      width - FIELD_PAD_X - FIELD_MARGIN,
+    )
+    const y = Phaser.Math.Between(
+      FIELD_PAD_Y + FIELD_MARGIN,
+      height - FIELD_PAD_Y_BOTTOM - FIELD_BOTTOM_EXTRA,
+    )
+    return new Phaser.Math.Vector2(x, y)
   }
 
   /** Выпустить бокс из фабрики. level не задан → roll по апгрейду rareFrog (L7/L8/L9). */
