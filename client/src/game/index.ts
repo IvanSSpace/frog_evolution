@@ -64,6 +64,18 @@ export function getStarMapHUD(): {
   }
 }
 
+// Скролл двухзонного поля MainScene (frogs↑/buildings↓) для DOM-оверлеев,
+// которым нужно ехать вместе с картой. progress 0=зона лягушек, 1=зона зданий.
+export function getFieldScroll(): { progress: number } | null {
+  if (!game) return null
+  const sm = game.scene
+  if (!sm.isActive('MainScene')) return null
+  const main = sm.getScene('MainScene') as Phaser.Scene
+  const cam = main.cameras?.main
+  if (!cam || !cam.height) return null
+  return { progress: Math.max(0, Math.min(1, cam.scrollY / cam.height)) }
+}
+
 export function startGame(): Phaser.Game {
   if (game) return game
 
