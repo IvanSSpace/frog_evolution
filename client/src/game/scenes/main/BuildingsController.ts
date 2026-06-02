@@ -218,10 +218,13 @@ export class BuildingsController {
       // при обходе на RTB-маршруте.
       // Loc2-капсулы: depth ВЫШЕ лягушек (frog depth = container.y ~1.7*H) —
       // лягушка-мердж видна ВНУТРИ колбы (за полупрозрачным стеклом), а не поверх.
-      const isLoc2Capsule =
-        b.key === 'bld2_capsule' || b.key === 'bld2_capsule_green'
+      // Loc3 evoblock — тоже поверх лягушек: эволюционирующая видна ВНУТРИ.
+      const isFrontGlass =
+        b.key === 'bld2_capsule' ||
+        b.key === 'bld2_capsule_green' ||
+        b.key === 'bld3_evoblock'
       sp.setDepth(
-        isLoc2Capsule
+        isFrontGlass
           ? 300000 + b.yFrac
           : b.key === 'bld_main' ||
               b.key === 'bld_scaner' ||

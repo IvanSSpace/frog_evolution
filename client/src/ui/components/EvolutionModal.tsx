@@ -9,10 +9,12 @@ type Props = { onClose: () => void }
 // эволюцию (помещается в капсулу, таймер, потом анлок уникальной механики).
 export function EvolutionModal({ onClose }: Props) {
   useModalLock()
-  // Лягушки на Loc3 (index 2). Считаем по уровням.
-  const loc3 = useGameStore((s) => s.locationFrogs[2] ?? [])
+  // Лягушки СО ВСЕХ локаций (эволюция доступна любому уровню). Считаем по уровням.
+  const locationFrogs = useGameStore((s) => s.locationFrogs)
   const counts = new Map<number, number>()
-  for (const lvl of loc3) counts.set(lvl, (counts.get(lvl) ?? 0) + 1)
+  for (const arr of locationFrogs) {
+    for (const lvl of arr ?? []) counts.set(lvl, (counts.get(lvl) ?? 0) + 1)
+  }
   const levels = [...counts.keys()].sort((a, b) => a - b)
 
   const start = (level: number) => {
@@ -94,7 +96,7 @@ export function EvolutionModal({ onClose }: Props) {
               className="ff-display text-sm text-center py-6"
               style={{ color: 'var(--ff-text-dim)' }}
             >
-              Нет лягушек на континенте — вырасти их сначала.
+              Нет лягушек — вырасти их сначала.
             </div>
           )}
 
@@ -126,7 +128,7 @@ export function EvolutionModal({ onClose }: Props) {
                   className="ff-display"
                   style={{ fontSize: 11, color: 'var(--ff-text-dim)' }}
                 >
-                  на поле: {counts.get(level)}
+                  всего: {counts.get(level)}
                 </div>
               </div>
               <span

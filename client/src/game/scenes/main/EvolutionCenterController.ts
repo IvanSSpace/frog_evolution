@@ -13,6 +13,8 @@ import type { FrogSpawner } from './FrogSpawner'
 import type { BuildingsController } from './BuildingsController'
 import { useGameStore } from '../../../store/gameStore'
 import { eventBus } from '../../../store/eventBus'
+import { textureKeyForLevel } from '../../config/frogs'
+import { BASE_SCALE } from './types'
 import type { FrogData } from './types'
 
 const EVO_DURATION_MS = 15000 // тест-таймер эволюции (балансим позже)
@@ -24,7 +26,12 @@ export class EvolutionCenterController {
   private buildings: BuildingsController
   private active = false
   private overlay: Phaser.GameObjects.Image | null = null
+  // Что плавает в капсуле: либо реальная лягушка с поля Loc3 (frog), либо
+  // временный спрайт (если лягушка списана с другой локации из стора).
   private frog: FrogData | null = null
+  private tempSprite: Phaser.GameObjects.Image | null = null
+  private node: Phaser.GameObjects.Container | Phaser.GameObjects.Image | null =
+    null
   private tweens: Phaser.Tweens.Tween[] = []
   private timer: Phaser.Time.TimerEvent | null = null
 
@@ -40,36 +47,60 @@ export class EvolutionCenterController {
     eventBus.on('evolution:start', this.onStart)
   }
 
-  // Старт по выбору из модалки: берём с поля свободную лягушку нужного уровня
-  // (ближайшую к капсуле), помещаем в капсулу.
+  // Старт по выбору из модалки. Эволюция доступна лягушке ЛЮБОГО уровня (с
+  // любой локации). Если такая лягушка видима на поле Loc3 — берём её; иначе
+  // списываем 1 из стора (любая локация где есть) и показываем временный спрайт.
   private onStart = ({ level }: { level: number }): void => {
     if (this.active) return
     if (useGameStore.getState().currentLocation !== 3) return
     const sp = this.buildings.getEvoblockSprite()
     if (!sp) return
-    let best: FrogData | null = null
+    const cx = sp.x
+    const cy = sp.y - sp.displayHeight * 0.5 // центр тела капсулы
+
+    // (1) видимая свободная лягушка этого уровня на поле Loc3 → берём её.
+    let field: FrogData | null = null
     let bestD = Infinity
     for (const f of this.scene.frogs) {
       if (f.level !== level) continue
       if (f.isDragging || f.isMerging || f.isAttracted) continue
-      const d = Phaser.Math.Distance.Between(
-        f.container.x,
-        f.container.y,
-        sp.x,
-        sp.y,
-      )
+      const d = Phaser.Math.Distance.Between(f.container.x, f.container.y, sp.x, sp.y)
       if (d < bestD) {
         bestD = d
-        best = f
+        field = f
       }
     }
-    if (!best) return // нет свободной лягушки этого уровня на поле
-    this.start(best, sp)
+    if (field) {
+      useGameStore.getState().removeFrogFromLocation(3, level)
+      this.beginField(field, sp, cx, cy)
+      return
+    }
+
+    // (2) иначе — списываем из стора любой локации, где есть, + временный спрайт.
+    const loc = this.findOwnedLoc(level)
+    if (loc == null) return // не владеешь лягушкой этого уровня
+    useGameStore.getState().removeFrogFromLocation(loc, level)
+    this.beginTemp(level, sp, cx, cy)
   }
 
-  private start(frog: FrogData, sp: Phaser.GameObjects.Image): void {
+  // Первая локация (по индексу) у которой в сторе есть лягушка этого уровня.
+  private findOwnedLoc(level: number): number | null {
+    const lf = useGameStore.getState().locationFrogs
+    for (let i = 0; i < lf.length; i++) {
+      if ((lf[i] ?? []).includes(level)) return i + 1
+    }
+    return null
+  }
+
+  private beginField(
+    frog: FrogData,
+    sp: Phaser.GameObjects.Image,
+    cx: number,
+    cy: number,
+  ): void {
     this.active = true
     this.frog = frog
+    this.node = frog.container
     frog.isAttracted = true
     frog.isMoving = false
     if (frog.dashTimer) {
@@ -81,18 +112,42 @@ export class EvolutionCenterController {
     frog.body.y = 0
     frog.body.scaleY = 1
     if (frog.body.input) frog.body.input.enabled = false
+    this.beginAnim(sp, cx, cy)
+  }
 
-    const cx = sp.x
-    const cy = sp.y - sp.displayHeight * 0.5 // центр тела капсулы
+  private beginTemp(
+    level: number,
+    sp: Phaser.GameObjects.Image,
+    cx: number,
+    cy: number,
+  ): void {
+    this.active = true
+    const img = this.scene.add
+      .image(cx, cy + 40, textureKeyForLevel(level))
+      .setScale(BASE_SCALE)
+      .setDepth(sp.depth - 0.5) // ВНУТРИ капсулы (за стеклом)
+    this.tempSprite = img
+    this.node = img
+    this.beginAnim(sp, cx, cy)
+  }
+
+  // Общая анимация: заезд в капсулу → плавание + crossfade активной текстуры.
+  private beginAnim(
+    sp: Phaser.GameObjects.Image,
+    cx: number,
+    cy: number,
+  ): void {
+    const node = this.node
+    if (!node) return
     this.showActive(sp)
     this.tweens.push(
       this.scene.tweens.add({
-        targets: frog.container,
+        targets: node,
         x: cx,
         y: cy,
         duration: FADE_MS,
         ease: 'Sine.easeInOut',
-        onComplete: () => this.startFloat(frog, cy),
+        onComplete: () => this.startFloat(cy),
       }),
     )
     this.timer = this.scene.time.delayedCall(EVO_DURATION_MS, () =>
@@ -101,11 +156,12 @@ export class EvolutionCenterController {
   }
 
   // Плавание в капсуле: покачивание + медленное вращение.
-  private startFloat(frog: FrogData, cy: number): void {
-    if (!frog.container.active) return
+  private startFloat(cy: number): void {
+    const node = this.node
+    if (!node || !node.active) return
     this.tweens.push(
       this.scene.tweens.add({
-        targets: frog.container,
+        targets: node,
         y: cy - 12,
         duration: 800,
         ease: 'Sine.easeInOut',
@@ -113,7 +169,7 @@ export class EvolutionCenterController {
         repeat: -1,
       }),
       this.scene.tweens.add({
-        targets: frog.container,
+        targets: node,
         angle: 360,
         duration: 3200,
         repeat: -1,
@@ -147,15 +203,19 @@ export class EvolutionCenterController {
   }
 
   private complete(): void {
-    const frog = this.frog
     this.killTweens()
-    if (frog && frog.container.active) {
-      // v1: лягушка эволюционировала → потребляется. TODO: реестр анлоков +
-      // спавн эволюционировавшей особи / включение уникальной механики.
-      useGameStore.getState().removeFrogFromLocation(3, frog.level)
-      this.spawner.removeFrog(frog)
+    // v1: лягушка эволюционировала → потребляется (стор уже списан на старте).
+    // TODO: реестр анлоков + включение уникальной механики по виду/уровню.
+    if (this.frog && this.frog.container.active) {
+      this.spawner.removeFrog(this.frog)
+    }
+    if (this.tempSprite) {
+      this.scene.tweens.killTweensOf(this.tempSprite)
+      this.tempSprite.destroy()
     }
     this.frog = null
+    this.tempSprite = null
+    this.node = null
     this.hideActive()
     this.active = false
   }
@@ -169,7 +229,8 @@ export class EvolutionCenterController {
     }
   }
 
-  // Сброс при смене локации: вернуть лягушку в норму, убрать FX/хит-зону.
+  // Сброс при смене локации: эволюция отменяется. Вернуть лягушку в норму
+  // (+ вернуть в стор, т.к. на старте списали), убрать временный спрайт/FX.
   reset(): void {
     this.killTweens()
     const frog = this.frog
@@ -178,8 +239,15 @@ export class EvolutionCenterController {
       frog.container.angle = 0
       frog.isAttracted = false
       if (frog.body.input) frog.body.input.enabled = true
+      useGameStore.getState().addFrogToLocation(3, frog.level)
+    }
+    if (this.tempSprite) {
+      this.scene.tweens.killTweensOf(this.tempSprite)
+      this.tempSprite.destroy()
     }
     this.frog = null
+    this.tempSprite = null
+    this.node = null
     this.active = false
     if (this.overlay) {
       this.scene.tweens.killTweensOf(this.overlay)
