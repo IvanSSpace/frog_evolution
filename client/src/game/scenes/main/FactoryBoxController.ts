@@ -34,6 +34,9 @@ type Pt = readonly [number, number] // [xFrac, yFracZone]
 const P0: Pt = [0.296, 0.402] // выход из фабрики
 const P1: Pt = [0.432, 0.482] // едет (slide, без прыжков)
 const P2: Pt = [0.517, 0.535] // спрыгивает сюда, дальше прыжками
+// Промежуточный waypoint к полю: бокс прыгает СНАЧАЛА сюда, потом на поле —
+// чтобы обойти визуальные камни на фоне (не проходить сквозь них).
+const WP: Pt = [0.525, 0.067]
 
 // Поле куда бокс прыгает = ВЕРХНЯЯ frog-зона (играбельная область, где живут
 // лягушки и идёт мердж). Капсулы — в нижней зоне зданий, поэтому наложения нет.
@@ -155,8 +158,11 @@ export class FactoryBoxController {
           ease: 'Quad.easeIn',
           onComplete: () => {
             if (!sp.active) return
-            // 3) Прыжками к рандомной точке поля.
-            this.hopToField(box, this.randomFieldPoint())
+            // 3) Прыжками СНАЧАЛА к waypoint (обход камней), потом на поле.
+            const wp = this.worldPt(WP)
+            this.hopToField(box, wp, () =>
+              this.hopToField(box, this.randomFieldPoint()),
+            )
           },
         })
       },
@@ -181,22 +187,27 @@ export class FactoryBoxController {
     })
   }
 
-  /** Рекурсивные прыжки к target; на каждом прыжке рандомный разворот 90°. */
-  private hopToField(box: FactoryBox, target: Phaser.Math.Vector2): void {
+  /** Рекурсивные прыжки к target; на каждом прыжке рандомный разворот 90°.
+   *  onArrive — что делать по достижении target (по умолч. приземление). */
+  private hopToField(
+    box: FactoryBox,
+    target: Phaser.Math.Vector2,
+    onArrive?: () => void,
+  ): void {
     const sp = box.sp
     if (!sp.active) return
+    const arrive = onArrive ?? (() => this.land(box))
     const dx = target.x - sp.x
     const dy = target.y - sp.y
     const dist = Math.hypot(dx, dy)
 
     if (dist <= HOP_LEN) {
-      // Финальный прыжок точно в target → приземление.
-      this.singleHop(sp, target.x, target.y, () => this.land(box))
+      this.singleHop(sp, target.x, target.y, arrive)
       return
     }
     const nx = sp.x + (dx / dist) * HOP_LEN
     const ny = sp.y + (dy / dist) * HOP_LEN
-    this.singleHop(sp, nx, ny, () => this.hopToField(box, target))
+    this.singleHop(sp, nx, ny, () => this.hopToField(box, target, onArrive))
   }
 
   /** Один прыжок с дугой по Y + рандомный разворот на 0/90/180/270°. */
