@@ -19,6 +19,7 @@ import {
 } from '../store/gameStore'
 import { useOnboardingStore } from '../store/onboarding/onboardingSlice'
 import { getServerGameState, putServerGameState } from './gameState'
+import { loadActiveEvo, saveActiveEvo } from '../store/persistence'
 import { ApiError } from './client'
 import { devLog, devWarn } from '../utils/devLog'
 import { eventBus } from '../store/eventBus'
@@ -160,6 +161,20 @@ function snapshotForSave() {
     mutagen2: Math.floor(Math.max(0, s.mutagen2)),
     mutagen3: Math.floor(Math.max(0, s.mutagen3)),
     loc2Upgrades: s.loc2Upgrades as unknown as Record<string, number>,
+    // Эволюция (Loc3) — bridge из localStorage контроллера в server-колонки
+    // (cross-device). endsAt — клиентский 24ч таймер (см. AUDIT §4.2).
+    ...((): {
+      evoActive: boolean
+      evoLevel: number | null
+      evoEndsAt: string | null
+    } => {
+      const evo = loadActiveEvo()
+      return {
+        evoActive: !!evo,
+        evoLevel: evo ? evo.level : null,
+        evoEndsAt: evo ? new Date(evo.endsAt).toISOString() : null,
+      }
+    })(),
     cosmic,
     // Onboarding state — per-user, cross-device. Sync через server так чтобы
     // beats не повторялись при cache wipe в TG WebView.
@@ -426,6 +441,26 @@ export async function loadGameState(): Promise<boolean> {
           persistence.saveLoc2Upgrades(
             update.loc2Upgrades as Record<string, number>,
           )
+      }
+    }
+
+    // Эволюция (Loc3) — server → localStorage контроллера (tryRestore читает на
+    // boot). RESTORE-only: сервер может только восстановить активную эволюцию,
+    // НЕ удалить локальную. Иначе первый GET после деплоя (server evoActive=false,
+    // т.к. раньше не синкалось) стёр бы ещё-не-запушенную локальную эволюцию.
+    // Локальную очистку по завершению таймера делает сам контроллер (complete()).
+    {
+      const d = data as unknown as Record<string, unknown>
+      if (
+        d.evoActive === true &&
+        typeof d.evoLevel === 'number' &&
+        (typeof d.evoEndsAt === 'string' || typeof d.evoEndsAt === 'number') &&
+        !loadActiveEvo() // не перетираем локальную (она свежее/равна)
+      ) {
+        const endsAt = new Date(d.evoEndsAt as string).getTime()
+        if (Number.isFinite(endsAt)) {
+          saveActiveEvo({ level: d.evoLevel as number, endsAt })
+        }
       }
     }
 

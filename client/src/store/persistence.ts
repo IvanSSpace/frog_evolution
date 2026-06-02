@@ -1009,6 +1009,37 @@ export function saveBestiarySeenLevels(arr: number[]): void {
   }
 }
 
+// ─── active evolution (Loc3) ───────────────────────────────────────────────
+// Зеркалит SAVE_KEY из EvolutionCenterController ('frog_evolution_active_evo').
+// Используется gameSync для cross-device sync эволюции через server-колонки evo*.
+// (TODO DRY: контроллер мог бы импортировать эти helpers вместо inline-ключа.)
+const ACTIVE_EVO_KEY = 'frog_evolution_active_evo'
+export function loadActiveEvo(): { level: number; endsAt: number } | null {
+  try {
+    const raw = localStorage.getItem(ACTIVE_EVO_KEY)
+    if (!raw) return null
+    const o = JSON.parse(raw) as { level: number; endsAt: number }
+    if (typeof o.level === 'number' && typeof o.endsAt === 'number') return o
+  } catch {
+    /* ignore */
+  }
+  return null
+}
+export function saveActiveEvo(v: { level: number; endsAt: number }): void {
+  try {
+    localStorage.setItem(ACTIVE_EVO_KEY, JSON.stringify(v))
+  } catch {
+    /* ignore */
+  }
+}
+export function clearActiveEvo(): void {
+  try {
+    localStorage.removeItem(ACTIVE_EVO_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
 // Side effect on import: apply persisted format globally so first render
 // uses the user's preferred number format (1.5K vs 1,500).
 const _initialFormat = loadNumberFormat()

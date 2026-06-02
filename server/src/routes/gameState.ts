@@ -160,6 +160,26 @@ export async function gameStateRoutes(app: FastifyInstance) {
         data.loc2Upgrades = loc2
       }
 
+      // Эволюция (Loc3): cross-device sync активного слота {evoActive, evoLevel,
+      // evoEndsAt}. endsAt ставит клиент (24ч таймер) — server-wall-clock authority
+      // оставлен на дальнейшее (см. AUDIT §4.2 / финальный отчёт).
+      if (typeof body.evoActive === 'boolean') {
+        data.evoActive = body.evoActive
+        if (body.evoActive) {
+          if (typeof body.evoLevel === 'number' && body.evoLevel >= 1) {
+            data.evoLevel = Math.floor(body.evoLevel)
+          }
+          const endsRaw = body.evoEndsAt
+          if (typeof endsRaw === 'string' || typeof endsRaw === 'number') {
+            const t = new Date(endsRaw)
+            if (!Number.isNaN(t.getTime())) data.evoEndsAt = t
+          }
+        } else {
+          data.evoLevel = null
+          data.evoEndsAt = null
+        }
+      }
+
       // Clamp incomePerSec — client value accepted but bounded.
       if ('incomePerSec' in body && typeof body.incomePerSec === 'number') {
         data.incomePerSec = Math.min(Math.max(0, body.incomePerSec), MAX_INCOME_PER_SEC)
