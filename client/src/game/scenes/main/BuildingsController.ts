@@ -177,10 +177,12 @@ export class BuildingsController {
     for (const b of BUILDINGS) scene.load.image(b.key, b.src)
     for (const b of BUILDINGS_LOC2) scene.load.image(b.key, b.src)
     for (const b of BUILDINGS_LOC3) scene.load.image(b.key, b.src)
-    // Активная текстура блока эволюции (показывается во время эволюции).
+    // Слои активного блока эволюции: зад (active) под лягушками + перёд (стекло)
+    // поверх. Лягушки плавают между ними.
+    scene.load.image('bld3_evoblock_back', '/builds_loc3/evoblockActive.png')
     scene.load.image(
-      'bld3_evoblock_active',
-      '/builds_loc3/evoblock2_tansparent_Active.png',
+      'bld3_evoblock_front',
+      '/builds_loc3/evoblock_transparent2.png',
     )
     // Состояния коллектора по заполнению (превью + будущая механика).
     scene.load.image('bld_collector_empty', '/builds/collector_empty.png')
