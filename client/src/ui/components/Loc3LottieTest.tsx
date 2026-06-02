@@ -22,13 +22,16 @@ const SPOTS = [
   { xFrac: 0.419, yFrac: 0.13 },
   { xFrac: 0.698, yFrac: 0.182 },
 ]
-const SIZE = 80
+// Размер огня = доля ширины canvas (≈80px при референс-ширине ~827) → зумится
+// вместе с картой при ресайзе. Раньше был фикс 80px и не масштабировался.
+const SIZE_FRAC = 0.097
 
 export function Loc3LottieTest() {
   const currentLocation = useGameStore((s) => s.currentLocation)
   useFireLevel() // подписка: ре-рендер при смене уровня любого огня
   const clipRef = useRef<HTMLDivElement | null>(null)
   const spotRefs = useRef<(HTMLDivElement | null)[]>([])
+  const lastSize = useRef(-1) // последний применённый размер огня (px); -1 → форс первый раз
 
   const active = currentLocation === 3
 
@@ -48,11 +51,21 @@ export function Loc3LottieTest() {
         clip.style.width = `${r.width}px`
         clip.style.height = `${r.height}px`
         const off = 1 - fs.progress // 0 в зоне зданий, 1 в зоне лягушек
+        // Размер пропорционален ширине canvas. Пишем width/height ТОЛЬКО при
+        // изменении ширины (не каждый кадр) — ResizeObserver в LottieSpot тогда
+        // дёрнет anim.resize() для чёткой перерисовки. Позицию двигаем каждый кадр.
+        const size = SIZE_FRAC * r.width
+        const sizeChanged = Math.abs(size - lastSize.current) > 0.5
+        if (sizeChanged) lastSize.current = size
         SPOTS.forEach((s, i) => {
           const el = spotRefs.current[i]
           if (!el) return
           el.style.left = `${s.xFrac * r.width}px`
           el.style.top = `${(s.yFrac + off) * r.height}px`
+          if (sizeChanged) {
+            el.style.width = `${size}px`
+            el.style.height = `${size}px`
+          }
         })
       }
       raf = requestAnimationFrame(loop)
@@ -88,8 +101,8 @@ export function Loc3LottieTest() {
             left: -9999,
             top: -9999,
             transform: 'translate(-50%, -50%)',
-            width: SIZE,
-            height: SIZE,
+            width: 0, // размер задаётся в rAF-loop пропорционально canvas
+            height: 0,
             pointerEvents: 'none',
             filter: fireFilter(i), // уровень горения этого огня (per-fire)
           }}
@@ -120,7 +133,15 @@ function LottieSpot() {
       autoplay: true,
       path: LOTTIE_URL,
     })
-    return () => anim.destroy()
+    // Канвас-renderer не масштабируется сам при ресайзе контейнера — следим
+    // ResizeObserver'ом и зовём anim.resize() для чёткой перерисовки под новый
+    // размер (контейнер ресайзит rAF-loop пропорционально canvas-карте).
+    const ro = new ResizeObserver(() => anim.resize())
+    ro.observe(container)
+    return () => {
+      ro.disconnect()
+      anim.destroy()
+    }
   }, [])
 
   return <div ref={ref} style={{ width: '100%', height: '100%' }} />
