@@ -94,6 +94,11 @@ export class MainScene extends Phaser.Scene {
   // Loc2 конвейер (фабрика лягушек): авто-производство L7 на поле по таймеру,
   // бесплатно (как боксы Loc1). Апгрейды скорости — за gold (позже).
   private conveyorProgressMs = 0
+  // Перф: prepBuildings звался каждый кадр. Кэшируем (лока + уровни дрона/магнита),
+  // чтобы вызывать ТОЛЬКО при смене локи или покупке дрона/магнита (а не 60×/сек).
+  private preppedLoc = -1
+  private preppedDroneLvl = -1
+  private preppedMagnetLvl = -1
 
   // Phase 21-04 (Wave 4): magnet state перенесён в MagnetController.
 
@@ -923,8 +928,24 @@ export class MainScene extends Phaser.Scene {
     // мгновенно hide()+despawn() (currentLocation уже = новая локация) и
     // здания/дроны исчезают вместо заморозки+зума. Lifecycle на переходе
     // целиком ведёт LocationTransition (reparent + release).
+    // Перф: prepBuildings (show зданий + ensureSpawned дрона/магнита) звался
+    // КАЖДЫЙ кадр. Теперь — только при изменении локи ИЛИ уровня дрона/магнита
+    // (покупка апгрейда мид-игры всё ещё спавнит их сразу, т.к. tick не спавнит).
     if (!this.isLocationTransitioning) {
-      this.prepBuildings(storeForTimer.currentLocation)
+      const loc = storeForTimer.currentLocation
+      const dLvl = storeForTimer.upgrades.autoCollect ?? 0
+      const mLvl =
+        storeForTimer.upgrades[magnetKeyForLocation(loc)] ?? 0
+      if (
+        loc !== this.preppedLoc ||
+        dLvl !== this.preppedDroneLvl ||
+        mLvl !== this.preppedMagnetLvl
+      ) {
+        this.prepBuildings(loc)
+        this.preppedLoc = loc
+        this.preppedDroneLvl = dLvl
+        this.preppedMagnetLvl = mLvl
+      }
     }
 
     // Во время перехода между локациями замораживаем всю логику —
