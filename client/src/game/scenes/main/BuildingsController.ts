@@ -137,6 +137,7 @@ const BUILDINGS_LOC3: readonly BuildingDef[] = [
     xFrac: 0.56,
     yFrac: 0.52,
     widthFrac: 0.4,
+    opens: 'fireLevels', // клик → модалка настройки огней (Чанк 2)
   },
   {
     key: 'bld3_evoblock',

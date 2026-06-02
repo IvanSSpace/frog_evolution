@@ -4,13 +4,20 @@
 // CSS-фильтр ко всем огням. Без персиста.
 
 import { useModalLock } from '../../utils/modalLock'
-import { FIRE_LEVELS, setFireLevel, useFireLevel } from './fireLevels'
+import {
+  FIRE_LEVELS,
+  FIRE_COUNT,
+  FIRE_NAMES,
+  getFireLevel,
+  setFireLevel,
+  useFireLevel,
+} from './fireLevels'
 
 type Props = { onClose: () => void }
 
 export function FireLevelsModal({ onClose }: Props) {
   useModalLock()
-  const level = useFireLevel()
+  useFireLevel() // подписка на смену уровней
 
   return (
     <div
@@ -78,39 +85,47 @@ export function FireLevelsModal({ onClose }: Props) {
             className="ff-display"
             style={{ fontSize: 12, color: 'var(--ff-text-dim)' }}
           >
-            Уровень горения (слабое → кислотное)
+            Уровень горения каждого огня (слабое → кислотное)
           </div>
-          {FIRE_LEVELS.map((lvl) => {
-            const active = lvl.id === level
+          {Array.from({ length: FIRE_COUNT }).map((_f, fire) => {
+            const cur = getFireLevel(fire)
             return (
-              <button
-                key={lvl.id}
-                type="button"
-                onClick={() => setFireLevel(lvl.id)}
-                style={{ touchAction: 'manipulation' }}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2 border-2 ${
-                  active
-                    ? 'border-[#3f8a2e] bg-[#d4eeb8]'
-                    : 'border-transparent bg-[#dceecb]'
-                }`}
-              >
-                <span
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: '50%',
-                    background: `radial-gradient(circle at 35% 30%, #ffffff55, ${lvl.swatch} 70%)`,
-                    boxShadow: `0 0 8px ${lvl.swatch}`,
-                    flexShrink: 0,
-                  }}
-                />
-                <span className="ff-display text-sm flex-1 text-left text-[#1f3a17]">
-                  {lvl.name}
-                </span>
-                {active && (
-                  <span className="ff-display text-xs text-[#2d6a1f]">✓</span>
-                )}
-              </button>
+              <div key={fire} className="flex flex-col gap-1">
+                <div className="ff-display text-xs text-[#4a6b3a]">
+                  🔥 {FIRE_NAMES[fire] ?? `Огонь ${fire + 1}`}
+                </div>
+                <div className="flex gap-2">
+                  {FIRE_LEVELS.map((lvl) => {
+                    const active = lvl.id === cur
+                    return (
+                      <button
+                        key={lvl.id}
+                        type="button"
+                        onClick={() => setFireLevel(fire, lvl.id)}
+                        style={{ touchAction: 'manipulation' }}
+                        className={`flex-1 flex flex-col items-center gap-1 rounded-xl px-2 py-2 border-2 ${
+                          active
+                            ? 'border-[#3f8a2e] bg-[#d4eeb8]'
+                            : 'border-transparent bg-[#dceecb]'
+                        }`}
+                      >
+                        <span
+                          style={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: '50%',
+                            background: `radial-gradient(circle at 35% 30%, #ffffff55, ${lvl.swatch} 70%)`,
+                            boxShadow: `0 0 8px ${lvl.swatch}`,
+                          }}
+                        />
+                        <span className="ff-display text-[10px] text-[#1f3a17]">
+                          {lvl.name}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
             )
           })}
         </div>

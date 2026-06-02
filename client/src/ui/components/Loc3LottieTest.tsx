@@ -67,8 +67,7 @@ function ensureDotlottieLoaded(): Promise<unknown> {
 export function Loc3LottieTest() {
   const currentLocation = useGameStore((s) => s.currentLocation)
   const [ready, setReady] = useState(false)
-  useFireLevel() // подписка: ре-рендер при смене уровня огня
-  const filter = fireFilter()
+  useFireLevel() // подписка: ре-рендер при смене уровня любого огня
   const clipRef = useRef<HTMLDivElement | null>(null)
   const spotRefs = useRef<(HTMLDivElement | null)[]>([])
 
@@ -145,7 +144,7 @@ export function Loc3LottieTest() {
             width: SIZE,
             height: SIZE,
             pointerEvents: 'none',
-            filter, // уровень горения (CSS-фильтр поверх зелёной базы)
+            filter: fireFilter(i), // уровень горения этого огня (per-fire)
           }}
         >
           <LottieSpot />

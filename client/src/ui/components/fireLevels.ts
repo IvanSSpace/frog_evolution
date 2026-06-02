@@ -34,21 +34,26 @@ export const FIRE_LEVELS: FireLevel[] = [
   },
 ]
 
-let current = 1 // дефолт — среднее
+// Кол-во огней на Loc3 (= SPOTS в Loc3LottieTest). Каждый настраивается отдельно.
+export const FIRE_COUNT = 2
+export const FIRE_NAMES = ['Левый', 'Правый']
+
+const levels: number[] = Array(FIRE_COUNT).fill(1) // дефолт — среднее
 const listeners = new Set<() => void>()
 
-export function getFireLevel(): number {
-  return current
+export function getFireLevel(fire: number): number {
+  return levels[fire] ?? 1
 }
 
-export function setFireLevel(id: number): void {
-  current = Math.max(0, Math.min(FIRE_LEVELS.length - 1, id))
+export function setFireLevel(fire: number, id: number): void {
+  if (fire < 0 || fire >= FIRE_COUNT) return
+  levels[fire] = Math.max(0, Math.min(FIRE_LEVELS.length - 1, id))
   listeners.forEach((f) => f())
 }
 
-/** React-хук: текущий уровень + ре-рендер при смене. */
+/** React-хук: подписка на смену любого уровня (значение читать get'ом). */
 export function useFireLevel(): number {
-  const [, force] = useState(0)
+  const [tick, force] = useState(0)
   useEffect(() => {
     const f = () => force((x) => x + 1)
     listeners.add(f)
@@ -56,9 +61,9 @@ export function useFireLevel(): number {
       listeners.delete(f)
     }
   }, [])
-  return current
+  return tick
 }
 
-export function fireFilter(): string {
-  return FIRE_LEVELS[current]?.filter ?? 'none'
+export function fireFilter(fire: number): string {
+  return FIRE_LEVELS[getFireLevel(fire)]?.filter ?? 'none'
 }
