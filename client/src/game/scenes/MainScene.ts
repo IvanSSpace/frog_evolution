@@ -63,6 +63,14 @@ eventBus.on('boxes:offline-fill', ({ count }: { count: number }) => {
   _offlineBoxFill += count
 })
 
+// Буфер offline-конвейера Loc2: сервер вернул число L7, произведённых за офлайн
+// (computeOfflineConveyorFrogs, capped полем). Дренится в update() на Loc2 —
+// по одной за кадр пока есть свободный слот. Аналог offline box fill.
+let _offlineLoc2Frogs = 0
+eventBus.on('loc2:offline-frogs', ({ count }: { count: number }) => {
+  _offlineLoc2Frogs += count
+})
+
 const SWIPE_SLOP = 90 * DPR // палец должен сдвинуться на столько, прежде чем начнётся скролл
 const SWIPE_FLICK_V = 0.5 // |velocity.y| (px/ms) выше — считаем фликом, переключаем по направлению
 
@@ -1052,6 +1060,12 @@ export class MainScene extends Phaser.Scene {
 
     // Loc2 конвейер: авто-производство L7 на поле (бесплатно), cap-gated.
     if (currentLocId === 2) {
+      // Offline-дрен: L7, накопленные конвейером за офлайн (server). По одной за
+      // кадр пока есть слот — растекаются естественно, не пайлятся в один кадр.
+      if (_offlineLoc2Frogs > 0 && this.canSpawnBox()) {
+        this.spawnConveyorFrog()
+        _offlineLoc2Frogs--
+      }
       // Интервал из апгрейда conveyorSpeed (Чанк 2: loc2Upgrades + геттер).
       const cInterval = conveyorIntervalMs(store.loc2Upgrades.conveyorSpeed)
       this.conveyorProgressMs = Math.min(

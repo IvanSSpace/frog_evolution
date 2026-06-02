@@ -95,6 +95,8 @@ type Events = {
   'evolution:finish': void
   // Offline box fill: gameSync считает сколько боксов накопилось за AFK, MainScene выкладывает на поле.
   'boxes:offline-fill': { count: number }
+  // Loc2 конвейер за офлайн: сервер вернул число L7, MainScene спавнит их на поле Loc2 (capped полем).
+  'loc2:offline-frogs': { count: number }
   // Server-authoritative goo collector offline income (boot-time).
   'server:welcome-back': { earned: number; durationMs: number }
   // Gallery — open detail panel for a specific archetype/rarity (UI-only, legacy rarity)

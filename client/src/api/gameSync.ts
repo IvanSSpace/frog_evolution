@@ -479,6 +479,29 @@ export async function loadGameState(): Promise<boolean> {
       if (count > 0) eventBus.emit('boxes:offline-fill', { count })
     }
 
+    // Loc2 эктоплазма за офлайн: server уже добавил в колонку ectoplasm (гидрировано
+    // выше) — здесь только welcome-back тост.
+    {
+      const ecto =
+        typeof data.offlineEctoplasm === 'number' ? data.offlineEctoplasm : 0
+      if (ecto > 0) {
+        eventBus.emit('cosmic:toast', {
+          type: 'generic',
+          msg: `+${ecto} эктоплазмы за офлайн 🟣`,
+          duration: 3000,
+        })
+      }
+    }
+
+    // Loc2 конвейер за офлайн: server вернул число L7, MainScene спавнит на поле Loc2.
+    {
+      const count =
+        typeof data.offlineConveyorFrogs === 'number'
+          ? data.offlineConveyorFrogs
+          : 0
+      if (count > 0) eventBus.emit('loc2:offline-frogs', { count })
+    }
+
     devLog('[gameSync] loaded state from server')
     return true
   } catch (err) {

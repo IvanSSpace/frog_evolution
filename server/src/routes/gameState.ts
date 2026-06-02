@@ -8,6 +8,8 @@ import {
   getGooCollectorCapMs,
   DRONE_OFFLINE_BONUS_MS,
   computeOfflineBoxes,
+  computeOfflineEctoplasm,
+  computeOfflineConveyorFrogs,
 } from '../config/economy'
 
 // Anti-cheat threshold для idle income.
@@ -51,29 +53,43 @@ export async function gameStateRoutes(app: FastifyInstance) {
         }
       }
 
-      // Compute offline income — server time is authoritative.
+      // ─── Офлайн-accrual: ЕДИНОЕ глобальное окно (server time authoritative) ───
+      // capMs — общий «таймер офлайна» для всей игры (goo + эктоплазма + конвейер).
+      // Привязан к goo-collector капу (как в Loc1) + бонус дронов. lastSessionAt
+      // сбрасывается на заходе → таймер стартует заново (модель автора).
       const upgrades = state.upgrades as Record<string, number>
       const gooCollectorLevel = upgrades.gooCollector ?? upgrades.tractor ?? 0
       const elapsedMs = Date.now() - state.lastSessionAt.getTime()
-      // Дроны автосбора продлевают офлайн-работу: +6ч к капу если куплен autoCollect.
       const droneBonusMs = (upgrades.autoCollect ?? 0) > 0 ? DRONE_OFFLINE_BONUS_MS : 0
       const capMs = getGooCollectorCapMs(gooCollectorLevel) + droneBonusMs
       const earnedMs = Math.min(Math.max(0, elapsedMs), capMs)
       const earnedSec = Math.floor(earnedMs / 1000)
+
+      // Goo-голд (все локации, через incomePerSec).
       const offlineIncome = BigInt(Math.floor(earnedSec * state.incomePerSec))
 
-      if (offlineIncome > 0n) {
+      // Loc2 эктоплазма — copится дроном офлайн (closed-form, capped). Только
+      // если Loc2 открыта (есть L7 в discoveredLevels).
+      const discovered = (state.discoveredLevels as number[]) ?? []
+      const loc2Unlocked = discovered.includes(7)
+      const loc2 = (state.loc2Upgrades as Record<string, number>) ?? {}
+      const offlineEcto = loc2Unlocked
+        ? computeOfflineEctoplasm(earnedMs, loc2)
+        : 0
+
+      // Применяем gold + ectoplasm + сброс таймера одной транзакцией (если что-то накопилось).
+      if (offlineIncome > 0n || offlineEcto > 0) {
         state = await prisma.gameState.update({
           where: { userId: request.user.id },
           data: {
             gold: state.gold + offlineIncome,
+            ectoplasm: state.ectoplasm + BigInt(offlineEcto),
             lastSessionAt: new Date(),
           },
         })
       }
 
-      // Offline box fill — считаем на сервере (раньше считал клиент из сырого
-      // elapsedMs → манипулируемо, AUDIT §2). Детерминированно от upgrades.
+      // Offline box fill (Loc1) — server-authoritative (AUDIT §2).
       const offlineBoxes = computeOfflineBoxes(
         elapsedMs,
         upgrades.dropSpeed ?? 0,
@@ -81,12 +97,22 @@ export async function gameStateRoutes(app: FastifyInstance) {
         upgrades.collectorDrones ?? 0,
       )
 
+      // Loc2 конвейер — число L7 за окно, ограничено свободным местом поля Loc2.
+      // Состояние поля НЕ мутируем (client-managed) — клиент заспавнит на заходе.
+      const locFrogs = (state.locationFrogs as number[][]) ?? [[], [], []]
+      const loc2FrogCount = locFrogs[1]?.length ?? 0
+      const offlineConveyorFrogs = loc2Unlocked
+        ? computeOfflineConveyorFrogs(earnedMs, loc2.conveyorSpeed ?? 0, loc2FrogCount)
+        : 0
+
       return {
         ...serializeState(state),
         offlineIncome: offlineIncome.toString(),
-        offlineMs: earnedMs, // capped по goo collector
-        elapsedMs, // raw — оставлен для совместимости
-        offlineBoxes, // server-authoritative число боксов за офлайн
+        offlineMs: earnedMs, // capped — единое окно
+        elapsedMs, // raw — для совместимости
+        offlineBoxes,
+        offlineEctoplasm: offlineEcto, // эктоплазма, начисленная за офлайн
+        offlineConveyorFrogs, // L7 для спавна на поле Loc2 (клиент)
       }
     },
   )

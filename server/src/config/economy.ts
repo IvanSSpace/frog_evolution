@@ -203,6 +203,57 @@ export function computeOfflineBoxes(
   return Math.min(OFFLINE_BOX_CAP, Math.max(0, spawned - collected))
 }
 
+// === Loc2 offline accrual (закрытая форма, глобальное окно capMs) ===
+// SYNC POINT: зеркало client geттеров (conveyorIntervalMs, ectoDrone*Mult).
+//
+// ⚠️ PLACEHOLDER BALANCE: рейт эктоплазмы = полная пропускная способность дрона
+// (1 пак / ~3.5с × множители). За многочасовое окно это даёт сотни-тысячи
+// эктоплазмы, тогда как апгрейды Loc2 стоят 10-200 → БЕЗ КАПА сломало бы
+// экономику. OFFLINE_ECTO_CAP ограничивает выдачу за один возврат. Числа
+// тюнить с балансом Loc2 (как и остальные PLACEHOLDER-кривые в gameStore).
+
+const ECTO_COLLECT_CYCLE_SEC = 3.5 // 1 пак: всасывание 2с + полёт ~1.5с
+const ECTO_AVG_PUCK = 2 // среднее max(1, level-6) для L7-L12 (PLACEHOLDER)
+export const OFFLINE_ECTO_CAP = 200 // PLACEHOLDER кап эктоплазмы за один возврат
+
+const CONVEYOR_BASE_MS = 6000 // зеркало client CONVEYOR_BASE_MS
+
+function conveyorIntervalMs(level: number): number {
+  return Math.round(CONVEYOR_BASE_MS * Math.pow(0.85, Math.max(0, level)))
+}
+
+// Эктоплазма за офлайн: рейт дрона × окно, капнуто OFFLINE_ECTO_CAP.
+// loc2 — карта апгрейдов (ectoDroneCount/Speed/Value).
+export function computeOfflineEctoplasm(
+  cappedMs: number,
+  loc2: Record<string, number>,
+): number {
+  if (cappedMs <= 0) return 0
+  const drones = 1 + Math.max(0, loc2.ectoDroneCount ?? 0)
+  const speedMult = 1 + 0.15 * Math.max(0, loc2.ectoDroneSpeed ?? 0)
+  const valueMult = 1 + 0.25 * Math.max(0, loc2.ectoDroneValue ?? 0)
+  const cycleSec = ECTO_COLLECT_CYCLE_SEC / speedMult
+  const ratePerSec = (drones * valueMult * ECTO_AVG_PUCK) / cycleSec
+  const earned = Math.floor(ratePerSec * (cappedMs / 1000))
+  return Math.min(OFFLINE_ECTO_CAP, Math.max(0, earned))
+}
+
+// Конвейер за офлайн: число L7, произведённых за окно, ограничено свободным
+// местом на поле Loc2 (ENTITY_CAP - текущие лягушки Loc2). Капсулы мерджат уже
+// онлайн при возврате (closed-form: офлайн только наполняет поле L7).
+export function computeOfflineConveyorFrogs(
+  cappedMs: number,
+  conveyorSpeedLevel: number,
+  loc2FrogCount: number,
+): number {
+  if (cappedMs <= 0) return 0
+  const interval = conveyorIntervalMs(conveyorSpeedLevel)
+  if (interval <= 0) return 0
+  const produced = Math.floor(cappedMs / interval)
+  const space = Math.max(0, ENTITY_CAP - Math.max(0, loc2FrogCount))
+  return Math.min(produced, space)
+}
+
 // Возвращает locationId куда переезжает лягушка level (1..18).
 // L1-6 → Болото (1), L7-12 → Лес (2), L13-18 → Планета (3).
 // Для L19 (sentinel) → не используется, special-case в merge endpoint.

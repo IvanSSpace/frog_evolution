@@ -36,6 +36,8 @@ export interface ServerGameState {
   offlineMs?: number
   elapsedMs?: number
   offlineBoxes?: number // server-authoritative число боксов за офлайн (AUDIT §2)
+  offlineEctoplasm?: number // эктоплазма, начисленная за офлайн (Loc2 дрон)
+  offlineConveyorFrogs?: number // L7 для спавна на поле Loc2 за офлайн (конвейер)
   lastSessionAt: string
   createdAt: string
   updatedAt: string
