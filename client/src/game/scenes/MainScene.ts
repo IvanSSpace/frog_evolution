@@ -1044,6 +1044,11 @@ export class MainScene extends Phaser.Scene {
       this.ectoDrone.tick()
     }
 
+    // Loc3: DVD-движение мини-лягушек в капсуле эволюции.
+    if (currentLocId === 3) {
+      this.evoCenter.update(delta)
+    }
+
 
     // Loc2 конвейер: авто-производство L7 на поле (бесплатно), cap-gated.
     if (currentLocId === 2) {

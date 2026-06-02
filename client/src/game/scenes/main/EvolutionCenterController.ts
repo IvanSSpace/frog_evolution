@@ -20,6 +20,7 @@ import { BASE_SCALE } from './types'
 
 const EVO_DURATION_MS = 15000 // тест-таймер эволюции (балансим позже)
 const FADE_MS = 500
+const SWIM_SPEED = 42 // px/сек DVD-дрейф мини-лягушек в капсуле
 
 // Полигон, в котором плавают лягушки внутри капсулы (xFrac, yFracZone).
 type Pt = readonly [number, number]
@@ -52,6 +53,7 @@ export class EvolutionCenterController {
   private back: Phaser.GameObjects.Image | null = null
   private front: Phaser.GameObjects.Image | null = null
   private swimmers: Phaser.GameObjects.Image[] = []
+  private poolPoly: Phaser.Math.Vector2[] = []
   private tweens: Phaser.Tweens.Tween[] = []
   private timer: Phaser.Time.TimerEvent | null = null
 
@@ -127,22 +129,33 @@ export class EvolutionCenterController {
       }),
     )
 
-    // N мини-лягушек в полигоне (между задом и стеклом).
+    // N мини-лягушек в полигоне (между задом и стеклом). Двигаются DVD-стилем:
+    // постоянная скорость + отскок от границ + медленное вращение (см. update).
     const n = swimmerCount(level)
     const scale = BASE_SCALE * swimmerScale(n)
-    const poly = POOL_POLY.map((p) => this.worldPt(p))
+    this.poolPoly = POOL_POLY.map((p) => this.worldPt(p))
     for (let i = 0; i < n; i++) {
-      const start = this.randomInPoly(poly)
+      const start = this.randomInPoly(this.poolPoly)
       const img = this.scene.add
         .image(start.x, start.y, textureKeyForLevel(level))
         .setScale(scale)
         .setDepth(baseDepth + 2 + i * 0.01)
         .setAlpha(0)
+      const ang = Phaser.Math.FloatBetween(0, Math.PI * 2)
+      const speed = SWIM_SPEED * Phaser.Math.FloatBetween(0.8, 1.2)
+      img.setData('vx', Math.cos(ang) * speed)
+      img.setData('vy', Math.sin(ang) * speed)
       this.swimmers.push(img)
       this.tweens.push(
         this.scene.tweens.add({ targets: img, alpha: 1, duration: FADE_MS }),
+        // медленное вращение (tumble), направление случайно.
+        this.scene.tweens.add({
+          targets: img,
+          angle: Math.random() < 0.5 ? 360 : -360,
+          duration: Phaser.Math.Between(4000, 7000),
+          repeat: -1,
+        }),
       )
-      this.swim(img, poly)
     }
 
     // Стекло-перёд поверх лягушек.
@@ -165,26 +178,37 @@ export class EvolutionCenterController {
     )
   }
 
-  // Плавание: лягушка тянется к случайной точке внутри полигона, бесконечно.
-  private swim(img: Phaser.GameObjects.Image, poly: Phaser.Math.Vector2[]): void {
-    const step = () => {
-      if (!img.active) return
-      const t = this.randomInPoly(poly)
-      const dist = Phaser.Math.Distance.Between(img.x, img.y, t.x, t.y)
-      img.setFlipX(t.x < img.x)
-      const tw = this.scene.tweens.add({
-        targets: img,
-        x: t.x,
-        y: t.y,
-        duration: Math.max(900, dist * 8),
-        ease: 'Sine.easeInOut',
-        onComplete: () => {
-          this.scene.time.delayedCall(Phaser.Math.Between(150, 500), step)
-        },
-      })
-      this.tweens.push(tw)
+  // Per-frame: DVD-движение лягушек — постоянная скорость, отскок от границ
+  // полигона. Вызывается из MainScene на loc3.
+  update(delta: number): void {
+    if (!this.active || this.swimmers.length === 0) return
+    const dt = Math.min(delta, 50) / 1000
+    const poly = this.poolPoly
+    for (const img of this.swimmers) {
+      if (!img.active) continue
+      let vx = (img.getData('vx') as number) || 0
+      let vy = (img.getData('vy') as number) || 0
+      const nx = img.x + vx * dt
+      const ny = img.y + vy * dt
+      if (this.pointInPoly(nx, ny, poly)) {
+        img.x = nx
+        img.y = ny
+      } else if (this.pointInPoly(img.x + vx * dt, img.y, poly)) {
+        // вертикальная граница → отражаем vy
+        img.x += vx * dt
+        vy = -vy
+        img.setData('vy', vy)
+      } else if (this.pointInPoly(img.x, img.y + vy * dt, poly)) {
+        // горизонтальная граница → отражаем vx
+        img.y += vy * dt
+        vx = -vx
+        img.setData('vx', vx)
+      } else {
+        // угол → разворот
+        img.setData('vx', -vx)
+        img.setData('vy', -vy)
+      }
     }
-    step()
   }
 
   private randomInPoly(poly: Phaser.Math.Vector2[]): Phaser.Math.Vector2 {
