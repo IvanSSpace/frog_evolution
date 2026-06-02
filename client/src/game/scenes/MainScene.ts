@@ -629,50 +629,9 @@ export class MainScene extends Phaser.Scene {
     this.poop.spawnEctoPoop(frog)
   }
 
-  // Loc2 конвейер: выкатывает L7 на поле (у фабрики, низ-лево) с pop-анимацией.
-  private spawnConveyorFrog(): void {
-    const { width, height } = this.scale
-    const m = 24 * DPR
-    const x = Phaser.Math.Between(FIELD_PAD_X + m, Math.floor(width * 0.5))
-    const y = Phaser.Math.Between(
-      height - FIELD_PAD_Y_BOTTOM - 130 * DPR,
-      height - FIELD_PAD_Y_BOTTOM - m,
-    )
-    const frog = this.spawner.spawnFrog(x, y, 7)
-    useGameStore.getState().addFrogToLocation(2, 7)
-    // Лента/жёлоб: фабрика «выплёвывает» лягушку — squash-пульс по вертикали.
-    const factory = this.buildings.getFactorySprite()
-    if (factory) {
-      const fs = factory.scaleY
-      this.tweens.killTweensOf(factory)
-      this.tweens.add({
-        targets: factory,
-        scaleY: fs * 0.9,
-        duration: 90,
-        ease: 'Power2.easeOut',
-        yoyo: true,
-        onComplete: () => {
-          if (factory.active) factory.setScale(factory.scaleX, fs)
-        },
-      })
-    }
-    frog.container.setScale(0)
-    this.tweens.add({
-      targets: frog.container,
-      scale: BASE_SCALE * 1.2,
-      duration: 160,
-      ease: 'Back.easeOut',
-      onComplete: () => {
-        if (!frog.container.active) return
-        this.tweens.add({
-          targets: frog.container,
-          scale: BASE_SCALE,
-          duration: 100,
-          ease: 'Power2.easeOut',
-        })
-      },
-    })
-  }
+  // Конвейер Loc2 теперь выпускает БОКСЫ (FactoryBoxController), не лягушек
+  // напрямую — старый spawnConveyorFrog удалён. Онлайн: factoryBox.emit();
+  // офлайн-догон: factoryBox.spawnOpenedFrog() / emit() (см. update + gameSync).
 
   // ============== МЕРДЖ ==============
   // Phase 21-02: вся merge-логика (standard / feed / carrier-merge), find-target,
@@ -1063,10 +1022,13 @@ export class MainScene extends Phaser.Scene {
 
     // Loc2 конвейер: авто-производство L7 на поле (бесплатно), cap-gated.
     if (currentLocId === 2) {
-      // Offline-дрен: L7, накопленные конвейером за офлайн (server). По одной за
-      // кадр пока есть слот — растекаются естественно, не пайлятся в один кадр.
-      if (_offlineLoc2Frogs > 0 && this.canSpawnBox()) {
-        this.spawnConveyorFrog()
+      // Offline-дрен: лягушки, накопленные конвейером за офлайн (server). При
+      // заходе они уже «вскрыты» (на поле) — кроме ПОСЛЕДНЕЙ: её выпускаем боксом,
+      // чтобы показать «жизнь» на поле (бокс едет/прыгает/ждёт вскрытия). По одной
+      // за кадр пока есть слот — растекаются естественно.
+      if (_offlineLoc2Frogs > 0 && this.canSpawnBox() && this.factoryBox.count() < 4) {
+        if (_offlineLoc2Frogs === 1) this.factoryBox.emit()
+        else this.factoryBox.spawnOpenedFrog()
         _offlineLoc2Frogs--
       }
       // Интервал из апгрейда conveyorSpeed (Чанк 2: loc2Upgrades + геттер).

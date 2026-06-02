@@ -145,6 +145,24 @@ export class FactoryBoxController {
     })
   }
 
+  /** Спавн уже «вскрытой» лягушки сразу на поле (офлайн-догон: боксы уже открылись
+   *  пока тебя не было). Без анимации бокса — лягушка в рандомной точке поля. */
+  spawnOpenedFrog(level?: number): void {
+    const lvl =
+      level ??
+      rollFactoryFrogLevel(useGameStore.getState().loc2Upgrades.rareFrog)
+    const p = this.randomFieldPoint()
+    const frog = this.spawner.spawnFrog(p.x, p.y, lvl)
+    useGameStore.getState().addFrogToLocation(2, lvl)
+    frog.container.setScale(0)
+    this.scene.tweens.add({
+      targets: frog.container,
+      scale: 1,
+      duration: 200,
+      ease: 'Back.easeOut',
+    })
+  }
+
   /** Рекурсивные прыжки к target; на каждом прыжке рандомный разворот 90°. */
   private hopToField(box: FactoryBox, target: Phaser.Math.Vector2): void {
     const sp = box.sp
