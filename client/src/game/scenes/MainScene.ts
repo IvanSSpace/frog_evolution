@@ -714,6 +714,10 @@ export class MainScene extends Phaser.Scene {
       // магнита тут нет (Loc2 уходит на building-based механики).
       this.buildings.show(2)
       this.drone.despawn()
+    } else if (locId === 3) {
+      // Loc3: монумент-тотем + блок эволюции (источник из болот — отдельно).
+      this.buildings.show(3)
+      this.drone.despawn()
     } else {
       this.buildings.hide()
       this.drone.despawn()

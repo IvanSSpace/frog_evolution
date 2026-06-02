@@ -128,10 +128,30 @@ const BUILDINGS_LOC2: readonly BuildingDef[] = [
   },
 ] as const
 
+// Loc3 (Континент) — древняя земля: монумент-тотем (центр, чуть выше) + блок
+// эволюции (низ). Источник лягушек (болотные бассейны) + источник-тик — отдельно.
+const BUILDINGS_LOC3: readonly BuildingDef[] = [
+  {
+    key: 'bld3_monument',
+    src: '/builds_loc3/monument.png',
+    xFrac: 0.5,
+    yFrac: 0.52,
+    widthFrac: 0.4,
+  },
+  {
+    key: 'bld3_evoblock',
+    src: '/builds_loc3/evoblock1_tansparent.png',
+    xFrac: 0.5,
+    yFrac: 0.95,
+    widthFrac: 0.34,
+  },
+] as const
+
 // Набор зданий по локации. Расширяется по мере добавления локаций.
 const BUILDINGS_BY_LOC: Record<number, readonly BuildingDef[]> = {
   1: BUILDINGS,
   2: BUILDINGS_LOC2,
+  3: BUILDINGS_LOC3,
 }
 
 export class BuildingsController {
@@ -155,6 +175,7 @@ export class BuildingsController {
   static preload(scene: Phaser.Scene): void {
     for (const b of BUILDINGS) scene.load.image(b.key, b.src)
     for (const b of BUILDINGS_LOC2) scene.load.image(b.key, b.src)
+    for (const b of BUILDINGS_LOC3) scene.load.image(b.key, b.src)
     // Состояния коллектора по заполнению (превью + будущая механика).
     scene.load.image('bld_collector_empty', '/builds/collector_empty.png')
     scene.load.image('bld_collector_full', '/builds/collector_full.png')
