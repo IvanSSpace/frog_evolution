@@ -1,7 +1,7 @@
 import type * as ToneNS from 'tone'
 import type { CreateTrack, TrackInstance } from '../types'
 import { TRACK_META } from './index'
-import { NodeBag, TimerBag } from './_helpers'
+import { NodeBag, TimerBag, Mixer } from './_helpers'
 
 // Hogstep — lo-fi nether anthem (порт автономного hogstep_disc.html).
 // F# minor, 90 BPM, swing ~10%. 8 секций / 52 такта ≈ 139 сек, зациклен.
@@ -95,6 +95,7 @@ interface Voices {
 const create: CreateTrack = (Tone): TrackInstance => {
   const nodes = new NodeBag()
   const timers = new TimerBag()
+  const mixer = new Mixer()
   let analyser: ToneNS.Analyser | null = null
   let voices: Voices | null = null
 
@@ -332,6 +333,19 @@ const create: CreateTrack = (Tone): TrackInstance => {
         crackle,
         shaker,
       }
+
+      // Микшер: голоса с громкостью для UI-ползунков.
+      mixer.add('bass808', '808-бас', bass808)
+      mixer.add('piano', 'Пиано', piano)
+      mixer.add('lead', 'Лид', lead)
+      mixer.add('kick', 'Кик', kick)
+      mixer.add('snare', 'Снэр', snare)
+      mixer.add('snareBody', 'Снэр-тело', snareBody)
+      mixer.add('hatClosed', 'Хет закрытый', hatClosed)
+      mixer.add('hatOpen', 'Хет открытый', hatOpen)
+      mixer.add('pad', 'Пэд', pad)
+      mixer.add('crackle', 'Винил', crackle)
+      mixer.add('shaker', 'Шейкер', shaker)
     },
 
     startScheduler(fromSec, ctx) {
@@ -560,6 +574,7 @@ const create: CreateTrack = (Tone): TrackInstance => {
     },
 
     getAnalyser: () => analyser,
+    getMixer: () => mixer.channels(),
   }
 }
 

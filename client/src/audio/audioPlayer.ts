@@ -326,6 +326,11 @@ class AudioPlayer {
     return this.current?.getAnalyser() ?? null
   }
 
+  /** Каналы микшера текущего трека (для dev-страницы тюнинга). */
+  getMixer(): import('./types').MixerChannel[] {
+    return this.current?.getMixer?.() ?? []
+  }
+
   /** Загрузка трека (build, но без play). */
   async loadTrack(id: TrackId): Promise<void> {
     if (this.trackId === id && this.current) return

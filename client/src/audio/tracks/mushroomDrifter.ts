@@ -1,7 +1,7 @@
 import type * as ToneNS from 'tone'
 import type { CreateTrack, TrackInstance, ToneLib } from '../types'
 import { TRACK_META } from './index'
-import { NodeBag, TimerBag, transpose } from './_helpers'
+import { NodeBag, TimerBag, transpose, Mixer } from './_helpers'
 
 // Mushroom Drifter — заглавная тема про космолягух. Меланхоличный альт-вайб,
 // Am–C–G–F, 90 BPM, 4/4, структура интро → тема → припев → брейк → кульминация
@@ -45,10 +45,37 @@ const PROG: Chord[] = [
   { name: 'F', bass: 'F1', pad: ['F2', 'A2', 'C3'], arp: ['F3', 'A3', 'C4'] },
 ]
 const MOTIF: Record<string, Array<[number, string, string]>> = {
-  Am: [[0, 'E4', '4n'], [1.5, 'A4', '8n'], [2, 'C5', '4n'], [3.5, 'B4', '8n'], [4, 'A4', '4n'], [6, 'E4', '2n']],
-  C: [[0, 'G4', '4n'], [1.5, 'E4', '8n'], [2, 'G4', '4n'], [3, 'C5', '8n'], [4, 'B4', '4n'], [6, 'G4', '2n']],
-  G: [[0, 'D5', '4n'], [1.5, 'B4', '8n'], [2, 'D5', '4n'], [4, 'G4', '4n'], [6, 'B4', '2n']],
-  F: [[0, 'C5', '4n'], [1.5, 'A4', '8n'], [2, 'F4', '4n'], [3, 'A4', '8n'], [4, 'G4', '4n'], [6, 'A4', '2n']],
+  Am: [
+    [0, 'E4', '4n'],
+    [1.5, 'A4', '8n'],
+    [2, 'C5', '4n'],
+    [3.5, 'B4', '8n'],
+    [4, 'A4', '4n'],
+    [6, 'E4', '2n'],
+  ],
+  C: [
+    [0, 'G4', '4n'],
+    [1.5, 'E4', '8n'],
+    [2, 'G4', '4n'],
+    [3, 'C5', '8n'],
+    [4, 'B4', '4n'],
+    [6, 'G4', '2n'],
+  ],
+  G: [
+    [0, 'D5', '4n'],
+    [1.5, 'B4', '8n'],
+    [2, 'D5', '4n'],
+    [4, 'G4', '4n'],
+    [6, 'B4', '2n'],
+  ],
+  F: [
+    [0, 'C5', '4n'],
+    [1.5, 'A4', '8n'],
+    [2, 'F4', '4n'],
+    [3, 'A4', '8n'],
+    [4, 'G4', '4n'],
+    [6, 'A4', '2n'],
+  ],
 }
 
 type Section = 'intro' | 'A' | 'B' | 'break' | 'A2' | 'outro'
@@ -112,7 +139,8 @@ function buildEvents(): Ev[] {
         push(T(bar), 'bass', ch.bass, '4n', 0.6)
         push(T(bar, 2), 'bass', ch.bass, '4n', 0.55)
       } else {
-        for (const b of [0, 1, 2, 3]) push(T(bar, b), 'bass', ch.bass, '8n', 0.62)
+        for (const b of [0, 1, 2, 3])
+          push(T(bar, b), 'bass', ch.bass, '8n', 0.62)
         push(T(bar, 2.5), 'bass', transpose(ch.bass, 12), '8n', 0.4)
       }
     }
@@ -125,7 +153,8 @@ function buildEvents(): Ev[] {
       if (sec === 'break') av = 0.2
       if (sec === 'A') av = 0.27
       if (sec === 'B' || sec === 'A2') av = 0.33
-      for (let i = 0; i < 8; i++) push(T(bar, i * 0.5), 'arp', an[pat[i]], '8n', av)
+      for (let i = 0; i < 8; i++)
+        push(T(bar, i * 0.5), 'arp', an[pat[i]], '8n', av)
     }
     // LEAD
     if (start && (sec === 'A' || sec === 'B' || sec === 'A2')) {
@@ -147,25 +176,31 @@ function buildEvents(): Ev[] {
       push(T(bar), 'kick', null, '8n', 0.9)
       push(T(bar, 2), 'kick', null, '8n', 0.8)
       if (bar >= 16) push(T(bar, 2), 'snare', null, '16n', 0.5)
-      for (let i = 0; i < 8; i++) push(T(bar, i * 0.5), 'hat', null, '32n', i % 2 ? 0.24 : 0.14)
+      for (let i = 0; i < 8; i++)
+        push(T(bar, i * 0.5), 'hat', null, '32n', i % 2 ? 0.24 : 0.14)
     } else if (sec === 'B' || sec === 'A2') {
       push(T(bar), 'kick', null, '8n', 1.0)
       push(T(bar, 2), 'kick', null, '8n', 0.9)
       push(T(bar, 2.5), 'kick', null, '8n', 0.55)
       push(T(bar, 1), 'snare', null, '16n', 0.8)
       push(T(bar, 3), 'snare', null, '16n', 0.85)
-      for (let i = 0; i < 8; i++) push(T(bar, i * 0.5), 'hat', null, '32n', i % 2 ? 0.3 : 0.17)
+      for (let i = 0; i < 8; i++)
+        push(T(bar, i * 0.5), 'hat', null, '32n', i % 2 ? 0.3 : 0.17)
     } else if (sec === 'break' && bar >= 46) {
       const steps = bar === 47 ? 16 : 8
-      for (let i = 0; i < steps; i++) push(T(bar, i * (4 / steps)), 'hat', null, '32n', 0.18 + 0.018 * i)
+      for (let i = 0; i < steps; i++)
+        push(T(bar, i * (4 / steps)), 'hat', null, '32n', 0.18 + 0.018 * i)
       if (bar === 47) {
         push(T(bar, 3), 'snare', null, '16n', 0.7)
         push(T(bar, 3.5), 'snare', null, '16n', 0.88)
       }
     }
-    if (bar === 24 || bar === 48 || bar === 56) push(T(bar), 'crash', null, '1n', 0.32)
-    if (sec === 'intro' && (bar === 2 || bar === 5)) push(T(bar, 1), 'sparkle', 'A5', '4n', 0.38)
-    if (sec === 'break' && (bar === 40 || bar === 43)) push(T(bar, 2), 'sparkle', 'E6', '4n', 0.32)
+    if (bar === 24 || bar === 48 || bar === 56)
+      push(T(bar), 'crash', null, '1n', 0.32)
+    if (sec === 'intro' && (bar === 2 || bar === 5))
+      push(T(bar, 1), 'sparkle', 'A5', '4n', 0.38)
+    if (sec === 'break' && (bar === 40 || bar === 43))
+      push(T(bar, 2), 'sparkle', 'E6', '4n', 0.32)
   }
   // OUTRO (такты 64-67) — разрешение на Am
   push(T(64), 'pad', ['A2', 'C3', 'E3', 'A3'], '4m', 0.55)
@@ -194,6 +229,7 @@ interface Voices {
 const create: CreateTrack = (Tone: ToneLib): TrackInstance => {
   const nodes = new NodeBag()
   const timers = new TimerBag()
+  const mixer = new Mixer()
   let analyser: ToneNS.Analyser | null = null
   let voices: Voices | null = null
 
@@ -250,7 +286,9 @@ const create: CreateTrack = (Tone: ToneLib): TrackInstance => {
       // остальных в оригинале, приглушаем на выходе пластинки.
       const master = nodes.add(new Tone.Gain(0.92 * 0.6).connect(outNode))
       const reverb = nodes.add(
-        new Tone.Reverb({ decay: 5, preDelay: 0.02, wet: 0.34 }).connect(master),
+        new Tone.Reverb({ decay: 5, preDelay: 0.02, wet: 0.34 }).connect(
+          master,
+        ),
       )
       await reverb.generate()
       const delay = nodes.add(
@@ -383,6 +421,16 @@ const create: CreateTrack = (Tone: ToneLib): TrackInstance => {
         crash,
         sparkle,
       }
+
+      mixer.add('pad', 'Пэд', pad)
+      mixer.add('bass', 'Бас', bass)
+      mixer.add('arp', 'Арп', arp)
+      mixer.add('lead', 'Лид', lead)
+      mixer.add('kick', 'Кик', kick)
+      mixer.add('snare', 'Снэр', snare)
+      mixer.add('hat', 'Хет', hat)
+      mixer.add('crash', 'Креш', crash)
+      mixer.add('sparkle', 'Искры', sparkle)
     },
 
     startScheduler(fromSec, ctx) {
@@ -413,13 +461,19 @@ const create: CreateTrack = (Tone: ToneLib): TrackInstance => {
         for (const ev of events) {
           const delay = (origin + ev.time - nowElapsed) * 1000
           if (delay < -60) continue // событие уже прошло (seek в середину)
-          timers.pushTimeout(() => {
-            if (ctx.isPlaying()) trigger(ev)
-          }, Math.max(0, delay))
+          timers.pushTimeout(
+            () => {
+              if (ctx.isPlaying()) trigger(ev)
+            },
+            Math.max(0, delay),
+          )
         }
         const nextOrigin = origin + TOTAL_SEC
         const loopDelay = (nextOrigin - ctx.getElapsed()) * 1000
-        timers.pushTimeout(() => schedulePass(nextOrigin), Math.max(0, loopDelay))
+        timers.pushTimeout(
+          () => schedulePass(nextOrigin),
+          Math.max(0, loopDelay),
+        )
       }
       // origin первого прохода выравниваем по проигранным лупам (seek/resume).
       schedulePass(Math.floor(fromSec / TOTAL_SEC) * TOTAL_SEC)
@@ -439,6 +493,7 @@ const create: CreateTrack = (Tone: ToneLib): TrackInstance => {
     },
 
     getAnalyser: () => analyser,
+    getMixer: () => mixer.channels(),
   }
 }
 
