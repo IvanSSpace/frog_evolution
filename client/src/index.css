@@ -447,3 +447,23 @@ body.modal-open .ship-follow-btn {
     animation: none;
   }
 }
+
+/* 2026-06-03: лазерный стилус плеера слегка «трекает» при игре (как живой
+   тонарм, в такт вращению диска). Анимация transform перебивает inline-rotate. */
+.ff-stylus-live {
+  animation: ff-stylus-sway 3.4s ease-in-out infinite;
+}
+@keyframes ff-stylus-sway {
+  0%,
+  100% {
+    transform: rotate(-44deg);
+  }
+  50% {
+    transform: rotate(-42deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ff-stylus-live {
+    animation: none;
+  }
+}

@@ -247,6 +247,7 @@ export function PlayerPanel() {
               к диску. playing rotate(-44deg) — луч «читает» дорожку у центра,
               ярко горит; paused rotate(20deg) — отведён и пригашен. */}
           <div
+            className={isPlaying ? 'ff-stylus-live' : undefined}
             style={{
               position: 'absolute',
               top: 20,
