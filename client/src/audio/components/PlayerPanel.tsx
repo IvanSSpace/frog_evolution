@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type CSSProperties,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import { audioPlayer, TRACK_ORDER } from '../audioPlayer'
 import { useAudioPlayer } from '../useAudioPlayer'
@@ -42,9 +48,12 @@ export function PlayerPanel() {
   const [enterAnim, setEnterAnim] = useState<boolean>(false)
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => () => {
-    if (exitTimerRef.current) clearTimeout(exitTimerRef.current)
-  }, [])
+  useEffect(
+    () => () => {
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current)
+    },
+    [],
+  )
 
   const switchTo = (newId: TrackId, dir: 'r' | 'l') => {
     if (newId === intentId) return
@@ -71,7 +80,8 @@ export function PlayerPanel() {
   }
 
   const prev = () => {
-    const n = TRACK_ORDER[(intentIdx - 1 + TRACK_ORDER.length) % TRACK_ORDER.length]
+    const n =
+      TRACK_ORDER[(intentIdx - 1 + TRACK_ORDER.length) % TRACK_ORDER.length]
     switchTo(n, 'l')
   }
   const next = () => {
@@ -118,9 +128,9 @@ export function PlayerPanel() {
             inset: 0,
             borderRadius: '50%',
             background:
-              'radial-gradient(circle at 50% 50%, #1f2937 0%, #111827 60%, #000 100%)',
+              'radial-gradient(circle at 38% 32%, #2a2150 0%, #141033 55%, #05030f 100%)',
             boxShadow:
-              '0 0 0 3px #14532d, inset 0 0 0 1px rgba(255,255,255,0.06), 0 8px 20px rgba(0,0,0,0.5)',
+              '0 0 0 2px rgba(167,139,250,0.6), 0 0 22px rgba(99,102,241,0.55), inset 0 0 0 1px rgba(255,255,255,0.06), 0 8px 24px rgba(0,0,0,0.6)',
             willChange: 'transform',
           }}
         >
@@ -190,10 +200,21 @@ export function PlayerPanel() {
 
   return (
     <div className="flex flex-col gap-3 items-stretch">
-      {/* Turntable */}
+      {/* Turntable — космический проигрыватель */}
       <div
-        className="ff-card flex flex-col items-center p-4 relative"
-        style={{ gap: 16 }}
+        className="flex flex-col items-center p-4 relative"
+        style={{
+          gap: 16,
+          borderRadius: 14,
+          border: '1px solid rgba(120,150,255,0.35)',
+          background:
+            'radial-gradient(ellipse at 28% 0%, rgba(99,102,241,0.22), transparent 60%),' +
+            'radial-gradient(ellipse at 82% 100%, rgba(34,211,238,0.14), transparent 55%),' +
+            'linear-gradient(180deg, #0c1026 0%, #070a18 100%)',
+          boxShadow:
+            '0 0 24px rgba(99,102,241,0.25), inset 0 0 30px rgba(0,0,0,0.5)',
+          overflow: 'hidden',
+        }}
       >
         {/* Vinyl disc + tonearm */}
         <div
@@ -249,7 +270,8 @@ export function PlayerPanel() {
               width: 18,
               height: 18,
               borderRadius: '50%',
-              background: 'radial-gradient(circle at 35% 35%, #d1d5db, #4b5563)',
+              background:
+                'radial-gradient(circle at 35% 35%, #d1d5db, #4b5563)',
               border: '2px solid #1f2937',
               zIndex: 2,
               boxShadow: '0 2px 4px rgba(0,0,0,0.4)',
@@ -267,21 +289,36 @@ export function PlayerPanel() {
             style={{
               width: 44,
               height: 44,
-              ['--ff-tile-from' as never]: '#a7f3d0',
-              ['--ff-tile-to' as never]: '#34d399',
-              ['--ff-tile-border' as never]: '#065f46',
-              color: '#fff',
+              ['--ff-tile-from' as never]: '#67e8f9',
+              ['--ff-tile-to' as never]: '#22d3ee',
+              ['--ff-tile-border' as never]: '#0e7490',
+              color: '#05121a',
               fontSize: 22,
               lineHeight: 1,
+              boxShadow: '0 0 12px rgba(34,211,238,0.5)',
             }}
           >
             ‹
           </button>
           <button
+            type="button"
             onClick={handlePlayPause}
             aria-label={isPlaying || isLoading ? 'pause' : 'play'}
-            className={`ff-btn ${isPlaying || isLoading ? 'ff-btn-yellow' : 'ff-btn-green'}`}
-            style={{ width: 54, height: 54, padding: 0, fontSize: 22, lineHeight: 1 }}
+            style={{
+              width: 54,
+              height: 54,
+              padding: 0,
+              fontSize: 22,
+              lineHeight: 1,
+              borderRadius: '50%',
+              border: '2px solid rgba(167,139,250,0.8)',
+              background:
+                'radial-gradient(circle at 38% 32%, #a78bfa, #6d28d9 70%, #3b0f86)',
+              color: '#fff',
+              boxShadow:
+                '0 0 18px rgba(167,139,250,0.6), inset 0 1px 2px rgba(255,255,255,0.3)',
+              touchAction: 'manipulation',
+            }}
           >
             {isPlaying || isLoading ? '⏸' : '▶'}
           </button>
@@ -293,12 +330,13 @@ export function PlayerPanel() {
             style={{
               width: 44,
               height: 44,
-              ['--ff-tile-from' as never]: '#a7f3d0',
-              ['--ff-tile-to' as never]: '#34d399',
-              ['--ff-tile-border' as never]: '#065f46',
-              color: '#fff',
+              ['--ff-tile-from' as never]: '#67e8f9',
+              ['--ff-tile-to' as never]: '#22d3ee',
+              ['--ff-tile-border' as never]: '#0e7490',
+              color: '#05121a',
               fontSize: 22,
               lineHeight: 1,
+              boxShadow: '0 0 12px rgba(34,211,238,0.5)',
             }}
           >
             ›
@@ -314,7 +352,10 @@ export function PlayerPanel() {
                 width: id === intentId ? 12 : 8,
                 height: 8,
                 borderRadius: 4,
-                background: id === intentId ? '#16a34a' : 'rgba(54,83,20,0.25)',
+                background:
+                  id === intentId ? '#22d3ee' : 'rgba(120,150,255,0.25)',
+                boxShadow:
+                  id === intentId ? '0 0 8px rgba(34,211,238,0.7)' : 'none',
                 transition: 'width 200ms ease, background 200ms ease',
               }}
             />
@@ -323,13 +364,16 @@ export function PlayerPanel() {
 
         {/* Section + time */}
         {meta && (
-          <div className="ff-body text-xs text-center" style={{ color: '#365314' }}>
+          <div
+            className="ff-body text-xs text-center"
+            style={{ color: '#a8b4ff' }}
+          >
             {sectionLabel}
           </div>
         )}
         <div
           className="ff-body text-xs tabular-nums"
-          style={{ color: '#166534' }}
+          style={{ color: '#7fe9e0' }}
         >
           {formatTime(snap.elapsed)} / {formatTime(snap.totalSec)}
         </div>
@@ -341,9 +385,9 @@ export function PlayerPanel() {
             position: 'relative',
             height: 12,
             borderRadius: 8,
-            background: '#1a2e1a',
+            background: 'rgba(8,12,28,0.8)',
             cursor: meta ? 'pointer' : 'default',
-            border: '2px solid #166534',
+            border: '1.5px solid rgba(120,150,255,0.45)',
             overflow: 'hidden',
             width: '100%',
           }}
@@ -353,7 +397,8 @@ export function PlayerPanel() {
               position: 'absolute',
               inset: 0,
               width: `${progressPct}%`,
-              background: 'linear-gradient(180deg, #4ade80 0%, #16a34a 100%)',
+              background: 'linear-gradient(90deg, #5fe3d0 0%, #a78bfa 100%)',
+              boxShadow: '0 0 10px rgba(95,227,208,0.6)',
               transition: 'width 80ms linear',
             }}
           />
@@ -375,12 +420,14 @@ export function PlayerPanel() {
             )
           })}
         </div>
-
       </div>
 
       {/* Volume */}
-      <div className="ff-card p-3 flex items-center gap-3">
-        <span className="ff-body font-bold text-emerald-900 text-sm flex-shrink-0">
+      <div className="p-3 flex items-center gap-3" style={cosmicCard}>
+        <span
+          className="ff-body font-bold text-sm flex-shrink-0"
+          style={{ color: '#a8b4ff' }}
+        >
           {t('player.volume')}
         </span>
         <input
@@ -390,28 +437,55 @@ export function PlayerPanel() {
           step={1}
           value={snap.volume}
           onChange={(e) => audioPlayer.setVolume(Number(e.target.value))}
-          style={{ flex: 1, accentColor: '#16a34a' }}
+          style={{ flex: 1, accentColor: '#5fe3d0' }}
         />
         <span
           className="ff-body text-xs tabular-nums w-12 text-right"
-          style={{ color: '#166534' }}
+          style={{ color: '#7fe9e0' }}
         >
           {snap.volume} dB
         </span>
       </div>
 
       {/* Auto-resume */}
-      <div className="ff-card p-3 flex items-center justify-between gap-3">
-        <span className="ff-body font-bold text-emerald-900 text-sm">
+      <div
+        className="p-3 flex items-center justify-between gap-3"
+        style={cosmicCard}
+      >
+        <span
+          className="ff-body font-bold text-sm"
+          style={{ color: '#a8b4ff' }}
+        >
           {t('player.auto_resume')}
         </span>
         <button
+          type="button"
           onClick={() => audioPlayer.setAutoResume(!snap.autoResume)}
-          className={`ff-btn text-xs px-3 py-1.5 ${snap.autoResume ? 'ff-btn-green' : 'ff-btn-grey'}`}
+          className="ff-body text-xs font-bold px-3 py-1.5"
+          style={{
+            borderRadius: 8,
+            border: '1px solid rgba(120,150,255,0.5)',
+            background: snap.autoResume
+              ? 'rgba(34,211,238,0.22)'
+              : 'rgba(30,40,60,0.6)',
+            color: snap.autoResume ? '#9af7ec' : '#8aa0c0',
+            boxShadow: snap.autoResume
+              ? '0 0 10px rgba(34,211,238,0.4)'
+              : 'none',
+            touchAction: 'manipulation',
+          }}
         >
           {snap.autoResume ? t('player.on') : t('player.off')}
         </button>
       </div>
     </div>
   )
+}
+
+// Космическая «карточка» (тёмная панель с неоновой рамкой) — для volume/resume.
+const cosmicCard: CSSProperties = {
+  borderRadius: 14,
+  border: '1px solid rgba(120,150,255,0.3)',
+  background: 'linear-gradient(180deg, #0c1026 0%, #080b1a 100%)',
+  boxShadow: 'inset 0 0 20px rgba(0,0,0,0.45)',
 }
