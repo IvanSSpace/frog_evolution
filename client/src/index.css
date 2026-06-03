@@ -451,15 +451,15 @@ body.modal-open .ship-follow-btn {
 /* 2026-06-03: лазерный стилус плеера слегка «трекает» при игре (как живой
    тонарм, в такт вращению диска). Анимация transform перебивает inline-rotate. */
 .ff-stylus-live {
-  animation: ff-stylus-sway 3.4s ease-in-out infinite;
+  animation: ff-stylus-sway 2.6s ease-in-out infinite;
 }
 @keyframes ff-stylus-sway {
   0%,
   100% {
-    transform: rotate(-44deg);
+    transform: rotate(-46deg);
   }
   50% {
-    transform: rotate(-42deg);
+    transform: rotate(-40.5deg);
   }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -253,7 +253,7 @@ export function PlayerPanel() {
               top: 20,
               left: -2,
               width: 2,
-              height: 150,
+              height: 186,
               background:
                 'linear-gradient(180deg, rgba(95,227,208,0.95) 0%, rgba(167,139,250,0.35) 100%)',
               borderRadius: 2,
