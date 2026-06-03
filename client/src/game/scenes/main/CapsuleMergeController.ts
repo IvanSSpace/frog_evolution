@@ -732,12 +732,45 @@ export class CapsuleMergeController {
     this.offlineMerges = remaining
   }
 
-  // Вход на Loc2: дозревшие УЖЕ применены away-флашем в update() (на Loc1/3 пока
-  // тебя не было). Здесь только очищаем очередь — не-дозревшие пары остались в
-  // locationFrogs, капсулы перехватят их заново визуально (честно, без абуза).
-  // НЕ флашим тут: transitionEnd идёт ПОСЛЕ респавна → флаш дал бы десинк
-  // (2 лягушки уже на поле, а данные бы их убрали).
+  // 2 свободные (не зарезервированные) активные лягушки точного уровня с поля.
+  private acquirePairOfLevel(level: number): [FrogData, FrogData] | null {
+    const avail: FrogData[] = []
+    for (const f of this.scene.frogs) {
+      if (!f.container.active || this.reserved.has(f.id)) continue
+      if (f.level === level) {
+        avail.push(f)
+        if (avail.length === 2) return [avail[0], avail[1]]
+      }
+    }
+    return null
+  }
+
+  // Возобновить незавершённый мердж на возврате: пара СРАЗУ идёт в капсулу
+  // (без 4с pending — они уже были в пути до ухода), а не телепортируется на
+  // поле и замирает. Мердж завершится ~по completeAt (beginRouting≈route+merge).
+  private resumeRouting(level: number, completeAt: number): boolean {
+    const slot = this.slots.find((s) => s.state === 'idle')
+    if (!slot) return false
+    const pair = this.acquirePairOfLevel(level)
+    if (!pair) return false
+    const [a, b] = pair
+    slot.frogs = [a, b]
+    slot.reservedIds = [a.id, b.id]
+    this.reserved.add(a.id)
+    this.reserved.add(b.id)
+    slot.completeAt = completeAt
+    slot.merged = false
+    this.beginRouting(slot)
+    return true
+  }
+
+  // Вход на Loc2: дозревшие УЖЕ применены away-флашем в update(). Оставшиеся
+  // (в пути, ещё не дозрели) — СРАЗУ возобновляем маршрут в капсулу, чтобы
+  // лягушки продолжали «своё дело», а не телепортировались на поле и замирали.
   onEnterLoc2(): void {
+    for (const m of this.offlineMerges) {
+      this.resumeRouting(m.level, m.completeAt)
+    }
     this.offlineMerges = []
   }
 
