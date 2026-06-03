@@ -18,6 +18,7 @@ import {
 } from '../../store/gameStore'
 import { useModalLock } from '../../utils/modalLock'
 import { fmt } from '../../utils/formatting'
+import { tapUpgrade, useIsSelected } from './upgradeDetail'
 
 type Props = { onClose: () => void }
 
@@ -40,12 +41,40 @@ function FactoryEctoUpgrade({
   const isMax = level >= meta.maxLevel
   const cost = loc2UpgradeCost(upgradeKey, level)
   const affordable = !isMax && ecto >= cost
+  const selected = useIsSelected(`ecto:${upgradeKey}`)
+  const handleTap = () =>
+    tapUpgrade(`ecto:${upgradeKey}`, () => ({
+      icon,
+      title,
+      desc: desc(level),
+      effect: desc(level),
+      level,
+      maxLevel: meta.maxLevel,
+      cost,
+      currency: 'ecto',
+      isMax,
+      canAfford: affordable,
+      onBuy: () => buyEctoUpgrade(upgradeKey),
+    }))
 
   return (
-    <div className="ff-card flex items-center gap-3 p-3">
+    <div
+      onClick={handleTap}
+      className="ff-card flex items-center gap-3 p-3"
+      style={{
+        touchAction: 'manipulation',
+        cursor: 'pointer',
+        outline: selected ? '3px solid #9d4edd' : 'none',
+        outlineOffset: -1,
+        borderRadius: 16,
+      }}
+    >
       <span style={{ fontSize: 26 }}>{icon}</span>
       <div className="flex-1 min-w-0">
-        <div className="ff-display text-sm" style={{ color: 'var(--ff-text-light)' }}>
+        <div
+          className="ff-display text-sm"
+          style={{ color: 'var(--ff-text-light)' }}
+        >
           {title}
         </div>
         <div
@@ -68,32 +97,29 @@ function FactoryEctoUpgrade({
           ))}
         </div>
       </div>
-      <button
-        type="button"
-        onClick={() => buyEctoUpgrade(upgradeKey)}
-        disabled={!affordable}
-        aria-label={isMax ? 'Максимум' : `Купить за ${cost} эктоплазмы`}
-        className="ff-tile flex-shrink-0"
+      {/* Справа — статус/цена (read-only; покупка в детальном экране). */}
+      <div
+        className="flex-shrink-0"
         style={{
-          touchAction: 'manipulation',
           minWidth: 64,
           height: 40,
           padding: '0 8px',
+          borderRadius: 12,
           fontSize: 12,
           fontWeight: 700,
           color: '#fff',
-          opacity: affordable ? 1 : 0.5,
-          ['--ff-tile-from' as never]: '#c084fc',
-          ['--ff-tile-to' as never]: '#7e22ce',
-          ['--ff-tile-border' as never]: '#4c1d95',
+          opacity: affordable || isMax ? 1 : 0.5,
+          background: isMax
+            ? 'linear-gradient(#9aa39a,#6f786f)'
+            : 'linear-gradient(#c084fc,#7e22ce)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           gap: 4,
         }}
       >
-        {isMax ? 'MAX' : `🟣 ${fmt(cost)}`}
-      </button>
+        {isMax ? 'MAX' : selected ? 'Открыть →' : `🟣 ${fmt(cost)}`}
+      </div>
     </div>
   )
 }
@@ -110,6 +136,24 @@ export function ConveyorModal({ onClose }: Props) {
   const affordable = !isMax && gold >= cost
   const curMs = conveyorIntervalMs(level)
   const nextMs = isMax ? curMs : conveyorIntervalMs(level + 1)
+  // 2 тапа: выбор → деталь (покупка conveyorSpeed там).
+  const convSelected = useIsSelected('conveyorSpeed')
+  const tapConveyor = () =>
+    tapUpgrade('conveyorSpeed', () => ({
+      icon: '🏭',
+      title: 'Скорость конвейера',
+      desc: 'Как часто фабрика выпускает лягушку L7.',
+      effect: isMax
+        ? `Выпуск раз в ${(curMs / 1000).toFixed(1)}с (макс)`
+        : `${(curMs / 1000).toFixed(1)}с → ${(nextMs / 1000).toFixed(1)}с`,
+      level,
+      maxLevel: meta.maxLevel,
+      cost,
+      currency: 'gold',
+      isMax,
+      canAfford: affordable,
+      onBuy: buyConveyorSpeed,
+    }))
 
   return (
     <div
@@ -173,8 +217,18 @@ export function ConveyorModal({ onClose }: Props) {
             overscrollBehavior: 'contain',
           }}
         >
-          {/* Инфо */}
-          <div className="ff-card flex items-center gap-3 p-3">
+          {/* Инфо (тап → деталь) */}
+          <div
+            onClick={tapConveyor}
+            className="ff-card flex items-center gap-3 p-3"
+            style={{
+              touchAction: 'manipulation',
+              cursor: 'pointer',
+              outline: convSelected ? '3px solid #d97706' : 'none',
+              outlineOffset: -1,
+              borderRadius: 16,
+            }}
+          >
             <span style={{ fontSize: 26 }}>🏭</span>
             <div className="flex-1 min-w-0">
               <div
@@ -206,32 +260,29 @@ export function ConveyorModal({ onClose }: Props) {
                 ))}
               </div>
             </div>
-            <button
-              type="button"
-              onClick={buyConveyorSpeed}
-              disabled={!affordable}
-              aria-label={isMax ? 'Максимум' : `Купить за ${cost} золота`}
-              className="ff-tile flex-shrink-0"
+            {/* Справа — статус/цена (read-only; покупка в детальном экране). */}
+            <div
+              className="flex-shrink-0"
               style={{
-                touchAction: 'manipulation',
                 minWidth: 64,
                 height: 40,
                 padding: '0 8px',
+                borderRadius: 12,
                 fontSize: 12,
                 fontWeight: 700,
                 color: '#fff',
-                opacity: affordable ? 1 : 0.5,
-                ['--ff-tile-from' as never]: '#fcd34d',
-                ['--ff-tile-to' as never]: '#d97706',
-                ['--ff-tile-border' as never]: '#78350f',
+                opacity: affordable || isMax ? 1 : 0.5,
+                background: isMax
+                  ? 'linear-gradient(#9aa39a,#6f786f)'
+                  : 'linear-gradient(#fcd34d,#d97706)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 4,
               }}
             >
-              {isMax ? 'MAX' : `🪙 ${fmt(cost)}`}
-            </button>
+              {isMax ? 'MAX' : convSelected ? 'Открыть →' : `🪙 ${fmt(cost)}`}
+            </div>
           </div>
 
           {/* Авто-открытие боксов (эктоплазма) */}

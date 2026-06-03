@@ -6,6 +6,7 @@ import {
 } from '../../store/gameStore'
 import { useModalLock } from '../../utils/modalLock'
 import { fmt } from '../../utils/formatting'
+import { tapUpgrade, useIsSelected } from './upgradeDetail'
 
 type Props = { onClose: () => void }
 
@@ -31,9 +32,35 @@ function EctoBuyRow({
   const isMax = level >= meta.maxLevel
   const cost = loc2UpgradeCost(upgradeKey, level)
   const affordable = !isMax && ectoplasm >= cost
+  // 2 тапа: выбор → крупная деталь (покупка там).
+  const selected = useIsSelected(`ecto:${upgradeKey}`)
+  const handleTap = () =>
+    tapUpgrade(`ecto:${upgradeKey}`, () => ({
+      icon,
+      title,
+      desc,
+      effect: desc,
+      level,
+      maxLevel: meta.maxLevel,
+      cost,
+      currency: 'ecto',
+      isMax,
+      canAfford: affordable,
+      onBuy: () => buyEctoUpgrade(upgradeKey),
+    }))
 
   return (
-    <div className="ff-card flex items-center gap-3 p-3">
+    <div
+      onClick={handleTap}
+      className="ff-card flex items-center gap-3 p-3"
+      style={{
+        touchAction: 'manipulation',
+        cursor: 'pointer',
+        outline: selected ? '3px solid #9d4edd' : 'none',
+        outlineOffset: -1,
+        borderRadius: 16,
+      }}
+    >
       <span style={{ fontSize: 26 }}>{icon}</span>
       <div className="flex-1 min-w-0">
         <div
@@ -63,32 +90,29 @@ function EctoBuyRow({
           ))}
         </div>
       </div>
-      <button
-        type="button"
-        onClick={() => buyEctoUpgrade(upgradeKey)}
-        disabled={!affordable}
-        aria-label={isMax ? 'Максимум' : `Купить за ${cost} эктоплазмы`}
-        className="ff-tile flex-shrink-0"
+      {/* Справа — статус/цена (read-only; покупка в детальном экране). */}
+      <div
+        className="flex-shrink-0"
         style={{
-          touchAction: 'manipulation',
           minWidth: 64,
           height: 40,
           padding: '0 8px',
+          borderRadius: 12,
           fontSize: 12,
           fontWeight: 700,
           color: '#fff',
-          opacity: affordable ? 1 : 0.5,
-          ['--ff-tile-from' as never]: '#c77dff',
-          ['--ff-tile-to' as never]: '#7b2cbf',
-          ['--ff-tile-border' as never]: '#5a189a',
+          opacity: affordable || isMax ? 1 : 0.5,
+          background: isMax
+            ? 'linear-gradient(#9aa39a,#6f786f)'
+            : 'linear-gradient(#c77dff,#7b2cbf)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           gap: 4,
         }}
       >
-        {isMax ? 'MAX' : `💜 ${fmt(cost)}`}
-      </button>
+        {isMax ? 'MAX' : selected ? 'Открыть →' : `💜 ${fmt(cost)}`}
+      </div>
     </div>
   )
 }

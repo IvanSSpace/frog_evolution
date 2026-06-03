@@ -39,6 +39,7 @@ import { MilestoneToast } from './components/CosmicHub/bestiary/MilestoneToast'
 import { AchievementToast } from './ui/components/AchievementToast'
 import { MixerDevPage } from './ui/components/MixerDevPage'
 import { GooDialog } from './ui/components/GooDialog'
+import { UpgradeDetailOverlay } from './ui/components/UpgradeDetailOverlay'
 // import { TutorialOverlay } from './components/Tutorial/TutorialOverlay'  // disabled 2026-05-18 — Phase 23 onboarding replaces
 import { OnboardingController } from './components/Onboarding/OnboardingController'
 import { CaptainBirthModal } from './components/Captain/CaptainBirthModal'
@@ -483,6 +484,7 @@ function App() {
       <MilestoneToast />
       <AchievementToast />
       <GooDialog />
+      <UpgradeDetailOverlay />
       {/* Phase 19-05 (UX-08): tutorial overlay — DISABLED 2026-05-18.
           Phase 23 onboarding (OnboardingController) полностью заменяет:
           - first-box → Phase 23 Beat 2 (tap hint banner)

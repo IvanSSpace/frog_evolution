@@ -24,6 +24,7 @@ import { fmt } from '../../utils/formatting'
 import { useModalLock } from '../../utils/modalLock'
 import { useCosmosUnlocked } from '../../utils/cosmosGate'
 import { CosmicShopTab } from '../../components/CosmicHub/CosmicShopTab'
+import { tapUpgrade, useIsSelected } from './upgradeDetail'
 
 type Props = { onClose: () => void }
 type ShopTab = 'upgrades' | 'ships' | 'cosmos'
@@ -260,8 +261,35 @@ export function UpgradeCard({
   const { t } = useTranslation()
   useGameStore((s) => s.numberFormat) // subscribe to format changes
   const th = THEME[theme] ?? THEME.slime
+  // 2 тапа: 1-й выбирает (подсветка), 2-й открывает деталь (покупка там).
+  const selected = useIsSelected(title)
+  const handleTap = () => {
+    if (locked) return
+    tapUpgrade(title, () => ({
+      icon,
+      title,
+      effect,
+      level,
+      maxLevel,
+      cost,
+      currency: 'gold',
+      isMax,
+      canAfford,
+      onBuy,
+    }))
+  }
   return (
-    <div className="ff-card p-3 flex items-center gap-3">
+    <div
+      onClick={handleTap}
+      style={{
+        touchAction: 'manipulation',
+        cursor: locked ? 'default' : 'pointer',
+        outline: selected ? '3px solid #4d8a26' : 'none',
+        outlineOffset: -1,
+        borderRadius: 16,
+      }}
+      className="ff-card p-3 flex items-center gap-3"
+    >
       <div
         className="flex-shrink-0 w-14 h-14 flex items-center justify-center text-3xl rounded-2xl"
         style={{
@@ -287,9 +315,8 @@ export function UpgradeCard({
         </div>
       </div>
 
-      <button
-        onClick={onBuy}
-        disabled={isMax || locked || !canAfford}
+      {/* Справа — статус/цена (read-only; покупка в детальном экране). */}
+      <div
         className={`ff-btn text-sm ${
           isMax || locked
             ? 'ff-btn-grey'
@@ -297,11 +324,14 @@ export function UpgradeCard({
               ? 'ff-btn-green'
               : 'ff-btn-red'
         }`}
+        style={{ pointerEvents: 'none' }}
       >
         {isMax ? (
           t('shop.max')
         ) : locked ? (
           <>🔒 {lockLabel}</>
+        ) : selected ? (
+          'Открыть →'
         ) : (
           <>
             {fmt(cost)}{' '}
@@ -317,7 +347,7 @@ export function UpgradeCard({
             />
           </>
         )}
-      </button>
+      </div>
     </div>
   )
 }
@@ -425,13 +455,17 @@ export function AutoCollectCard() {
   const canAfford = gold >= cost
   const cooldownMs = getAutoCollectCooldownMs(level)
   const cooldownSec = Math.round(cooldownMs / 1000)
-  const nextCooldownMs = isMax ? cooldownMs : getAutoCollectCooldownMs(level + 1)
+  const nextCooldownMs = isMax
+    ? cooldownMs
+    : getAutoCollectCooldownMs(level + 1)
   const nextCooldownSec = Math.round(nextCooldownMs / 1000)
   const cur =
     level === 0
       ? t('shop.autoCollect.not_bought')
       : t('shop.autoCollect.cooldown', { sec: cooldownSec })
-  const next = isMax ? '' : t('shop.autoCollect.cooldown', { sec: nextCooldownSec })
+  const next = isMax
+    ? ''
+    : t('shop.autoCollect.cooldown', { sec: nextCooldownSec })
   return (
     <UpgradeCard
       icon={
