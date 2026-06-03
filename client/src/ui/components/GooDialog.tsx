@@ -49,7 +49,8 @@ export function GooDialog() {
           position: 'fixed',
           left: 0,
           right: 0,
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 84px)',
+          // Над футером: футер = 9% высоты экрана + safe-area + зазор.
+          bottom: 'calc(9vh + env(safe-area-inset-bottom, 0px) + 14px)',
           zIndex: 250,
           display: 'flex',
           justifyContent: 'center',
@@ -61,53 +62,64 @@ export function GooDialog() {
           style={{
             pointerEvents: 'auto',
             width: 'min(94vw, 420px)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            padding: '12px 14px 12px 12px',
+            // Левый паддинг = место под крупного персонажа, торчащего слева.
+            padding: '14px 16px 14px 112px',
             borderRadius: 22,
             border: '3px solid #6fae3e',
             background:
               'linear-gradient(135deg, #f3fbe6 0%, #e4f4cf 60%, #d8efbe 100%)',
             boxShadow: '0 10px 30px rgba(40,70,20,0.28)',
             position: 'relative',
+            // overflow видим — персонаж вылазит выше карточки.
             animation: closing
               ? 'goo-out 200ms ease-in forwards'
               : 'goo-pop 320ms cubic-bezier(.2,.85,.3,1)',
           }}
         >
-          {/* Персонаж слева */}
+          {/* Персонаж — крупный, вылазит за карточку (вверх-влево). */}
           <div
             style={{
-              width: 72,
-              height: 72,
-              flexShrink: 0,
-              borderRadius: '50%',
-              background:
-                'radial-gradient(circle at 40% 35%, #ffffff, #cfe9a8 75%)',
-              border: '2px solid #6fae3e',
+              position: 'absolute',
+              left: -10,
+              bottom: -6,
+              width: 138,
+              height: 150,
+              pointerEvents: 'none',
               display: 'flex',
-              alignItems: 'center',
+              alignItems: 'flex-end',
               justifyContent: 'center',
-              boxShadow: 'inset 0 -3px 8px rgba(80,120,40,0.25)',
             }}
           >
+            {/* Halo-кружок за персонажем */}
+            <div
+              style={{
+                position: 'absolute',
+                left: 12,
+                bottom: 4,
+                width: 112,
+                height: 112,
+                borderRadius: '50%',
+                background:
+                  'radial-gradient(circle at 45% 42%, #ffffffdd, #c7e9a0 66%, rgba(199,233,160,0) 72%)',
+              }}
+            />
             <img
               src="/goo_collector.webp"
               alt=""
               draggable={false}
               style={{
-                width: 56,
-                height: 56,
+                position: 'relative',
+                width: 134,
+                height: 134,
                 objectFit: 'contain',
+                filter: 'drop-shadow(0 6px 8px rgba(40,70,20,0.35))',
                 animation: 'goo-bob 2.4s ease-in-out infinite',
-                pointerEvents: 'none',
               }}
             />
           </div>
 
           {/* Текст справа */}
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ minWidth: 0 }}>
             {data.title && (
               <div
                 style={{
