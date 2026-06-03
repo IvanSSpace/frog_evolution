@@ -90,6 +90,8 @@ type Events = {
   'building:open': { modal: string }
   // Ачивка разблокирована (достигнут target) → показать тост (AchievementToast).
   'achievement:unlocked': { id: string }
+  // Онбординг-диалог с персонажем goo_collector (GooDialog). title опц.
+  'goo:dialog': { text: string; title?: string }
   // Loc3 центр эволюции: модалка выбрала лягушку уровня level → начать эволюцию.
   // durationMs — опц. (DEV-тест короткого таймера; по умолчанию ~сутки).
   'evolution:start': { level: number; durationMs?: number }

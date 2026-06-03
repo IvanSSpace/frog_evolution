@@ -37,6 +37,7 @@ import { GalleryModal } from './components/Gallery/GalleryModal'
 import { GalleryDetailModal } from './components/Gallery/GalleryDetailModal'
 import { MilestoneToast } from './components/CosmicHub/bestiary/MilestoneToast'
 import { AchievementToast } from './ui/components/AchievementToast'
+import { GooDialog } from './ui/components/GooDialog'
 // import { TutorialOverlay } from './components/Tutorial/TutorialOverlay'  // disabled 2026-05-18 — Phase 23 onboarding replaces
 import { OnboardingController } from './components/Onboarding/OnboardingController'
 import { CaptainBirthModal } from './components/Captain/CaptainBirthModal'
@@ -48,6 +49,7 @@ import { installFrogTierDevHelpers } from './utils/devFrogTiers'
 import { installOnboardingDevHelpers } from './utils/onboardingDevHelpers'
 import { installCaptainBirthDevHelpers } from './utils/captainBirthDevHelpers'
 import { installAchievementDevHelpers } from './utils/achievementDevHelpers'
+import { installGooDialogDevHelpers } from './utils/gooDialogDevHelpers'
 // Tech-debt 2026-05-19: DEV-only Telegram safe-area visual overlay.
 // Tree-shaken из production через import.meta.env.DEV guard в самом компоненте
 // + mount-site guard ниже. Toggle: window.__toggleTgSafeAreaDebug().
@@ -360,6 +362,8 @@ function App() {
     installCaptainBirthDevHelpers()
     // Ачивки: dev-тест уведомления (__testAchievement(id?) / __listAchievements()).
     installAchievementDevHelpers()
+    // Онбординг-диалог goo_collector: dev-вызов (__gooDialog(text?, title?)).
+    installGooDialogDevHelpers()
     // Tech-debt 2026-05-19: TG safe-area overlay helper
     // (__toggleTgSafeAreaDebug / __tgSafeAreaDebug). Default OFF.
     const tgSafeAreaDevCleanup = installTelegramSafeAreaDebugHelper()
@@ -477,6 +481,7 @@ function App() {
           event from cosmicSlice.setBestiaryBit; visible regardless of Cosmic Hub state. */}
       <MilestoneToast />
       <AchievementToast />
+      <GooDialog />
       {/* Phase 19-05 (UX-08): tutorial overlay — DISABLED 2026-05-18.
           Phase 23 onboarding (OnboardingController) полностью заменяет:
           - first-box → Phase 23 Beat 2 (tap hint banner)
