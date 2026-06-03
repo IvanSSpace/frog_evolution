@@ -173,7 +173,11 @@ function DetailInner() {
           onClick={buy}
           disabled={d.isMax || !d.canAfford}
           className={`ff-btn ${
-            d.isMax ? 'ff-btn-grey' : d.canAfford ? 'ff-btn-green' : 'ff-btn-red'
+            d.isMax
+              ? 'ff-btn-grey'
+              : d.canAfford
+                ? 'ff-btn-green'
+                : 'ff-btn-red'
           }`}
           style={{
             touchAction: 'manipulation',
