@@ -1,5 +1,6 @@
 // MixerDevPage — СЛУЖЕБНАЯ (dev-only) страница тюнинга треков.
 //
+// Открывается ТОЛЬКО по прямому URL: /mixer (или #mixer) — кнопок в UI нет.
 // Назначение: быстро покрутить громкости голосов текущего трека вживую и
 // кнопкой «Скопировать параметры» выгрузить значения (trackId + channel: dB),
 // чтобы передать их в чат — я по ним правлю исходник трека (voice.volume.value).
@@ -7,6 +8,13 @@
 // НЕ ПОПАДАЕТ В ПРОД-БАНДЛ: компонент и его монтирование обёрнуты в
 // import.meta.env.DEV — Vite (define) сворачивает ветку в false и tree-shake'ит
 // весь модуль из production-сборки (как TelegramSafeAreaDebugOverlay).
+
+// Путь активации страницы. Поддерживаем pathname (vite SPA-fallback в dev) и hash.
+function isMixerPath(): boolean {
+  if (typeof window === 'undefined') return false
+  const { pathname, hash } = window.location
+  return pathname === '/mixer' || hash.replace(/^#\/?/, '') === 'mixer'
+}
 
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -23,20 +31,20 @@ export function MixerDevPage() {
 
 function MixerDevPageInner() {
   const snap = useAudioPlayer()
-  const [open, setOpen] = useState(false)
+  const active = isMixerPath()
   const [channels, setChannels] = useState<MixerChannel[]>([])
   const [vals, setVals] = useState<Record<string, number>>({})
   const [copied, setCopied] = useState(false)
 
   // Перечитываем каналы при смене трека/статуса (голоса есть после build).
   useEffect(() => {
-    if (!open) return
+    if (!active) return
     const ch = audioPlayer.getMixer()
     setChannels(ch)
     const v: Record<string, number> = {}
     for (const c of ch) v[c.id] = c.getDb()
     setVals(v)
-  }, [open, snap.trackId, snap.status])
+  }, [active, snap.trackId, snap.status])
 
   const setDb = (c: MixerChannel, db: number) => {
     c.setDb(db)
@@ -73,32 +81,8 @@ function MixerDevPageInner() {
     )
   }
 
-  // Свёрнуто — только маленькая кнопка-открывашка.
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        style={{
-          position: 'fixed',
-          left: 8,
-          bottom: 8,
-          zIndex: 100000,
-          width: 40,
-          height: 40,
-          borderRadius: 8,
-          background: 'rgba(20,28,40,0.85)',
-          border: '1px solid #5fe3d0',
-          color: '#5fe3d0',
-          fontSize: 20,
-          touchAction: 'manipulation',
-        }}
-        aria-label="Mixer (dev)"
-      >
-        🎚
-      </button>
-    )
-  }
+  // Не на /mixer — ничего не рендерим (страница доступна только по прямому URL).
+  if (!active) return null
 
   const trackName = snap.trackId
     ? TRACK_META[snap.trackId].id
@@ -144,7 +128,7 @@ function MixerDevPageInner() {
         </button>
         <button
           type="button"
-          onClick={() => setOpen(false)}
+          onClick={() => window.location.assign('/')}
           style={{ ...devBtn, color: '#ff8a8a', borderColor: '#7f1d1d' }}
           aria-label="close"
         >
