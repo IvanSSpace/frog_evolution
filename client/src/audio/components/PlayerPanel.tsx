@@ -257,7 +257,7 @@ export function PlayerPanel() {
                 'linear-gradient(180deg, rgba(95,227,208,0.95) 0%, rgba(167,139,250,0.35) 100%)',
               borderRadius: 2,
               transformOrigin: '50% 0%',
-              transform: isPlaying ? 'rotate(44deg)' : 'rotate(-20deg)',
+              transform: isPlaying ? 'rotate(-44deg)' : 'rotate(20deg)',
               transition:
                 'transform 520ms cubic-bezier(0.34,1.56,0.64,1), box-shadow 300ms, opacity 300ms',
               boxShadow: isPlaying
