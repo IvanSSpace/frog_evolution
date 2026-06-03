@@ -385,7 +385,7 @@ function GooCollectorCard() {
     <UpgradeCard
       icon={
         <img
-          src="/goo_collector_icon.png"
+          src="/goo_collector_icon.webp"
           alt=""
           style={{
             height: '74%',
@@ -436,7 +436,7 @@ export function AutoCollectCard() {
     <UpgradeCard
       icon={
         <img
-          src="/goo_collector_icon.png"
+          src="/goo_collector_icon.webp"
           alt=""
           style={{
             height: '74%',
@@ -514,7 +514,7 @@ export function MagnetCard({
     <UpgradeCard
       icon={
         <img
-          src="/magnet_drone_icon.png"
+          src="/magnet_drone_icon.webp"
           alt=""
           style={{
             height: '74%',
@@ -670,25 +670,25 @@ const SHIP_STAT_META: {
 }[] = [
   {
     key: 'corpus',
-    icon: '/ship/ship_health.png',
+    icon: '/ship/ship_health.webp',
     name: 'Корпус',
     desc: 'Прочность (макс HP)',
   },
   {
     key: 'armor',
-    icon: '/ship/ship_armor.png',
+    icon: '/ship/ship_armor.webp',
     name: 'Броня',
     desc: 'Меньше урона и риска',
   },
   {
     key: 'engine',
-    icon: '/ship/ship_turbo.png',
+    icon: '/ship/ship_turbo.webp',
     name: 'Двигатель',
     desc: 'Больше золота',
   },
   {
     key: 'scanner',
-    icon: '/ship/ship_radar.png',
+    icon: '/ship/ship_radar.webp',
     name: 'Сканер',
     desc: 'Больше находок',
   },
@@ -761,7 +761,7 @@ function ShipsUpgradeTab() {
               </span>
               <span className="text-xs text-emerald-700 font-bold inline-flex items-center gap-1">
                 <img
-                  src="/ship/ship_health.png"
+                  src="/ship/ship_health.webp"
                   alt=""
                   style={{
                     width: 16,

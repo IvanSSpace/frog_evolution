@@ -208,8 +208,8 @@ export function BottomBar({
             icon="inventory"
             imgSrc={
               zone === 'frogs'
-                ? '/footer_icons/grid2.png'
-                : '/footer_icons/grid.png'
+                ? '/footer_icons/grid2.webp'
+                : '/footer_icons/grid.webp'
             }
             skin="amber"
             title={zone === 'frogs' ? 'Здания' : 'Лягушки'}

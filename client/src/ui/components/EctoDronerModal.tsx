@@ -162,7 +162,7 @@ export function EctoDronerModal({ onClose }: Props) {
           {/* Дрон + баланс */}
           <div className="ff-card flex items-center gap-3 p-3">
             <img
-              src="/drone_loc2.png"
+              src="/drone_loc2.webp"
               alt=""
               style={{ height: 56, width: 'auto', objectFit: 'contain' }}
             />

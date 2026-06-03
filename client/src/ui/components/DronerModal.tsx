@@ -117,7 +117,7 @@ function DroneDistribution() {
         </div>
       </div>
       <DistributionRow
-        icon="/goo_collector_icon.png"
+        icon="/goo_collector_icon.webp"
         name="Сборщики"
         count={collectors}
         canAdd={free > 0}
@@ -125,7 +125,7 @@ function DroneDistribution() {
         onSub={() => setDist(collectors - 1, magnets)}
       />
       <DistributionRow
-        icon="/magnet_drone_icon.png"
+        icon="/magnet_drone_icon.webp"
         name="Магниты"
         count={magnets}
         canAdd={free > 0}
@@ -314,7 +314,7 @@ export function DronerModal({ onClose }: Props) {
               {droneBatteries.map((b, i) => (
                 <ChargeRow
                   key={`d${i}`}
-                  icon="/goo_collector_icon.png"
+                  icon="/goo_collector_icon.webp"
                   name={
                     droneBatteries.length > 1
                       ? `Дрон-сборщик ${i + 1}`
@@ -326,7 +326,7 @@ export function DronerModal({ onClose }: Props) {
               {magnetBatteries.map((b, i) => (
                 <ChargeRow
                   key={`m${i}`}
-                  icon="/magnet_drone_icon.png"
+                  icon="/magnet_drone_icon.webp"
                   name={
                     magnetBatteries.length > 1
                       ? `Магнит-дрон ${i + 1}`

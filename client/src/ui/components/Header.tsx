@@ -88,7 +88,7 @@ export function Header({ onOpenIncome }: { onOpenIncome?: () => void }) {
                 title="Эссенция"
               >
                 <img
-                  src="/essence.png"
+                  src="/essence.webp"
                   alt=""
                   style={{
                     width: '1.2em',

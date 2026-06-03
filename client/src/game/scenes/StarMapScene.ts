@@ -210,7 +210,7 @@ export class StarMapScene extends Phaser.Scene {
 
   preload() {
     this.load.image('spaceShip', '/spaceShip.webp')
-    this.load.image('nebulaBg', '/nebula_bh_maelstrom.png')
+    this.load.image('nebulaBg', '/nebula_bh_maelstrom.webp')
   }
 
   create() {

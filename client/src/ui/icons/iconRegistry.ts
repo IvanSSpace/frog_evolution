@@ -74,13 +74,13 @@ export const ICON_EMOJI: Record<IconName, string> = {
 // 2026-05-28: footer-иконки лежат в public/footer_icons/ как PNG.
 // Override маппит ключи на свои пути; остальные ищутся в /icons/<name>.svg.
 const ICON_OVERRIDE: Partial<Record<IconName, string>> = {
-  'frog-shop': '/footer_icons/icon_frog.png',
-  'upgrade-shop': '/footer_icons/icon_upgrade.png',
-  ship: '/footer_icons/icon_rocket.png',
-  bestiary: '/footer_icons/icon_book.png',
-  inventory: '/footer_icons/icon_backpack.png',
-  clan: '/footer_icons/icon_shield.png',
-  essence: '/essence.png',
+  'frog-shop': '/footer_icons/icon_frog.webp',
+  'upgrade-shop': '/footer_icons/icon_upgrade.webp',
+  ship: '/footer_icons/icon_rocket.webp',
+  bestiary: '/footer_icons/icon_book.webp',
+  inventory: '/footer_icons/icon_backpack.webp',
+  clan: '/footer_icons/icon_shield.webp',
+  essence: '/essence.webp',
 }
 
 /** Путь к SVG/PNG-ассету иконки в public/icons/. */

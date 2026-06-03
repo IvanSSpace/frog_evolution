@@ -93,7 +93,7 @@ export function GooDialog() {
             }}
           >
             <img
-              src="/goo_collector.png"
+              src="/goo_collector.webp"
               alt=""
               draggable={false}
               style={{

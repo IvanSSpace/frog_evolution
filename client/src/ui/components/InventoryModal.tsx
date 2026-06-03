@@ -237,7 +237,7 @@ export function InventoryModal({ onClose }: Props) {
     filled.push(
       <InvSlot
         key={id}
-        icon={`/gens/gen${tier}.png`}
+        icon={`/gens/gen${tier}.webp`}
         count={count}
         tint="#a855f7"
         label={`🧬 Мутаген-${tier} — для эволюции лягушек ${range}. Космо-лут.`}

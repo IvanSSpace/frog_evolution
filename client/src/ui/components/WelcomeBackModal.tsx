@@ -39,7 +39,7 @@ export function WelcomeBackModal({ earned, hours, onClose }: Props) {
               animation: 'discFloat 2.2s ease-in-out infinite',
             }}
           >
-            <img src="/goo_collector.png" alt="" style={{ width: 72, height: 72, objectFit: 'contain' }} />
+            <img src="/goo_collector.webp" alt="" style={{ width: 72, height: 72, objectFit: 'contain' }} />
           </div>
 
           <h2

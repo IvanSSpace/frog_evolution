@@ -38,7 +38,7 @@ interface BuildingDef {
 const BUILDINGS: readonly BuildingDef[] = [
   {
     key: 'bld_main',
-    src: '/builds/main.png',
+    src: '/builds/main.webp',
     xFrac: 0.53,
     yFrac: 0.33,
     widthFrac: 0.37,
@@ -46,14 +46,14 @@ const BUILDINGS: readonly BuildingDef[] = [
   },
   {
     key: 'bld_collector',
-    src: '/builds/collector.png',
+    src: '/builds/collector.webp',
     xFrac: 0.3,
     yFrac: 0.54,
     widthFrac: 0.27,
   },
   {
     key: 'bld_storage',
-    src: '/builds/storage.png',
+    src: '/builds/storage.webp',
     xFrac: 0.77,
     yFrac: 0.54,
     widthFrac: 0.29,
@@ -61,7 +61,7 @@ const BUILDINGS: readonly BuildingDef[] = [
   },
   {
     key: 'bld_droner',
-    src: '/builds/droner.png',
+    src: '/builds/droner.webp',
     xFrac: 0.3,
     yFrac: 0.82,
     widthFrac: 0.37,
@@ -69,14 +69,14 @@ const BUILDINGS: readonly BuildingDef[] = [
   },
   {
     key: 'bld_space',
-    src: '/builds/space.png',
+    src: '/builds/space.webp',
     xFrac: 0.77,
     yFrac: 0.78,
     widthFrac: 0.32,
   },
   {
     key: 'bld_scaner',
-    src: '/builds/scaner.png',
+    src: '/builds/scaner.webp',
     xFrac: 0.5,
     yFrac: 0.97,
     widthFrac: 0.27,
@@ -90,7 +90,7 @@ const BUILDINGS: readonly BuildingDef[] = [
 const BUILDINGS_LOC2: readonly BuildingDef[] = [
   {
     key: 'bld2_factory',
-    src: '/builds_loc2/frog_factory2loc.png',
+    src: '/builds_loc2/frog_factory2loc.webp',
     xFrac: 0.28,
     yFrac: 0.54,
     widthFrac: 0.46,
@@ -98,7 +98,7 @@ const BUILDINGS_LOC2: readonly BuildingDef[] = [
   },
   {
     key: 'bld2_droner',
-    src: '/builds_loc2/droner2loc.png',
+    src: '/builds_loc2/droner2loc.webp',
     xFrac: 0.74,
     yFrac: 0.48,
     widthFrac: 0.34,
@@ -108,21 +108,21 @@ const BUILDINGS_LOC2: readonly BuildingDef[] = [
   // Боковые с меньшим yFrac → ниже depth → рендерятся ЗА центральной.
   {
     key: 'bld2_capsule',
-    src: '/builds_loc2/capsule1_semi.png',
+    src: '/builds_loc2/capsule1_semi.webp',
     xFrac: 0.3,
     yFrac: 0.83,
     widthFrac: 0.28,
   },
   {
     key: 'bld2_capsule',
-    src: '/builds_loc2/capsule1_semi.png',
+    src: '/builds_loc2/capsule1_semi.webp',
     xFrac: 0.74,
     yFrac: 0.83,
     widthFrac: 0.28,
   },
   {
     key: 'bld2_capsule',
-    src: '/builds_loc2/capsule1_semi.png',
+    src: '/builds_loc2/capsule1_semi.webp',
     xFrac: 0.52,
     yFrac: 0.92,
     widthFrac: 0.28,
@@ -134,7 +134,7 @@ const BUILDINGS_LOC2: readonly BuildingDef[] = [
 const BUILDINGS_LOC3: readonly BuildingDef[] = [
   {
     key: 'bld3_monument',
-    src: '/builds_loc3/monument.png',
+    src: '/builds_loc3/monument.webp',
     xFrac: 0.56,
     yFrac: 0.52,
     widthFrac: 0.4,
@@ -142,7 +142,7 @@ const BUILDINGS_LOC3: readonly BuildingDef[] = [
   },
   {
     key: 'bld3_evoblock',
-    src: '/builds_loc3/evoblock1_tansparent.png',
+    src: '/builds_loc3/evoblock1_tansparent.webp',
     xFrac: 0.5,
     yFrac: 0.9,
     widthFrac: 0.62,
@@ -181,17 +181,17 @@ export class BuildingsController {
     for (const b of BUILDINGS_LOC3) scene.load.image(b.key, b.src)
     // Слои активного блока эволюции: зад (active) под лягушками + перёд (стекло)
     // поверх. Лягушки плавают между ними.
-    scene.load.image('bld3_evoblock_back', '/builds_loc3/evoblockActive.png')
+    scene.load.image('bld3_evoblock_back', '/builds_loc3/evoblockActive.webp')
     scene.load.image(
       'bld3_evoblock_front',
-      '/builds_loc3/evoblock_transparent2.png',
+      '/builds_loc3/evoblock_transparent2.webp',
     )
     // Состояния коллектора по заполнению (превью + будущая механика).
-    scene.load.image('bld_collector_empty', '/builds/collector_empty.png')
-    scene.load.image('bld_collector_full', '/builds/collector_full.png')
+    scene.load.image('bld_collector_empty', '/builds/collector_empty.webp')
+    scene.load.image('bld_collector_full', '/builds/collector_full.webp')
     // Капсула репликации loc2: «заряженная» текстура (показывается во время
     // мерджа поверх обычной, плавно). capsule2_semi — того же размера.
-    scene.load.image('bld2_capsule_full', '/builds_loc2/capsule2_semi.png')
+    scene.load.image('bld2_capsule_full', '/builds_loc2/capsule2_semi.webp')
   }
 
   show(locId: number): void {

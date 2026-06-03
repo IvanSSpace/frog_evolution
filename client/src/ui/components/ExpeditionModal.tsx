@@ -212,7 +212,7 @@ function ShipInventory({ loot }: { loot: ExpeditionView['loot'] }) {
       />
       {loot.mutagen1 > 0 && (
         <InvSlot
-          icon="/gens/gen1.png"
+          icon="/gens/gen1.webp"
           count={loot.mutagen1}
           tint="#a855f7"
           label="🧬 Мутаген-1 — для эволюции лягушек L1-6. Космо-лут."
@@ -220,7 +220,7 @@ function ShipInventory({ loot }: { loot: ExpeditionView['loot'] }) {
       )}
       {loot.mutagen2 > 0 && (
         <InvSlot
-          icon="/gens/gen2.png"
+          icon="/gens/gen2.webp"
           count={loot.mutagen2}
           tint="#a855f7"
           label="🧬 Мутаген-2 — для эволюции лягушек L7-12. Космо-лут."
@@ -228,7 +228,7 @@ function ShipInventory({ loot }: { loot: ExpeditionView['loot'] }) {
       )}
       {loot.mutagen3 > 0 && (
         <InvSlot
-          icon="/gens/gen3.png"
+          icon="/gens/gen3.webp"
           count={loot.mutagen3}
           tint="#a855f7"
           label="🧬 Мутаген-3 — для эволюции лягушек L13-18. Космо-лут."

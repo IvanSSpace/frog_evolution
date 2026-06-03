@@ -6,10 +6,10 @@ import type { LocationConfig } from '../../store/gameStore'
 
 // Финальные картинки локаций (placeholder-эмодзи выпилены 2026-06-02).
 const LOCATION_IMG: Record<number, string> = {
-  1: '/locations/swamp.png', // Болото
-  2: '/locations/forestIcon2.png', // Лес
-  3: '/locations/planetIcon3.png', // Континент
-  6: '/locations/galaxyIcon4.png', // Звёздная карта
+  1: '/locations/swamp.webp', // Болото
+  2: '/locations/forestIcon2.webp', // Лес
+  3: '/locations/planetIcon3.webp', // Континент
+  6: '/locations/galaxyIcon4.webp', // Звёздная карта
 }
 
 export function LocationButton({

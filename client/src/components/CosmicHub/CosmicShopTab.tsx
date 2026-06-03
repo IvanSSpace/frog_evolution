@@ -134,7 +134,7 @@ export function CosmicShopTab() {
               }`}
             >
               <img
-                src="/essence.png"
+                src="/essence.webp"
                 alt=""
                 style={{
                   width: '1.1em',
