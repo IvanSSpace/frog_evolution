@@ -19,6 +19,7 @@ import type { MergeController } from './MergeController'
 import type { BuildingsController } from './BuildingsController'
 import { BASE_SCALE, DPR } from './types'
 import type { FrogData } from './types'
+import { useGameStore } from '../../../store/gameStore'
 
 // Точки маршрута: [xFrac, yFracZone] (yFracZone: 0 = верх зоны строений = height,
 // 1 = низ = 2*height; отрицательные = зона лягушек выше).
@@ -72,6 +73,7 @@ interface CapsuleSlot {
   pendingTimer: Phaser.Time.TimerEvent | null
   marks: Phaser.GameObjects.Text[]
   fxGreen: Phaser.GameObjects.Image | null // «заряженная» текстура поверх колбы
+  merged: boolean // performMerge уже применён (мердж в данных) — для suspend()
 }
 
 export class CapsuleMergeController {
@@ -106,6 +108,7 @@ export class CapsuleMergeController {
       pendingTimer: null,
       marks: [],
       fxGreen: null,
+      merged: false,
     }))
   }
 
@@ -529,6 +532,7 @@ export class CapsuleMergeController {
       // performMerge: спираль + removeFrog + spawnFrog ОТЛОЖЕННО (~410мс).
       const beforeIds = new Set(this.scene.frogs.map((f) => f.id))
       this.merge.performMerge(a, b, fl.x, fl.y)
+      slot.merged = true // мердж применён в данные — suspend() не дублирует
       this.scene.time.delayedCall(VORTEX_WAIT, () => {
         if (slot.state !== 'busy') return
         const fresh = this.scene.frogs.filter((f) => !beforeIds.has(f.id))
@@ -586,6 +590,7 @@ export class CapsuleMergeController {
     slot.reservedIds = []
     slot.frogs = []
     slot.arrived = 0
+    slot.merged = false
     if (cooldown) {
       // Остывание: зелёная «заряженная» плавно возвращается в cyan за 10с.
       slot.state = 'cooldown'
@@ -629,11 +634,61 @@ export class CapsuleMergeController {
       slot.frogs = []
       slot.reservedIds = []
       slot.arrived = 0
+      slot.merged = false
       slot.state = 'idle'
       slot.cooldownUntil = 0
     }
     // Остывающие overlay'и (slot.fxGreen уже null) — уничтожаем явно, иначе
     // силуэт capsule_full утекает на другие локации после смены.
+    for (const ov of this.coolingOverlays) {
+      this.scene.tweens.killTweensOf(ov)
+      ov.destroy()
+    }
+    this.coolingOverlays = []
+    this.reserved.clear()
+  }
+
+  // suspend() — вызывается при УХОДЕ с Loc2 (вместо reset). «Живые» капсулы:
+  // НЕ откатываем маршруты, а доводим начатые мерджи до результата в ДАННЫХ
+  // (поле продвигается, на возврате spawn покажет +1) и СОХРАНЯЕМ кулдауны
+  // капсул (cooldownUntil абсолютен в scene.time, который непрерывен между
+  // локациями). На возврате капсулы не рестартуют, нет «снова идут в капсулу».
+  // Визуалы гибнут с clearField — позицию середины маршрута не реконструируем,
+  // но прогресс мерджа продолжается (завершается), а не сбрасывается.
+  suspend(): void {
+    const store = useGameStore.getState()
+    const now = this.scene.time.now
+    for (const slot of this.slots) {
+      if (slot.pendingTimer) {
+        slot.pendingTimer.remove()
+        slot.pendingTimer = null
+      }
+      this.clearMark(slot)
+      this.clearFxImmediate(slot)
+      this.releaseSurvivors(slot)
+      // Busy и мердж ещё НЕ применён → домердживаем пару в данные (L7-11 → +1).
+      // (Если merged=true — performMerge уже изменил данные, не дублируем.)
+      if (slot.state === 'busy' && !slot.merged) {
+        const lvl = slot.frogs[0]?.level
+        if (typeof lvl === 'number' && lvl >= 7 && lvl < CAP_LEVEL) {
+          store.removeFrogFromLocation(2, lvl)
+          store.removeFrogFromLocation(2, lvl)
+          store.addFrogToLocation(2, lvl + 1)
+        }
+      }
+      slot.frogs = []
+      slot.reservedIds = []
+      slot.arrived = 0
+      slot.merged = false
+      // Кулдаун переживает переключение (не обнуляем). Pending/busy → если капсула
+      // ещё «остывает» оставляем cooldown, иначе idle (готова брать пару на возврате).
+      if (slot.cooldownUntil > now) {
+        slot.state = 'cooldown'
+      } else {
+        slot.state = 'idle'
+        slot.cooldownUntil = 0
+      }
+    }
     for (const ov of this.coolingOverlays) {
       this.scene.tweens.killTweensOf(ov)
       ov.destroy()

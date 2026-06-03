@@ -1144,8 +1144,9 @@ export class MainScene extends Phaser.Scene {
     this.loc2Bg.setVisible(false)
     this.loc3Bg.setVisible(false)
     this.bg.setVisible(true)
-    // Сброс капсул-мерджа loc2: вернуть едущих лягушек в норму перед clearField.
-    this.capsuleMerge.reset()
+    // Loc2 «живые» капсулы: suspend (не reset) — начатые мерджи доводятся в
+    // данные, кулдауны сохраняются. На возврате нет отката «снова идут в капсулу».
+    this.capsuleMerge.suspend()
     // Сброс ecto-дрона + чистка лежащей эктоплазмы перед сменой локации.
     this.ectoDrone.reset()
     for (const p of this.ectoPoops) {
