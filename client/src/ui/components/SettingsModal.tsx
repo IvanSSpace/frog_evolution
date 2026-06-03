@@ -259,12 +259,9 @@ function BestiaryTab() {
     zIndex: 2,
     width: 40,
     height: 40,
-    ['--ff-tile-from' as never]: '#a7f3d0',
-    ['--ff-tile-to' as never]: '#34d399',
-    ['--ff-tile-border' as never]: '#065f46',
-    color: '#fff',
     fontSize: 22,
     lineHeight: 1,
+    touchAction: 'manipulation',
   }
 
   return (
@@ -347,7 +344,7 @@ function BestiaryTab() {
           onClick={prev}
           aria-label="prev"
           disabled={idx === 0}
-          className="ff-tile"
+          className="ff-crt-btn"
           style={{
             ...arrowStyle,
             left: 24,
@@ -362,7 +359,7 @@ function BestiaryTab() {
           onClick={next}
           aria-label="next"
           disabled={idx === total - 1}
-          className="ff-tile"
+          className="ff-crt-btn"
           style={{
             ...arrowStyle,
             right: 24,
@@ -435,7 +432,7 @@ function BestiaryCard({
       <button
         type="button"
         onClick={cycleTier}
-        className="ff-btn ff-btn-green"
+        className="ff-crt-btn"
         style={{
           position: 'absolute',
           top: 12,
@@ -444,7 +441,9 @@ function BestiaryCard({
           height: 40,
           padding: 0,
           fontSize: 18,
+          fontWeight: 700,
           zIndex: 2,
+          touchAction: 'manipulation',
         }}
         aria-label="cycle evolution tier"
       >

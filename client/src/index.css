@@ -309,7 +309,7 @@ body.modal-open .ship-follow-btn {
 .ff-crt {
   position: relative;
   overflow: hidden;
-  animation: crt-glitch 7.3s infinite;
+  animation: crt-glitch 9s infinite;
 }
 /* Сканлайны: бегут + мерцают. */
 .ff-crt::before {
@@ -401,7 +401,7 @@ body.modal-open .ship-follow-btn {
     opacity: 1;
   }
 }
-/* Редкие глитч-сбои: почти всё время неподвижно, короткие дёрганья. */
+/* Редкие глитч-сбои: почти всё время неподвижно, очень короткие лёгкие дёрганья. */
 @keyframes crt-glitch {
   0%,
   46%,
@@ -409,23 +409,54 @@ body.modal-open .ship-follow-btn {
     transform: translate(0, 0) skewX(0deg);
   }
   47% {
-    transform: translate(-2px, 0) skewX(-1.4deg);
+    transform: translate(-0.8px, 0) skewX(-0.5deg);
   }
-  47.8% {
-    transform: translate(2px, 0) skewX(1deg);
+  47.7% {
+    transform: translate(0.8px, 0) skewX(0.35deg);
   }
-  48.6% {
+  48.4% {
     transform: translate(0, 0) skewX(0deg);
   }
-  81% {
+  82% {
     transform: translate(0, 0) skewX(0deg);
   }
-  81.6% {
-    transform: translate(1px, 1px) skewX(0.6deg);
+  82.5% {
+    transform: translate(0, 0.6px) skewX(0.2deg);
   }
-  82.4% {
+  83% {
     transform: translate(0, 0) skewX(0deg);
   }
+}
+
+/* Терминал-кнопка: зелёный фосфор, моно-шрифт, свечение. Под стиль .ff-crt. */
+.ff-crt-btn {
+  font-family: ui-monospace, 'Press Start 2P', 'VT323', monospace;
+  background: rgba(8, 20, 10, 0.88);
+  border: 1.5px solid #5fd83a;
+  color: #9ef27a;
+  text-shadow: 0 0 6px rgba(95, 216, 58, 0.6);
+  box-shadow:
+    0 0 8px rgba(95, 216, 58, 0.25),
+    inset 0 0 10px rgba(95, 216, 58, 0.08);
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+  transition:
+    background 0.12s,
+    box-shadow 0.12s,
+    color 0.12s;
+}
+.ff-crt-btn:hover {
+  background: rgba(95, 216, 58, 0.16);
+  box-shadow:
+    0 0 12px rgba(95, 216, 58, 0.45),
+    inset 0 0 12px rgba(95, 216, 58, 0.12);
+}
+.ff-crt-btn:active {
+  background: rgba(95, 216, 58, 0.28);
+  color: #d9ffc4;
+}
+.ff-crt-btn:disabled {
+  opacity: 0.4;
 }
 @media (prefers-reduced-motion: reduce) {
   .ff-crt,
