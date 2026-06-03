@@ -298,3 +298,139 @@ body.modal-open .ship-follow-btn {
   position: relative;
   z-index: 1;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   2026-06-03: .ff-crt — «старый космический терминал, который лагает».
+   Сканлайны (как ff-scanlines), но: бегут вниз, мерцают как уставшая ЭЛТ,
+   плюс бегущая полоса развёртки и редкие глитч-сбои (дёрганье/skew). Только
+   для бестиария — клан-чат остаётся на статичном ff-scanlines.
+   Всё на transform/opacity (compositor-friendly), без тяжёлых per-frame фильтров.
+   ══════════════════════════════════════════════════════════════════════════ */
+.ff-crt {
+  position: relative;
+  overflow: hidden;
+  animation: crt-glitch 7.3s infinite;
+}
+/* Сканлайны: бегут + мерцают. */
+.ff-crt::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(95, 216, 58, 0) 0px,
+    rgba(95, 216, 58, 0) 2px,
+    rgba(95, 216, 58, 0.07) 3px,
+    rgba(95, 216, 58, 0.07) 4px
+  );
+  background-size: 100% 4px;
+  animation:
+    crt-scan 0.6s steps(4) infinite,
+    crt-flicker 4.2s steps(1, end) infinite;
+}
+/* Бегущая полоса развёртки (CRT roll). */
+.ff-crt::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -40%;
+  height: 40%;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(130, 255, 120, 0.06),
+    transparent
+  );
+  animation: crt-roll 5.5s linear infinite;
+}
+.ff-crt > * {
+  position: relative;
+  z-index: 1;
+}
+@keyframes crt-scan {
+  from {
+    background-position-y: 0;
+  }
+  to {
+    background-position-y: 4px;
+  }
+}
+@keyframes crt-roll {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(350%);
+  }
+}
+@keyframes crt-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  8% {
+    opacity: 0.82;
+  }
+  9% {
+    opacity: 1;
+  }
+  37% {
+    opacity: 1;
+  }
+  38% {
+    opacity: 0.68;
+  }
+  39% {
+    opacity: 1;
+  }
+  72% {
+    opacity: 0.9;
+  }
+  73% {
+    opacity: 1;
+  }
+  91% {
+    opacity: 0.78;
+  }
+  92% {
+    opacity: 1;
+  }
+}
+/* Редкие глитч-сбои: почти всё время неподвижно, короткие дёрганья. */
+@keyframes crt-glitch {
+  0%,
+  46%,
+  100% {
+    transform: translate(0, 0) skewX(0deg);
+  }
+  47% {
+    transform: translate(-2px, 0) skewX(-1.4deg);
+  }
+  47.8% {
+    transform: translate(2px, 0) skewX(1deg);
+  }
+  48.6% {
+    transform: translate(0, 0) skewX(0deg);
+  }
+  81% {
+    transform: translate(0, 0) skewX(0deg);
+  }
+  81.6% {
+    transform: translate(1px, 1px) skewX(0.6deg);
+  }
+  82.4% {
+    transform: translate(0, 0) skewX(0deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ff-crt,
+  .ff-crt::before,
+  .ff-crt::after {
+    animation: none;
+  }
+}

@@ -399,7 +399,7 @@ function BestiaryCard({
   if (!isUnlocked) {
     return (
       <div
-        className="ff-card ff-scanlines p-5 flex items-center justify-center"
+        className="ff-card ff-crt p-5 flex items-center justify-center"
         style={{
           minHeight: BESTIARY_CARD_MIN_HEIGHT,
           border: 'none',
@@ -424,7 +424,7 @@ function BestiaryCard({
 
   return (
     <div
-      className="ff-card ff-scanlines p-5 flex flex-col items-center gap-2 relative"
+      className="ff-card ff-crt p-5 flex flex-col items-center gap-2 relative"
       style={{
         minHeight: BESTIARY_CARD_MIN_HEIGHT,
         border: 'none',
