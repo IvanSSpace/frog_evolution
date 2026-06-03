@@ -8,6 +8,7 @@
 // Тест: window.__gooDialog(text?, title?) (см. gooDialogDevHelpers).
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { eventBus } from '../../store/eventBus'
 
 interface DialogData {
@@ -35,7 +36,9 @@ export function GooDialog() {
 
   if (!data) return null
 
-  return (
+  // Портал в body — иначе position:fixed цепляется к трансформированному
+  // контейнеру игры и bottom считается от него (диалог висит в середине).
+  return createPortal(
     <>
       <style>{`
         @keyframes goo-pop { 0%{transform:translateY(40px) scale(.92);opacity:0}
@@ -190,6 +193,7 @@ export function GooDialog() {
           </button>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }
