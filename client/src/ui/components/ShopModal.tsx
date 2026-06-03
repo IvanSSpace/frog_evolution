@@ -52,8 +52,8 @@ export function ShopModal({ onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
         className="ff-panel ff-pop"
         style={{
-          width: '100%',
-          maxWidth: 380,
+          width: 'min(100%, 380px)',
+          marginInline: 'auto',
           height: '100%',
           display: 'flex',
           flexDirection: 'column',

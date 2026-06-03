@@ -29,8 +29,8 @@ export function SerumModal({ onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
         className="ff-panel ff-pop relative"
         style={{
-          width: '100%',
-          maxWidth: 380,
+          width: 'min(100%, 380px)',
+          marginInline: 'auto',
           height: 'calc(100dvh - var(--ui-top-offset) - var(--tg-chrome-pad) - 9vh)',
           display: 'flex',
           flexDirection: 'column',
