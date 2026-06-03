@@ -59,6 +59,10 @@ const CONVERGE_MS = 450 // схождение к центру в конце сл
 const VORTEX_WAIT = 480 // performMerge спавнит merged отложенно (~410мс)
 const CAP_LEVEL = 12 // L12+ не авто-мерджим
 const COOLDOWN_MS = 10000 // кулдаун капсулы после мерджа (3 колбы = throughput)
+// Оценка полного времени от старта pending до применения мерджа в данные
+// (pending + mark + маршрут + слияние). Используется для time-gated офлайн-резолва
+// при уходе с Loc2: мердж завершается только когда РЕАЛЬНО прошло это время.
+const MERGE_TOTAL_MS = PENDING_DELAY + MARK_SHOW_MS + 3500 + MERGE_FLOAT_MS + CONVERGE_MS
 
 type CapsuleState = 'idle' | 'pending' | 'busy' | 'cooldown'
 
@@ -74,6 +78,7 @@ interface CapsuleSlot {
   marks: Phaser.GameObjects.Text[]
   fxGreen: Phaser.GameObjects.Image | null // «заряженная» текстура поверх колбы
   merged: boolean // performMerge уже применён (мердж в данных) — для suspend()
+  completeAt: number // абсолютное scene.time когда мердж применится (0 = неактивен)
 }
 
 export class CapsuleMergeController {
@@ -88,6 +93,11 @@ export class CapsuleMergeController {
   // но overlay ещё ~10с фейдится. Трекаем отдельно, чтобы reset() (смена локации)
   // их уничтожил — иначе остаются в scene root и видны силуэтом на других локациях.
   private coolingOverlays: Phaser.GameObjects.Image[] = []
+  // Мерджи, начатые на Loc2 но не завершённые к моменту ухода. Резолвятся по
+  // wall-clock в flushDueOfflineMerges() (зовётся в update() на ЛЮБОЙ локе) —
+  // «расчёты Loc2 идут всегда», но мердж засчитывается только когда реально
+  // прошло его время (анти-абуз быстрого переключения локаций).
+  private offlineMerges: { level: number; completeAt: number }[] = []
 
   constructor(
     scene: MainScene,
@@ -109,6 +119,7 @@ export class CapsuleMergeController {
       marks: [],
       fxGreen: null,
       merged: false,
+      completeAt: 0,
     }))
   }
 
@@ -152,6 +163,9 @@ export class CapsuleMergeController {
     slot.state = 'pending'
     slot.frogs = [a, b]
     slot.reservedIds = [a.id, b.id]
+    // Абсолютное время, когда мердж применится — для time-gated офлайн-резолва
+    // при уходе с локации (мердж засчитается только если реально прошло время).
+    slot.completeAt = this.scene.time.now + MERGE_TOTAL_MS
     this.reserved.add(a.id)
     this.reserved.add(b.id)
     slot.pendingTimer = this.scene.time.delayedCall(PENDING_DELAY, () =>
@@ -591,6 +605,7 @@ export class CapsuleMergeController {
     slot.frogs = []
     slot.arrived = 0
     slot.merged = false
+    slot.completeAt = 0
     if (cooldown) {
       // Остывание: зелёная «заряженная» плавно возвращается в cyan за 10с.
       slot.state = 'cooldown'
@@ -635,9 +650,12 @@ export class CapsuleMergeController {
       slot.reservedIds = []
       slot.arrived = 0
       slot.merged = false
+      slot.completeAt = 0
       slot.state = 'idle'
       slot.cooldownUntil = 0
     }
+    // reset() — полный teardown (destroy). Офлайн-очередь тоже сбрасываем.
+    this.offlineMerges = []
     // Остывающие overlay'и (slot.fxGreen уже null) — уничтожаем явно, иначе
     // силуэт capsule_full утекает на другие локации после смены.
     for (const ov of this.coolingOverlays) {
@@ -648,15 +666,14 @@ export class CapsuleMergeController {
     this.reserved.clear()
   }
 
-  // suspend() — вызывается при УХОДЕ с Loc2 (вместо reset). «Живые» капсулы:
-  // НЕ откатываем маршруты, а доводим начатые мерджи до результата в ДАННЫХ
-  // (поле продвигается, на возврате spawn покажет +1) и СОХРАНЯЕМ кулдауны
-  // капсул (cooldownUntil абсолютен в scene.time, который непрерывен между
-  // локациями). На возврате капсулы не рестартуют, нет «снова идут в капсулу».
-  // Визуалы гибнут с clearField — позицию середины маршрута не реконструируем,
-  // но прогресс мерджа продолжается (завершается), а не сбрасывается.
+  // suspend() — вызывается при УХОДЕ с Loc2 (вместо reset). Time-gated «жизнь»:
+  // НЕ завершаем мерджи мгновенно (это был бы абуз быстрого переключения) —
+  // записываем начатые в offlineMerges с их АБСОЛЮТНЫМ completeAt. Они резолвятся
+  // в данные только когда реально прошло их время (flushDueOfflineMerges в update,
+  // на любой локе). Кулдауны капсул сохраняем (scene.time непрерывен между локами).
+  // Данные НЕ меняем здесь. Визуалы гибнут с clearField; 2 лягушки пары остаются
+  // в locationFrogs (мердж ещё не применён) → на возврате респавнятся.
   suspend(): void {
-    const store = useGameStore.getState()
     const now = this.scene.time.now
     for (const slot of this.slots) {
       if (slot.pendingTimer) {
@@ -666,22 +683,20 @@ export class CapsuleMergeController {
       this.clearMark(slot)
       this.clearFxImmediate(slot)
       this.releaseSurvivors(slot)
-      // Busy и мердж ещё НЕ применён → домердживаем пару в данные (L7-11 → +1).
-      // (Если merged=true — performMerge уже изменил данные, не дублируем.)
-      if (slot.state === 'busy' && !slot.merged) {
+      // Начатый, но НЕ применённый мердж (pending/busy, performMerge не сработал)
+      // → в офлайн-очередь с его completeAt. Дозреет по реальному времени.
+      if ((slot.state === 'pending' || slot.state === 'busy') && !slot.merged) {
         const lvl = slot.frogs[0]?.level
-        if (typeof lvl === 'number' && lvl >= 7 && lvl < CAP_LEVEL) {
-          store.removeFrogFromLocation(2, lvl)
-          store.removeFrogFromLocation(2, lvl)
-          store.addFrogToLocation(2, lvl + 1)
+        if (typeof lvl === 'number' && lvl >= 7 && lvl < CAP_LEVEL && slot.completeAt > 0) {
+          this.offlineMerges.push({ level: lvl, completeAt: slot.completeAt })
         }
       }
       slot.frogs = []
       slot.reservedIds = []
       slot.arrived = 0
       slot.merged = false
-      // Кулдаун переживает переключение (не обнуляем). Pending/busy → если капсула
-      // ещё «остывает» оставляем cooldown, иначе idle (готова брать пару на возврате).
+      slot.completeAt = 0
+      // Кулдаун переживает переключение (не обнуляем). Иначе idle.
       if (slot.cooldownUntil > now) {
         slot.state = 'cooldown'
       } else {
@@ -695,6 +710,35 @@ export class CapsuleMergeController {
     }
     this.coolingOverlays = []
     this.reserved.clear()
+  }
+
+  // Применяет ДОЗРЕВШИЕ офлайн-мерджи (now ≥ completeAt) в данные locationFrogs[2].
+  // Зовётся в update() на ЛЮБОЙ локе → «расчёты Loc2 идут всегда», но мердж
+  // засчитывается только по реально прошедшему времени (не абуз).
+  flushDueOfflineMerges(): void {
+    if (this.offlineMerges.length === 0) return
+    const now = this.scene.time.now
+    const store = useGameStore.getState()
+    const remaining: { level: number; completeAt: number }[] = []
+    for (const m of this.offlineMerges) {
+      if (now >= m.completeAt) {
+        store.removeFrogFromLocation(2, m.level)
+        store.removeFrogFromLocation(2, m.level)
+        store.addFrogToLocation(2, m.level + 1)
+      } else {
+        remaining.push(m)
+      }
+    }
+    this.offlineMerges = remaining
+  }
+
+  // Вход на Loc2: дозревшие УЖЕ применены away-флашем в update() (на Loc1/3 пока
+  // тебя не было). Здесь только очищаем очередь — не-дозревшие пары остались в
+  // locationFrogs, капсулы перехватят их заново визуально (честно, без абуза).
+  // НЕ флашим тут: transitionEnd идёт ПОСЛЕ респавна → флаш дал бы десинк
+  // (2 лягушки уже на поле, а данные бы их убрали).
+  onEnterLoc2(): void {
+    this.offlineMerges = []
   }
 
   destroy(): void {

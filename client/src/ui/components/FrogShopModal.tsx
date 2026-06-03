@@ -46,10 +46,10 @@ export function FrogShopModal({ onClose }: Props) {
         inset: 0,
         zIndex: 100,
         display: 'flex',
-        alignItems: 'flex-end',
+        alignItems: 'stretch',
         justifyContent: 'center',
         pointerEvents: 'auto',
-        padding: '0 12px calc(9vh + env(safe-area-inset-bottom, 0px) + 6px)',
+        padding: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad) + 6px) 12px calc(9vh + env(safe-area-inset-bottom, 0px) + 6px)',
       }}
     >
       <div
@@ -58,7 +58,7 @@ export function FrogShopModal({ onClose }: Props) {
         style={{
           width: '100%',
           maxWidth: 380,
-          height: 'calc(100dvh - var(--ui-top-offset) - var(--tg-chrome-pad) - 9vh)',
+          height: '100%',
           display: 'flex',
           flexDirection: 'column',
         }}

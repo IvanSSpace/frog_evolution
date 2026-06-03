@@ -953,6 +953,11 @@ export class MainScene extends Phaser.Scene {
     // позиций выдадут неправильные значения.
     if (this.isLocationTransitioning) return
 
+    // «Расчёты Loc2 идут всегда»: дозревшие офлайн-мерджи капсул (начатые до ухода
+    // с Loc2) применяются по wall-clock на ЛЮБОЙ локе — анти-абуз быстрого
+    // переключения (мердж засчитывается только по реально прошедшему времени).
+    this.capsuleMerge.flushDueOfflineMerges()
+
     const store = useGameStore.getState()
 
     // Фоновый доход с лягушек на НЕ-текущих локациях + L18 absolute bonus.
@@ -1164,6 +1169,8 @@ export class MainScene extends Phaser.Scene {
     this.configureWorld(id, this.transitionFromZone)
     // Loc2: воссоздать сохранённые фабрик-боксы (persist между заходами).
     if (id === 2) this.factoryBox.restore()
+    // Loc2: добить дозревшие офлайн-мерджи капсул в данные ДО старта тика капсул.
+    if (id === 2) this.capsuleMerge.onEnterLoc2()
     // Loc1: выложить накопленные офлайн-боксы (если буфер ждал захода на Loc1).
     if (id === 1) this.drainOfflineBoxFill()
   }
