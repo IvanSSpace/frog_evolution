@@ -151,7 +151,7 @@ const create: CreateTrack = (Tone): TrackInstance => {
           },
         }).connect(bassFilter),
       )
-      bass808.volume.value = -11 // приглушён (был -6) — слишком басило
+      bass808.volume.value = -26.5
 
       // Пиано (lo-fi FM)
       const pianoRev = nodes.add(
@@ -180,7 +180,7 @@ const create: CreateTrack = (Tone): TrackInstance => {
           },
         }).connect(pianoFilter),
       )
-      piano.volume.value = -10
+      piano.volume.value = -22
 
       // Лид-синт
       const leadRev = nodes.add(
@@ -210,7 +210,7 @@ const create: CreateTrack = (Tone): TrackInstance => {
           },
         }).connect(leadFilter),
       )
-      lead.volume.value = -14
+      lead.volume.value = -29
 
       // Кик
       const kickFilter = nodes.add(
@@ -225,7 +225,7 @@ const create: CreateTrack = (Tone): TrackInstance => {
           envelope: { attack: 0.001, decay: 0.35, sustain: 0, release: 0.1 },
         }).connect(kickFilter),
       )
-      kick.volume.value = -10 // приглушён (был -8) — меньше низа
+      kick.volume.value = -22.5
 
       // Снэр + body
       const snareFilter = nodes.add(
@@ -239,7 +239,7 @@ const create: CreateTrack = (Tone): TrackInstance => {
           envelope: { attack: 0.001, decay: 0.15, sustain: 0 },
         }).connect(snareFilter),
       )
-      snare.volume.value = -16
+      snare.volume.value = -20.5
       const snareBody = nodes.add(
         new Tone.MembraneSynth({
           pitchDecay: 0.02,
@@ -247,7 +247,7 @@ const create: CreateTrack = (Tone): TrackInstance => {
           envelope: { attack: 0.001, decay: 0.08, sustain: 0, release: 0.05 },
         }).connect(masterComp),
       )
-      snareBody.volume.value = -18
+      snareBody.volume.value = -10
 
       // Хай-хеты
       const hatFilter = nodes.add(
@@ -261,14 +261,14 @@ const create: CreateTrack = (Tone): TrackInstance => {
           envelope: { attack: 0.001, decay: 0.04, sustain: 0 },
         }).connect(hatFilter),
       )
-      hatClosed.volume.value = -22
+      hatClosed.volume.value = -20
       const hatOpen = nodes.add(
         new Tone.NoiseSynth({
           noise: { type: 'white' },
           envelope: { attack: 0.001, decay: 0.25, sustain: 0 },
         }).connect(hatFilter),
       )
-      hatOpen.volume.value = -24
+      hatOpen.volume.value = -23
 
       // Пэд
       const padRev = nodes.add(
