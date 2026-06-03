@@ -250,14 +250,14 @@ export function PlayerPanel() {
             style={{
               position: 'absolute',
               top: 20,
-              right: -2,
+              left: -2,
               width: 2,
               height: 150,
               background:
                 'linear-gradient(180deg, rgba(95,227,208,0.95) 0%, rgba(167,139,250,0.35) 100%)',
               borderRadius: 2,
               transformOrigin: '50% 0%',
-              transform: isPlaying ? 'rotate(-44deg)' : 'rotate(20deg)',
+              transform: isPlaying ? 'rotate(44deg)' : 'rotate(-20deg)',
               transition:
                 'transform 520ms cubic-bezier(0.34,1.56,0.64,1), box-shadow 300ms, opacity 300ms',
               boxShadow: isPlaying
@@ -272,7 +272,7 @@ export function PlayerPanel() {
             style={{
               position: 'absolute',
               top: 12,
-              right: -10,
+              left: -10,
               width: 18,
               height: 18,
               borderRadius: '50%',
