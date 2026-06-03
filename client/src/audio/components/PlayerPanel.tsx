@@ -243,25 +243,31 @@ export function PlayerPanel() {
               : '',
           )}
 
-          {/* Tonearm — pivot чуть выше правого края диска; рычаг сметает
-              угол по диску: playing rotate(-44deg) — игла лежит ближе к
-              центру; paused rotate(20deg) — рычаг отведён в сторону. */}
+          {/* Лазерный стилус (футуристичный тонарм): неоновый луч от эмиттера
+              к диску. playing rotate(-44deg) — луч «читает» дорожку у центра,
+              ярко горит; paused rotate(20deg) — отведён и пригашен. */}
           <div
             style={{
               position: 'absolute',
               top: 20,
               right: -2,
-              width: 4,
+              width: 2,
               height: 150,
-              background: 'linear-gradient(180deg, #6b7280, #374151)',
+              background:
+                'linear-gradient(180deg, rgba(95,227,208,0.95) 0%, rgba(167,139,250,0.35) 100%)',
               borderRadius: 2,
               transformOrigin: '50% 0%',
               transform: isPlaying ? 'rotate(-44deg)' : 'rotate(20deg)',
-              transition: 'transform 520ms cubic-bezier(0.34, 1.56, 0.64, 1)',
-              boxShadow: '-1px 0 0 rgba(255,255,255,0.15) inset',
+              transition:
+                'transform 520ms cubic-bezier(0.34,1.56,0.64,1), box-shadow 300ms, opacity 300ms',
+              boxShadow: isPlaying
+                ? '0 0 10px rgba(95,227,208,0.9), 0 0 20px rgba(95,227,208,0.5)'
+                : '0 0 4px rgba(95,227,208,0.3)',
+              opacity: isPlaying ? 1 : 0.5,
               zIndex: 1,
             }}
           />
+          {/* Эмиттер — светящийся орб у основания луча. */}
           <div
             style={{
               position: 'absolute',
@@ -271,10 +277,13 @@ export function PlayerPanel() {
               height: 18,
               borderRadius: '50%',
               background:
-                'radial-gradient(circle at 35% 35%, #d1d5db, #4b5563)',
-              border: '2px solid #1f2937',
+                'radial-gradient(circle at 38% 35%, #ffffff 0%, #5fe3d0 45%, #1e6f6a 100%)',
+              border: '1px solid rgba(95,227,208,0.7)',
               zIndex: 2,
-              boxShadow: '0 2px 4px rgba(0,0,0,0.4)',
+              boxShadow: isPlaying
+                ? '0 0 12px rgba(95,227,208,0.9), 0 0 22px rgba(95,227,208,0.5)'
+                : '0 0 6px rgba(95,227,208,0.4)',
+              transition: 'box-shadow 300ms',
             }}
           />
         </div>
