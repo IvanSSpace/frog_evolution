@@ -94,7 +94,7 @@ export function GalleryModal({ onClose }: GalleryModalProps) {
         alignItems: 'flex-end',
         justifyContent: 'center',
         pointerEvents: 'auto',
-        padding: '0 16px 4px',
+        padding: '0 12px calc(9vh + env(safe-area-inset-bottom, 0px) + 6px)',
       }}
     >
       <div
@@ -103,17 +103,17 @@ export function GalleryModal({ onClose }: GalleryModalProps) {
         style={{
           width: '100%',
           maxWidth: 380,
-          height: '75vh',
+          height: 'calc(100dvh - var(--ui-top-offset) - var(--tg-chrome-pad) - 9vh)',
           display: 'flex',
           flexDirection: 'column',
         }}
       >
         <div
-          className="flex items-center justify-between px-5 pt-4 pb-3"
+          className="flex items-center justify-between px-4 pt-2 pb-2"
           style={{ borderBottom: '1px solid rgba(77,107,31,0.4)' }}
         >
           <h2
-            className="ff-display ff-stroke-white text-3xl"
+            className="ff-display ff-stroke-white text-xl"
             style={{ color: '#15803d', letterSpacing: 1.5 }}
           >
             Доходы
@@ -122,7 +122,7 @@ export function GalleryModal({ onClose }: GalleryModalProps) {
             type="button"
             onClick={onClose}
             aria-label="Закрыть"
-            className="ff-tile w-9 h-9 text-lg flex-shrink-0"
+            className="ff-tile w-8 h-8 text-base flex-shrink-0"
             style={{
               ['--ff-tile-from' as never]: '#fca5a5',
               ['--ff-tile-to' as never]: '#dc2626',

@@ -74,7 +74,7 @@ export function EvolutionModal({ onClose }: Props) {
         alignItems: 'flex-end',
         justifyContent: 'center',
         pointerEvents: 'auto',
-        padding: '0 16px 4px',
+        padding: '0 12px calc(9vh + env(safe-area-inset-bottom, 0px) + 6px)',
       }}
     >
       <div
@@ -83,17 +83,17 @@ export function EvolutionModal({ onClose }: Props) {
         style={{
           width: '100%',
           maxWidth: 380,
-          maxHeight: '75vh',
+          maxHeight: 'calc(100dvh - var(--ui-top-offset) - var(--tg-chrome-pad) - 9vh)',
           display: 'flex',
           flexDirection: 'column',
         }}
       >
         <div
-          className="flex items-center justify-between px-5 pt-4 pb-3"
+          className="flex items-center justify-between px-4 pt-2 pb-2"
           style={{ borderBottom: '1px solid rgba(77,107,31,0.4)' }}
         >
           <h2
-            className="ff-display ff-stroke-white text-3xl"
+            className="ff-display ff-stroke-white text-xl"
             style={{ color: '#16a34a', letterSpacing: 1.5 }}
           >
             Центр эволюции
@@ -102,7 +102,7 @@ export function EvolutionModal({ onClose }: Props) {
             type="button"
             onClick={onClose}
             aria-label="Закрыть"
-            className="ff-tile w-9 h-9 text-lg"
+            className="ff-tile w-8 h-8 text-base"
             style={{
               touchAction: 'manipulation',
               ['--ff-tile-from' as never]: '#fca5a5',

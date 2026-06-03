@@ -73,11 +73,11 @@ export function GalleryDetailModal() {
       >
         {/* Header */}
         <div
-          className="flex items-center justify-between px-5 pt-4 pb-3 flex-shrink-0"
+          className="flex items-center justify-between px-4 pt-2 pb-2 flex-shrink-0"
           style={{ borderBottom: '1px solid rgba(77,107,31,0.4)' }}
         >
           <h2
-            className="ff-display ff-stroke-white text-3xl flex items-center gap-2"
+            className="ff-display ff-stroke-white text-xl flex items-center gap-2"
             style={{ color: '#15803d', letterSpacing: 1.5 }}
           >
             <span>{ARCHETYPE_EMOJI[archetype]}</span>
