@@ -106,11 +106,12 @@ function DetailInner() {
 
         {/* Заголовок + уровень */}
         <div
+          className="ff-display ff-stroke-white"
           style={{
-            fontSize: 22,
-            fontWeight: 800,
+            fontSize: 24,
             color: '#2f6b1f',
             lineHeight: 1.1,
+            letterSpacing: 0.5,
           }}
         >
           {d.title}
@@ -166,31 +167,21 @@ function DetailInner() {
           {d.effect}
         </div>
 
-        {/* Кнопка покупки */}
+        {/* Кнопка покупки — из дизайн-системы (ff-btn). */}
         <button
           type="button"
           onClick={buy}
           disabled={d.isMax || !d.canAfford}
+          className={`ff-btn ${
+            d.isMax ? 'ff-btn-grey' : d.canAfford ? 'ff-btn-green' : 'ff-btn-red'
+          }`}
           style={{
             touchAction: 'manipulation',
             marginTop: 18,
             width: '100%',
+            fontSize: 18,
             padding: '14px 16px',
-            borderRadius: 16,
-            border: 'none',
-            fontSize: 17,
-            fontWeight: 800,
-            color: '#fff',
-            cursor: d.isMax || !d.canAfford ? 'not-allowed' : 'pointer',
-            opacity: d.isMax || !d.canAfford ? 0.55 : 1,
-            background: d.isMax
-              ? 'linear-gradient(#9aa39a, #6f786f)'
-              : 'linear-gradient(#7cc24a, #4d8a26)',
-            boxShadow: d.isMax ? 'none' : '0 3px 0 #3a6a1c',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
+            borderRadius: 18,
           }}
         >
           {d.isMax ? (
