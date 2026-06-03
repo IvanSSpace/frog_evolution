@@ -22,6 +22,19 @@ body.modal-open .ship-follow-btn {
   display: none;
 }
 
+/* Скрываем скроллбар во всех модалках (.ff-panel) — скролл остаётся, полоски нет. */
+.ff-panel,
+.ff-panel * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.ff-panel::-webkit-scrollbar,
+.ff-panel *::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    2026-05-28: Тёмная тема модалок. Центральная точка истины для .ff-panel,
    .ff-card, .ff-display, .ff-rarity-*. Header/Footer (.ff-bar) живут в

@@ -94,7 +94,7 @@ export function GalleryModal({ onClose }: GalleryModalProps) {
         alignItems: 'stretch',
         justifyContent: 'center',
         pointerEvents: 'auto',
-        padding: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad) + 56px) 12px calc(9vh + env(safe-area-inset-bottom, 0px) + 6px)',
+        padding: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad) + 56px) 12px calc(9vh + env(safe-area-inset-bottom, 0px))',
       }}
     >
       <div

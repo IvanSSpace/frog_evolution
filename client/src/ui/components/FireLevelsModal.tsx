@@ -31,7 +31,7 @@ export function FireLevelsModal({ onClose }: Props) {
         alignItems: 'flex-end',
         justifyContent: 'center',
         pointerEvents: 'auto',
-        padding: '0 12px calc(9vh + env(safe-area-inset-bottom, 0px) + 6px)',
+        padding: '0 12px calc(9vh + env(safe-area-inset-bottom, 0px))',
       }}
     >
       <div
