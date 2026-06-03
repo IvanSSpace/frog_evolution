@@ -71,10 +71,10 @@ export function EvolutionModal({ onClose }: Props) {
         inset: 0,
         zIndex: 100,
         display: 'flex',
-        alignItems: 'flex-end',
+        alignItems: 'stretch',
         justifyContent: 'center',
         pointerEvents: 'auto',
-        padding: '0 12px calc(9vh + env(safe-area-inset-bottom, 0px))',
+        padding: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad) + 56px) 12px calc(9vh + env(safe-area-inset-bottom, 0px))',
       }}
     >
       <div
@@ -83,7 +83,7 @@ export function EvolutionModal({ onClose }: Props) {
         style={{
           width: 'min(100%, 380px)',
           marginInline: 'auto',
-          maxHeight: 'calc(100dvh - var(--ui-top-offset) - var(--tg-chrome-pad) - 9vh)',
+          height: '100%',
           display: 'flex',
           flexDirection: 'column',
         }}
