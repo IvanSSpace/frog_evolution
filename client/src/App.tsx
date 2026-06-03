@@ -37,6 +37,7 @@ import { GalleryModal } from './components/Gallery/GalleryModal'
 import { GalleryDetailModal } from './components/Gallery/GalleryDetailModal'
 import { MilestoneToast } from './components/CosmicHub/bestiary/MilestoneToast'
 import { AchievementToast } from './ui/components/AchievementToast'
+import { MixerDevPage } from './ui/components/MixerDevPage'
 import { GooDialog } from './ui/components/GooDialog'
 // import { TutorialOverlay } from './components/Tutorial/TutorialOverlay'  // disabled 2026-05-18 — Phase 23 onboarding replaces
 import { OnboardingController } from './components/Onboarding/OnboardingController'
@@ -525,6 +526,7 @@ function App() {
           import.meta.env.DEV guard здесь + повторный guard внутри компонента
           → Vite tree-shake'ит и mount-site, и сам компонент в production. */}
       {import.meta.env.DEV && <TelegramSafeAreaDebugOverlay />}
+      {import.meta.env.DEV && <MixerDevPage />}
     </QueryClientProvider>
   )
 }
