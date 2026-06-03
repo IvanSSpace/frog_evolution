@@ -76,6 +76,8 @@ class AudioPlayer {
   // Sync-флаг: playTrack уже выполняется (await loadTone/Tone.start/build).
   // Блокирует параллельные вызовы → не плодим второй scheduler / track-граф.
   private playInFlight = false
+  // true пока идёт авто-переход к следующему треку (защита от повторного триггера).
+  private advancing = false
 
   private cachedSnapshot: PlayerSnapshot = {
     status: 'idle',
@@ -150,6 +152,15 @@ class AudioPlayer {
       if (now - last >= 33) {
         last = now
         this.emit('tick')
+      }
+      // Трек доиграл до конца → плавно переходим к следующему (очередь по
+      // TRACK_ORDER, с заворотом). Без этого трек просто крутился бы по кругу.
+      if (this.trackId && !this.advancing) {
+        const total = TRACK_TOTALS[this.trackId]
+        if (total > 0 && this.getElapsed() >= total) {
+          this.advancing = true
+          void this.advanceToNext()
+        }
       }
       this.rafId = requestAnimationFrame(tick)
     }
@@ -548,6 +559,18 @@ class AudioPlayer {
       onSectionChange: (idx) => this.setSection(idx),
     })
     this.startUiTick()
+  }
+
+  /** Следующий трек в очереди (TRACK_ORDER, с заворотом). */
+  private async advanceToNext(): Promise<void> {
+    try {
+      const cur = this.trackId ?? TRACK_ORDER[0]
+      const idx = TRACK_ORDER.indexOf(cur)
+      const next = TRACK_ORDER[(idx + 1) % TRACK_ORDER.length]
+      await this.playTrack(next, 0)
+    } finally {
+      this.advancing = false
+    }
   }
 
   /** Хелпер для UI: подписаться на смену секции. */
