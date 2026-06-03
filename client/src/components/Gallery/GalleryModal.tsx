@@ -94,7 +94,7 @@ export function GalleryModal({ onClose }: GalleryModalProps) {
         alignItems: 'stretch',
         justifyContent: 'center',
         pointerEvents: 'auto',
-        padding: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad) + 6px) 12px calc(9vh + env(safe-area-inset-bottom, 0px) + 6px)',
+        padding: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad) + 56px) 12px calc(9vh + env(safe-area-inset-bottom, 0px) + 6px)',
       }}
     >
       <div
@@ -109,7 +109,7 @@ export function GalleryModal({ onClose }: GalleryModalProps) {
         }}
       >
         <div
-          className="flex items-center justify-between px-4 pt-2 pb-2"
+          className="flex items-center justify-between px-4 pt-3 pb-2"
           style={{ borderBottom: '1px solid rgba(77,107,31,0.4)' }}
         >
           <h2

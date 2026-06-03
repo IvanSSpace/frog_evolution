@@ -73,7 +73,7 @@ export function GalleryDetailModal() {
       >
         {/* Header */}
         <div
-          className="flex items-center justify-between px-4 pt-2 pb-2 flex-shrink-0"
+          className="flex items-center justify-between px-4 pt-3 pb-2 flex-shrink-0"
           style={{ borderBottom: '1px solid rgba(77,107,31,0.4)' }}
         >
           <h2
