@@ -60,14 +60,6 @@ const BUILDINGS: readonly BuildingDef[] = [
     opens: 'inventory',
   },
   {
-    key: 'bld_droner',
-    src: '/builds/droner.webp',
-    xFrac: 0.3,
-    yFrac: 0.82,
-    widthFrac: 0.37,
-    opens: 'droner',
-  },
-  {
     key: 'bld_space',
     src: '/builds/space.webp',
     xFrac: 0.77,
@@ -83,51 +75,8 @@ const BUILDINGS: readonly BuildingDef[] = [
   },
 ] as const
 
-// Loc2 (Лес) — 3 здания по референсу toxic_map2_2size_bottom.png:
-//   фабрика фрогов L7 (верх-лево, конвейер) / фабрика дронов-с-пушкой (верх-право,
-//   купол) / капсула репликации (низ-центр, Y-кластер). Геймплей пока не реализован
-//   (только визуал, как loc1). Позиции приблизительные — подстраиваются итеративно.
-const BUILDINGS_LOC2: readonly BuildingDef[] = [
-  {
-    key: 'bld2_factory',
-    src: '/builds_loc2/frog_factory2loc.webp',
-    xFrac: 0.28,
-    yFrac: 0.54,
-    widthFrac: 0.46,
-    opens: 'conveyor', // тап → ConveyorModal (прокачка скорости конвейера)
-  },
-  {
-    key: 'bld2_droner',
-    src: '/builds_loc2/droner2loc.webp',
-    xFrac: 0.74,
-    yFrac: 0.48,
-    widthFrac: 0.34,
-    opens: 'ectoDroner',
-  },
-  // Капсула репликации: центральная (крупнее) + 2 позади неё слева/справа.
-  // Боковые с меньшим yFrac → ниже depth → рендерятся ЗА центральной.
-  {
-    key: 'bld2_capsule',
-    src: '/builds_loc2/capsule1_semi.webp',
-    xFrac: 0.3,
-    yFrac: 0.83,
-    widthFrac: 0.28,
-  },
-  {
-    key: 'bld2_capsule',
-    src: '/builds_loc2/capsule1_semi.webp',
-    xFrac: 0.74,
-    yFrac: 0.83,
-    widthFrac: 0.28,
-  },
-  {
-    key: 'bld2_capsule',
-    src: '/builds_loc2/capsule1_semi.webp',
-    xFrac: 0.52,
-    yFrac: 0.92,
-    widthFrac: 0.28,
-  },
-] as const
+// Loc2 (Лес) — зона строений пуста (factory/droner/capsule удалены в 30-04).
+const BUILDINGS_LOC2: readonly BuildingDef[] = [] as const
 
 // Loc3 (Континент) — древняя земля: монумент-тотем (центр, чуть выше) + блок
 // эволюции (низ). Источник лягушек (болотные бассейны) + источник-тик — отдельно.
@@ -432,11 +381,6 @@ export class BuildingsController {
   /** Спрайты для reparent в transition-контейнер (зум при смене локации). */
   getSprites(): Phaser.GameObjects.Image[] {
     return this.sprites
-  }
-
-  /** Спрайт фабрики лягушек loc2 (для конвейер-анимации при выпуске). */
-  getFactorySprite(): Phaser.GameObjects.Image | null {
-    return this.sprites.find((s) => s.texture.key === 'bld2_factory') ?? null
   }
 
   /** Спрайт блока эволюции loc3 (для EvolutionCenterController — FX/камеры). */
