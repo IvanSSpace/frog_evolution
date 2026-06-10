@@ -817,8 +817,8 @@ Plans:
 - [x] 30-01-PLAN.md — Delete 5 factory source files from disk (Wave 1)
 - [x] 30-02-PLAN.md — Delete 5 drone/modal source files from disk (Wave 1)
 - [x] 30-03-PLAN.md — Remove factory/drone wiring from App.tsx (Wave 2) — 91eda10
-- [ ] 30-04-PLAN.md — BuildingsController empty LOC2 + FrogSpawner unify poop + ShopModal add AutoCollect/Magnet (Wave 2)
-- [ ] 30-05-PLAN.md — Store cleanup: gameStore/persistence/gameSync/upgrades dead fields removed (Wave 2)
+- [x] 30-04-PLAN.md — BuildingsController empty LOC2 + FrogSpawner unify poop + ShopModal add AutoCollect/Magnet (Wave 2)
+- [x] 30-05-PLAN.md — Store cleanup: gameStore/persistence/gameSync/upgrades dead fields removed (Wave 2) — 1a91bfb
 - [ ] 30-06-PLAN.md — MainScene.ts full factory/drone machinery removal (Wave 3)
 - [ ] 30-07-PLAN.md — MergeController merge unification: remove ecto + currencyY side-effects (Wave 3)
 - [ ] 30-08-PLAN.md — migratePhase30 migration function + tests + wiring (Wave 4)
@@ -826,4 +826,4 @@ Plans:
 
 ---
 
-**Last updated:** 2026-06-11 — Plan 30-03 complete (91eda10): App.tsx factory/drone wiring removed
+**Last updated:** 2026-06-11 — Plan 30-05 complete (1a91bfb): store cleanup — factory/drone state removed, autoCollect+magnet kept
