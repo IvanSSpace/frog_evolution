@@ -2,7 +2,6 @@ import Phaser from 'phaser'
 import {
   useGameStore,
   getDropIntervalMs,
-  conveyorIntervalMs,
 } from '../../store/gameStore'
 import { magnetKeyForLocation } from '../config/upgrades'
 import { eventBus } from '../../store/eventBus'
@@ -44,14 +43,10 @@ import {
 } from './main/types'
 import { FrogSpawner } from './main/FrogSpawner'
 import { MergeController } from './main/MergeController'
-import { CapsuleMergeController } from './main/CapsuleMergeController'
-import { EctoDroneController } from './main/EctoDroneController'
 import { EvolutionCenterController } from './main/EvolutionCenterController'
-import { FactoryBoxController } from './main/FactoryBoxController'
 import { BoxController } from './main/BoxController'
 import { PoopController } from './main/PoopController'
 import { MagnetController } from './main/MagnetController'
-import { DroneController } from './main/DroneController'
 import { BuildingsController } from './main/BuildingsController'
 import { LocationTransition } from './main/LocationTransition'
 import { FrogInteraction } from './main/FrogInteraction'
@@ -64,13 +59,6 @@ eventBus.on('boxes:offline-fill', ({ count }: { count: number }) => {
   _offlineBoxFill += count
 })
 
-// Буфер offline-конвейера Loc2: сервер вернул число L7, произведённых за офлайн
-// (computeOfflineConveyorFrogs, capped полем). Дренится в update() на Loc2 —
-// по одной за кадр пока есть свободный слот. Аналог offline box fill.
-let _offlineLoc2Frogs = 0
-eventBus.on('loc2:offline-frogs', ({ count }: { count: number }) => {
-  _offlineLoc2Frogs += count
-})
 
 const SWIPE_SLOP = 90 * DPR // палец должен сдвинуться на столько, прежде чем начнётся скролл
 const SWIPE_FLICK_V = 0.5 // |velocity.y| (px/ms) выше — считаем фликом, переключаем по направлению
@@ -91,13 +79,9 @@ export class MainScene extends Phaser.Scene {
   // мутируется LocationTransition (snap-end resets).
   boxProgressMs = 0
 
-  // Loc2 конвейер (фабрика лягушек): авто-производство L7 на поле по таймеру,
-  // бесплатно (как боксы Loc1). Апгрейды скорости — за gold (позже).
-  private conveyorProgressMs = 0
-  // Перф: prepBuildings звался каждый кадр. Кэшируем (лока + уровни дрона/магнита),
-  // чтобы вызывать ТОЛЬКО при смене локи или покупке дрона/магнита (а не 60×/сек).
+  // Перф: prepBuildings звался каждый кадр. Кэшируем (лока + уровень магнита),
+  // чтобы вызывать ТОЛЬКО при смене локи или покупке магнита (а не 60×/сек).
   private preppedLoc = -1
-  private preppedDroneLvl = -1
   private preppedMagnetLvl = -1
 
   // Phase 21-04 (Wave 4): magnet state перенесён в MagnetController.
@@ -106,10 +90,6 @@ export class MainScene extends Phaser.Scene {
   // LocationTransition (oldContainer reparent).
   // Живые какашки на сцене — трекаем чтобы переносить в oldContainer при переходе локации
   poops: Phaser.GameObjects.Image[] = []
-
-  // Loc2: фиолетовые «слизи» (эктоплазма) — лежат на поле пока их не соберёт
-  // ecto-дрон (в отличие от обычных какашек — те авто-собираются деньгами).
-  ectoPoops: Phaser.GameObjects.Image[] = []
 
   // Phase 21-05 (Wave 5): prevLocation / bg package-public — мутируется LocationTransition.
   prevLocation = 1
@@ -157,15 +137,8 @@ export class MainScene extends Phaser.Scene {
   // Phase 21-02 (Wave 2): merge / feed / carrier-merge в отдельном controller'е.
   private merge!: MergeController
 
-  // Loc2: авто-мердж через капсулы репликации (помощник, ручной мердж не трогает).
-  private capsuleMerge!: CapsuleMergeController
-
-  // Loc2: дрон-сборщик эктоплазмы (фиолетовой слизи).
-  private ectoDrone!: EctoDroneController
-
   // Loc3: центр эволюции (evoblock-капсула: положить лягушку → таймер → анлок).
   private evoCenter!: EvolutionCenterController
-  private factoryBox!: FactoryBoxController
 
   // Phase 21-03 (Wave 3): box drop / open в отдельном controller'е.
   private box!: BoxController
@@ -175,9 +148,6 @@ export class MainScene extends Phaser.Scene {
 
   // Phase 21-04 (Wave 4): magnet system в отдельном controller'е (state + tick).
   private magnet!: MagnetController
-
-  // Дрон автосбора (autoCollect upgrade). Существует только на локации 1.
-  private drone!: DroneController
 
   // Здания зоны строений (набор из public/builds). Только на локации 1.
   private buildings!: BuildingsController
@@ -318,22 +288,10 @@ export class MainScene extends Phaser.Scene {
     this.poop = new PoopController(this, this.merge)
     // Phase 21-04 (Wave 4): magnet controller — нужен merge.findClosestSameLevelPair / performMerge.
     this.magnet = new MagnetController(this, this.merge)
-    // Дрон автосбора — box.onBoxTapped открывает обычные боксы на Болоте.
-    this.drone = new DroneController(this, this.box)
-    // Фабрика — статичный спрайт на локации 1.
+    // Здания зоны строений.
     this.buildings = new BuildingsController(this)
-    // Loc2: капсулы авто-мерджат пары (маршрут → колба → мердж). Нужен buildings
-    // для FX подмены текстуры колбы во время мерджа.
-    this.capsuleMerge = new CapsuleMergeController(
-      this,
-      this.merge,
-      this.buildings,
-    )
-    // Loc2: дрон собирает эктоплазму (фиолетовую слизь) с поля.
-    this.ectoDrone = new EctoDroneController(this)
     // Loc3: центр эволюции (тап по капсуле → лягушка внутрь → таймер → анлок).
     this.evoCenter = new EvolutionCenterController(this, this.spawner, this.buildings)
-    this.factoryBox = new FactoryBoxController(this, this.spawner, this.buildings)
     // Phase 21-05 (Wave 5): location-transition + interaction controllers.
     this.locTransition = new LocationTransition(
       this,
@@ -629,14 +587,6 @@ export class MainScene extends Phaser.Scene {
     this.poop.spawnAutoPoop(frog, type)
   }
 
-  // Loc2: фиолетовая слизь (эктоплазма) — лежит, ждёт ecto-дрон.
-  spawnEctoPoop(frog: FrogData) {
-    this.poop.spawnEctoPoop(frog)
-  }
-
-  // Конвейер Loc2 теперь выпускает БОКСЫ (FactoryBoxController), не лягушек
-  // напрямую — старый spawnConveyorFrog удалён. Онлайн: factoryBox.emit();
-  // офлайн-догон: factoryBox.spawnOpenedFrog() / emit() (см. update + gameSync).
 
   // ============== МЕРДЖ ==============
   // Phase 21-02: вся merge-логика (standard / feed / carrier-merge), find-target,
@@ -685,9 +635,6 @@ export class MainScene extends Phaser.Scene {
     if (locId === 1) {
       this.buildings.show(1)
       const s = useGameStore.getState()
-      if ((s.upgrades.autoCollect ?? 0) > 0) {
-        this.drone.ensureSpawned()
-      }
       // Магниты спавним тут же (а не только из tick), чтобы они вошли в зум-
       // анимацию захода на локацию вместе со сборщиками, а не появлялись после.
       const magnetKey = magnetKeyForLocation(1)
@@ -695,17 +642,13 @@ export class MainScene extends Phaser.Scene {
         this.magnet.ensureSpawned()
       }
     } else if (locId === 2) {
-      // Loc2: здания (фабрика/дроны/капсула) — пока только визуал. Дронов/
-      // магнита тут нет (Loc2 уходит на building-based механики).
+      // Loc2: здания — только визуал.
       this.buildings.show(2)
-      this.drone.despawn()
     } else if (locId === 3) {
       // Loc3: монумент-тотем + блок эволюции (источник из болот — отдельно).
       this.buildings.show(3)
-      this.drone.despawn()
     } else {
       this.buildings.hide()
-      this.drone.despawn()
     }
   }
 
@@ -719,33 +662,27 @@ export class MainScene extends Phaser.Scene {
     this.prepBuildings(locId)
     if (locId === 1) {
       return {
-        // Индикаторы зарядки дронов — в зоне зданий, идут с buildings (та же
-        // обработка видимости), чтобы плавно зумились, а не появлялись резко.
+        // Индикаторы зарядки магнита — в зоне зданий.
         buildings: [
           ...this.buildings.getSprites(),
-          ...this.drone.getChargeBarSprites(),
           ...this.magnet.getChargeBarSprites(),
         ],
-        // Магниты идут вместе со сборщиками — оба в зоне frogs, одинаковая
-        // обработка видимости в зум-анимации.
-        drones: [...this.drone.getSprites(), ...this.magnet.getSprites()],
+        // Магниты идут в зоне frogs.
+        drones: [...this.magnet.getSprites()],
       }
     }
-    // Loc2/Loc3: здания (фабрика/капсулы/тотем) — зона buildings. Без этого
-    // loc2/3-здания не зумились и капсулы зависали на экране при переходе.
-    // Ecto-дрон + капсульный fxGreen уже очищены reset()ом в onTransitionStart.
+    // Loc2/Loc3: здания (тотем и пр.) — зона buildings.
     return {
       buildings: [...this.buildings.getSprites()],
       drones: [],
     }
   }
 
-  // Package-public: после reparent спрайтов зданий/дронов в transition-контейнер
+  // Package-public: после reparent спрайтов зданий/магнита в transition-контейнер
   // (который их уничтожит через destroy(true)) контроллеры роняют ссылки —
   // show()/ensureSpawned пересоздадут при возврате на Болото.
   releaseBuildingsForTransition(): void {
     this.buildings.releaseForTransition()
-    this.drone.releaseForTransition()
     this.magnet.releaseForTransition()
   }
 
@@ -922,28 +859,22 @@ export class MainScene extends Phaser.Scene {
       }
     }
 
-    // 2026-05-30: дрон + фабрика + склад показываются ДО transition-gate,
-    // чтобы появляться синхронно с лягушками. Движение дрона (tick) — ниже gate.
-    // Во время перехода НЕ трогаем: иначе при уходе с Болота prepBuildings(2)
-    // мгновенно hide()+despawn() (currentLocation уже = новая локация) и
-    // здания/дроны исчезают вместо заморозки+зума. Lifecycle на переходе
-    // целиком ведёт LocationTransition (reparent + release).
-    // Перф: prepBuildings (show зданий + ensureSpawned дрона/магнита) звался
-    // КАЖДЫЙ кадр. Теперь — только при изменении локи ИЛИ уровня дрона/магнита
-    // (покупка апгрейда мид-игры всё ещё спавнит их сразу, т.к. tick не спавнит).
+    // 2026-05-30: здания показываются ДО transition-gate, чтобы появляться
+    // синхронно с лягушками. Во время перехода НЕ трогаем: иначе при уходе
+    // с Болота prepBuildings(2) мгновенно hide() и здания исчезают вместо
+    // заморозки+зума. Lifecycle на переходе целиком ведёт LocationTransition.
+    // Перф: prepBuildings (show зданий + ensureSpawned магнита) звался каждый
+    // кадр. Теперь — только при смене локи или покупке магнита.
     if (!this.isLocationTransitioning) {
       const loc = storeForTimer.currentLocation
-      const dLvl = storeForTimer.upgrades.autoCollect ?? 0
       const mLvl =
         storeForTimer.upgrades[magnetKeyForLocation(loc)] ?? 0
       if (
         loc !== this.preppedLoc ||
-        dLvl !== this.preppedDroneLvl ||
         mLvl !== this.preppedMagnetLvl
       ) {
         this.prepBuildings(loc)
         this.preppedLoc = loc
-        this.preppedDroneLvl = dLvl
         this.preppedMagnetLvl = mLvl
       }
     }
@@ -952,11 +883,6 @@ export class MainScene extends Phaser.Scene {
     // лягушки в wrapper-контейнере с локальными координатами, любые расчёты
     // позиций выдадут неправильные значения.
     if (this.isLocationTransitioning) return
-
-    // «Расчёты Loc2 идут всегда»: дозревшие офлайн-мерджи капсул (начатые до ухода
-    // с Loc2) применяются по wall-clock на ЛЮБОЙ локе — анти-абуз быстрого
-    // переключения (мердж засчитывается только по реально прошедшему времени).
-    this.capsuleMerge.flushDueOfflineMerges()
 
     const store = useGameStore.getState()
 
@@ -1027,59 +953,10 @@ export class MainScene extends Phaser.Scene {
       this.magnet.clearAll()
     }
 
-    // Дрон автосбора — движение/сбор. Lifecycle (spawn/despawn по локации)
-    // управляется блоком выше transition-gate. Здесь только tick при активных
-    // условиях; при serum-pause дрон просто замирает (не despawn).
-    const autoCollectLevel = store.upgrades.autoCollect
-    if (currentLocId === 1 && autoCollectLevel > 0 && !serumPaused) {
-      this.drone.tick(autoCollectLevel, delta)
-    }
-
-    // Loc2: капсулы репликации авто-мерджат пары (маршрут → колба → мердж).
-    // Только на loc2, не во время serum-выбора. Transition уже отсечён выше.
-    if (currentLocId === 2 && !serumPaused) {
-      this.capsuleMerge.tick()
-      this.ectoDrone.tick()
-    }
-
     // Loc3: DVD-движение мини-лягушек в капсуле эволюции.
     if (currentLocId === 3) {
       this.evoCenter.update(delta)
     }
-
-
-    // Loc2 конвейер: авто-производство L7 на поле (бесплатно), cap-gated.
-    if (currentLocId === 2) {
-      // Offline-дрен: лягушки, накопленные конвейером за офлайн (server). При
-      // заходе они уже «вскрыты» (на поле) — кроме ПОСЛЕДНЕЙ: её выпускаем боксом,
-      // чтобы показать «жизнь» на поле (бокс едет/прыгает/ждёт вскрытия). По одной
-      // за кадр пока есть слот — растекаются естественно.
-      if (_offlineLoc2Frogs > 0 && this.canSpawnBox() && this.factoryBox.count() < 4) {
-        if (_offlineLoc2Frogs === 1) this.factoryBox.emit()
-        else this.factoryBox.spawnOpenedFrog()
-        _offlineLoc2Frogs--
-      }
-      // Интервал из апгрейда conveyorSpeed (Чанк 2: loc2Upgrades + геттер).
-      const cInterval = conveyorIntervalMs(store.loc2Upgrades.conveyorSpeed)
-      this.conveyorProgressMs = Math.min(
-        this.conveyorProgressMs + delta,
-        cInterval,
-      )
-      if (this.conveyorProgressMs >= cInterval) {
-        // Фабрика выпускает БОКС (едет → прыгает → вскрывается в L7). Лимит
-        // конкуррентных боксов в полёте, чтобы открытие не переполнило поле.
-        if (this.canSpawnBox() && this.factoryBox.count() < 4) {
-          this.factoryBox.emit()
-          this.conveyorProgressMs = 0
-        } else {
-          this.conveyorProgressMs = cInterval // поле/боксы забиты — ждём слот
-        }
-      }
-    } else {
-      this.conveyorProgressMs = 0
-    }
-
-    // Фабрика show/hide — тоже в блоке выше transition-gate.
 
     // Depth sort: чем ниже лягушка/коробка, тем она поверх
     for (const frog of this.frogs) {
@@ -1149,28 +1026,12 @@ export class MainScene extends Phaser.Scene {
     this.loc2Bg.setVisible(false)
     this.loc3Bg.setVisible(false)
     this.bg.setVisible(true)
-    // Loc2 «живые» капсулы: suspend (не reset) — начатые мерджи доводятся в
-    // данные, кулдауны сохраняются. На возврате нет отката «снова идут в капсулу».
-    this.capsuleMerge.suspend()
-    // Сброс ecto-дрона + чистка лежащей эктоплазмы перед сменой локации.
-    this.ectoDrone.reset()
-    for (const p of this.ectoPoops) {
-      this.tweens.killTweensOf(p)
-      p.destroy()
-    }
-    this.ectoPoops = []
     // Сброс центра эволюции loc3 (вернуть лягушку, убрать FX/хит-зону).
     this.evoCenter.reset()
-    // Сброс фабрик-боксов loc2 (убрать все летящие/лежащие боксы).
-    this.factoryBox.reset()
   }
 
   private onTransitionEnd = ({ id }: { id: number }) => {
     this.configureWorld(id, this.transitionFromZone)
-    // Loc2: воссоздать сохранённые фабрик-боксы (persist между заходами).
-    if (id === 2) this.factoryBox.restore()
-    // Loc2: добить дозревшие офлайн-мерджи капсул в данные ДО старта тика капсул.
-    if (id === 2) this.capsuleMerge.onEnterLoc2()
     // Loc1: выложить накопленные офлайн-боксы (если буфер ждал захода на Loc1).
     if (id === 1) this.drainOfflineBoxFill()
   }
@@ -1302,15 +1163,10 @@ export class MainScene extends Phaser.Scene {
     // Phase 14: cleanup selection layer.
     this.selectionLayer?.dispose()
     this.selectionLayer = null
-    // Дрон автосбора — despawn при уничтожении сцены.
-    this.drone?.despawn()
-    // Фабрика — destroy при уничтожении сцены.
+    // Здания — destroy при уничтожении сцены.
     this.buildings?.destroy()
-    // Loc2 капсулы-мердж — сброс tween'ов/state.
-    this.capsuleMerge?.destroy()
-    this.ectoDrone?.destroy()
+    // Loc3: центр эволюции — destroy при уничтожении сцены.
     this.evoCenter?.destroy()
-    this.factoryBox?.destroy()
     // Phase 21-05: subscribe / DnD pointer listeners — в FrogInteraction.teardown().
     this.interaction.teardown()
     // Phase 23 Plan 23-05: очищаем window.__mainScene reference
