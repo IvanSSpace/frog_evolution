@@ -815,7 +815,7 @@ Plans:
 
 Plans:
 - [x] 30-01-PLAN.md — Delete 5 factory source files from disk (Wave 1)
-- [ ] 30-02-PLAN.md — Delete 5 drone/modal source files from disk (Wave 1)
+- [x] 30-02-PLAN.md — Delete 5 drone/modal source files from disk (Wave 1)
 - [ ] 30-03-PLAN.md — Remove factory/drone wiring from App.tsx (Wave 2)
 - [ ] 30-04-PLAN.md — BuildingsController empty LOC2 + FrogSpawner unify poop + ShopModal add AutoCollect/Magnet (Wave 2)
 - [ ] 30-05-PLAN.md — Store cleanup: gameStore/persistence/gameSync/upgrades dead fields removed (Wave 2)
@@ -826,4 +826,4 @@ Plans:
 
 ---
 
-**Last updated:** 2026-06-11 — Phase 30 added (deploy cut: strip factories/drones, unify locations, single upgrade)
+**Last updated:** 2026-06-11 — Plan 30-02 complete (47d9e21): 5 drone/modal source files deleted
