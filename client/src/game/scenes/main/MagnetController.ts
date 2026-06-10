@@ -6,9 +6,8 @@
 // сбора бокса (COLLECT) — летит к паре одноуровневых лягушек (WORK), долетев
 // стягивает их (PULLING) и мерджит.
 //
-// 2026-05-30: multi-drone. MagnetController — менеджер массива MagnetInstance.
-// Число магнит-дронов = upgrades.magnetDrones. Гейт активности
-// (magnetEnabled / болото / !serumPaused) делает MainScene через tick/clearAll.
+// 2026-06-11 (30-09): single-drone после удаления DroneController/droneCharge.
+// Гейт активности (болото / !serumPaused) делает MainScene через tick/clearAll.
 //
 // Public API (без изменений для MainScene):
 //   - tick(level, delta): per-frame. Спавнит/синкает дронов.
@@ -19,7 +18,6 @@ import Phaser from 'phaser'
 import {
   getMagnetSpawnInterval,
   getMagnetMergesPerCycle,
-  useGameStore,
 } from '../../../store/gameStore'
 import {
   MERGE_RADIUS,
@@ -31,7 +29,6 @@ import {
   FIELD_PAD_Y_BOTTOM,
   type FrogData,
 } from './types'
-import { loadDroneStates, saveDroneBatteries } from './droneCharge'
 import type { MainScene } from '../MainScene'
 import type { MergeController } from './MergeController'
 
@@ -880,48 +877,22 @@ class MagnetInstance {
 }
 
 // ─── Менеджер магнит-дронов ────────────────────────────────────────────────────
+// 2026-06-11 (30-09): после удаления DroneController/droneCharge в Phase 30
+// MagnetController управляет ровно 1 дроном (multi-slot убран вместе с системой
+// дронов). MainScene управляет гейтом активности через tick()/clearAll().
 export class MagnetController {
   private scene: MainScene
   private merge: MergeController
   private instances: MagnetInstance[] = []
-  // Throttle синка зарядов в store (для модалки).
-  private syncMs = 0
-  // Восстановленные (досчитанные офлайн) заряд+фаза по индексу.
-  private restored: { battery: number; charging: boolean }[] =
-    loadDroneStates('m')
-  private persistMs = 0
 
   constructor(scene: MainScene, merge: MergeController) {
     this.scene = scene
     this.merge = merge
   }
 
-  private initialBatteryFor(index: number): number {
-    const r = this.restored[index]
-    return r ? r.battery : Phaser.Math.Between(45, 100)
-  }
-
-  private initialChargingFor(index: number): boolean {
-    return this.restored[index]?.charging ?? false
-  }
-
-  private persist(): void {
-    if (this.instances.length > 0) {
-      saveDroneBatteries(
-        'm',
-        this.instances.map((m) => m.getBattery()),
-        this.instances.map((m) => m.getCharging()),
-      )
-    }
-  }
-
-  get magnets(): readonly never[] {
-    return []
-  }
-
-  // Желаемое число магнит-дронов (гейт активности — у вызывающего: tick vs clearAll).
+  // Магнит всегда single-instance — MainScene управляет его активностью.
   private targetCount(): number {
-    return Math.max(0, useGameStore.getState().upgrades.magnetDrones ?? 0)
+    return 1
   }
 
   private sync(want: number): void {
@@ -931,11 +902,10 @@ export class MagnetController {
         this.scene,
         this.merge,
         idx,
-        this.initialBatteryFor(idx),
-        this.initialChargingFor(idx),
+        Phaser.Math.Between(45, 100),
+        false,
       )
-      // Спавним сразу на поле (WANDER) — магниты живут своей жизнью, не выходят
-      // по одному из домика при заходе на локацию.
+      // Спавним сразу на поле (WANDER).
       this.instances.push(inst)
       inst.ensureSpawned()
     }
@@ -949,9 +919,7 @@ export class MagnetController {
     for (const m of this.instances) m.resetSpawnTimer()
   }
 
-  // Спавн всех магнит-дронов сразу (как DroneController.ensureSpawned). Зовётся
-  // из MainScene.prepBuildings до transition-gate, чтобы магниты участвовали в
-  // зум-анимации захода на локацию, а не появлялись после неё.
+  // Спавн магнит-дрона до transition-gate.
   ensureSpawned(): void {
     this.sync(this.targetCount())
   }
@@ -966,37 +934,17 @@ export class MagnetController {
 
   // Спрайты reparent'нуты в зум-контейнер — роняем ссылки без destroy.
   releaseForTransition(): void {
-    this.persist()
     for (const m of this.instances) m.releaseForTransition()
     this.instances = []
-    useGameStore.getState().setMagnetBatteries([])
   }
 
   tick(level: number, delta: number): void {
     this.sync(this.targetCount())
     for (const m of this.instances) m.tick(level, delta)
-    // В store кладём заряд каждого дрона (для модалки). Throttle ~500мс.
-    this.syncMs += delta
-    if (this.syncMs >= 500) {
-      this.syncMs = 0
-      useGameStore
-        .getState()
-        .setMagnetBatteries(
-          this.instances.map((m) => Math.round(m.getBattery())),
-        )
-    }
-    // Персист заряда ~ раз в 3с (для восстановления после reload).
-    this.persistMs += delta
-    if (this.persistMs >= 3000) {
-      this.persistMs = 0
-      this.persist()
-    }
   }
 
   clearAll(): void {
-    this.persist() // сохраняем перед уходом с локации
     for (const m of this.instances) m.despawn()
     this.instances = []
-    useGameStore.getState().setMagnetBatteries([])
   }
 }

@@ -10,8 +10,6 @@ export type AchMetric =
   | 'maxTier' // макс. тир эволюции (0/1/2)
   | 'gold' // накоплено слизи (снапшот-порог)
   | 'incomePerSec' // доход слизи/сек (снапшот)
-  | 'ectoplasm' // эктоплазма (Loc2)
-  | 'currencyY' // валюта Y (Loc3)
   | 'frogsOwned' // лягушек на поле (все локации)
   | 'boxesOpened' // открыто боксов всего
   | 'shipsOwned' // куплено кораблей
@@ -176,44 +174,6 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     icon: '⛲',
     metric: 'incomePerSec',
     target: 1_000_000,
-    reward: 5,
-  },
-  // ─── Эктоплазма (Loc2) ───
-  {
-    id: 'ecto_first',
-    title: 'Эктоплазма',
-    desc: 'Накопи 50 эктоплазмы',
-    icon: '🟣',
-    metric: 'ectoplasm',
-    target: 50,
-    reward: 2,
-  },
-  {
-    id: 'ecto_rich',
-    title: 'Призрачный запас',
-    desc: 'Накопи 500 эктоплазмы',
-    icon: '👻',
-    metric: 'ectoplasm',
-    target: 500,
-    reward: 4,
-  },
-  // ─── Валюта Y (Loc3) ───
-  {
-    id: 'continent_first',
-    title: 'Первопроходец',
-    desc: 'Добудь 10 валюты Континента',
-    icon: '🏔️',
-    metric: 'currencyY',
-    target: 10,
-    reward: 3,
-  },
-  {
-    id: 'continent_rich',
-    title: 'Хозяин гор',
-    desc: 'Добудь 100 валюты Континента',
-    icon: '🗿',
-    metric: 'currencyY',
-    target: 100,
     reward: 5,
   },
   // ─── Лягушки на поле ───

@@ -61,7 +61,6 @@ export function loadUpgrades(): Upgrades {
     rareBoxSpeed: 0,
     ships: 0,
     autoCollect: 0,
-    droneSlots: 0,
   }
   try {
     const raw = localStorage.getItem(UPGRADES_KEY)
@@ -91,10 +90,6 @@ export function loadUpgrades(): Upgrades {
         autoCollect: Math.min(
           (parsed as unknown as Record<string, number>).autoCollect ?? 0,
           UPGRADE_CONFIG.autoCollect.maxLevel,
-        ),
-        droneSlots: Math.min(
-          (parsed as unknown as Record<string, number>).droneSlots ?? 0,
-          UPGRADE_CONFIG.droneSlots.maxLevel,
         ),
       }
     }

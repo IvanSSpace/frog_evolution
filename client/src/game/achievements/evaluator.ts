@@ -16,10 +16,6 @@ export function metricValue(metric: AchMetric): number {
       return s.gold
     case 'incomePerSec':
       return s.incomePerSec
-    case 'ectoplasm':
-      return s.ectoplasm
-    case 'currencyY':
-      return s.currencyY
     case 'frogsOwned':
       return s.locationFrogs.reduce((acc, frogs) => acc + frogs.length, 0)
     case 'boxesOpened':

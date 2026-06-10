@@ -17,8 +17,6 @@ export interface Upgrades {
   ships: number
   // Автосбор: дрон на Болоте (локация 1) открывает обычные боксы онлайн.
   autoCollect: number
-  // 2026-05-30: слоты дронов (купленные, сверх 2 базовых).
-  droneSlots: number
 }
 
 // Прогрессивный анлок кораблей: чтобы купить корабль №(i+1), max discoveredLevel
@@ -53,7 +51,6 @@ export function toUpgrades(
     rareBoxSpeed: r.rareBoxSpeed ?? 0,
     ships: r.ships ?? 0,
     autoCollect: r.autoCollect ?? 0,
-    droneSlots: r.droneSlots ?? 0,
   }
 }
 
@@ -146,15 +143,6 @@ export const UPGRADE_CONFIG = {
     cooldownSec: [0, 20, 17, 14, 11, 8, 5] as readonly number[],
     costs: [
       300_000, 1_500_000, 8_000_000, 60_000_000, 500_000_000, 4_000_000_000,
-    ],
-  },
-  // Слоты дронов: докупаемые сверх 2 базовых. maxLevel 6 → ёмкость до 8.
-  // Цена растёт. Слот любого типа (сборщик/магнит) — распределение бесплатно.
-  droneSlots: {
-    maxLevel: 6,
-    costs: [
-      10_000_000, 40_000_000, 150_000_000, 500_000_000, 1_500_000_000,
-      4_000_000_000,
     ],
   },
 } as const
