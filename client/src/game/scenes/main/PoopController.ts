@@ -101,42 +101,4 @@ export class PoopController {
     })
   }
 
-  // Loc2: фиолетовая «слизь» (эктоплазма). В ОТЛИЧИЕ от обычной какашки —
-  // НЕ авто-собирается и НЕ тает: лежит на поле пока её не подберёт ecto-дрон.
-  spawnEctoPoop(frog: FrogData) {
-    const scene = this.scene
-    const x = frog.container.x
-    const y = frog.container.y
-    const finalScale = BASE_SCALE * 1.4
-    const behindX = x + (frog.facingRight ? -10 * DPR : 10 * DPR)
-    const img = scene.add.image(behindX, y + 6 * DPR, 'goo')
-    img.setTint(0x9d4edd) // фиолетовая
-    // Ценность = от уровня лягушки (выше уровень → больше эктоплазмы). Дрон
-    // читает это при сборе. L7→1, L8→2, … (max(1, level-6)).
-    img.setData('ecto', Math.max(1, frog.level - 6))
-    img.setAlpha(0)
-    img.setScale(0.4 * finalScale)
-    img.setDepth(y) // как лягушки — iso-сортировка по y
-    scene.ectoPoops.push(img)
-    scene.tweens.add({
-      targets: img,
-      x: behindX + (frog.facingRight ? -28 * DPR : 28 * DPR),
-      y: y + 16 * DPR,
-      alpha: 1,
-      scale: finalScale,
-      duration: 220,
-      ease: 'Power2.easeOut',
-    })
-    // лёгкая пульсация — заметно что лежит и ждёт сбора
-    scene.tweens.add({
-      targets: img,
-      scaleX: finalScale * 1.08,
-      scaleY: finalScale * 0.92,
-      duration: 900,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-      delay: 240,
-    })
-  }
 }
