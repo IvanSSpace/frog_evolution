@@ -30,10 +30,6 @@ const MAGNET_ENABLED_KEY = 'frog_evolution_magnet_enabled'
 const FORMAT_KEY = 'frog_format'
 const COSMIC_KEY = 'frog_evolution_cosmic'
 const LOCATION_KEY = 'frog_evolution_current_location'
-const ECTOPLASM_KEY = 'frog_evolution_ectoplasm'
-// Чанк 2: валюта Y (Loc3) + апгрейды Loc2 (конвейер/ecto-дрон/капсулы).
-const CURRENCY_Y_KEY = 'frog_evolution_currency_y'
-const LOC2_UPGRADES_KEY = 'frog_evolution_loc2_upgrades'
 const LOCATION_FROGS_KEY = 'frog_evolution_location_frogs'
 const BOX_OPEN_COUNT_KEY = 'frog_evolution_box_open_count'
 // Phase 22 Plan 22-06: cosmos gate — persisted unlock flag, отдельно от cosmic slice
@@ -64,8 +60,6 @@ export function loadUpgrades(): Upgrades {
     ships: 0,
     autoCollect: 0,
     droneSlots: 0,
-    collectorDrones: 1,
-    magnetDrones: 1,
   }
   try {
     const raw = localStorage.getItem(UPGRADES_KEY)
@@ -100,14 +94,6 @@ export function loadUpgrades(): Upgrades {
           (parsed as unknown as Record<string, number>).droneSlots ?? 0,
           UPGRADE_CONFIG.droneSlots.maxLevel,
         ),
-        collectorDrones: Math.max(
-          0,
-          (parsed as unknown as Record<string, number>).collectorDrones ?? 1,
-        ),
-        magnetDrones: Math.max(
-          0,
-          (parsed as unknown as Record<string, number>).magnetDrones ?? 1,
-        ),
       }
     }
   } catch {
@@ -119,76 +105,6 @@ export function loadUpgrades(): Upgrades {
 export function saveUpgrades(u: Upgrades) {
   try {
     localStorage.setItem(UPGRADES_KEY, JSON.stringify(u))
-  } catch {
-    /* ignore */
-  }
-}
-
-// ─── ectoplasm (loc2 фиолетовая слизь) ──────────────────────────────────────
-// 2026-06-01: пока локально (server-sync добавим позже).
-
-export function loadEctoplasm(): number {
-  try {
-    const raw = localStorage.getItem(ECTOPLASM_KEY)
-    if (raw != null) {
-      const n = Number(raw)
-      if (Number.isFinite(n) && n >= 0) return Math.floor(n)
-    }
-  } catch {
-    /* ignore */
-  }
-  return 0
-}
-
-export function saveEctoplasm(n: number) {
-  try {
-    localStorage.setItem(ECTOPLASM_KEY, String(Math.max(0, Math.floor(n))))
-  } catch {
-    /* ignore */
-  }
-}
-
-// ─── currency Y (Loc3) + Loc2 upgrades (Чанк 2) ──────────────────────────────
-// Server-sync через cosmic blob (см. api/gameSync.ts); localStorage — primary.
-
-export function loadCurrencyY(): number {
-  try {
-    const raw = localStorage.getItem(CURRENCY_Y_KEY)
-    if (raw != null) {
-      const n = Number(raw)
-      if (Number.isFinite(n) && n >= 0) return Math.floor(n)
-    }
-  } catch {
-    /* ignore */
-  }
-  return 0
-}
-
-export function saveCurrencyY(n: number) {
-  try {
-    localStorage.setItem(CURRENCY_Y_KEY, String(Math.max(0, Math.floor(n))))
-  } catch {
-    /* ignore */
-  }
-}
-
-// Уровни апгрейдов Loc2 — плоский Record<key, level>. gameStore мерджит с
-// дефолтом (toLoc2Upgrades), поэтому тут тип-агностично (без импорта типа).
-export function loadLoc2Upgrades(): Record<string, number> | null {
-  try {
-    const raw = localStorage.getItem(LOC2_UPGRADES_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw)
-    if (parsed && typeof parsed === 'object') return parsed as Record<string, number>
-  } catch {
-    /* ignore */
-  }
-  return null
-}
-
-export function saveLoc2Upgrades(v: Record<string, number>) {
-  try {
-    localStorage.setItem(LOC2_UPGRADES_KEY, JSON.stringify(v))
   } catch {
     /* ignore */
   }

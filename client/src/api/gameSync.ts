@@ -11,7 +11,7 @@
 // делает запросы к локальному dev-серверу, который автоматически использует
 // dev-юзера. Если /game/state недоступен — синк просто молча выключается.
 
-import { useGameStore, toLoc2Upgrades } from '../store/gameStore'
+import { useGameStore } from '../store/gameStore'
 import { useOnboardingStore } from '../store/onboarding/onboardingSlice'
 import { getServerGameState, putServerGameState } from './gameState'
 import { loadActiveEvo, saveActiveEvo } from '../store/persistence'
@@ -118,8 +118,7 @@ const COSMIC_SYNC_KEYS = [
   'frogTiers',
   'frogTierCooldowns',
   'temporaryIncomeBuff',
-  // NB: ectoplasm/currencyY/essence/mutagen1-3/loc2Upgrades вынесены из cosmic-блоба
-  // в типизированные top-level колонки (см. AUDIT §3A) — отправляются отдельно ниже.
+  // NB: essence/mutagen1-3 отправляются как top-level колонки (см. AUDIT §3A).
 ] as const satisfies readonly (keyof StoreState)[]
 
 function snapshotForSave() {
@@ -147,15 +146,11 @@ function snapshotForSave() {
     locationFrogs: s.locationFrogs,
     boxOpenCount: s.boxOpenCount,
     incomePerSec: s.incomePerSec,
-    // Валюты/прогресс локаций — top-level колонки (см. AUDIT §3A). ectoplasm
-    // как BigInt-строка (серверная колонка BigInt), остальное — целые числа.
-    ectoplasm: Math.floor(Math.max(0, s.ectoplasm)).toString(),
-    currencyY: Math.floor(Math.max(0, s.currencyY)),
+    // Валюты/прогресс — top-level колонки (см. AUDIT §3A).
     essence: Math.floor(Math.max(0, s.essence)),
     mutagen1: Math.floor(Math.max(0, s.mutagen1)),
     mutagen2: Math.floor(Math.max(0, s.mutagen2)),
     mutagen3: Math.floor(Math.max(0, s.mutagen3)),
-    loc2Upgrades: s.loc2Upgrades as unknown as Record<string, number>,
     // Эволюция (Loc3) — bridge из localStorage контроллера в server-колонки
     // (cross-device). endsAt — клиентский 24ч таймер (см. AUDIT §4.2).
     ...((): {
@@ -204,8 +199,6 @@ export async function loadGameState(): Promise<boolean> {
         ships: upg?.ships ?? 0,
         autoCollect: upg?.autoCollect ?? 0,
         droneSlots: upg?.droneSlots ?? 0,
-        collectorDrones: upg?.collectorDrones ?? 1,
-        magnetDrones: upg?.magnetDrones ?? 1,
       },
       frogPurchases: Array.isArray(data.frogPurchases)
         ? data.frogPurchases
@@ -246,8 +239,6 @@ export async function loadGameState(): Promise<boolean> {
       // trust blob shape для immediate hydrate).
       if ('ascendedCarriers' in c)
         cosmicUpdate.ascendedCarriers = c.ascendedCarriers
-      // NB: essence/mutagen1-3 теперь top-level колонки — гидрируются ниже
-      // (см. блок «Валюты/прогресс локаций»), не из cosmic-блоба.
       // Phase 22 Plan 22-05: hydrate shop perma upgrades + purchase counters.
       if ('permaSlotBonus' in c) cosmicUpdate.permaSlotBonus = c.permaSlotBonus
       if ('permaShipSpeedBonus' in c)
@@ -297,8 +288,6 @@ export async function loadGameState(): Promise<boolean> {
       if ('frogTierCooldowns' in c && Array.isArray(c.frogTierCooldowns)) {
         cosmicUpdate.frogTierCooldowns = c.frogTierCooldowns
       }
-      // NB: ectoplasm/currencyY/loc2Upgrades теперь top-level колонки —
-      // гидрируются ниже (блок «Валюты/прогресс локаций»), не из cosmic-блоба.
       // 2026-05-23: hydrate temporaryIncomeBuff (shape: {until, percent} | null).
       if ('temporaryIncomeBuff' in c) {
         const tb = c.temporaryIncomeBuff as unknown
@@ -399,43 +388,20 @@ export async function loadGameState(): Promise<boolean> {
       }
     }
 
-    // ─── Валюты/прогресс локаций — top-level колонки (см. AUDIT §3A) ───
-    // Гидрируем из top-level полей сервера (НЕ из cosmic-блоба). Defensive типы.
-    // ectoplasm/currencyY/loc2Upgrades имеют свои localStorage-ключи (primary на
-    // boot) → дублируем через persistence. essence/mutagen персистятся вместе с
-    // cosmic-slice (как и раньше) — достаточно setState.
+    // ─── Валюты/прогресс — top-level колонки (см. AUDIT §3A) ───
+    // Гидрируем essence/mutagen из top-level полей сервера (НЕ из cosmic-блоба).
+    // Персистятся вместе с cosmic-slice — достаточно setState.
     {
       const update: Record<string, unknown> = {}
       const d = data as unknown as Record<string, unknown>
-      // ectoplasm — BigInt-строка.
-      if (typeof d.ectoplasm === 'string' || typeof d.ectoplasm === 'number') {
-        const n = Math.floor(Number(d.ectoplasm))
-        if (Number.isFinite(n) && n >= 0) update.ectoplasm = n
-      }
-      // Целочисленные счётчики.
-      for (const k of ['currencyY', 'essence', 'mutagen1', 'mutagen2', 'mutagen3'] as const) {
+      for (const k of ['essence', 'mutagen1', 'mutagen2', 'mutagen3'] as const) {
         const v = d[k]
         if (typeof v === 'number' && Number.isFinite(v) && v >= 0) {
           update[k] = Math.floor(v)
         }
       }
-      // loc2Upgrades — карта апгрейдов.
-      if (d.loc2Upgrades && typeof d.loc2Upgrades === 'object') {
-        update.loc2Upgrades = toLoc2Upgrades(
-          d.loc2Upgrades as Record<string, number>,
-        )
-      }
       if (Object.keys(update).length > 0) {
         useGameStore.setState(update as Partial<typeof store>)
-        const persistence = await import('../store/persistence')
-        if (typeof update.ectoplasm === 'number')
-          persistence.saveEctoplasm(update.ectoplasm)
-        if (typeof update.currencyY === 'number')
-          persistence.saveCurrencyY(update.currencyY)
-        if ('loc2Upgrades' in update)
-          persistence.saveLoc2Upgrades(
-            update.loc2Upgrades as Record<string, number>,
-          )
       }
     }
 
@@ -477,29 +443,6 @@ export async function loadGameState(): Promise<boolean> {
       const count =
         typeof data.offlineBoxes === 'number' ? data.offlineBoxes : 0
       if (count > 0) eventBus.emit('boxes:offline-fill', { count })
-    }
-
-    // Loc2 эктоплазма за офлайн: server уже добавил в колонку ectoplasm (гидрировано
-    // выше) — здесь только welcome-back тост.
-    {
-      const ecto =
-        typeof data.offlineEctoplasm === 'number' ? data.offlineEctoplasm : 0
-      if (ecto > 0) {
-        eventBus.emit('cosmic:toast', {
-          type: 'generic',
-          msg: `+${ecto} эктоплазмы за офлайн 🟣`,
-          duration: 3000,
-        })
-      }
-    }
-
-    // Loc2 конвейер за офлайн: server вернул число L7, MainScene спавнит на поле Loc2.
-    {
-      const count =
-        typeof data.offlineConveyorFrogs === 'number'
-          ? data.offlineConveyorFrogs
-          : 0
-      if (count > 0) eventBus.emit('loc2:offline-frogs', { count })
     }
 
     devLog('[gameSync] loaded state from server')

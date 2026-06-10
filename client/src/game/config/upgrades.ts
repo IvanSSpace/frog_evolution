@@ -17,21 +17,8 @@ export interface Upgrades {
   ships: number
   // Автосбор: дрон на Болоте (локация 1) открывает обычные боксы онлайн.
   autoCollect: number
-  // 2026-05-30: слоты дронов. Здание droner: 2 базовых слота + droneSlots
-  // докупаемых. Ёмкость = 2 + droneSlots. Слоты распределяются между типами:
-  // collectorDrones (сборщики) + magnetDrones (магниты) ≤ ёмкость. Распределение
-  // бесплатно (± в модалке), платится только droneSlots.
+  // 2026-05-30: слоты дронов (купленные, сверх 2 базовых).
   droneSlots: number
-  collectorDrones: number
-  magnetDrones: number
-}
-
-// Базовое число слотов (бесплатных).
-export const BASE_DRONE_SLOTS = 2
-
-// Общая ёмкость слотов = база + докупленные.
-export function droneCapacity(slotsLevel: number): number {
-  return BASE_DRONE_SLOTS + Math.max(0, slotsLevel ?? 0)
 }
 
 // Прогрессивный анлок кораблей: чтобы купить корабль №(i+1), max discoveredLevel
@@ -67,9 +54,6 @@ export function toUpgrades(
     ships: r.ships ?? 0,
     autoCollect: r.autoCollect ?? 0,
     droneSlots: r.droneSlots ?? 0,
-    // Дефолт 1/1 — 2 базовых слота заняты одним сборщиком и одним магнитом.
-    collectorDrones: r.collectorDrones ?? 1,
-    magnetDrones: r.magnetDrones ?? 1,
   }
 }
 
@@ -177,8 +161,7 @@ export const UPGRADE_CONFIG = {
 
 export const ENTITY_CAP = 16 // total cap of frogs + boxes on field
 
-// Покупаемые за gold апгрейды (есть в UPGRADE_CONFIG). collectorDrones/
-// magnetDrones в Upgrades, но НЕ покупаются — меняются распределением слотов.
+// Покупаемые за gold апгрейды (есть в UPGRADE_CONFIG).
 export type PurchasableUpgrade = keyof typeof UPGRADE_CONFIG
 
 // ─── accessors ───────────────────────────────────────────────────────────────
