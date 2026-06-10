@@ -12,18 +12,94 @@ import { hapticImpact } from '../../utils/telegram'
 
 type Props = { onClose: () => void }
 
-const SERUM_INFO: Record<Element, { name: string; farm: string; ascend: string; expedition: string; mission: string }> = {
-  fire:    { name: 'Огонь',    farm: 'ускоряет появление боксов', ascend: 'мгновенно выдаёт запас слизи (~30 минут дохода)', expedition: 'экспедиция завершается быстрее — корабль раньше возвращается с лутом', mission: 'повышает урон отряда' },
-  plasma:  { name: 'Плазма',   farm: 'ускоряет появление боксов', ascend: 'мгновенно несколько боксов', expedition: 'повышает шанс редких находок', mission: 'увеличивает скорость атаки' },
-  water:   { name: 'Вода',     farm: 'повышает доход дрона сборщика', ascend: 'небольшой постоянный бонус к доходу локации', expedition: '+золото в добыче', mission: 'регенерация здоровья' },
-  forest:  { name: 'Лес',      farm: 'повышает доход дрона сборщика', ascend: 'пачка слизи', expedition: 'больше редкого лута (серумы, мутаген)', mission: 'дополнительная жизнь' },
-  gas:     { name: 'Газ',      farm: 'повышает доход дрона сборщика', ascend: 'добавляет событие в текущую экспедицию', expedition: 'экипаж дольше держится → больше событий', mission: 'урон по площади' },
-  crystal: { name: 'Кристалл', farm: 'увеличивает запас offline-дохода', ascend: 'шанс получить эссенцию', expedition: 'гарантированный минимум лута даже при неудаче', mission: 'щит на старте' },
-  ring:    { name: 'Кольцо',   farm: 'увеличивает запас offline-дохода', ascend: 'навсегда повышает предел offline-дохода', expedition: 'снижает потери от опасных событий', mission: 'броня — меньше входящего урона' },
-  binary:  { name: 'Бинар',    farm: 'повышает шанс дропа сыворотки', ascend: 'ролл на редкое: мутаген, эссенция или редкий бокс', expedition: 'больше редких событий и серума в добыче', mission: 'удача (лучше дроп) и шанс двойной награды' },
-  ice:     { name: 'Лёд',      farm: '+базовый доход слизи', ascend: 'сбрасывает кулдауны (эволюция, корабль)', expedition: 'снижает кулдаун повторной отправки корабля', mission: 'замедляет врагов' },
-  toxic:   { name: 'Яд',       farm: '+базовый доход слизи', ascend: 'бонусный дроп', expedition: 'отпугивает опасные события (меньше потерь)', mission: 'урон ядом по площади' },
-  desert:  { name: 'Пустыня',  farm: '+базовый доход слизи', ascend: 'временный бонус к дальности корабля', expedition: 'открывает дальние планеты / +находка', mission: 'увеличивает радиус подбора лута' },
+const SERUM_INFO: Record<
+  Element,
+  {
+    name: string
+    farm: string
+    ascend: string
+    expedition: string
+    mission: string
+  }
+> = {
+  fire: {
+    name: 'Огонь',
+    farm: 'ускоряет появление боксов',
+    ascend: 'мгновенно выдаёт запас слизи (~30 минут дохода)',
+    expedition:
+      'экспедиция завершается быстрее — корабль раньше возвращается с лутом',
+    mission: 'повышает урон отряда',
+  },
+  plasma: {
+    name: 'Плазма',
+    farm: 'ускоряет появление боксов',
+    ascend: 'мгновенно несколько боксов',
+    expedition: 'повышает шанс редких находок',
+    mission: 'увеличивает скорость атаки',
+  },
+  water: {
+    name: 'Вода',
+    farm: 'повышает доход дрона сборщика',
+    ascend: 'небольшой постоянный бонус к доходу локации',
+    expedition: '+золото в добыче',
+    mission: 'регенерация здоровья',
+  },
+  forest: {
+    name: 'Лес',
+    farm: 'повышает доход дрона сборщика',
+    ascend: 'пачка слизи',
+    expedition: 'больше редкого лута (серумы, мутаген)',
+    mission: 'дополнительная жизнь',
+  },
+  gas: {
+    name: 'Газ',
+    farm: 'повышает доход дрона сборщика',
+    ascend: 'добавляет событие в текущую экспедицию',
+    expedition: 'экипаж дольше держится → больше событий',
+    mission: 'урон по площади',
+  },
+  crystal: {
+    name: 'Кристалл',
+    farm: 'увеличивает запас offline-дохода',
+    ascend: 'шанс получить эссенцию',
+    expedition: 'гарантированный минимум лута даже при неудаче',
+    mission: 'щит на старте',
+  },
+  ring: {
+    name: 'Кольцо',
+    farm: 'увеличивает запас offline-дохода',
+    ascend: 'навсегда повышает предел offline-дохода',
+    expedition: 'снижает потери от опасных событий',
+    mission: 'броня — меньше входящего урона',
+  },
+  binary: {
+    name: 'Бинар',
+    farm: 'повышает шанс дропа сыворотки',
+    ascend: 'ролл на редкое: мутаген, эссенция или редкий бокс',
+    expedition: 'больше редких событий и серума в добыче',
+    mission: 'удача (лучше дроп) и шанс двойной награды',
+  },
+  ice: {
+    name: 'Лёд',
+    farm: '+базовый доход слизи',
+    ascend: 'сбрасывает кулдауны (эволюция, корабль)',
+    expedition: 'снижает кулдаун повторной отправки корабля',
+    mission: 'замедляет врагов',
+  },
+  toxic: {
+    name: 'Яд',
+    farm: '+базовый доход слизи',
+    ascend: 'бонусный дроп',
+    expedition: 'отпугивает опасные события (меньше потерь)',
+    mission: 'урон ядом по площади',
+  },
+  desert: {
+    name: 'Пустыня',
+    farm: '+базовый доход слизи',
+    ascend: 'временный бонус к дальности корабля',
+    expedition: 'открывает дальние планеты / +находка',
+    mission: 'увеличивает радиус подбора лута',
+  },
 }
 
 const ROUTE_RARITIES: {
@@ -295,26 +371,27 @@ export function InventoryModal({ onClose }: Props) {
         inset: 0,
         zIndex: 150,
         display: 'flex',
-        alignItems: 'stretch',
+        alignItems: 'flex-end',
         justifyContent: 'center',
         pointerEvents: 'auto',
-        padding: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad) + 56px) 12px calc(9vh + env(safe-area-inset-bottom, 0px))',
+        padding: '0 12px calc(9vh + env(safe-area-inset-bottom, 0px) + 6px)',
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         className="ff-panel ff-pop"
         style={{
-          width: 'min(100%, 380px)',
-          marginInline: 'auto',
-          height: '100%',
+          width: '100%',
+          maxWidth: 380,
+          height:
+            'calc(100dvh - var(--ui-top-offset) - var(--tg-chrome-pad) - 9vh)',
           display: 'flex',
           flexDirection: 'column',
         }}
       >
         {/* Header — как у Shop/FrogShop */}
         <div
-          className="relative flex items-center justify-between px-4 pt-3 pb-2"
+          className="relative flex items-center justify-between px-4 pt-2 pb-2"
           style={{ borderBottom: '1px solid rgba(77,107,31,0.4)' }}
         >
           <h2
@@ -364,13 +441,29 @@ export function InventoryModal({ onClose }: Props) {
                 paddingTop: 12,
               }}
             >
-              <p style={{ fontSize: 12, color: '#365314', lineHeight: 1.5, margin: 0 }}>
-                Сыворотка применяется на лягушку 1 уровня → она становится носителем стихии.
-                Баф работает пока лягушка на ферме, а также когда берёшь её в экипаж экспедиции или миссии.
+              <p
+                style={{
+                  fontSize: 12,
+                  color: '#365314',
+                  lineHeight: 1.5,
+                  margin: 0,
+                }}
+              >
+                Сыворотка применяется на лягушку 1 уровня → она становится
+                носителем стихии. Баф работает пока лягушка на ферме, а также
+                когда берёшь её в экипаж экспедиции или миссии.
               </p>
               {ELEMENTS.filter((e) => (serums[e] ?? 0) > 0).length === 0 ? (
-                <p style={{ fontSize: 13, color: '#365314', textAlign: 'center', marginTop: 12 }}>
-                  У тебя пока нет сывороток. Открывай космо-боксы и выполняй квесты.
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: '#365314',
+                    textAlign: 'center',
+                    marginTop: 12,
+                  }}
+                >
+                  У тебя пока нет сывороток. Открывай космо-боксы и выполняй
+                  квесты.
                 </p>
               ) : (
                 ELEMENTS.filter((e) => (serums[e] ?? 0) > 0).map((e) => (
@@ -389,24 +482,54 @@ export function InventoryModal({ onClose }: Props) {
                     <img
                       src="/genBottle.svg"
                       alt=""
-                      style={{ height: 32, width: 'auto', filter: ELEMENT_BOTTLE_FILTER[e], flexShrink: 0 }}
+                      style={{
+                        height: 32,
+                        width: 'auto',
+                        filter: ELEMENT_BOTTLE_FILTER[e],
+                        flexShrink: 0,
+                      }}
                     />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 13, color: '#15803d' }}>
+                      <div
+                        style={{
+                          fontWeight: 700,
+                          fontSize: 13,
+                          color: '#15803d',
+                        }}
+                      >
                         {SERUM_INFO[e].name}
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 4 }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 3,
+                          marginTop: 4,
+                        }}
+                      >
                         <div style={{ fontSize: 11, color: '#365314' }}>
-                          <span style={{ fontWeight: 700, color: '#15803d' }}>🌱 Ферма: </span>{SERUM_INFO[e].farm}
+                          <span style={{ fontWeight: 700, color: '#15803d' }}>
+                            🌱 Ферма:{' '}
+                          </span>
+                          {SERUM_INFO[e].farm}
                         </div>
                         <div style={{ fontSize: 11, color: '#365314' }}>
-                          <span style={{ fontWeight: 700, color: '#15803d' }}>🧬 Соединение 18+18: </span>{SERUM_INFO[e].ascend}
+                          <span style={{ fontWeight: 700, color: '#15803d' }}>
+                            🧬 Соединение 18+18:{' '}
+                          </span>
+                          {SERUM_INFO[e].ascend}
                         </div>
                         <div style={{ fontSize: 11, color: '#365314' }}>
-                          <span style={{ fontWeight: 700, color: '#15803d' }}>🚀 Экспедиция: </span>{SERUM_INFO[e].expedition}
+                          <span style={{ fontWeight: 700, color: '#15803d' }}>
+                            🚀 Экспедиция:{' '}
+                          </span>
+                          {SERUM_INFO[e].expedition}
                         </div>
                         <div style={{ fontSize: 11, color: '#365314' }}>
-                          <span style={{ fontWeight: 700, color: '#15803d' }}>🎮 Миссия: </span>{SERUM_INFO[e].mission}
+                          <span style={{ fontWeight: 700, color: '#15803d' }}>
+                            🎮 Миссия:{' '}
+                          </span>
+                          {SERUM_INFO[e].mission}
                         </div>
                       </div>
                     </div>

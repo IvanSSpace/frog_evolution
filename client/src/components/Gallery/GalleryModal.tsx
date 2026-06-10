@@ -59,10 +59,7 @@ export function GalleryModal({ onClose }: GalleryModalProps) {
   const tempFraction = activeTemporaryBuffFraction(temporaryIncomeBuff, now)
   const totalMultiplier = 1 + evolutionFraction + tempFraction
   const finalIncomePerSec = incomePerSec * totalMultiplier
-  const baseIncomeFromFrogs = Math.max(
-    0,
-    incomePerSec - l18AbsoluteBonusPerSec,
-  )
+  const baseIncomeFromFrogs = Math.max(0, incomePerSec - l18AbsoluteBonusPerSec)
 
   // Подсчёт эволюции — только итог per location, без per-L·t pills.
   const evolutionByLocation = LOCATION_RANGES.map(([min, max]) => {
@@ -91,25 +88,26 @@ export function GalleryModal({ onClose }: GalleryModalProps) {
         inset: 0,
         zIndex: 100,
         display: 'flex',
-        alignItems: 'stretch',
+        alignItems: 'flex-end',
         justifyContent: 'center',
         pointerEvents: 'auto',
-        padding: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad) + 56px) 12px calc(9vh + env(safe-area-inset-bottom, 0px))',
+        padding: '0 12px calc(9vh + env(safe-area-inset-bottom, 0px) + 6px)',
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         className="ff-panel ff-pop relative"
         style={{
-          width: 'min(100%, 380px)',
-          marginInline: 'auto',
-          height: '100%',
+          width: '100%',
+          maxWidth: 380,
+          height:
+            'calc(100dvh - var(--ui-top-offset) - var(--tg-chrome-pad) - 9vh)',
           display: 'flex',
           flexDirection: 'column',
         }}
       >
         <div
-          className="flex items-center justify-between px-4 pt-3 pb-2"
+          className="flex items-center justify-between px-4 pt-2 pb-2"
           style={{ borderBottom: '1px solid rgba(77,107,31,0.4)' }}
         >
           <h2
@@ -396,18 +394,12 @@ function TempBuffCard({
           >
             +{percent.toString().replace(/\.0$/, '')}%
           </div>
-          <div
-            className="ff-body"
-            style={{ fontSize: 12, color: '#581c87' }}
-          >
+          <div className="ff-body" style={{ fontSize: 12, color: '#581c87' }}>
             к доходу
           </div>
         </div>
         <div className="text-right">
-          <div
-            className="ff-body"
-            style={{ fontSize: 11, color: '#6b21a8' }}
-          >
+          <div className="ff-body" style={{ fontSize: 11, color: '#6b21a8' }}>
             ОСТАЛОСЬ
           </div>
           <div
@@ -422,20 +414,11 @@ function TempBuffCard({
   )
 }
 
-function ProgressBar({
-  value,
-  label,
-}: {
-  value: number
-  label: string
-}) {
+function ProgressBar({ value, label }: { value: number; label: string }) {
   return (
     <div>
       <div className="flex justify-between mb-1">
-        <span
-          className="ff-body"
-          style={{ fontSize: 12, color: '#4d7c0f' }}
-        >
+        <span className="ff-body" style={{ fontSize: 12, color: '#4d7c0f' }}>
           Прогресс
         </span>
         <span

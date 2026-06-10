@@ -34,3 +34,6 @@ prisma/migrations/dev/
 
 # Docker local data
 postgres-data/
+
+# graphify knowledge-graph output (local dev tool)
+graphify-out/

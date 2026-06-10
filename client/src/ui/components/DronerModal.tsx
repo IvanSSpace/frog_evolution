@@ -1,5 +1,9 @@
 import { useState, type ReactNode } from 'react'
-import { useGameStore, UPGRADE_CONFIG, getUpgradeCost } from '../../store/gameStore'
+import {
+  useGameStore,
+  UPGRADE_CONFIG,
+  getUpgradeCost,
+} from '../../store/gameStore'
 import { droneCapacity } from '../../game/config/upgrades'
 import { useModalLock } from '../../utils/modalLock'
 import { hapticImpact, hapticNotification } from '../../utils/telegram'
@@ -58,8 +62,15 @@ function DistributionRow({
   })
   return (
     <div className="flex items-center gap-3">
-      <img src={icon} alt="" style={{ height: 34, width: 'auto', objectFit: 'contain' }} />
-      <div className="ff-display text-sm flex-1" style={{ color: 'var(--ff-text-light)' }}>
+      <img
+        src={icon}
+        alt=""
+        style={{ height: 34, width: 'auto', objectFit: 'contain' }}
+      />
+      <div
+        className="ff-display text-sm flex-1"
+        style={{ color: 'var(--ff-text-light)' }}
+      >
         {name}
       </div>
       <button
@@ -106,7 +117,10 @@ function DroneDistribution() {
   return (
     <div className="ff-card p-3 flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <div className="ff-display text-sm" style={{ color: 'var(--ff-text-light)' }}>
+        <div
+          className="ff-display text-sm"
+          style={{ color: 'var(--ff-text-light)' }}
+        >
           Распределение слотов
         </div>
         <div
@@ -220,7 +234,11 @@ function ChargeRow({
       </div>
       <div
         className="ff-display tabular-nums text-sm flex-shrink-0"
-        style={{ color: active ? fillColor : 'var(--ff-text-dim)', minWidth: 44, textAlign: 'right' }}
+        style={{
+          color: active ? fillColor : 'var(--ff-text-dim)',
+          minWidth: 44,
+          textAlign: 'right',
+        }}
       >
         {active ? `${pct}%` : '—'}
       </div>
@@ -243,26 +261,27 @@ export function DronerModal({ onClose }: Props) {
         inset: 0,
         zIndex: 100,
         display: 'flex',
-        alignItems: 'stretch',
+        alignItems: 'flex-end',
         justifyContent: 'center',
         pointerEvents: 'auto',
-        padding: 'calc(var(--ui-top-offset) + var(--tg-chrome-pad) + 56px) 12px calc(9vh + env(safe-area-inset-bottom, 0px))',
+        padding: '0 12px calc(9vh + env(safe-area-inset-bottom, 0px) + 6px)',
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         className="ff-panel ff-pop"
         style={{
-          width: 'min(100%, 380px)',
-          marginInline: 'auto',
-          height: '100%',
+          width: '100%',
+          maxWidth: 380,
+          height:
+            'calc(100dvh - var(--ui-top-offset) - var(--tg-chrome-pad) - 9vh)',
           display: 'flex',
           flexDirection: 'column',
         }}
       >
         {/* Header — как FrogShop/Inventory */}
         <div
-          className="flex items-center justify-between px-4 pt-3 pb-2"
+          className="flex items-center justify-between px-4 pt-2 pb-2"
           style={{ borderBottom: '1px solid rgba(77,107,31,0.4)' }}
         >
           <h2
@@ -299,7 +318,10 @@ export function DronerModal({ onClose }: Props) {
         {/* Body */}
         <div
           className="flex-1 min-h-0 overflow-y-auto ff-no-scrollbar px-4 py-3 flex flex-col gap-3"
-          style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            overscrollBehavior: 'contain',
+          }}
         >
           {tab === 'charge' ? (
             <>
