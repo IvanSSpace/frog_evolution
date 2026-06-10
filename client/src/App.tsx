@@ -6,15 +6,8 @@ import { ShopModal } from './ui/components/ShopModal'
 import { FrogShopModal } from './ui/components/FrogShopModal'
 import { ExpeditionModal } from './ui/components/ExpeditionModal'
 import { JourneyMissionSelect } from './ui/components/JourneyMissionSelect'
-import {
-  startLoc2FrogFactory,
-  stopLoc2FrogFactory,
-} from './game/factory/loc2FrogFactory'
 import { InventoryModal } from './ui/components/InventoryModal'
-import { DronerModal } from './ui/components/DronerModal'
-import { EctoDronerModal } from './ui/components/EctoDronerModal'
 import { EvolutionModal } from './ui/components/EvolutionModal'
-import { ConveyorModal } from './ui/components/ConveyorModal'
 import { Loc3LottieTest } from './ui/components/Loc3LottieTest'
 import { FireLevelsModal } from './ui/components/FireLevelsModal'
 import { startExpedition } from './api/expedition'
@@ -76,10 +69,7 @@ function App() {
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [expeditionOpen, setExpeditionOpen] = useState(false)
   const [inventoryOpen, setInventoryOpen] = useState(false)
-  const [dronerOpen, setDronerOpen] = useState(false)
-  const [ectoDronerOpen, setEctoDronerOpen] = useState(false)
   const [evolutionOpen, setEvolutionOpen] = useState(false)
-  const [conveyorOpen, setConveyorOpen] = useState(false)
   const [fireLevelsOpen, setFireLevelsOpen] = useState(false)
   const [clanOpen, setClanOpen] = useState(false)
   const [journeyOpen, setJourneyOpen] = useState(false)
@@ -212,10 +202,6 @@ function App() {
     const onBuildingOpen = ({ modal }: { modal: string }) => {
       if (modal === 'inventory') setInventoryOpen(true)
       else if (modal === 'shop') setShopOpen(true)
-      else if (modal === 'droner') setDronerOpen(true)
-      else if (modal === 'ectoDroner') setEctoDronerOpen(true)
-      // Чанк 2: фабрика конвейера. Чанк 1 задаёт opens:'conveyor' на здании.
-      else if (modal === 'conveyor') setConveyorOpen(true)
       // Чанк 1: центр эволюции Loc3 (evoblock opens:'evolution').
       else if (modal === 'evolution') setEvolutionOpen(true)
       // Loc3 монумент: уровень горения огня. Чанк 1 задаёт opens:'fireLevels'.
@@ -258,12 +244,6 @@ function App() {
     const id = window.setTimeout(() => setShowLoader(false), 450)
     return () => window.clearTimeout(id)
   }, [gameReady])
-
-  // Завод loc2: пассивно производит L7-лягушек (самодостаточный модуль).
-  useEffect(() => {
-    startLoc2FrogFactory()
-    return () => stopLoc2FrogFactory()
-  }, [])
 
   // Phase 24 Plan 24-04: install Captain birth Beat 4 + Beat 5 coordinator.
   // Production-critical (НЕ DEV-only). Idempotent — повторный mount/StrictMode
@@ -462,14 +442,9 @@ function App() {
       {expeditionOpen && (
         <ExpeditionModal onClose={() => setExpeditionOpen(false)} />
       )}
-      {dronerOpen && <DronerModal onClose={() => setDronerOpen(false)} />}
-      {ectoDronerOpen && (
-        <EctoDronerModal onClose={() => setEctoDronerOpen(false)} />
-      )}
       {evolutionOpen && (
         <EvolutionModal onClose={() => setEvolutionOpen(false)} />
       )}
-      {conveyorOpen && <ConveyorModal onClose={() => setConveyorOpen(false)} />}
       <Loc3LottieTest />
       {fireLevelsOpen && (
         <FireLevelsModal onClose={() => setFireLevelsOpen(false)} />
