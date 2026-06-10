@@ -819,11 +819,11 @@ Plans:
 - [x] 30-03-PLAN.md — Remove factory/drone wiring from App.tsx (Wave 2) — 91eda10
 - [x] 30-04-PLAN.md — BuildingsController empty LOC2 + FrogSpawner unify poop + ShopModal add AutoCollect/Magnet (Wave 2)
 - [x] 30-05-PLAN.md — Store cleanup: gameStore/persistence/gameSync/upgrades dead fields removed (Wave 2) — 1a91bfb
-- [ ] 30-06-PLAN.md — MainScene.ts full factory/drone machinery removal (Wave 3)
-- [ ] 30-07-PLAN.md — MergeController merge unification: remove ecto + currencyY side-effects (Wave 3)
+- [x] 30-06-PLAN.md — MainScene.ts full factory/drone machinery removal (Wave 3) — 28e11ed
+- [x] 30-07-PLAN.md — MergeController merge unification: remove ecto + currencyY side-effects (Wave 3) — f6c1c14
 - [ ] 30-08-PLAN.md — migratePhase30 migration function + tests + wiring (Wave 4)
 - [ ] 30-09-PLAN.md — Orphan sweep + tsc + vitest + build + human smoke checklist (Wave 5)
 
 ---
 
-**Last updated:** 2026-06-11 — Plan 30-05 complete (1a91bfb): store cleanup — factory/drone state removed, autoCollect+magnet kept
+**Last updated:** 2026-06-11 — Plan 30-07 complete (f6c1c14): MergeController unified — addEctoplasm/flashEctoplasm/addCurrencyY removed, markDiscovered+location:unlocked preserved, Wave 3 complete
