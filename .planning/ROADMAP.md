@@ -811,7 +811,18 @@ Plans:
 **Requirements**: CUT30-REMOVE-FACTORY, CUT30-REMOVE-DRONES, CUT30-EMPTY-ZONES, CUT30-UNIFY-MERGE, CUT30-SINGLE-UPGRADE, CUT30-STATE-CLEANUP, CUT30-NO-ORPHANS, CUT30-SMOKE
 **Depends on:** Phase 29
 
-**Plans:** TBD (planning in progress — full pipeline: research → pattern → plan → check)
+**Plans:** 9 plans in 5 waves
+
+Plans:
+- [x] 30-01-PLAN.md — Delete 5 factory source files from disk (Wave 1)
+- [ ] 30-02-PLAN.md — Delete 5 drone/modal source files from disk (Wave 1)
+- [ ] 30-03-PLAN.md — Remove factory/drone wiring from App.tsx (Wave 2)
+- [ ] 30-04-PLAN.md — BuildingsController empty LOC2 + FrogSpawner unify poop + ShopModal add AutoCollect/Magnet (Wave 2)
+- [ ] 30-05-PLAN.md — Store cleanup: gameStore/persistence/gameSync/upgrades dead fields removed (Wave 2)
+- [ ] 30-06-PLAN.md — MainScene.ts full factory/drone machinery removal (Wave 3)
+- [ ] 30-07-PLAN.md — MergeController merge unification: remove ecto + currencyY side-effects (Wave 3)
+- [ ] 30-08-PLAN.md — migratePhase30 migration function + tests + wiring (Wave 4)
+- [ ] 30-09-PLAN.md — Orphan sweep + tsc + vitest + build + human smoke checklist (Wave 5)
 
 ---
 
