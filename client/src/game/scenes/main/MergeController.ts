@@ -33,10 +33,6 @@ import {
 } from '../../../store/gameStore'
 
 const SIX_HOURS_MS = 6 * 60 * 60 * 1000
-// Loc1 cap-merge L6+L6 → столько эктоплазмы (рост уходит в Loc2).
-const ECTO_PER_L6MERGE = 3
-// Loc2 cap-merge L12+L12 → столько валюты Y (рост уходит в Loc3).
-const CURRENCY_Y_PER_L12MERGE = 3
 import { useOnboardingStore } from '../../../store/onboarding/onboardingSlice'
 import { eventBus } from '../../../store/eventBus'
 import {
@@ -353,14 +349,12 @@ export class MergeController {
       const store = useGameStore.getState()
       const currentLocId = store.currentLocation
 
-      // Loc1 cap-merge: L6+L6 → ЭКТОПЛАЗМА (не L7). Рост уходит в Loc2 — туда же
-      // указывает направление; L7 приходят с конвейера Loc2, не отсюда.
+      // L6+L6 on Loc1: unified merge — produce L7 normally.
+      // First L6+L6 discovers L7 and unlocks Loc2.
       if (oldLevel === 6 && currentLocId === 1) {
         store.removeFrogFromLocation(currentLocId, 6)
         store.removeFrogFromLocation(currentLocId, 6)
-        store.addEctoplasm(ECTO_PER_L6MERGE)
-        this.flashEctoplasm(cx, cy, ECTO_PER_L6MERGE)
-        // Первый L6+L6 открывает Loc2 (раньше это делал спавн L7; теперь L7 нет).
+        // Первый L6+L6 открывает Loc2.
         const wasNew = store.markDiscovered(7)
         if (wasNew) {
           eventBus.emit('frog:discovered', { level: 7 })
@@ -384,17 +378,11 @@ export class MergeController {
         return
       }
 
-      // Loc2 cap-merge: L12+L12 → валюта Y (не L13). Рост уходит в Loc3.
-      // Первый L12+L12 открывает Loc3 (Континент). currencyY заводит Чанк 2 —
-      // зовём через safe-cast, пока поле не появилось — no-op.
+      // L12+L12 on Loc2: unified merge — produce L13 normally.
+      // First L12+L12 discovers L13 and unlocks Loc3.
       if (oldLevel === 12 && currentLocId === 2) {
         store.removeFrogFromLocation(currentLocId, 12)
         store.removeFrogFromLocation(currentLocId, 12)
-        const st = useGameStore.getState() as unknown as {
-          addCurrencyY?: (n: number) => void
-        }
-        st.addCurrencyY?.(CURRENCY_Y_PER_L12MERGE)
-        this.flashEctoplasm(cx, cy, CURRENCY_Y_PER_L12MERGE)
         const wasNew = store.markDiscovered(13)
         if (wasNew) {
           eventBus.emit('frog:discovered', { level: 13 })
@@ -624,38 +612,4 @@ export class MergeController {
     })
   }
 
-  // Фиолетовый «+N» при L6+L6 merge (показывает что merge дал эктоплазму).
-  private flashEctoplasm(x: number, y: number, n: number) {
-    const scene = this.scene
-    const t = scene.add.text(x, y - 18 * DPR, `+${n} 🟣`, {
-      fontFamily: 'Russo One, sans-serif',
-      fontSize: `${14 * DPR}px`,
-      color: '#c77dff',
-      stroke: '#3a1a52',
-      strokeThickness: 3 * DPR,
-    })
-    t.setOrigin(0.5)
-    t.setDepth(99998)
-    t.setScale(0)
-    scene.tweens.add({
-      targets: t,
-      scale: 1,
-      duration: 200,
-      ease: 'Back.easeOut',
-    })
-    scene.tweens.add({
-      targets: t,
-      y: y - 60 * DPR,
-      duration: 1600,
-      ease: 'Sine.easeOut',
-    })
-    scene.tweens.add({
-      targets: t,
-      alpha: 0,
-      delay: 1000,
-      duration: 600,
-      ease: 'Sine.easeIn',
-      onComplete: () => t.destroy(),
-    })
-  }
 }
