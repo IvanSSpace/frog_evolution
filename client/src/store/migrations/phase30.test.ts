@@ -49,16 +49,22 @@ describe('migratePhase30', () => {
     expect(out.gold).toBe(200)
   })
 
-  it('Test 4: Strip upgrades.droneSlots from old save', () => {
+  it('Test 4: Preserve upgrades.droneSlots (purchasable upgrade, not drone-machinery)', () => {
+    // droneSlots is a purchasable upgrade that survived the cut (Plan 30-05).
+    // It MUST NOT be stripped — only collectorDrones/magnetDrones are drone-machinery.
     const old = {
       upgrades: {
         dropSpeed: 2,
         magnet: 3,
         droneSlots: 5,
+        collectorDrones: 2,
+        magnetDrones: 1,
       },
     }
     const out = migratePhase30(old) as { upgrades: Record<string, unknown> }
-    expect(out.upgrades.droneSlots).toBeUndefined()
+    expect(out.upgrades.droneSlots).toBe(5)
+    expect(out.upgrades.collectorDrones).toBeUndefined()
+    expect(out.upgrades.magnetDrones).toBeUndefined()
     expect(out.upgrades.dropSpeed).toBe(2)
     expect(out.upgrades.magnet).toBe(3)
   })

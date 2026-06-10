@@ -10,6 +10,8 @@ import { setGlobalFormat, type NumberFormat } from '../utils/formatting'
 import { makeInitialCosmicSlice, type BoxData } from './cosmic/types'
 // Phase 22 Plan 22-07: legacy state migration (idempotent).
 import { migratePhase22 } from './migrations/phase22'
+// Phase 30 Plan 30-08: strip dead factory/drone fields from old saves (idempotent).
+import { migratePhase30 } from './migrations/phase30'
 // Phase 23 Plan 23-01: onboarding flow per-device state.
 import type { OnboardingState } from './onboarding/types'
 
@@ -353,7 +355,9 @@ export function loadCosmicSlice(): CosmicPersist {
     //   - flatten nested serums {fire: {common, rare,...}} → {fire: sum}
     //   - default Phase 22 fields (essence/ascendedCarriers/perma*/shopPurchaseCounts)
     //   - inferring hasCosmosUnlocked (handled отдельно в gameStore init)
-    const parsed = migratePhase22(JSON.parse(raw))
+    // Phase 30 Plan 30-08: strip dead factory/drone fields from old saves.
+    // migratePhase30: strip ectoplasm/loc2Upgrades/currencyY + upgrades.collectorDrones/magnetDrones
+    const parsed = migratePhase30(migratePhase22(JSON.parse(raw)))
     // Graceful fallback: каждое поле проверяется отдельно — поломанные части
     // заменяются дефолтами (T-11-01 mitigation).
 
