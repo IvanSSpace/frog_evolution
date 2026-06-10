@@ -796,6 +796,23 @@ Plans:
 
 **Outcome:** Admin panel MVP shipped. Separate Vite 5 + React 19 + TypeScript standalone app in `admin/` (own package.json, port 5174) with Tailwind CSS v3 dark mode + shadcn/ui CSS variable tokens. Frontend: React Router v6 routes (/login + / + /users + /users/:id), ProtectedRoute + AppShell (top nav + sidebar), Zustand-free auth via sessionStorage helpers (getToken/setToken/clearToken/isAuthenticated), Axios with Bearer auth interceptor + 401→logout, TanStack Query v5 (staleTime 30s, refetchOnWindowFocus=false), TanStack Table v8 with server-side pagination + search on UsersPage, React Hook Form + Zod validation on grant forms, shadcn/ui components (Button/Input/Label/Card/Badge/Table/Toast). Backend: bcryptjs installed, User.banned Boolean @default(false) Prisma migration (non-breaking), @fastify/jwt + @fastify/cors plugins, requireAdmin JWT middleware, 6 admin routes (POST /admin/login bcrypt compare + JWT 24h; GET /admin/users paginated search; GET /admin/users/:id full game state; POST .../grant gold/essence/serum; POST .../ban). DashboardPage with Recharts LineChart (mock data 7-day signups — real analytics deferred Phase 30). SMOKE_TEST_29.md 9 scenarios A-I. 29/29 REQ-IDs covered (PHASE29-ADMIN-APP-SCAFFOLD, PHASE29-VITE-CONFIG, PHASE29-TAILWIND-CONFIG, PHASE29-SHADCN-INIT, PHASE29-ROUTER-SETUP, PHASE29-AXIOS-INTERCEPTOR, PHASE29-REACT-QUERY-SETUP, PHASE29-PRISMA-BANNED-FIELD, PHASE29-FASTIFY-JWT-PLUGIN, PHASE29-FASTIFY-CORS-PLUGIN, PHASE29-BCRYPT-DEP, PHASE29-ADMIN-LOGIN-ROUTE, PHASE29-JWT-MIDDLEWARE, PHASE29-ADMIN-USERS-LIST-ROUTE, PHASE29-ADMIN-USER-DETAIL-ROUTE, PHASE29-ADMIN-GRANT-ROUTE, PHASE29-ADMIN-BAN-ROUTE, PHASE29-LOGIN-SCREEN, PHASE29-DASHBOARD-PLACEHOLDER, PHASE29-USERS-LIST-TABLE, PHASE29-USER-DETAIL-VIEW, PHASE29-GRANT-FORMS, PHASE29-BAN-TOGGLE, PHASE29-APP-SHELL, PHASE29-PROTECTED-ROUTE, PHASE29-ENV-CONFIG, PHASE29-BUILD-CHAIN, PHASE29-SMOKE, PHASE29-FINALIZE).
 
+### Phase 30: Deploy cut — strip factories/drones, unify locations, single upgrade
+
+**Status:** planning (2026-06-11)
+**Goal:** Подготовить к деплою (конец июня) через срез функционала. Полностью удалить систему **заводов** (по 3 зоны на локацию: вся логика, контроллеры, рендер, состояние) и всю логику **дронов** (заряд/RTB-маршрут/модалки/multi-drone) и всё, что с этим связано. Зоны заводов остаются **пустыми** (мульти-локационная структура НЕ удаляется). Унифицировать поведение локаций — merge/work-логика, которая сейчас работает по-разному на разных локациях, сводится к **единому** поведению. Откатить прогрессию к **одной** прокачке, как было до введения локаций (точный до-локационный экран определяется research через git-историю / архив-ветку `archive/full-pre-rework-2026-06-11`).
+
+**Scope decisions (locked, from user 2026-06-11):**
+- Локации СОХРАНЯЮТСЯ (мульти-лока остаётся), зоны заводов делаются пустыми
+- Заводы + дроны + всё связанное — УДАЛЯЕТСЯ целиком
+- Merge/work-логика локаций — УНИФИЦИРУЕТСЯ (единое поведение, конец per-location расхождениям)
+- Прокачка — ОДНА (до-локационный экран; research находит что это было)
+
+**Source design:** inline scope-cut session 2026-06-11 (no spec file — memory `feedback_superpowers_workflow`); full pre-cut state frozen в `archive/full-pre-rework-2026-06-11`
+**Requirements**: CUT30-REMOVE-FACTORY, CUT30-REMOVE-DRONES, CUT30-EMPTY-ZONES, CUT30-UNIFY-MERGE, CUT30-SINGLE-UPGRADE, CUT30-STATE-CLEANUP, CUT30-NO-ORPHANS, CUT30-SMOKE
+**Depends on:** Phase 29
+
+**Plans:** TBD (planning in progress — full pipeline: research → pattern → plan → check)
+
 ---
 
-**Last updated:** 2026-05-19 — Phase 29 complete (6 plans; separate admin/ app in monorepo)
+**Last updated:** 2026-06-11 — Phase 30 added (deploy cut: strip factories/drones, unify locations, single upgrade)
