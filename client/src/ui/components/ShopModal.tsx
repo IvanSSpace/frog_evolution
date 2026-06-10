@@ -148,13 +148,15 @@ function ShopTabButton({
 
 function UpgradesCards() {
   // Магниты L2/L3 (Лес/Континент) — обычные улучшения, рядом с базовым магнитом.
+  // AutoCollect + Magnet переехали сюда из DronerModal (удалён в 30-02, per D-03).
   return (
     <div className="flex flex-col gap-3 p-4 overflow-y-auto">
-      {/* Дроны (магниты + автосбор) переехали в модалку droner. */}
       <DropSpeedCard />
       <CrateQualityCard />
       <RareBoxSpeedCard />
       <GooCollectorCard />
+      <AutoCollectCard /> {/* moved from DronerModal — per D-03 */}
+      <MagnetCard />      {/* moved from DronerModal — per D-03 */}
     </div>
   )
 }
