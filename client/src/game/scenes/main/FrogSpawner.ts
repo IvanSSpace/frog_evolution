@@ -133,7 +133,7 @@ export class FrogSpawner {
     const tier =
       typeof tierOverride === 'number'
         ? Math.max(0, Math.min(2, Math.floor(tierOverride)))
-        : (useGameStore.getState().frogTiers[level - 1] ?? 0)
+        : (useGameStore.getState().baseTier ?? 0)
     const body = scene.add.image(0, 0, textureKeyForLevel(level, 0))
     // Drop-shadow: дубль body, сплошной чёрный силуэт, под body, сдвинут влево-вниз.
     const shadow = scene.add.image(-5, 6, textureKeyForLevel(level, 0))

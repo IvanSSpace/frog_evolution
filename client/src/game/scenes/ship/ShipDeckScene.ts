@@ -39,8 +39,6 @@ export class ShipDeckScene extends Phaser.Scene {
 
   private frogs: { level: number; element?: Element }[] = [] // все доступные лягушки (стабильный список)
   private selected = new Set<number>() // индексы выбранных в this.frogs
-  private frogTiers: number[] = [] // tier эволюции per-level (для модельки)
-
   private layer!: Phaser.GameObjects.Container
   private titleText!: Phaser.GameObjects.Text
   private hintText!: Phaser.GameObjects.Text
@@ -94,7 +92,6 @@ export class ShipDeckScene extends Phaser.Scene {
         const element = pool && pool.length ? pool.shift() : undefined
         return { level: lvl, element }
       })
-    this.frogTiers = store.frogTiers
     this.selected = new Set()
     this.layout()
   }
@@ -277,7 +274,7 @@ export class ShipDeckScene extends Phaser.Scene {
     y: number,
     element?: Element,
   ): Phaser.GameObjects.Image {
-    const tier = this.frogTiers[level - 1] ?? 0 // эволюционировавшая моделька
+    const tier = useGameStore.getState().baseTier ?? 0 // эволюционировавшая моделька (Phase 31: baseTier)
     const key = textureKeyForLevel(level, tier)
     const img = this.add.image(x, y, key)
     img.setScale(BASE_SCALE) // тот же размер, что лягушки на поле
