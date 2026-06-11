@@ -4,24 +4,24 @@ milestone: v2.0
 milestone_name: cosmic-frogs-system
 current_phase: 31-universe-restart
 status: in-progress
-last_updated: "2026-06-11T14:30:00.000Z"
+last_updated: "2026-06-11T15:00:00.000Z"
 progress:
   total_phases: 21
   completed_phases: 8
   total_plans: 64
-  completed_plans: 54
-  percent: 84
+  completed_plans: 55
+  percent: 86
 phase_31_progress:
-  current_plan: 6
+  current_plan: 7
   total_plans: 7
-  completed_plans: [01, 02, 03, 04, 05]
+  completed_plans: [01, 02, 03, 04, 05, 06]
 ---
 
 # Project State
 
 **Milestone:** Cosmic Frogs System (v2.0) — **IN PROGRESS (Phase 31)**
-**Status:** Phase 31-universe-restart active — Plan 05 complete (Evolution removal + baseTier income)
-**Current Phase:** 31-universe-restart (Plan 05/07 done)
+**Status:** Phase 31-universe-restart active — Plan 06 complete (Tests + Smoke). Awaiting browser smoke approval.
+**Current Phase:** 31-universe-restart (Plan 06/07 done — smoke checkpoint active)
 **Last Updated:** 2026-06-11
 
 ## Phase 31 Progress
@@ -33,9 +33,12 @@ phase_31_progress:
 | 31-03 | l19Count hook + baseTier spawn repurpose | **complete** (2026-06-11) |
 | 31-04 | Universe Restart UI — LocationStack id=5 + UniverseProgressScreen + i18n | **complete** (2026-06-11) |
 | 31-05 | Evolution removal + baseTier income multiplier (FIX 1) | **complete** (2026-06-11) |
-| 31-06..07 | Remaining plans | pending |
+| 31-06 | Final gate: unit tests + migration + smoke checklist | **complete** (2026-06-11) — 24 tests PASS, tsc/build green, SMOKE_TEST_31.md |
+| 31-07 | Remaining plan | pending |
 
 ### Phase 31 Decisions
+- Plan 06: localStorage полифилл timing — dynamic import() в тестах гарантирует что полифилл установлен до Zustand store init
+- Plan 06: 9 pre-existing vitest failures (archetypeBonuses/shopSlice/slice.openBox) — задокументированы в SMOKE_TEST_31.md, не блокеры Phase 31
 - Plan 05: addGold income multiplier = 0.10 * baseTier (replaces getEvolutionBonusFraction); Header and GalleryModal updated to match
 - Plan 05: frogTiers/frogTierCooldowns/upgradeFrogTier fully removed from store; evolution.ts deleted
 - applyRestartState сбрасывает locationFrogs=[[1],[],[]] hardcoded (3 loc init)
