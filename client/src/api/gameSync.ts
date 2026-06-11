@@ -54,6 +54,47 @@ function hardResetClient(): void {
   }
 }
 
+// TEMP loop-guard + diagnostics (rollback debug). Logs which version-guard fired
+// and the local/server versions, and SUPPRESSES the reload if we already
+// reloaded <8s ago — so an infinite version-mismatch loop breaks instead of
+// thrashing the page (app left running so console/network stay readable).
+function guardedReload(reason: string): void {
+  const KEY = 'frog_reload_guard'
+  let count = 0
+  let last = 0
+  try {
+    const raw = sessionStorage.getItem(KEY)
+    if (raw) {
+      const p = JSON.parse(raw) as { count?: number; ts?: number }
+      count = p.count ?? 0
+      last = p.ts ?? 0
+    }
+  } catch {
+    /* ignore */
+  }
+  const now = Date.now()
+  const recent = now - last < 8000
+  const nextCount = recent ? count + 1 : 1
+  // console.error so it shows even outside dev builds.
+  console.error(
+    `[gameSync] RELOAD trigger: ${reason} | recent=${recent} count=${nextCount}`,
+  )
+  try {
+    sessionStorage.setItem(KEY, JSON.stringify({ count: nextCount, ts: now }))
+  } catch {
+    /* ignore */
+  }
+  if (recent && nextCount >= 2) {
+    console.error(
+      '[gameSync] RELOAD LOOP SUPPRESSED — sync disabled, page NOT reloaded. ' +
+        'Read the reason above (local/server version) + Network tab to find the cause.',
+    )
+    syncEnabled = false
+    return
+  }
+  setTimeout(() => window.location.reload(), 0)
+}
+
 const SAVE_THROTTLE_MS = 5000 // максимум один PUT раз в 5 секунд при идле
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 let pendingSave = false
@@ -426,11 +467,7 @@ export async function saveGameState(force = false): Promise<boolean> {
       syncEnabled = false
       pendingSave = false
       hardResetClient()
-      // Defer reload one tick so devWarn flushes and any in-flight async cleanup
-      // resolves.
-      setTimeout(() => {
-        window.location.reload()
-      }, 0)
+      guardedReload(`PUT 409 version mismatch (local=${lastKnownVersion})`)
       return false
     }
     devWarn('[gameSync] failed to save state', err)
@@ -479,7 +516,9 @@ async function heartbeatCheck(): Promise<void> {
       syncEnabled = false
       pendingSave = false
       hardResetClient()
-      setTimeout(() => window.location.reload(), 0)
+      guardedReload(
+        `heartbeat version mismatch (local=${lastKnownVersion}, server=${serverVersion})`,
+      )
     }
   } catch {
     // network error — silent skip; next tick retries
