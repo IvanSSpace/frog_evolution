@@ -4,24 +4,24 @@ milestone: v2.0
 milestone_name: cosmic-frogs-system
 current_phase: 31-universe-restart
 status: in-progress
-last_updated: "2026-06-11T12:25:00.000Z"
+last_updated: "2026-06-11T12:24:00.000Z"
 progress:
   total_phases: 21
   completed_phases: 8
   total_plans: 64
-  completed_plans: 51
-  percent: 80
+  completed_plans: 52
+  percent: 81
 phase_31_progress:
-  current_plan: 3
+  current_plan: 4
   total_plans: 7
-  completed_plans: [01, 02]
+  completed_plans: [01, 02, 03]
 ---
 
 # Project State
 
 **Milestone:** Cosmic Frogs System (v2.0) — **IN PROGRESS (Phase 31)**
-**Status:** Phase 31-universe-restart active — Plan 02 complete (client state foundation done)
-**Current Phase:** 31-universe-restart (Plan 02/07 done)
+**Status:** Phase 31-universe-restart active — Plan 03 complete (l19Count hook + baseTier spawn wired)
+**Current Phase:** 31-universe-restart (Plan 03/07 done)
 **Last Updated:** 2026-06-11
 
 ## Phase 31 Progress
@@ -30,7 +30,8 @@ phase_31_progress:
 |------|------|--------|
 | 31-01 | Backend prestige endpoint (Prisma + POST /game/restart) | **complete** (2026-06-11) |
 | 31-02 | Client state — l19Count/baseTier/universeRestartCount + applyRestartState | **complete** (2026-06-11) |
-| 31-03..07 | Remaining plans | pending |
+| 31-03 | l19Count hook + baseTier spawn repurpose | **complete** (2026-06-11) |
+| 31-04..07 | Remaining plans | pending |
 
 ### Phase 31 Decisions
 - applyRestartState сбрасывает locationFrogs=[[1],[],[]] hardcoded (3 loc init)

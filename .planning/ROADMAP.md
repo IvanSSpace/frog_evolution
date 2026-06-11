@@ -816,12 +816,12 @@ Plans:
 
 Plans:
 - [x] 31-01-PLAN.md — Backend: Prisma колонки (universe_restart_count, base_tier, l19_count) + POST /game/restart endpoint (atomic wipe+increment)
-- [ ] 31-02-PLAN.md — Client state: gameStore новые поля (l19Count, baseTier, universeRestartCount) + persistence + gameSync cosmic blob
-- [ ] 31-03-PLAN.md — Hooks: MergeController l19Count хук + FrogSpawner/ShipDeckScene → baseTier
+- [x] 31-02-PLAN.md — Client state: gameStore новые поля (l19Count, baseTier, universeRestartCount) + persistence + gameSync cosmic blob
+- [x] 31-03-PLAN.md — Hooks: MergeController l19Count хук + FrogSpawner/ShipDeckScene → baseTier
 - [ ] 31-04-PLAN.md — UI: UniverseProgressScreen (локация id=5 в LocationStack) + confirm модалка + i18n
 - [ ] 31-05-PLAN.md — Cleanup: удалить evolution.ts + EvolutionCeremony + evolution refs из 10 файлов
 - [ ] 31-06-PLAN.md — Gate: unit тесты prestige store + migration compat + full suite + smoke чеклист
 
 ---
 
-**Last updated:** 2026-06-11 — Phase 31 plan 01 complete (backend foundation: Prisma migration + POST /game/restart)
+**Last updated:** 2026-06-11 — Phase 31 plan 03 complete (l19Count hook + baseTier spawn wired)
