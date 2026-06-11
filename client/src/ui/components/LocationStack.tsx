@@ -130,6 +130,26 @@ export function LocationStack() {
     if (id === pulsingLocationId) {
       eventBus.emit('onboarding:locationCelebrationDismiss', { locationId: id })
     }
+    // Phase 31: открыта universe-сцена, кликнули НЕ по ♻️ → сначала закрываем
+    // сцену (sleep UniverseRestartScene + wake MainScene), затем переходим.
+    // Без этого MainScene остаётся спящей и игрок застревает на экране рестарта.
+    if (universeSceneActive && id !== UNIVERSE_RESTART_ID) {
+      hapticSelection()
+      eventBus.emit('universe:close')
+      setUniverseSceneActive(false)
+      if (id === STAR_MAP_PROTOTYPE_ID) {
+        // Даём universe:close доиграть fade+wake MainScene (350мс), потом StarMap.
+        setStarMapTransitioning(true)
+        setStarMapActive(true)
+        window.setTimeout(() => {
+          eventBus.emit('starmap:open')
+          setStarMapTransitioning(false)
+        }, 400)
+      } else if (id !== currentLocation) {
+        setCurrentLocation(id)
+      }
+      return
+    }
     // Phase 31 Plan 31-04: Universe Restart — открываем Phaser-сцену.
     // Если StarMap была открыта — закрываем её перед открытием сцены.
     if (id === UNIVERSE_RESTART_ID) {
