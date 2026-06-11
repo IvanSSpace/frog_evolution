@@ -319,6 +319,8 @@ export class MergeController {
           storeL25.activateTemporaryIncomeBuff(buffFraction * 100, SIX_HOURS_MS)
         }
         storeL25.incrementL18Merges()
+        // Phase 31: Universe Restart — increment l19Count at every L18+L18 merge
+        useGameStore.getState().incrementL19Count()
         mergeApi(MAX_LEVEL, currentLocId)
           .then((res) => {
             if (res.ok) {
