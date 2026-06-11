@@ -86,6 +86,12 @@ const REQUIRED_COSMIC_SYNC_FIELDS = [
   // Phase 22 Plan 22-03: ascension state (permanent progress).
   'ascendedCarriers',
   'essence',
+  // Mutagen resources (Phase 31 maturación tiers — gen1/gen2/gen3).
+  'mutagen1',
+  'mutagen2',
+  'mutagen3',
+  // Ship routes inventory.
+  'routes',
   // Phase 22 Plan 22-05: cosmic shop perma upgrades + purchase counters.
   'permaSlotBonus',
   'permaShipSpeedBonus',
@@ -96,8 +102,6 @@ const REQUIRED_COSMIC_SYNC_FIELDS = [
   'pityCounters',
   // UI persistence
   'lastActiveTab',
-  // Crew (Phase 16)
-  'crew',
   // Phase 16 progressive disclosure
   'hasFirstFeed',
   'hasFirstMission',
@@ -157,8 +161,10 @@ describe('gameSync — cosmic state sync coverage', () => {
   it('snapshotForSave includes every REQUIRED_COSMIC_SYNC_FIELDS key', async () => {
     const { useGameStore } = await import('../store/gameStore')
     const state = useGameStore.getState()
-    const { saveGameState } = await import('./gameSync')
+    const { saveGameState, setLastKnownVersion } = await import('./gameSync')
 
+    // Set a known version so saveGameState guard doesn't bail out.
+    setLastKnownVersion(0)
     capturedPayload = null
     const ok = await saveGameState(true)
     expect(ok).toBe(true)
@@ -193,8 +199,10 @@ describe('gameSync — cosmic state sync coverage', () => {
 describe('Phase 31 — universe restart fields', () => {
   it('snapshotForSave includes l19Count, baseTier, universeRestartCount in cosmic blob', async () => {
     const { useGameStore } = await import('../store/gameStore')
-    const { saveGameState } = await import('./gameSync')
+    const { saveGameState, setLastKnownVersion } = await import('./gameSync')
     useGameStore.setState({ l19Count: 3, baseTier: 1, universeRestartCount: 1 })
+    // Set a known version so saveGameState guard doesn't bail out.
+    setLastKnownVersion(0)
     capturedPayload = null
     await saveGameState(true)
     const cosmic = (capturedPayload as { cosmic?: Record<string, unknown> })?.cosmic

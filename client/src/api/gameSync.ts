@@ -107,6 +107,11 @@ export function getLastKnownVersion(): number | null {
   return lastKnownVersion
 }
 
+/** For testing only: set the last-known server version to allow saveGameState to proceed. */
+export function setLastKnownVersion(v: number | null): void {
+  lastKnownVersion = v
+}
+
 function snapshotForSave() {
   const s = useGameStore.getState()
   return {
@@ -134,6 +139,9 @@ function snapshotForSave() {
       mutagen1: s.mutagen1,
       mutagen2: s.mutagen2,
       mutagen3: s.mutagen3,
+      // Ship routes inventory (accumulated via missions). Rule 1 fix: was missing
+      // from snapshotForSave → cross-device login lost route inventory.
+      routes: s.routes,
       // Phase 22 Plan 22-05: cosmic shop perma upgrades + per-item purchase
       // history (used for cost scaling).
       // 2026-05-18 audit fix: WAS missing from snapshotForSave → cross-device
@@ -165,6 +173,10 @@ function snapshotForSave() {
       hasCosmosUnlocked: s.hasCosmosUnlocked,
       l18MergesCount: s.l18MergesCount,
       l18AbsoluteBonusPerSec: s.l18AbsoluteBonusPerSec,
+      // Phase 31: universe restart prestige state (cross-device sync via cosmic blob).
+      l19Count: s.l19Count,
+      baseTier: s.baseTier,
+      universeRestartCount: s.universeRestartCount,
       // 2026-05-23: эволюция лягушек (per-level tier + cooldown timestamps).
       // Permanent progress — должен переноситься между девайсами.
       frogTiers: s.frogTiers,
@@ -325,6 +337,15 @@ export async function loadGameState(): Promise<boolean> {
           cosmicUpdate.temporaryIncomeBuff = null
         }
       }
+      // Phase 31: hydrate universe restart prestige fields from server blob.
+      // Defensive validation + Math.min(2,...) for baseTier (T-31-06 mitigation).
+      if ('l19Count' in c && typeof c.l19Count === 'number')
+        cosmicUpdate.l19Count = Math.max(0, Math.floor(c.l19Count as number))
+      if ('baseTier' in c && typeof c.baseTier === 'number')
+        cosmicUpdate.baseTier = Math.max(0, Math.min(2, Math.floor(c.baseTier as number)))
+      if ('universeRestartCount' in c && typeof c.universeRestartCount === 'number')
+        cosmicUpdate.universeRestartCount = Math.max(0, Math.floor(c.universeRestartCount as number))
+
       if (Object.keys(cosmicUpdate).length > 0) {
         useGameStore.setState(cosmicUpdate as Partial<typeof store>)
       }
@@ -347,7 +368,11 @@ export async function loadGameState(): Promise<boolean> {
         typeof cosmicUpdate.l18AbsoluteBonusPerSec === 'number' ||
         Array.isArray(cosmicUpdate.frogTiers) ||
         Array.isArray(cosmicUpdate.frogTierCooldowns) ||
-        'temporaryIncomeBuff' in cosmicUpdate
+        'temporaryIncomeBuff' in cosmicUpdate ||
+        // Phase 31: universe restart fields have their own localStorage keys.
+        typeof cosmicUpdate.l19Count === 'number' ||
+        typeof cosmicUpdate.baseTier === 'number' ||
+        typeof cosmicUpdate.universeRestartCount === 'number'
       if (needsPersistenceWrite) {
         const persistence = await import('../store/persistence')
         if (cosmicUpdate.captainBirthSeen === true) {
@@ -379,6 +404,17 @@ export async function loadGameState(): Promise<boolean> {
               percent: number
             } | null,
           )
+        }
+        // Phase 31: persist universe restart fields to localStorage so offline
+        // boot reads correct values before server response arrives.
+        if (typeof cosmicUpdate.l19Count === 'number') {
+          persistence.saveL19Count(cosmicUpdate.l19Count as number)
+        }
+        if (typeof cosmicUpdate.baseTier === 'number') {
+          persistence.saveBaseTier(cosmicUpdate.baseTier as number)
+        }
+        if (typeof cosmicUpdate.universeRestartCount === 'number') {
+          persistence.saveUniverseRestartCount(cosmicUpdate.universeRestartCount as number)
         }
       }
 

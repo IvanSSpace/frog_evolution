@@ -68,6 +68,12 @@ import {
   saveL18MergesCount,
   loadL18AbsoluteBonusPerSec,
   saveL18AbsoluteBonusPerSec,
+  loadL19Count,
+  saveL19Count,
+  loadBaseTier,
+  saveBaseTier,
+  loadUniverseRestartCount,
+  saveUniverseRestartCount,
 } from './persistence'
 
 // Re-exports for backward compat — many consumers import these from gameStore.
@@ -229,6 +235,22 @@ interface GameStateBase {
    *  HUD-элементы (magnet/location) скрываются на это время. */
   battleSceneActive: boolean
   setBattleSceneActive: (v: boolean) => void
+
+  // Phase 31: Universe Restart prestige state.
+  // l19Count — кумулятивный счётчик создания L19 за текущую вселенную (0..5).
+  // baseTier — глобальный пол тира спавна (0=base, 1, 2). CAP=2.
+  // universeRestartCount — сколько раз игрок перезапускал вселенную.
+  l19Count: number
+  baseTier: number
+  universeRestartCount: number
+  incrementL19Count: () => void
+  resetL19Count: () => void
+  applyRestartState: (resp: {
+    base_tier: number
+    universe_restart_count: number
+    l19_count: number
+    version: number
+  }) => void
 }
 
 // Полный GameState = базовые поля + Cosmic Frogs System (Phase 11+)
@@ -614,6 +636,66 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   battleSceneActive: false,
   setBattleSceneActive: (v) => set({ battleSceneActive: v }),
+
+  // ============== PHASE 31: UNIVERSE RESTART ==============
+
+  l19Count: loadL19Count(),
+  baseTier: loadBaseTier(),
+  universeRestartCount: loadUniverseRestartCount(),
+
+  incrementL19Count: () => {
+    const next = get().l19Count + 1
+    saveL19Count(next)
+    set({ l19Count: next })
+  },
+  resetL19Count: () => {
+    saveL19Count(0)
+    set({ l19Count: 0 })
+  },
+  applyRestartState: (resp) => {
+    // FIX 4 — ПОЛНЫЙ defensive client wipe: store становится консистентным
+    // СРАЗУ, ещё до post-restart reload. Если reload не сработает — стейт всё
+    // равно корректен. Клиент cap'ает baseTier — дополнительная защита.
+    const safeTier = Math.max(0, Math.min(2, resp.base_tier ?? 0))
+    const safeCount = Math.max(0, resp.universe_restart_count ?? 0)
+    // Persist meta + clear current-universe income counters в localStorage
+    saveBaseTier(safeTier)
+    saveUniverseRestartCount(safeCount)
+    saveL19Count(0)
+    // FIX 3 — l18MergesCount/l18AbsoluteBonusPerSec — current-universe income
+    // бонус → СБРОС. Это top-level поля со СВОИМ localStorage (НЕ в cosmic blob
+    // клиента), поэтому их нужно явно обнулить и очистить их localStorage ключи.
+    saveL18MergesCount(0)
+    saveL18AbsoluteBonusPerSec(0)
+    // Default upgrades — тот же объект что и в devResetUpgrades/create().
+    const defaultUpgradesObj: import('../game/config/upgrades').Upgrades = {
+      dropSpeed: 0,
+      gooCollector: 0,
+      magnet: 0,
+      magnet2: 0,
+      magnet3: 0,
+      crateQuality: 0,
+      rareBoxSpeed: 0,
+      ships: 0,
+      autoCollect: 0,
+    }
+    set({
+      // META
+      baseTier: safeTier,
+      universeRestartCount: safeCount,
+      l19Count: 0,
+      // CURRENT-UNIVERSE income counters (FIX 3)
+      l18MergesCount: 0,
+      l18AbsoluteBonusPerSec: 0,
+      // FULL GAME-PROGRESS WIPE (FIX 4) — store консистентен pre-reload
+      gold: 0,
+      upgrades: defaultUpgradesObj,
+      locationFrogs: [[1], [], []],
+      discoveredLevels: [1],
+      currentLocation: 1,
+      frogPurchases: [],
+    })
+  },
 
   // ============== COSMIC FROGS SYSTEM (Phase 11+) ==============
   // createCosmicSlice сначала кладёт actions + дефолтные данные,
