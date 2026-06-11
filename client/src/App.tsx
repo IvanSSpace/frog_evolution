@@ -31,7 +31,6 @@ import { MilestoneToast } from './components/CosmicHub/bestiary/MilestoneToast'
 // import { TutorialOverlay } from './components/Tutorial/TutorialOverlay'  // disabled 2026-05-18 — Phase 23 onboarding replaces
 import { OnboardingController } from './components/Onboarding/OnboardingController'
 import { CaptainBirthModal } from './components/Captain/CaptainBirthModal'
-import { EvolutionCeremony } from './components/Evolution/EvolutionCeremony'
 import { installCaptainBirthController } from './components/Captain/captainBirthController'
 import { StarUnionsModal } from './components/StarUnions/StarUnionsModal'
 import { installBestiaryDevHelpers } from './utils/devHelpers'
@@ -407,10 +406,6 @@ function App() {
           eventBus 'captain:birth-effect-complete' (Plan 24-02), null-render'ит
           когда invisible. Cinematic trigger — MergeController L18+L18 branch. */}
       <CaptainBirthModal />
-      {/* Phase Evolution: Pokemon-style evolution ceremony — self-subscribes к
-          eventBus 'frog:evolution-ceremony' (эмитит FrogShopModal после
-          успешного upgradeFrogTier), null-render'ит когда invisible. */}
-      <EvolutionCeremony />
       {discovered !== null && (
         <DiscoveryModal
           level={discovered}

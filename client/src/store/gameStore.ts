@@ -25,21 +25,10 @@ import {
 import { setGlobalFormat, type NumberFormat } from '../utils/formatting'
 import { createCosmicSlice, type CosmicState } from './cosmic/slice'
 import {
-  EVOLUTION_COOLDOWN_MS,
-  getEvolutionBonusFraction,
-  getEvolutionCost,
-  isEvolutionUnlockedForLocation,
-  locationGroupForLevel,
-} from '../game/config/evolution'
-import {
   loadUpgrades,
   saveUpgrades,
   loadFrogPurchases,
   saveFrogPurchases,
-  loadFrogTiers,
-  saveFrogTiers,
-  loadFrogTierCooldowns,
-  saveFrogTierCooldowns,
   loadTemporaryIncomeBuff,
   saveTemporaryIncomeBuff,
   loadDiscovered,
@@ -143,24 +132,6 @@ interface GameStateBase {
   // Сколько раз каждый уровень был куплен (для расчёта цены)
   frogPurchases: number[]
   buyFrog: (level: number) => Promise<BuyFrogResult>
-
-  // Тиры эволюции на каждый уровень (0=base, 1, 2).
-  frogTiers: number[]
-  // Per-level cooldown timestamps (Date.now()-based, ms). 0 = нет cooldown'а.
-  // Тикает в real-time (offline тоже).
-  frogTierCooldowns: number[]
-  upgradeFrogTier: (level: number) => {
-    ok: boolean
-    reason?:
-      | 'maxTier'
-      | 'noGold'
-      | 'noEssence'
-      | 'noMutagen'
-      | 'cooldown'
-      | 'locked'
-      | 'invalid'
-      | 'cosmosLocked'
-  }
 
   // Открытые уровни — для модалки "Открыта новая лягушка"
   discoveredLevels: number[]
@@ -292,7 +263,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         s.gold +
         amount *
           (1 +
-            getEvolutionBonusFraction(s.frogTiers) +
+            0.10 * s.baseTier +
             activeTemporaryBuffFraction(s.temporaryIncomeBuff)),
     })),
 
@@ -487,67 +458,6 @@ export const useGameStore = create<GameState>((set, get) => ({
       })
       return { ok: false, reason: 'noGold' }
     }
-  },
-
-  frogTiers: loadFrogTiers(),
-  frogTierCooldowns: loadFrogTierCooldowns(),
-  upgradeFrogTier: (level) => {
-    if (level < 1 || level > MAX_LEVEL) return { ok: false, reason: 'invalid' }
-    const state = get()
-    if (!state.hasCosmosUnlocked) {
-      return { ok: false, reason: 'cosmosLocked' }
-    }
-    const groupIdx = locationGroupForLevel(level)
-    if (!isEvolutionUnlockedForLocation(state.frogTiers, groupIdx)) {
-      return { ok: false, reason: 'locked' }
-    }
-    const cdEnd = state.frogTierCooldowns[level - 1] ?? 0
-    if (cdEnd > Date.now()) {
-      return { ok: false, reason: 'cooldown' }
-    }
-    const current = state.frogTiers[level - 1] ?? 0
-    if (current >= 2) return { ok: false, reason: 'maxTier' }
-    const {
-      gold: goldCost,
-      essence: essenceCost,
-      mutagen: mutagenCost,
-      mutagenTier,
-    } = getEvolutionCost(level, current)
-    if (state.gold < goldCost) return { ok: false, reason: 'noGold' }
-    if (state.essence < essenceCost) {
-      return { ok: false, reason: 'noEssence' }
-    }
-    // Списываем мутаген конкретного tier'а (1=L1-6, 2=L7-12, 3=L13-18).
-    const currentMutagen =
-      mutagenTier === 1
-        ? state.mutagen1
-        : mutagenTier === 2
-          ? state.mutagen2
-          : state.mutagen3
-    if (currentMutagen < mutagenCost) {
-      return { ok: false, reason: 'noMutagen' }
-    }
-    const nextTiers = [...state.frogTiers]
-    nextTiers[level - 1] = current + 1
-    const nextCooldowns = [...state.frogTierCooldowns]
-    nextCooldowns[level - 1] = Date.now() + EVOLUTION_COOLDOWN_MS
-    saveFrogTiers(nextTiers)
-    saveFrogTierCooldowns(nextCooldowns)
-    const mutagenPatch: Partial<
-      Pick<typeof state, 'mutagen1' | 'mutagen2' | 'mutagen3'>
-    > = {}
-    if (mutagenTier === 1) mutagenPatch.mutagen1 = state.mutagen1 - mutagenCost
-    else if (mutagenTier === 2)
-      mutagenPatch.mutagen2 = state.mutagen2 - mutagenCost
-    else mutagenPatch.mutagen3 = state.mutagen3 - mutagenCost
-    set({
-      gold: state.gold - goldCost,
-      essence: state.essence - essenceCost,
-      ...mutagenPatch,
-      frogTiers: nextTiers,
-      frogTierCooldowns: nextCooldowns,
-    })
-    return { ok: true }
   },
 
   numberFormat: loadNumberFormat(),
