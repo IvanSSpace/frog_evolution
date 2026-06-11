@@ -508,18 +508,6 @@ function SettingsTab() {
   const addGold = useGameStore((s) => s.addGold)
   const devResetUpgrades = useGameStore((s) => s.devResetUpgrades)
   const devClearAllFrogs = useGameStore((s) => s.devClearAllFrogs)
-  const devResetFrogTiers = () => {
-    const fresh = new Array(18).fill(0)
-    const freshCooldowns = new Array(18).fill(0)
-    useGameStore.setState({
-      frogTiers: fresh,
-      frogTierCooldowns: freshCooldowns,
-    })
-    void import('../../store/persistence').then((m) => {
-      m.saveFrogTiers(fresh)
-      m.saveFrogTierCooldowns(freshCooldowns)
-    })
-  }
   const addSerum = useGameStore((s) => s.addSerum)
 
   // Phase 22: dev-кнопки делают local mutation + немедленный PUT на сервер
@@ -613,12 +601,6 @@ function SettingsTab() {
             className="ff-btn ff-btn-red text-sm w-full"
           >
             Сбросить апгрейды
-          </button>
-          <button
-            onClick={devSync(devResetFrogTiers)}
-            className="ff-btn ff-btn-red text-sm w-full"
-          >
-            Сбросить эволюцию лягушек
           </button>
           <button
             onClick={devSync(devClearAllFrogs)}

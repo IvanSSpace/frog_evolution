@@ -17,11 +17,6 @@ import type { OnboardingState } from './onboarding/types'
 
 const UPGRADES_KEY = 'frog_evolution_upgrades'
 const PURCHASES_KEY = 'frog_evolution_frog_purchases'
-const FROG_TIERS_KEY = 'frog_evolution_frog_tiers'
-// 2026-05-23: cooldown timestamps per frog level (когда лочится снова можно эволвить).
-// Хранится массив длиной 18, значение 0 = нет кулдауна, иначе Date.now()-таймстамп
-// окончания cooldown'а. Тикает в real-time (offline тоже).
-const FROG_TIER_COOLDOWNS_KEY = 'frog_evolution_frog_tier_cooldowns'
 // 2026-05-23: временный 6h buff к доходу от L18+L18 merge'а.
 // { until: ms timestamp, percent: 5/2.5/etc } | null
 const TEMP_INCOME_BUFF_KEY = 'frog_evolution_temp_income_buff'
@@ -129,67 +124,6 @@ export function loadFrogPurchases(): number[] {
 export function saveFrogPurchases(arr: number[]) {
   try {
     localStorage.setItem(PURCHASES_KEY, JSON.stringify(arr))
-  } catch {
-    /* ignore */
-  }
-}
-
-// ─── frog tiers (evolution) ──────────────────────────────────────────────────
-
-export function loadFrogTiers(): number[] {
-  try {
-    const raw = localStorage.getItem(FROG_TIERS_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw) as number[]
-      if (Array.isArray(parsed)) {
-        const arr = new Array(MAX_LEVEL).fill(0)
-        for (let i = 0; i < Math.min(parsed.length, MAX_LEVEL); i++) {
-          const v = Math.max(0, Math.min(2, Math.floor(parsed[i] ?? 0)))
-          arr[i] = v
-        }
-        return arr
-      }
-    }
-  } catch {
-    /* ignore */
-  }
-  return new Array(MAX_LEVEL).fill(0)
-}
-
-export function saveFrogTiers(arr: number[]) {
-  try {
-    localStorage.setItem(FROG_TIERS_KEY, JSON.stringify(arr))
-  } catch {
-    /* ignore */
-  }
-}
-
-// ─── frog tier cooldowns (per-level evolution cooldowns) ─────────────────────
-// DEPRECATED Phase 31 — удалить после подтверждения
-
-export function loadFrogTierCooldowns(): number[] {
-  try {
-    const raw = localStorage.getItem(FROG_TIER_COOLDOWNS_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw) as number[]
-      if (Array.isArray(parsed)) {
-        const arr = new Array(MAX_LEVEL).fill(0)
-        for (let i = 0; i < Math.min(parsed.length, MAX_LEVEL); i++) {
-          const v = Number(parsed[i] ?? 0)
-          arr[i] = Number.isFinite(v) && v > 0 ? Math.floor(v) : 0
-        }
-        return arr
-      }
-    }
-  } catch {
-    /* ignore */
-  }
-  return new Array(MAX_LEVEL).fill(0)
-}
-
-export function saveFrogTierCooldowns(arr: number[]) {
-  try {
-    localStorage.setItem(FROG_TIER_COOLDOWNS_KEY, JSON.stringify(arr))
   } catch {
     /* ignore */
   }

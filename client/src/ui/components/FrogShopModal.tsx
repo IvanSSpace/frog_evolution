@@ -6,7 +6,6 @@ import {
   FROG_LEVELS,
   getFrogPrice,
   getTargetIncomePerSec,
-  getFrogPath,
 } from '../../game/config/frogs'
 import { hapticNotification } from '../../utils/telegram'
 import {

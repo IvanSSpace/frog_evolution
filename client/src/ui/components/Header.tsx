@@ -7,8 +7,6 @@ import {
 import { fmt, fmtRate } from '../../utils/formatting'
 import { useCosmosUnlocked } from '../../utils/cosmosGate'
 import { getRareBoxThreshold } from '../../game/config/upgrades'
-import { getEvolutionBonusFraction } from '../../game/config/evolution'
-
 function formatCountdown(remainingMs: number): string {
   const totalSec = Math.max(0, Math.floor(remainingMs / 1000))
   const h = Math.floor(totalSec / 3600)
@@ -30,7 +28,7 @@ export function Header({ onOpenIncome }: { onOpenIncome?: () => void }) {
     1,
   )
   const essence = useGameStore((s) => s.essence)
-  const frogTiers = useGameStore((s) => s.frogTiers)
+  const baseTier = useGameStore((s) => s.baseTier)
   const temporaryIncomeBuff = useGameStore((s) => s.temporaryIncomeBuff)
   useGameStore((s) => s.numberFormat) // subscribe to format changes
   const cosmosUnlocked = useCosmosUnlocked()
@@ -43,9 +41,9 @@ export function Header({ onOpenIncome }: { onOpenIncome?: () => void }) {
     return () => clearInterval(id)
   }, [temporaryIncomeBuff, now])
 
-  // 2026-05-23: permanent % теперь только эволюция; временный — buff после
-  // L18+L18 merge'а. Мирор формулы `addGold`.
-  const evolutionFraction = getEvolutionBonusFraction(frogTiers)
+  // Phase 31: income multiplier = 0.10 * baseTier (prestige) + temporary buff.
+  // Mirrors addGold formula in gameStore.
+  const evolutionFraction = 0.10 * baseTier
   const tempFraction = activeTemporaryBuffFraction(temporaryIncomeBuff, now)
   const multiplier = 1 + evolutionFraction + tempFraction
   const bonusPct = Math.round((multiplier - 1) * 1000) / 10

@@ -177,10 +177,6 @@ function snapshotForSave() {
       l19Count: s.l19Count,
       baseTier: s.baseTier,
       universeRestartCount: s.universeRestartCount,
-      // 2026-05-23: эволюция лягушек (per-level tier + cooldown timestamps).
-      // Permanent progress — должен переноситься между девайсами.
-      frogTiers: s.frogTiers,
-      frogTierCooldowns: s.frogTierCooldowns,
       // 2026-05-23: временный 6h buff к доходу после L18+L18 merge.
       // Persist чтобы не сбрасывался при cross-device login.
       temporaryIncomeBuff: s.temporaryIncomeBuff,
@@ -309,13 +305,6 @@ export async function loadGameState(): Promise<boolean> {
       // Phase 24 Plan 24-01: hydrate captain-birth flag from server.
       if ('captainBirthSeen' in c)
         cosmicUpdate.captainBirthSeen = c.captainBirthSeen
-      // 2026-05-23: эволюция лягушек — tier (per-level 0/1/2) + cooldowns (timestamps).
-      if ('frogTiers' in c && Array.isArray(c.frogTiers)) {
-        cosmicUpdate.frogTiers = c.frogTiers
-      }
-      if ('frogTierCooldowns' in c && Array.isArray(c.frogTierCooldowns)) {
-        cosmicUpdate.frogTierCooldowns = c.frogTierCooldowns
-      }
       // 2026-05-23: hydrate temporaryIncomeBuff (shape: {until, percent} | null).
       if ('temporaryIncomeBuff' in c) {
         const tb = c.temporaryIncomeBuff as unknown
@@ -366,8 +355,6 @@ export async function loadGameState(): Promise<boolean> {
         cosmicUpdate.hasCosmosUnlocked === true ||
         typeof cosmicUpdate.l18MergesCount === 'number' ||
         typeof cosmicUpdate.l18AbsoluteBonusPerSec === 'number' ||
-        Array.isArray(cosmicUpdate.frogTiers) ||
-        Array.isArray(cosmicUpdate.frogTierCooldowns) ||
         'temporaryIncomeBuff' in cosmicUpdate ||
         // Phase 31: universe restart fields have their own localStorage keys.
         typeof cosmicUpdate.l19Count === 'number' ||
@@ -387,14 +374,6 @@ export async function loadGameState(): Promise<boolean> {
         if (typeof cosmicUpdate.l18AbsoluteBonusPerSec === 'number') {
           persistence.saveL18AbsoluteBonusPerSec(
             cosmicUpdate.l18AbsoluteBonusPerSec as number,
-          )
-        }
-        if (Array.isArray(cosmicUpdate.frogTiers)) {
-          persistence.saveFrogTiers(cosmicUpdate.frogTiers as number[])
-        }
-        if (Array.isArray(cosmicUpdate.frogTierCooldowns)) {
-          persistence.saveFrogTierCooldowns(
-            cosmicUpdate.frogTierCooldowns as number[],
           )
         }
         if ('temporaryIncomeBuff' in cosmicUpdate) {

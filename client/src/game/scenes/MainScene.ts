@@ -290,27 +290,6 @@ export class MainScene extends Phaser.Scene {
     // Подписка на покупку лягушки из магазина
     eventBus.on('frog:purchased', this.onFrogPurchased)
 
-    // Reactive update визуала лягушек на поле при апгрейде tier'а в магазине.
-    // Слушаем frogTiers diff — если для уровня tier вырос, перегружаем sprite
-    // у всех live-frogs этого level через ensureFrogTextureLoaded.
-    const prevTiers = [...useGameStore.getState().frogTiers]
-    const unsubTiers = useGameStore.subscribe((state) => {
-      const next = state.frogTiers
-      for (let i = 0; i < next.length; i++) {
-        const prev = prevTiers[i] ?? 0
-        const cur = next[i] ?? 0
-        if (cur === prev) continue
-        prevTiers[i] = cur
-        const level = i + 1
-        this.ensureFrogTextureLoaded(level, cur, () => {
-          const key = textureKeyForLevel(level, cur)
-          for (const f of this.frogs) {
-            if (f.level === level) f.body.setTexture(key)
-          }
-        })
-      }
-    })
-    this.events.once(Phaser.Scenes.Events.DESTROY, () => unsubTiers())
     // Offline box drops: модульный listener (выше класса) пишет в _offlineBoxBuffer
     // с момента загрузки модуля — ловит emit даже если он пришёл до create().
     // Инстанс-handler дренирует буфер при каждом новом emit (маловероятен,
