@@ -165,6 +165,7 @@ export function saveFrogTiers(arr: number[]) {
 }
 
 // ─── frog tier cooldowns (per-level evolution cooldowns) ─────────────────────
+// DEPRECATED Phase 31 — удалить после подтверждения
 
 export function loadFrogTierCooldowns(): number[] {
   try {
@@ -192,6 +193,43 @@ export function saveFrogTierCooldowns(arr: number[]) {
   } catch {
     /* ignore */
   }
+}
+
+// ─── universe restart state (Phase 31) ──────────────────────────────────────
+
+const L19_COUNT_KEY = 'frog_evolution_l19_count'
+const BASE_TIER_KEY = 'frog_evolution_base_tier'
+const UNIVERSE_RESTART_COUNT_KEY = 'frog_evolution_restart_count'
+
+export function loadL19Count(): number {
+  try {
+    const raw = localStorage.getItem(L19_COUNT_KEY)
+    return raw ? Math.max(0, parseInt(raw, 10)) || 0 : 0
+  } catch { return 0 }
+}
+export function saveL19Count(count: number): void {
+  try { localStorage.setItem(L19_COUNT_KEY, String(count)) } catch { /* ignore */ }
+}
+
+export function loadBaseTier(): number {
+  try {
+    const raw = localStorage.getItem(BASE_TIER_KEY)
+    const parsed = raw ? parseInt(raw, 10) : 0
+    return Math.max(0, Math.min(2, isNaN(parsed) ? 0 : parsed))
+  } catch { return 0 }
+}
+export function saveBaseTier(tier: number): void {
+  try { localStorage.setItem(BASE_TIER_KEY, String(Math.max(0, Math.min(2, tier)))) } catch { /* ignore */ }
+}
+
+export function loadUniverseRestartCount(): number {
+  try {
+    const raw = localStorage.getItem(UNIVERSE_RESTART_COUNT_KEY)
+    return raw ? Math.max(0, parseInt(raw, 10)) || 0 : 0
+  } catch { return 0 }
+}
+export function saveUniverseRestartCount(count: number): void {
+  try { localStorage.setItem(UNIVERSE_RESTART_COUNT_KEY, String(count)) } catch { /* ignore */ }
 }
 
 // ─── temporary income buff (6h after L18+L18 merge) ──────────────────────────
