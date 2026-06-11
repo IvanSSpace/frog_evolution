@@ -798,7 +798,7 @@ Plans:
 
 ### Phase 31: Universe Restart (prestige) — rework evolution
 
-**Status:** planning (2026-06-11)
+**Status:** in-progress (plan 01/06 complete, 2026-06-11)
 **Goal:** Заменить текущую систему эволюции (`frogTiers` per-level 0/1/2) на prestige-механику **«Перезапуск вселенной»**. Игрок копит достижения L19 (создать L19-лягушку 5 раз кумулятивно за вселенную); по достижении — может перезапустить вселенную: теряет всех лягушек + золото + апгрейды + открытые локации (старт с нуля, только Loc1), НО базовый тир спавна лягушек поднимается на +1 (после рестарта спавнятся тир-2 вместо тир-1, и т.д.). Добавить отдельную 4-ю локацию-экран прогресса рестарта (в LocationStack). Большое обновление: фронт + бэкенд (новые поля стейта, миграция, restart-endpoint, cross-device sync).
 
 **Scope decisions (locked, user 2026-06-11):**
@@ -812,8 +812,16 @@ Plans:
 **Requirements**: UNIV31-RESTART-TRIGGER, UNIV31-L19-COUNTER, UNIV31-RESTART-ACTION, UNIV31-BASE-TIER, UNIV31-NEW-LOCATION, UNIV31-REMOVE-EVOLUTION, UNIV31-STATE, UNIV31-BACKEND, UNIV31-MIGRATION, UNIV31-I18N, UNIV31-SMOKE
 **Depends on:** Phase 29 (текущая база — 30 мая после отката)
 
-**Plans:** TBD (full pipeline: research → pattern → plan → check)
+**Plans:** 6 plans
+
+Plans:
+- [x] 31-01-PLAN.md — Backend: Prisma колонки (universe_restart_count, base_tier, l19_count) + POST /game/restart endpoint (atomic wipe+increment)
+- [ ] 31-02-PLAN.md — Client state: gameStore новые поля (l19Count, baseTier, universeRestartCount) + persistence + gameSync cosmic blob
+- [ ] 31-03-PLAN.md — Hooks: MergeController l19Count хук + FrogSpawner/ShipDeckScene → baseTier
+- [ ] 31-04-PLAN.md — UI: UniverseProgressScreen (локация id=5 в LocationStack) + confirm модалка + i18n
+- [ ] 31-05-PLAN.md — Cleanup: удалить evolution.ts + EvolutionCeremony + evolution refs из 10 файлов
+- [ ] 31-06-PLAN.md — Gate: unit тесты prestige store + migration compat + full suite + smoke чеклист
 
 ---
 
-**Last updated:** 2026-06-11 — Phase 31 added (Universe Restart prestige; reworks evolution; front+back)
+**Last updated:** 2026-06-11 — Phase 31 plan 01 complete (backend foundation: Prisma migration + POST /game/restart)
