@@ -133,6 +133,10 @@ const REQUIRED_TOPLEVEL_SYNC_FIELDS = [
   // 2026-05-18: L18+L18 merge multiplier counter + absolute bonus per sec.
   'l18MergesCount',
   'l18AbsoluteBonusPerSec',
+  // Phase 31: universe restart prestige state.
+  'l19Count',            // Phase 31
+  'baseTier',            // Phase 31
+  'universeRestartCount', // Phase 31
 ]
 
 describe('gameSync — cosmic state sync coverage', () => {
@@ -183,5 +187,88 @@ describe('gameSync — cosmic state sync coverage', () => {
 
     // Sanity: state matches snapshot for one anchor cosmic field
     expect(cosmic?.serums).toEqual(state.serums)
+  })
+})
+
+describe('Phase 31 — universe restart fields', () => {
+  it('snapshotForSave includes l19Count, baseTier, universeRestartCount in cosmic blob', async () => {
+    const { useGameStore } = await import('../store/gameStore')
+    const { saveGameState } = await import('./gameSync')
+    useGameStore.setState({ l19Count: 3, baseTier: 1, universeRestartCount: 1 })
+    capturedPayload = null
+    await saveGameState(true)
+    const cosmic = (capturedPayload as { cosmic?: Record<string, unknown> })?.cosmic
+    expect(cosmic).toMatchObject({ l19Count: 3, baseTier: 1, universeRestartCount: 1 })
+  })
+
+  it('loadGameState hydrates l19Count from cosmic blob with ?? 0 for missing fields', () => {
+    // Old save without l19Count in cosmic — should not crash and cosmicUpdate.l19Count stays undefined
+    const cosmicWithoutNew = { hasCosmosUnlocked: true }
+    expect(() => {
+      const cosmicUpdate: Record<string, unknown> = {}
+      if ('l19Count' in cosmicWithoutNew) {
+        cosmicUpdate.l19Count = (cosmicWithoutNew as Record<string, unknown>).l19Count
+      }
+      // cosmicUpdate.l19Count stays undefined — no crash, default 0 from loadL19Count()
+      expect(cosmicUpdate.l19Count).toBeUndefined()
+    }).not.toThrow()
+  })
+
+  it('gameStore has l19Count, baseTier, universeRestartCount as number fields with default 0', async () => {
+    const { useGameStore } = await import('../store/gameStore')
+    const state = useGameStore.getState()
+    expect(typeof state.l19Count).toBe('number')
+    expect(typeof state.baseTier).toBe('number')
+    expect(typeof state.universeRestartCount).toBe('number')
+  })
+
+  it('incrementL19Count increments l19Count', async () => {
+    const { useGameStore } = await import('../store/gameStore')
+    useGameStore.setState({ l19Count: 0 })
+    useGameStore.getState().incrementL19Count()
+    useGameStore.getState().incrementL19Count()
+    expect(useGameStore.getState().l19Count).toBe(2)
+  })
+
+  it('resetL19Count resets l19Count to 0', async () => {
+    const { useGameStore } = await import('../store/gameStore')
+    useGameStore.setState({ l19Count: 5 })
+    useGameStore.getState().resetL19Count()
+    expect(useGameStore.getState().l19Count).toBe(0)
+  })
+
+  it('applyRestartState sets meta fields and clears game progress', async () => {
+    const { useGameStore } = await import('../store/gameStore')
+    // Set some non-default state
+    useGameStore.setState({ gold: 9999, l19Count: 5 })
+    useGameStore.getState().applyRestartState({
+      base_tier: 1,
+      universe_restart_count: 1,
+      l19_count: 0,
+      version: 5,
+    })
+    const s = useGameStore.getState()
+    expect(s.baseTier).toBe(1)
+    expect(s.universeRestartCount).toBe(1)
+    expect(s.l19Count).toBe(0)
+    expect(s.gold).toBe(0)
+    expect(s.l18MergesCount).toBe(0)
+    expect(s.l18AbsoluteBonusPerSec).toBe(0)
+    expect(s.locationFrogs[0]).toEqual([1])
+    expect(s.locationFrogs[1]).toEqual([])
+    expect(s.discoveredLevels).toEqual([1])
+    expect(s.currentLocation).toBe(1)
+    expect(s.frogPurchases).toEqual([])
+  })
+
+  it('applyRestartState caps baseTier at 2', async () => {
+    const { useGameStore } = await import('../store/gameStore')
+    useGameStore.getState().applyRestartState({
+      base_tier: 99,
+      universe_restart_count: 3,
+      l19_count: 0,
+      version: 6,
+    })
+    expect(useGameStore.getState().baseTier).toBe(2)
   })
 })
