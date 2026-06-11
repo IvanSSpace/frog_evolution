@@ -224,31 +224,35 @@ export function startGame(): Phaser.Game {
   eventBus.on('shipdeck:cancel', closeShipDeck)
 
   // Universe Restart prestige screen — UniverseRestartScene (Phaser).
-  // Простой sleep/wake как ShipDeckScene (без dual-container zoom).
+  // Тот же dual-container zoom что StarMap (runOpen/CloseStarMapTransition):
+  // ферма сжимается в точку → map4 разрастается → UniverseRestartScene fade-in.
   const UNIVERSE_FADE_MS = 350
   let universeTransitioning = false
 
-  eventBus.on('universe:open', () => {
+  eventBus.on('universe:open', async () => {
     if (universeTransitioning) return
     if (sm().isActive('UniverseRestartScene')) return
     universeTransitioning = true
 
-    if (sm().isActive('MainScene')) sm().sleep('MainScene')
+    const main = sm().getScene('MainScene') as MainScene
+    // Этап 1: dual-container zoom-out фермы + zoom-in map4 (как StarMap open).
+    await main.locTransition.runOpenStarMapTransition()
 
-    if (sm().isSleeping('UniverseRestartScene')) {
-      sm().wake('UniverseRestartScene')
-    } else {
-      sm().start('UniverseRestartScene')
-    }
+    // Этап 2: засыпаем MainScene, поднимаем UniverseRestartScene с fade-in.
+    sm().sleep('MainScene')
+    if (sm().isSleeping('UniverseRestartScene')) sm().wake('UniverseRestartScene')
+    else sm().start('UniverseRestartScene')
 
-    const waitForScene = () => {
+    const animate = () => {
       const scene = sm().getScene('UniverseRestartScene') as Phaser.Scene
       if (!scene || !scene.cameras?.main) {
-        requestAnimationFrame(waitForScene)
+        requestAnimationFrame(animate)
         return
       }
       const cam = scene.cameras.main
+      cam.setZoom(1.0)
       cam.setAlpha(0)
+      cam.resetFX()
       scene.tweens.add({
         targets: cam,
         alpha: 1,
@@ -259,7 +263,7 @@ export function startGame(): Phaser.Game {
         },
       })
     }
-    requestAnimationFrame(waitForScene)
+    requestAnimationFrame(animate)
   })
 
   eventBus.on('universe:close', () => {
@@ -269,15 +273,22 @@ export function startGame(): Phaser.Game {
 
     const scene = sm().getScene('UniverseRestartScene') as Phaser.Scene
     const cam = scene.cameras.main
+    // Этап 1: затухание сцены рестарта (под ней спящая MainScene с bg=map4).
     scene.tweens.add({
       targets: cam,
       alpha: 0,
       duration: UNIVERSE_FADE_MS,
       ease: 'Sine.easeIn',
     })
-    scene.time.delayedCall(UNIVERSE_FADE_MS, () => {
+    scene.time.delayedCall(UNIVERSE_FADE_MS, async () => {
+      cam.setZoom(1.0)
+      cam.resetFX()
       sm().sleep('UniverseRestartScene')
-      if (sm().isSleeping('MainScene')) sm().wake('MainScene')
+      sm().wake('MainScene')
+      const main = sm().getScene('MainScene') as MainScene
+      // Этап 2: dual-container zoom от map4 к текущей локации (как StarMap close).
+      const targetLoc = useGameStore.getState().currentLocation
+      await main.locTransition.runCloseStarMapTransition(targetLoc)
       universeTransitioning = false
     })
   })
