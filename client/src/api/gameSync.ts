@@ -439,6 +439,18 @@ export async function loadGameState(): Promise<boolean> {
 
 export async function saveGameState(force = false): Promise<boolean> {
   if (!syncEnabled && !force) return false
+  // НИКОГДА не делаем blind-PUT без известной серверной версии. Если
+  // loadGameState не успел/упал (таймаут, ошибка GET), lastKnownVersion === null
+  // и snapshotForSave отправит version=0. При server > 0 это 409 → hard reload →
+  // на следующем буте load снова падает → null → 409 → бесконечный reload-цикл.
+  // Сначала должен пройти успешный loadGameState (он выставит lastKnownVersion).
+  if (lastKnownVersion === null) {
+    devWarn(
+      '[gameSync] save skipped — серверная версия ещё неизвестна (load не завершился); PUT отменён во избежание 409-reload-цикла',
+    )
+    pendingSave = false
+    return false
+  }
   // Сериализуем PUT'ы: если сохранение уже в полёте — помечаем pending и выходим.
   // Иначе второй PUT уходит со старой version (первый ещё не вернул новую) →
   // сервер отвечает 409 → hard reload. Это и вызывало перезагрузку при частых
