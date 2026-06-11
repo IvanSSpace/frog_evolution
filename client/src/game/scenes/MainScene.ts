@@ -44,7 +44,6 @@ import { MergeController } from './main/MergeController'
 import { BoxController } from './main/BoxController'
 import { PoopController } from './main/PoopController'
 import { MagnetController } from './main/MagnetController'
-import { DroneController } from './main/DroneController'
 import { LocationTransition } from './main/LocationTransition'
 import { FrogInteraction } from './main/FrogInteraction'
 
@@ -120,9 +119,6 @@ export class MainScene extends Phaser.Scene {
 
   // Phase 21-04 (Wave 4): magnet system в отдельном controller'е (state + tick).
   private magnet!: MagnetController
-
-  // Дрон автосбора (autoCollect upgrade). Существует только на локации 1.
-  private drone!: DroneController
 
   // Phase 21-05 (Wave 5): location transition (clearField + dual-container zoom).
   // Package-public — game/index.ts вызывает runOpen/CloseStarMapTransition при
@@ -257,8 +253,6 @@ export class MainScene extends Phaser.Scene {
     this.poop = new PoopController(this, this.merge)
     // Phase 21-04 (Wave 4): magnet controller — нужен merge.findClosestSameLevelPair / performMerge.
     this.magnet = new MagnetController(this, this.merge)
-    // Дрон автосбора — box.onBoxTapped открывает обычные боксы на Болоте.
-    this.drone = new DroneController(this, this.box)
     // Phase 21-05 (Wave 5): location-transition + interaction controllers.
     this.locTransition = new LocationTransition(
       this,
@@ -788,14 +782,6 @@ export class MainScene extends Phaser.Scene {
       this.magnet.resetSpawnTimer()
     }
 
-    // Дрон автосбора — только на локации 1, только если куплен, не во время serum pause.
-    const autoCollectLevel = store.upgrades.autoCollect
-    if (currentLocId === 1 && autoCollectLevel > 0 && !serumPaused) {
-      this.drone.tick(autoCollectLevel, delta)
-    } else {
-      this.drone.despawn()
-    }
-
     // Depth sort: чем ниже лягушка/коробка, тем она поверх
     for (const frog of this.frogs) {
       if (!frog.isDragging && !frog.isMerging) {
@@ -837,8 +823,6 @@ export class MainScene extends Phaser.Scene {
     // Phase 14: cleanup selection layer.
     this.selectionLayer?.dispose()
     this.selectionLayer = null
-    // Дрон автосбора — despawn при уничтожении сцены.
-    this.drone?.despawn()
     // Phase 21-05: subscribe / DnD pointer listeners — в FrogInteraction.teardown().
     this.interaction.teardown()
     // Phase 23 Plan 23-05: очищаем window.__mainScene reference
