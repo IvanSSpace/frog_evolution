@@ -84,15 +84,15 @@ export function UniverseProgressScreen({ onClose }: Props) {
     >
       <div
         style={{
-          background: '#1a1a2e',
-          border: '1px solid #f59e0b44',
-          borderRadius: '16px',
+          // Без карточки-модалки — контент сидит прямо на Phaser-сцене.
+          background: 'transparent',
           padding: '32px',
           maxWidth: '400px',
           width: '100%',
           display: 'flex',
           flexDirection: 'column',
           gap: '20px',
+          textShadow: '0 1px 6px rgba(0,0,0,0.85)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
