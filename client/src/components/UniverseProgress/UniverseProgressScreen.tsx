@@ -71,7 +71,9 @@ export function UniverseProgressScreen(_props: Props) {
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 70,
+        // z-index 45 — НИЖЕ LocationStack (50), чтобы кнопки локаций оставались
+        // кликабельны поверх HUD рестарта. Выше игрового canvas/баров (0-30).
+        zIndex: 45,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
