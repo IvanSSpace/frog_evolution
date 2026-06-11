@@ -12,6 +12,7 @@ export const LOCATION_VISUAL: Record<
   1: { emoji: '🌿', from: '#bef264', to: '#65a30d', border: '#365314' }, // Болото
   2: { emoji: '🌲', from: '#86efac', to: '#15803d', border: '#14532d' }, // Лес
   3: { emoji: '🌍', from: '#fca5a5', to: '#b91c1c', border: '#7f1d1d' }, // Континент
+  5: { emoji: '♻️', from: '#fde68a', to: '#d97706', border: '#78350f' }, // Universe Restart (prestige)
   6: { emoji: '✨', from: '#67e8f9', to: '#0e7490', border: '#164e63' }, // Звёздная карта (тест)
 }
 
@@ -78,10 +79,10 @@ export function LocationButton({
             : undefined,
         }}
       >
-        {loc.id === 6 ||
+        {(loc.id === 6 ||
         loc.id === 3 ||
         loc.id === 2 ||
-        loc.id === 1 ? (
+        loc.id === 1) ? (
           <img
             src={
               loc.id === 6

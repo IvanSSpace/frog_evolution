@@ -49,7 +49,8 @@
     "1": "Swamp",
     "2": "Forest",
     "3": "Continent",
-    "6": "Star Map"
+    "6": "Star Map",
+    "5": "♻️ Restart"
   },
   "header": {
     "per_sec": "/sec"
@@ -1192,5 +1193,22 @@
       "description": "To read the thread whole, you must become part of it. Raise relations to tier 8 — time will let you into its circle.",
       "short": "Tier 8 (Timeweavers)"
     }
+  },
+  "universeRestart": {
+    "title": "Universe Restart",
+    "subtitle": "Start over with stronger frogs",
+    "restartCount": "Restarts",
+    "baseTier": "Base Tier",
+    "maxTier": "(max)",
+    "progress": "L19 Frogs Created",
+    "restartButton": "Restart Universe",
+    "closeButton": "Close",
+    "cancelButton": "Cancel",
+    "confirmTitle": "Are you sure?",
+    "confirmBody": "All frogs, gold and upgrades will be reset. Base frog tier will increase.",
+    "confirmButton": "Restart"
+  },
+  "universe": {
+    "income_boost": "Income will increase by +{{percent}}%"
   }
 }

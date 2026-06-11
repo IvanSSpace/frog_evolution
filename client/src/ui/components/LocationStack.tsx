@@ -10,6 +10,7 @@ import { hapticSelection } from '../../utils/telegram'
 // Phase 22 Plan 22-06: Star Map (виртуальная 6-я локация) скрыта до cosmos unlock.
 import { useCosmosUnlocked } from '../../utils/cosmosGate'
 import { LocationButton } from './LocationButton'
+import { UniverseProgressScreen } from '../../components/UniverseProgress/UniverseProgressScreen'
 
 // Виртуальная 6-я локация — тестовая, открывает прототип Звёздной карты в модалке.
 // НЕ часть LOCATIONS, чтобы не ломать существующую игровую логику.
@@ -19,6 +20,18 @@ const STAR_MAP_PROTOTYPE_LOC: LocationConfig = {
   name: 'Звёздная карта',
   minLevel: 19,
   maxLevel: 24,
+  magnetEnabled: false,
+}
+
+// Виртуальная 5-я локация — экран прогресса перезапуска вселенной.
+// НЕ часть LOCATIONS, чтобы не ломать игровую логику.
+// id=5 не конфликтует с LOCATION_UNLOCK_THRESHOLD[4]=19 (тот массив по index, не id).
+const UNIVERSE_RESTART_ID = 5
+const UNIVERSE_RESTART_LOC: LocationConfig = {
+  id: UNIVERSE_RESTART_ID,
+  name: 'universeRestart',
+  minLevel: 0,
+  maxLevel: 0,
   magnetEnabled: false,
 }
 
@@ -36,6 +49,9 @@ export function LocationStack() {
   const [starMapActive, setStarMapActive] = useState(false)
   // Локальный лок на время starmap-перехода (~900мс), чтобы не словить двойной клик
   const [starMapTransitioning, setStarMapTransitioning] = useState(false)
+  // Phase 31 Plan 31-04: экран прогресса перезапуска вселенной (виртуальная 5-я).
+  // Локальный UI-режим — DOM overlay, не Phaser сцена.
+  const [universeScreenActive, setUniverseScreenActive] = useState(false)
   // Phase 23 Plan 23-05 (Beat 4): pulse на новой location button после unlock.
   // null = ни одна кнопка не пульсирует. Set'ится по 'celebrationStart' event,
   // clear'ится по 'celebrationDismiss' (emit'ит сам LocationStack по tap).
@@ -99,7 +115,7 @@ export function LocationStack() {
       return frogs.length > 0
     })
   const ordered: LocationConfig[] = cosmosUnlocked
-    ? [STAR_MAP_PROTOTYPE_LOC, ...farmLocations]
+    ? [STAR_MAP_PROTOTYPE_LOC, UNIVERSE_RESTART_LOC, ...farmLocations]
     : farmLocations
 
   // Если visible только одна локация (Болото) и cosmos не разблокирован —
@@ -115,6 +131,19 @@ export function LocationStack() {
     // если transition заблокирован (id === currentLocation возврат ниже).
     if (id === pulsingLocationId) {
       eventBus.emit('onboarding:locationCelebrationDismiss', { locationId: id })
+    }
+    // Phase 31 Plan 31-04: Universe Restart — открываем DOM overlay.
+    // Если StarMap была открыта — закрываем её перед открытием overlay.
+    if (id === UNIVERSE_RESTART_ID) {
+      hapticSelection()
+      if (starMapActive) {
+        setStarMapTransitioning(true)
+        eventBus.emit('starmap:close')
+        setStarMapActive(false)
+        window.setTimeout(() => setStarMapTransitioning(false), 1000)
+      }
+      setUniverseScreenActive((v) => !v)
+      return
     }
     if (id === STAR_MAP_PROTOTYPE_ID) {
       // Звёздная карта — переключаем Phaser-сцены через event bus
@@ -158,6 +187,10 @@ export function LocationStack() {
 
   return (
     <>
+      {/* Phase 31 Plan 31-04: Universe Progress overlay (виртуальная 5-я локация). */}
+      {universeScreenActive && (
+        <UniverseProgressScreen onClose={() => setUniverseScreenActive(false)} />
+      )}
       {/* Phase 23 Plan 23-05 (Beat 4): pulse keyframes для location button после
           unlock. Bobble — scale 1.0↔1.1, 1.2s loop, infinite. CSS keyframes
           (НЕ Lottie) per memory feedback_animations. */}
@@ -193,7 +226,9 @@ export function LocationStack() {
             {(() => {
               const currentLocId = starMapActive
                 ? STAR_MAP_PROTOTYPE_ID
-                : currentLocation
+                : universeScreenActive
+                  ? UNIVERSE_RESTART_ID
+                  : currentLocation
               const idx = ordered.findIndex((l) => l.id === currentLocId)
               if (idx < 0) return null
               const BTN = 46
@@ -237,10 +272,12 @@ export function LocationStack() {
                 isCurrent={
                   loc.id === STAR_MAP_PROTOTYPE_ID
                     ? starMapActive
-                    : !starMapActive && loc.id === currentLocation
+                    : loc.id === UNIVERSE_RESTART_ID
+                      ? universeScreenActive
+                      : !starMapActive && !universeScreenActive && loc.id === currentLocation
                 }
                 isPulsing={loc.id === pulsingLocationId}
-                disabled={transitioning && loc.id !== STAR_MAP_PROTOTYPE_ID}
+                disabled={transitioning && loc.id !== STAR_MAP_PROTOTYPE_ID && loc.id !== UNIVERSE_RESTART_ID}
                 onClick={() => handleSelect(loc.id)}
               />
             ))}
@@ -255,17 +292,35 @@ export function LocationStack() {
                 disabled={transitioning}
                 onClick={toggleCollapse}
               />
+            ) : universeScreenActive ? (
+              <LocationButton
+                loc={UNIVERSE_RESTART_LOC}
+                isCurrent
+                isPulsing={UNIVERSE_RESTART_ID === pulsingLocationId}
+                disabled={transitioning}
+                onClick={toggleCollapse}
+              />
             ) : (
               <>
                 {/* Phase 22 Plan 22-06: Star Map button скрыта до cosmos unlock. */}
                 {cosmosUnlocked && (
-                  <LocationButton
-                    loc={STAR_MAP_PROTOTYPE_LOC}
-                    isCurrent={false}
-                    isPulsing={STAR_MAP_PROTOTYPE_ID === pulsingLocationId}
-                    disabled={false}
-                    onClick={() => handleSelect(STAR_MAP_PROTOTYPE_ID)}
-                  />
+                  <>
+                    <LocationButton
+                      loc={STAR_MAP_PROTOTYPE_LOC}
+                      isCurrent={false}
+                      isPulsing={STAR_MAP_PROTOTYPE_ID === pulsingLocationId}
+                      disabled={false}
+                      onClick={() => handleSelect(STAR_MAP_PROTOTYPE_ID)}
+                    />
+                    {/* Phase 31 Plan 31-04: Universe Restart button (свёрнутый стек). */}
+                    <LocationButton
+                      loc={UNIVERSE_RESTART_LOC}
+                      isCurrent={false}
+                      isPulsing={UNIVERSE_RESTART_ID === pulsingLocationId}
+                      disabled={false}
+                      onClick={() => handleSelect(UNIVERSE_RESTART_ID)}
+                    />
+                  </>
                 )}
                 <LocationButton
                   loc={getLocationById(currentLocation)}

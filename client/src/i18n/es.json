@@ -49,7 +49,8 @@
     "1": "Pantano",
     "2": "Bosque",
     "3": "Continente",
-    "6": "Mapa Estelar"
+    "6": "Mapa Estelar",
+    "5": "♻️ Reinicio"
   },
   "header": {
     "per_sec": "/seg"
@@ -1192,5 +1193,22 @@
       "description": "Para leer el hilo entero, debes ser parte de él. Sube la relación al nivel 8 — el tiempo te dejará entrar en su círculo.",
       "short": "Nivel 8 (Tejetiempos)"
     }
+  },
+  "universeRestart": {
+    "title": "Reinicio del Universo",
+    "subtitle": "Empieza de nuevo con ranas más fuertes",
+    "restartCount": "Reinicios",
+    "baseTier": "Nivel Base",
+    "maxTier": "(máximo)",
+    "progress": "Ranas L19 Creadas",
+    "restartButton": "Reiniciar Universo",
+    "closeButton": "Cerrar",
+    "cancelButton": "Cancelar",
+    "confirmTitle": "¿Estás seguro?",
+    "confirmBody": "Todas las ranas, el oro y las mejoras se resetearán. El nivel base de las ranas aumentará.",
+    "confirmButton": "Reiniciar"
+  },
+  "universe": {
+    "income_boost": "Los ingresos aumentarán en +{{percent}}%"
   }
 }
