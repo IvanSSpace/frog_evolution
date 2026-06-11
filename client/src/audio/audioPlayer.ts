@@ -17,26 +17,38 @@ import {
   saveVizEnabled,
   loadAutoResume,
   saveAutoResume,
+  loadProgress,
+  saveProgress,
+  clearProgress,
+  ensureDefaultTrack,
 } from './storage'
 
 const TRACK_LOADERS: Record<TrackId, () => Promise<{ default: CreateTrack }>> =
   {
+    hogstep: () => import('./tracks/hogstep'),
     beyondHorizon: () => import('./tracks/beyondHorizon'),
-    swampDance: () => import('./tracks/swampDance'),
-    frogJazz: () => import('./tracks/frogJazz'),
+    mushroomDrifter: () => import('./tracks/mushroomDrifter'),
   }
 
-export const TRACK_ORDER: TrackId[] = ['swampDance', 'frogJazz', 'beyondHorizon']
+export const TRACK_ORDER: TrackId[] = [
+  'hogstep',
+  'mushroomDrifter',
+  'beyondHorizon',
+]
 
 export const TRACK_TOTALS: Record<TrackId, number> = {
+  hogstep: 139,
   beyondHorizon: 420,
-  swampDance: 96,
-  frogJazz: 108,
+  mushroomDrifter: 181,
 }
 
 const CROSSFADE_SEC = 0.15
 const RAMP_DOWN_SEC = 0.5
 const DISPOSE_DELAY_MS = 4000
+// Перезашёл в приложение в течение этого окна → музыка продолжается с места
+// остановки. Позже — стартуем трек с начала.
+const RESUME_WINDOW_MS = 4 * 60 * 1000
+const PROGRESS_SAVE_INTERVAL_MS = 5000
 
 type Events = Record<PlayerEvent, void>
 
@@ -61,6 +73,11 @@ class AudioPlayer {
   private rafId: number | null = null
 
   private wasPlayingBeforeBlur = false
+  // Sync-флаг: playTrack уже выполняется (await loadTone/Tone.start/build).
+  // Блокирует параллельные вызовы → не плодим второй scheduler / track-граф.
+  private playInFlight = false
+  // true пока идёт авто-переход к следующему треку (защита от повторного триггера).
+  private advancing = false
 
   private cachedSnapshot: PlayerSnapshot = {
     status: 'idle',
@@ -136,6 +153,15 @@ class AudioPlayer {
         last = now
         this.emit('tick')
       }
+      // Трек доиграл до конца → плавно переходим к следующему (очередь по
+      // TRACK_ORDER, с заворотом). Без этого трек просто крутился бы по кругу.
+      if (this.trackId && !this.advancing) {
+        const total = TRACK_TOTALS[this.trackId]
+        if (total > 0 && this.getElapsed() >= total) {
+          this.advancing = true
+          void this.advanceToNext()
+        }
+      }
       this.rafId = requestAnimationFrame(tick)
     }
     this.rafId = requestAnimationFrame(tick)
@@ -152,6 +178,7 @@ class AudioPlayer {
     if (typeof document === 'undefined') return
     const handler = (): void => {
       if (document.hidden) {
+        this.persistProgress()
         this.wasPlayingBeforeBlur = this.status === 'playing'
         if (this.status === 'playing') void this.pause()
       } else if (this.wasPlayingBeforeBlur && this.autoResume) {
@@ -162,9 +189,40 @@ class AudioPlayer {
     document.addEventListener('visibilitychange', handler)
   }
 
+  /**
+   * Сохраняет текущую позицию + timestamp в localStorage, чтобы при
+   * перезаходе в приложение (полная перезагрузка / переоткрытие Mini App)
+   * продолжить с места остановки, если прошло не больше RESUME_WINDOW_MS.
+   * Позиция берётся по модулю длины трека (трек зациклен).
+   */
+  private persistProgress(): void {
+    if (!this.trackId) return
+    if (this.status !== 'playing' && this.status !== 'paused') return
+    const total = TRACK_TOTALS[this.trackId]
+    const pos = total > 0 ? this.getElapsed() % total : 0
+    saveProgress({ trackId: this.trackId, pos, ts: Date.now() })
+  }
+
   init(): void {
     this.setupVisibility()
     this.setupBootAutoplay()
+    if (typeof window !== 'undefined') {
+      // Пробуем завести музыку сразу, без клика. На платформах, где autoplay
+      // разрешён (Telegram WebView обычно несёт user-activation от открытия
+      // приложения), контекст резюмится и выбранный трек играет без жеста. Где
+      // браузер блокирует — остаётся фолбэк по первому жесту (setupBootAutoplay),
+      // а Tone уже прогрет, так что старт по жесту мгновенный.
+      void this.tryBootAutoplay()
+      // pagehide надёжнее beforeunload на mobile/Telegram WebView.
+      const save = (): void => this.persistProgress()
+      window.addEventListener('pagehide', save)
+      window.addEventListener('beforeunload', save)
+    }
+    // Периодический бэкап на случай жёсткого киллa процесса (нет clean unload).
+    // Синглтон живёт всю сессию — интервал не сбрасываем.
+    setInterval(() => {
+      if (this.status === 'playing') this.persistProgress()
+    }, PROGRESS_SAVE_INTERVAL_MS)
   }
 
   /**
@@ -177,22 +235,64 @@ class AudioPlayer {
    */
   private setupBootAutoplay(): void {
     if (typeof window === 'undefined') return
+    // capture: true — ловим жест в фазе погружения, ДО того как Phaser-канвас
+    // (или другой обработчик) сделает stopPropagation. Иначе тапы по игровому
+    // полю не доходят до window и музыка стартовала только после клика по
+    // DOM-контролу (напр. кнопке смены локации).
+    const opts: AddEventListenerOptions = { passive: true, capture: true }
     const start = (): void => {
-      if (this.bootPlayDone) return
-      this.bootPlayDone = true
-      window.removeEventListener('pointerdown', start)
-      window.removeEventListener('touchstart', start)
-      window.removeEventListener('click', start)
-      window.removeEventListener('keydown', start)
-      if (this.autoResume && this.status === 'idle') {
+      window.removeEventListener('pointerdown', start, opts)
+      window.removeEventListener('touchstart', start, opts)
+      window.removeEventListener('click', start, opts)
+      window.removeEventListener('keydown', start, opts)
+      // Резюмим AudioContext СИНХРОННО внутри жеста: в playTrack первый
+      // await loadTone()/import('tone') съедает активацию жеста, и последующий
+      // context.resume() игнорируется браузером — звук не появлялся до
+      // следующего тапа (смены локации). Tone прогрет в init → this.Tone есть.
+      if (this.Tone && this.Tone.context.state !== 'running') {
+        void this.Tone.start()
+      }
+      this.bootPlay()
+    }
+    window.addEventListener('pointerdown', start, opts)
+    window.addEventListener('touchstart', start, opts)
+    window.addEventListener('click', start, opts)
+    window.addEventListener('keydown', start, opts)
+  }
+
+  /** Старт выбранного трека один раз за сессию (boot). Idempotent. */
+  private bootPlay(): void {
+    if (this.bootPlayDone) return
+    this.bootPlayDone = true
+    if (this.autoResume && this.status === 'idle') {
+      // Перезаход в течение RESUME_WINDOW_MS → продолжаем с места остановки,
+      // иначе выбранный трек с начала.
+      const prog = loadProgress()
+      if (prog && Date.now() - prog.ts <= RESUME_WINDOW_MS) {
+        void this.playTrack(prog.trackId, prog.pos)
+      } else {
         void this.playTrack()
       }
     }
-    const passiveOpts: AddEventListenerOptions = { passive: true }
-    window.addEventListener('pointerdown', start, passiveOpts)
-    window.addEventListener('touchstart', start, passiveOpts)
-    window.addEventListener('click', start, passiveOpts)
-    window.addEventListener('keydown', start)
+  }
+
+  /**
+   * Попытка автоплея без клика. Прогревает Tone и пробует резюмировать контекст.
+   * Если платформа разрешила (context.state === 'running') — играем выбранный
+   * трек сразу. Если заблокировано — bootPlay не зовём, ждём первый жест.
+   */
+  private async tryBootAutoplay(): Promise<void> {
+    let Tone: ToneLib | null = null
+    try {
+      Tone = await this.loadTone()
+      await Tone.start()
+    } catch {
+      /* контекст ещё suspended — ждём жест */
+    }
+    if (!this.autoResume) return
+    if (Tone && Tone.context.state === 'running') {
+      this.bootPlay()
+    }
   }
 
   on(event: PlayerEvent, cb: () => void): () => void {
@@ -237,6 +337,11 @@ class AudioPlayer {
     return this.current?.getAnalyser() ?? null
   }
 
+  /** Каналы микшера текущего трека (для dev-страницы тюнинга). */
+  getMixer(): import('./types').MixerChannel[] {
+    return this.current?.getMixer?.() ?? []
+  }
+
   /** Загрузка трека (build, но без play). */
   async loadTrack(id: TrackId): Promise<void> {
     if (this.trackId === id && this.current) return
@@ -261,39 +366,62 @@ class AudioPlayer {
 
   async playTrack(id?: TrackId, fromSec = 0): Promise<void> {
     const targetId = id ?? this.trackId ?? TRACK_ORDER[0]
-    const Tone = await this.loadTone()
-    if (Tone.context.state !== 'running') {
-      await Tone.start()
-    }
 
-    if (this.current && this.trackId === targetId && this.status === 'paused') {
-      return this.resume()
+    // Уже играет ровно этот трек — повторный запуск создал бы второй scheduler
+    // поверх первого (наложение = «несколько песен одновременно»). No-op.
+    if (
+      this.current &&
+      this.trackId === targetId &&
+      this.status === 'playing'
+    ) {
+      return
     }
+    // Загрузка/запуск уже идёт — не плодим параллельные графы из-за гонки на
+    // await (loadTone/Tone.start/build). Текущий запуск доведёт дело сам.
+    if (this.playInFlight) return
+    this.playInFlight = true
+    try {
+      const Tone = await this.loadTone()
+      if (Tone.context.state !== 'running') {
+        await Tone.start()
+      }
 
-    if (!this.current || this.trackId !== targetId) {
-      // Crossfade if currently playing another track
-      if (this.current && this.status === 'playing') {
-        await this.crossfadeTo(targetId, fromSec)
+      if (
+        this.current &&
+        this.trackId === targetId &&
+        this.status === 'paused'
+      ) {
+        await this.resume()
         return
       }
-      await this.loadTrack(targetId)
-    }
 
-    if (!this.current) return
+      if (!this.current || this.trackId !== targetId) {
+        // Crossfade if currently playing another track
+        if (this.current && this.status === 'playing') {
+          await this.crossfadeTo(targetId, fromSec)
+          return
+        }
+        await this.loadTrack(targetId)
+      }
 
-    this.baseTime = Math.max(0, Math.min(fromSec, TRACK_TOTALS[targetId] - 1))
-    this.realStart = Date.now()
-    this.setStatus('playing')
-    if (this.trackOut) {
-      this.trackOut.volume.cancelScheduledValues(Tone.now())
-      this.trackOut.volume.value = 0
+      if (!this.current) return
+
+      this.baseTime = Math.max(0, Math.min(fromSec, TRACK_TOTALS[targetId] - 1))
+      this.realStart = Date.now()
+      this.setStatus('playing')
+      if (this.trackOut) {
+        this.trackOut.volume.cancelScheduledValues(Tone.now())
+        this.trackOut.volume.value = 0
+      }
+      this.current.startScheduler(this.baseTime, {
+        getElapsed: () => this.getElapsed(),
+        isPlaying: () => this.status === 'playing',
+        onSectionChange: (idx) => this.setSection(idx),
+      })
+      this.startUiTick()
+    } finally {
+      this.playInFlight = false
     }
-    this.current.startScheduler(this.baseTime, {
-      getElapsed: () => this.getElapsed(),
-      isPlaying: () => this.status === 'playing',
-      onSectionChange: (idx) => this.setSection(idx),
-    })
-    this.startUiTick()
   }
 
   async pause(): Promise<void> {
@@ -305,6 +433,7 @@ class AudioPlayer {
     }
     this.stopUiTick()
     this.setStatus('paused')
+    this.persistProgress()
   }
 
   async resume(): Promise<void> {
@@ -336,6 +465,7 @@ class AudioPlayer {
     this.baseTime = 0
     this.sectionIdx = 0
     this.setStatus('idle')
+    clearProgress()
   }
 
   seekTo(sec: number): void {
@@ -431,11 +561,27 @@ class AudioPlayer {
     this.startUiTick()
   }
 
+  /** Следующий трек в очереди (TRACK_ORDER, с заворотом). */
+  private async advanceToNext(): Promise<void> {
+    try {
+      const cur = this.trackId ?? TRACK_ORDER[0]
+      const idx = TRACK_ORDER.indexOf(cur)
+      const next = TRACK_ORDER[(idx + 1) % TRACK_ORDER.length]
+      await this.playTrack(next, 0)
+    } finally {
+      this.advancing = false
+    }
+  }
+
   /** Хелпер для UI: подписаться на смену секции. */
   onSectionChange(cb: () => void): () => void {
     return this.on('section', cb)
   }
 }
+
+// Миграция дефолта ДО конструктора: поля trackId/cachedSnapshot читают
+// loadSelectedTrack() при создании инстанса.
+if (typeof window !== 'undefined') ensureDefaultTrack()
 
 export const audioPlayer = new AudioPlayer()
 

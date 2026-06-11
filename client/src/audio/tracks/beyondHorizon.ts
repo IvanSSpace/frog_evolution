@@ -1,7 +1,7 @@
 import type * as ToneNS from 'tone'
 import type { CreateTrack, TrackInstance } from '../types'
 import { TRACK_META } from './index'
-import { NodeBag, TimerBag, transpose } from './_helpers'
+import { NodeBag, TimerBag, transpose, Mixer } from './_helpers'
 
 const SECTIONS = TRACK_META.beyondHorizon.sections
 
@@ -88,6 +88,7 @@ interface Voices {
 const create: CreateTrack = (Tone): TrackInstance => {
   const nodes = new NodeBag()
   const timers = new TimerBag()
+  const mixer = new Mixer()
   let analyser: ToneNS.Analyser | null = null
   let voices: Voices | null = null
 
@@ -239,6 +240,16 @@ const create: CreateTrack = (Tone): TrackInstance => {
         strings,
         bass,
       }
+
+      mixer.add('pedal1', 'Пэд 1', pedal1)
+      mixer.add('pedal2', 'Пэд 2', pedal2)
+      mixer.add('pedal3', 'Пэд 3', pedal3)
+      mixer.add('pedal4', 'Пэд 4', pedal4)
+      mixer.add('piano', 'Пиано', piano)
+      mixer.add('theme', 'Тема', theme)
+      mixer.add('themeHigh', 'Тема (выс.)', themeHigh)
+      mixer.add('strings', 'Струнные', strings)
+      mixer.add('bass', 'Бас', bass)
     },
 
     startScheduler(fromSec, ctx) {
@@ -400,6 +411,7 @@ const create: CreateTrack = (Tone): TrackInstance => {
     },
 
     getAnalyser: () => analyser,
+    getMixer: () => mixer.channels(),
   }
 }
 

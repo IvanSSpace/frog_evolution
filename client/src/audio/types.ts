@@ -16,12 +16,20 @@ export interface TrackMeta {
   sections: TrackSection[]
 }
 
-export type TrackId = 'beyondHorizon' | 'swampDance' | 'frogJazz'
+export type TrackId = 'hogstep' | 'beyondHorizon' | 'mushroomDrifter'
 
 export interface RuntimeContext {
   getElapsed: () => number
   isPlaying: () => boolean
   onSectionChange: (idx: number) => void
+}
+
+// Один канал микшера — голос трека с регулируемой громкостью (dB, live).
+export interface MixerChannel {
+  id: string
+  label: string
+  getDb: () => number
+  setDb: (db: number) => void
 }
 
 export interface TrackInstance {
@@ -31,6 +39,8 @@ export interface TrackInstance {
   stopScheduler: () => void
   dispose: () => Promise<void>
   getAnalyser: () => ToneNS.Analyser | null
+  /** Каналы микшера (голоса с громкостью). Доступны после build. */
+  getMixer?: () => MixerChannel[]
 }
 
 export type CreateTrack = (Tone: ToneLib) => TrackInstance

@@ -4,6 +4,7 @@ const KEY_VOLUME = 'audio.volume'
 const KEY_TRACK = 'audio.selectedTrack'
 const KEY_VIZ = 'audio.vizEnabled'
 const KEY_AUTORESUME = 'audio.autoResume'
+const KEY_PROGRESS = 'audio.progress'
 
 export function loadVolumeDb(): number {
   const raw = localStorage.getItem(KEY_VOLUME)
@@ -18,9 +19,9 @@ export function saveVolumeDb(db: number): void {
 }
 
 const VALID_TRACKS: ReadonlySet<TrackId> = new Set<TrackId>([
+  'hogstep',
   'beyondHorizon',
-  'swampDance',
-  'frogJazz',
+  'mushroomDrifter',
 ])
 
 export function loadSelectedTrack(): TrackId | null {
@@ -50,4 +51,58 @@ export function loadAutoResume(): boolean {
 
 export function saveAutoResume(v: boolean): void {
   localStorage.setItem(KEY_AUTORESUME, v ? '1' : '0')
+}
+
+/** Последняя позиция воспроизведения для resume при перезаходе в приложение. */
+export interface AudioProgress {
+  trackId: TrackId
+  pos: number // позиция внутри трека (0..totalSec), уже по модулю петли
+  ts: number // Date.now() момента сохранения
+}
+
+export function loadProgress(): AudioProgress | null {
+  const raw = localStorage.getItem(KEY_PROGRESS)
+  if (!raw) return null
+  try {
+    const p = JSON.parse(raw) as Partial<AudioProgress>
+    if (
+      typeof p.pos === 'number' &&
+      Number.isFinite(p.pos) &&
+      typeof p.ts === 'number' &&
+      Number.isFinite(p.ts) &&
+      typeof p.trackId === 'string' &&
+      VALID_TRACKS.has(p.trackId as TrackId)
+    ) {
+      return { trackId: p.trackId as TrackId, pos: p.pos, ts: p.ts }
+    }
+  } catch {
+    /* corrupt — игнорируем */
+  }
+  return null
+}
+
+export function saveProgress(p: AudioProgress): void {
+  localStorage.setItem(KEY_PROGRESS, JSON.stringify(p))
+}
+
+export function clearProgress(): void {
+  localStorage.removeItem(KEY_PROGRESS)
+}
+
+const KEY_DEFAULT_TRACK_V2 = 'audio.defaultTrackV2'
+
+/**
+ * Одноразовая миграция дефолта на hogstep. У существующих юзеров в
+ * audio.selectedTrack лежит старый авто-дефолт (записан playTrack до появления
+ * hogstep), из-за чего hogstep не играет. Один раз перетираем выбор на hogstep;
+ * дальше осознанный выбор юзера сохраняется как обычно и не трогается.
+ */
+export function ensureDefaultTrack(): void {
+  try {
+    if (localStorage.getItem(KEY_DEFAULT_TRACK_V2) === '1') return
+    localStorage.setItem(KEY_DEFAULT_TRACK_V2, '1')
+    localStorage.setItem(KEY_TRACK, 'hogstep')
+  } catch {
+    /* нет localStorage — дефолт и так hogstep через TRACK_ORDER[0] */
+  }
 }

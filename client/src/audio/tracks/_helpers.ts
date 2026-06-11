@@ -73,6 +73,35 @@ export class NodeBag {
   }
 }
 
+// Нода с регулируемой громкостью: у Tone-синтов и Tone.Volume есть `.volume`
+// (Param в децибелах). Достаточно для live-микшера.
+interface VolumeNode {
+  volume: { value: number }
+}
+
+/**
+ * Микшер трека: регистрирует именованные голоса с их громкостью (dB) и отдаёт
+ * каналы для UI-ползунков. Менять value можно на лету — Tone применяет сразу.
+ */
+export class Mixer {
+  private chans: import('../types').MixerChannel[] = []
+
+  add(id: string, label: string, node: VolumeNode): void {
+    this.chans.push({
+      id,
+      label,
+      getDb: () => node.volume.value,
+      setDb: (db) => {
+        node.volume.value = db
+      },
+    })
+  }
+
+  channels(): import('../types').MixerChannel[] {
+    return this.chans
+  }
+}
+
 /** Управляет списком таймеров (setTimeout/setInterval). */
 export class TimerBag {
   ids: ReturnType<typeof setTimeout>[] = []
