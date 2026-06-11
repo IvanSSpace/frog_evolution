@@ -26,6 +26,8 @@ type Events = {
   'rareCrate:claim': { level: number }
   'starmap:open': void
   'starmap:close': void
+  'universe:open': void
+  'universe:close': void
   // Pan камеры к указанной планете (по id из MAIN_RACES). Используется
   // для навигации в StarMap.
   'starmap:focus-planet': { planetId: string }

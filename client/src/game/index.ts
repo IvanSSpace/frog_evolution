@@ -3,6 +3,7 @@ import { MainScene } from './scenes/MainScene'
 import { StarMapScene } from './scenes/StarMapScene'
 import { ShipDeckScene } from './scenes/ship/ShipDeckScene'
 import { SurvivorScene } from './scenes/survivor/SurvivorScene'
+import { UniverseRestartScene } from './scenes/UniverseRestartScene'
 import { eventBus } from '../store/eventBus'
 import { useGameStore } from '../store/gameStore'
 
@@ -97,6 +98,7 @@ export function startGame(): Phaser.Game {
       StarMapScene,
       ShipDeckScene,
       SurvivorScene,
+      UniverseRestartScene,
     ],
     physics: {
       default: 'arcade',
@@ -220,6 +222,65 @@ export function startGame(): Phaser.Game {
   })
   eventBus.on('shipdeck:launch', closeShipDeck)
   eventBus.on('shipdeck:cancel', closeShipDeck)
+
+  // Universe Restart prestige screen — UniverseRestartScene (Phaser).
+  // Простой sleep/wake как ShipDeckScene (без dual-container zoom).
+  const UNIVERSE_FADE_MS = 350
+  let universeTransitioning = false
+
+  eventBus.on('universe:open', () => {
+    if (universeTransitioning) return
+    if (sm().isActive('UniverseRestartScene')) return
+    universeTransitioning = true
+
+    if (sm().isActive('MainScene')) sm().sleep('MainScene')
+
+    if (sm().isSleeping('UniverseRestartScene')) {
+      sm().wake('UniverseRestartScene')
+    } else {
+      sm().start('UniverseRestartScene')
+    }
+
+    const waitForScene = () => {
+      const scene = sm().getScene('UniverseRestartScene') as Phaser.Scene
+      if (!scene || !scene.cameras?.main) {
+        requestAnimationFrame(waitForScene)
+        return
+      }
+      const cam = scene.cameras.main
+      cam.setAlpha(0)
+      scene.tweens.add({
+        targets: cam,
+        alpha: 1,
+        duration: UNIVERSE_FADE_MS,
+        ease: 'Sine.easeOut',
+        onComplete: () => {
+          universeTransitioning = false
+        },
+      })
+    }
+    requestAnimationFrame(waitForScene)
+  })
+
+  eventBus.on('universe:close', () => {
+    if (universeTransitioning) return
+    if (!sm().isActive('UniverseRestartScene')) return
+    universeTransitioning = true
+
+    const scene = sm().getScene('UniverseRestartScene') as Phaser.Scene
+    const cam = scene.cameras.main
+    scene.tweens.add({
+      targets: cam,
+      alpha: 0,
+      duration: UNIVERSE_FADE_MS,
+      ease: 'Sine.easeIn',
+    })
+    scene.time.delayedCall(UNIVERSE_FADE_MS, () => {
+      sm().sleep('UniverseRestartScene')
+      if (sm().isSleeping('MainScene')) sm().wake('MainScene')
+      universeTransitioning = false
+    })
+  })
 
   // VS-арена миссии (Survivor). Запускается из ShipDeckScene кнопкой «На миссию».
   // ShipDeck уже усыпил MainScene (shipdeck:open) → усыпляем ShipDeck, стартуем

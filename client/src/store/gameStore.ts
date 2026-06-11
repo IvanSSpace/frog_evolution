@@ -207,6 +207,10 @@ interface GameStateBase {
   battleSceneActive: boolean
   setBattleSceneActive: (v: boolean) => void
 
+  /** True пока активна UniverseRestartScene (Phaser). Transient — не персистируется. */
+  universeSceneActive: boolean
+  setUniverseSceneActive: (b: boolean) => void
+
   // Phase 31: Universe Restart prestige state.
   // l19Count — кумулятивный счётчик создания L19 за текущую вселенную (0..5).
   // baseTier — глобальный пол тира спавна (0=base, 1, 2). CAP=2.
@@ -546,6 +550,9 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   battleSceneActive: false,
   setBattleSceneActive: (v) => set({ battleSceneActive: v }),
+
+  universeSceneActive: false,
+  setUniverseSceneActive: (b) => set({ universeSceneActive: b }),
 
   // ============== PHASE 31: UNIVERSE RESTART ==============
 

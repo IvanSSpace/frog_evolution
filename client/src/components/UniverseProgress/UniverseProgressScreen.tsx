@@ -62,18 +62,21 @@ export function UniverseProgressScreen({ onClose }: Props) {
   }
 
   return (
-    // zIndex=70: между StarMap (50) и CosmicHub (100)
+    // zIndex=70: между StarMap (50) и CosmicHub (100).
+    // Фон прозрачный — Phaser UniverseRestartScene видна позади.
+    // Виньетка по краям даёт глубину без полного перекрытия сцены.
     <div
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 70,
-        background: 'rgba(0,0,0,0.85)',
+        background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.6) 100%)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '24px',
+        touchAction: 'manipulation',
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()

@@ -33,6 +33,7 @@ import { OnboardingController } from './components/Onboarding/OnboardingControll
 import { CaptainBirthModal } from './components/Captain/CaptainBirthModal'
 import { installCaptainBirthController } from './components/Captain/captainBirthController'
 import { StarUnionsModal } from './components/StarUnions/StarUnionsModal'
+import { UniverseProgressScreen } from './components/UniverseProgress/UniverseProgressScreen'
 import { installBestiaryDevHelpers } from './utils/devHelpers'
 import { installFrogTierDevHelpers } from './utils/devFrogTiers'
 import { installOnboardingDevHelpers } from './utils/onboardingDevHelpers'
@@ -74,6 +75,8 @@ function App() {
   const [bootState, setBootState] = useState<'loading' | 'ready' | 'offline'>(
     'loading',
   )
+  const universeSceneActive = useGameStore((s) => s.universeSceneActive)
+  const setUniverseSceneActive = useGameStore((s) => s.setUniverseSceneActive)
 
   useEffect(() => {
     let cancelled = false
@@ -204,6 +207,14 @@ function App() {
   useEffect(() => {
     installCaptainBirthController()
   }, [])
+
+  useEffect(() => {
+    if (universeSceneActive) document.body.classList.add('universe-mode')
+    else document.body.classList.remove('universe-mode')
+    return () => {
+      document.body.classList.remove('universe-mode')
+    }
+  }, [universeSceneActive])
 
   // Космическая экспедиция: ShipDeckScene ↔ модалка. На «Снарядить» модалка
   // закрывается (видна Phaser-сцена). Сцена эмитит launch (старт экспедиции с
@@ -370,6 +381,14 @@ function App() {
       <MagnetToggle />
       <StarMapHUD />
       <ShipFollowButton />
+      {universeSceneActive && (
+        <UniverseProgressScreen
+          onClose={() => {
+            eventBus.emit('universe:close')
+            setUniverseSceneActive(false)
+          }}
+        />
+      )}
       {/* 2026-05-29: SerumBar убран с поля — серумы теперь применяются только
          из InventoryModal (см. InvSlot → Применить). */}
       <LocationStack />
