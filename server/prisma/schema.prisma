@@ -47,6 +47,9 @@ model GameState {
   boxOpenCount     Int      @default(0) @map("box_open_count")
   incomePerSec     Float    @default(0) @map("income_per_sec")
   version          Int      @default(0)
+  universeRestartCount Int  @default(0) @map("universe_restart_count")
+  baseTier         Int      @default(0) @map("base_tier")
+  l19Count         Int      @default(0) @map("l19_count")
   lastSessionAt    DateTime @default(now()) @map("last_session_at")
 
   createdAt DateTime @default(now()) @map("created_at")
