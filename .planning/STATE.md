@@ -4,24 +4,24 @@ milestone: v2.0
 milestone_name: cosmic-frogs-system
 current_phase: 31-universe-restart
 status: in-progress
-last_updated: "2026-06-11T13:10:00.000Z"
+last_updated: "2026-06-11T14:30:00.000Z"
 progress:
   total_phases: 21
   completed_phases: 8
   total_plans: 64
-  completed_plans: 53
-  percent: 82
+  completed_plans: 54
+  percent: 84
 phase_31_progress:
-  current_plan: 5
+  current_plan: 6
   total_plans: 7
-  completed_plans: [01, 02, 03, 04]
+  completed_plans: [01, 02, 03, 04, 05]
 ---
 
 # Project State
 
 **Milestone:** Cosmic Frogs System (v2.0) — **IN PROGRESS (Phase 31)**
-**Status:** Phase 31-universe-restart active — Plan 04 complete (Universe Restart UI + i18n)
-**Current Phase:** 31-universe-restart (Plan 04/07 done)
+**Status:** Phase 31-universe-restart active — Plan 05 complete (Evolution removal + baseTier income)
+**Current Phase:** 31-universe-restart (Plan 05/07 done)
 **Last Updated:** 2026-06-11
 
 ## Phase 31 Progress
@@ -32,9 +32,12 @@ phase_31_progress:
 | 31-02 | Client state — l19Count/baseTier/universeRestartCount + applyRestartState | **complete** (2026-06-11) |
 | 31-03 | l19Count hook + baseTier spawn repurpose | **complete** (2026-06-11) |
 | 31-04 | Universe Restart UI — LocationStack id=5 + UniverseProgressScreen + i18n | **complete** (2026-06-11) |
-| 31-05..07 | Remaining plans | pending |
+| 31-05 | Evolution removal + baseTier income multiplier (FIX 1) | **complete** (2026-06-11) |
+| 31-06..07 | Remaining plans | pending |
 
 ### Phase 31 Decisions
+- Plan 05: addGold income multiplier = 0.10 * baseTier (replaces getEvolutionBonusFraction); Header and GalleryModal updated to match
+- Plan 05: frogTiers/frogTierCooldowns/upgradeFrogTier fully removed from store; evolution.ts deleted
 - applyRestartState сбрасывает locationFrogs=[[1],[],[]] hardcoded (3 loc init)
 - FIX 3: l18MergesCount/l18AbsoluteBonusPerSec явно сбрасываются в applyRestartState с очисткой localStorage
 - FIX 4: полный defensive client wipe до post-restart reload
