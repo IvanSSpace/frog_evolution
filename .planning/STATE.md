@@ -4,24 +4,24 @@ milestone: v2.0
 milestone_name: cosmic-frogs-system
 current_phase: 31-universe-restart
 status: in-progress
-last_updated: "2026-06-11T12:24:00.000Z"
+last_updated: "2026-06-11T13:10:00.000Z"
 progress:
   total_phases: 21
   completed_phases: 8
   total_plans: 64
-  completed_plans: 52
-  percent: 81
+  completed_plans: 53
+  percent: 82
 phase_31_progress:
-  current_plan: 4
+  current_plan: 5
   total_plans: 7
-  completed_plans: [01, 02, 03]
+  completed_plans: [01, 02, 03, 04]
 ---
 
 # Project State
 
 **Milestone:** Cosmic Frogs System (v2.0) — **IN PROGRESS (Phase 31)**
-**Status:** Phase 31-universe-restart active — Plan 03 complete (l19Count hook + baseTier spawn wired)
-**Current Phase:** 31-universe-restart (Plan 03/07 done)
+**Status:** Phase 31-universe-restart active — Plan 04 complete (Universe Restart UI + i18n)
+**Current Phase:** 31-universe-restart (Plan 04/07 done)
 **Last Updated:** 2026-06-11
 
 ## Phase 31 Progress
@@ -31,13 +31,17 @@ phase_31_progress:
 | 31-01 | Backend prestige endpoint (Prisma + POST /game/restart) | **complete** (2026-06-11) |
 | 31-02 | Client state — l19Count/baseTier/universeRestartCount + applyRestartState | **complete** (2026-06-11) |
 | 31-03 | l19Count hook + baseTier spawn repurpose | **complete** (2026-06-11) |
-| 31-04..07 | Remaining plans | pending |
+| 31-04 | Universe Restart UI — LocationStack id=5 + UniverseProgressScreen + i18n | **complete** (2026-06-11) |
+| 31-05..07 | Remaining plans | pending |
 
 ### Phase 31 Decisions
 - applyRestartState сбрасывает locationFrogs=[[1],[],[]] hardcoded (3 loc init)
 - FIX 3: l18MergesCount/l18AbsoluteBonusPerSec явно сбрасываются в applyRestartState с очисткой localStorage
 - FIX 4: полный defensive client wipe до post-restart reload
 - baseTier cap=2 применяется как на сервере, так и на клиенте (дублированная защита)
+- Plan 04: UNIVERSE_RESTART_ID=5 (не 4, не конфликтует с LOCATION_UNLOCK_THRESHOLD индексом)
+- Plan 04: apiFetch используется вместо raw fetch для авторизованных вызовов
+- Plan 04: universeRestart.closeButton/cancelButton вместо common.close/cancel (эти ключи не существовали)
 
 ## Phase Progress
 
