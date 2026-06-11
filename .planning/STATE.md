@@ -2,23 +2,41 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: cosmic-frogs-system
-current_phase: 29
-status: completed
-last_updated: "2026-05-19T12:00:00.000Z"
+current_phase: 31-universe-restart
+status: in-progress
+last_updated: "2026-06-11T12:25:00.000Z"
 progress:
-  total_phases: 17
+  total_phases: 21
   completed_phases: 8
-  total_plans: 54
-  completed_plans: 52
-  percent: 96
+  total_plans: 64
+  completed_plans: 51
+  percent: 80
+phase_31_progress:
+  current_plan: 3
+  total_plans: 7
+  completed_plans: [01, 02]
 ---
 
 # Project State
 
-**Milestone:** Cosmic Frogs System (v2.0) — **COMPLETE**
-**Status:** Complete — Phase 29 closed (Admin Panel MVP — separate Vite 5 + React 19 + TypeScript admin app in admin/, 6 Fastify /admin/* routes, bcryptjs + JWT auth, Prisma User.banned migration, TanStack Table + React Query + shadcn/ui, Login/Dashboard/Users/UserDetail pages, grant gold/essence/serum + ban toggle actions, DashboardPage Recharts placeholder). All 29 PHASE29-* REQ-IDs covered.
-**Current Phase:** 29 (complete); Phase 20 (Pre-release safety net) deferred до prod-релиза
-**Last Updated:** 2026-05-19
+**Milestone:** Cosmic Frogs System (v2.0) — **IN PROGRESS (Phase 31)**
+**Status:** Phase 31-universe-restart active — Plan 02 complete (client state foundation done)
+**Current Phase:** 31-universe-restart (Plan 02/07 done)
+**Last Updated:** 2026-06-11
+
+## Phase 31 Progress
+
+| Plan | Name | Status |
+|------|------|--------|
+| 31-01 | Backend prestige endpoint (Prisma + POST /game/restart) | **complete** (2026-06-11) |
+| 31-02 | Client state — l19Count/baseTier/universeRestartCount + applyRestartState | **complete** (2026-06-11) |
+| 31-03..07 | Remaining plans | pending |
+
+### Phase 31 Decisions
+- applyRestartState сбрасывает locationFrogs=[[1],[],[]] hardcoded (3 loc init)
+- FIX 3: l18MergesCount/l18AbsoluteBonusPerSec явно сбрасываются в applyRestartState с очисткой localStorage
+- FIX 4: полный defensive client wipe до post-restart reload
+- baseTier cap=2 применяется как на сервере, так и на клиенте (дублированная защита)
 
 ## Phase Progress
 
