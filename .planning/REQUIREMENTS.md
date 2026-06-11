@@ -342,4 +342,22 @@
 
 ---
 
-**Last updated:** 2026-05-08 — initial REQUIREMENTS for milestone v2.0
+## Phase 31 — Universe Restart (prestige) (2026-06-11)
+
+| ID | Requirement |
+|----|-------------|
+| UNIV31-RESTART-TRIGGER | Рестарт доступен когда кумулятивный счётчик «достиг L19» за текущую вселенную = 5. UI индикация доступности. |
+| UNIV31-L19-COUNTER | Счётчик инкрементится при каждом создании L19-лягушки (хук в MergeController L18+L18→L19). Персист, cross-device. Обнуляется на рестарт. |
+| UNIV31-RESTART-ACTION | Действие рестарта: wipe лягушек на всех локациях + золото + апгрейды прокачки + открытые локации (→ только Loc1). `baseTier += 1` (кап на макс-тире). `universeRestartCount += 1`. `l19Count = 0`. Confirm-модалка. |
+| UNIV31-BASE-TIER | Спавн лягушек использует `baseTier` как пол тира (frogTiers floor). Тир-0 базовый → после рестартов тир-1, тир-2. Кап = текущие 3 тира (0/1/2). |
+| UNIV31-NEW-LOCATION | Новая 4-я локация (переключаемая через LocationStack): экран прогресса рестарта («сколько ещё L19») + кнопка рестарта. Иконка-слот в LocationStack + LocationButton. |
+| UNIV31-REMOVE-EVOLUTION | Удалить старую механику эволюции: frogTiers-evolution UI, evoblock на Loc3, FrogShopModal evolution-секцию, EvolutionModal/EvolutionCenter. Перепривязать frogTiers-спавн к baseTier. |
+| UNIV31-STATE | Новые поля стейта: `universeRestartCount`, `baseTier`, `l19Count`. gameStore + persistence (localStorage). |
+| UNIV31-BACKEND | Серверные колонки (Prisma) для restart-count/baseTier/l19Count + restart-endpoint (атомарный wipe+increment) + cross-device sync через gameSync. |
+| UNIV31-MIGRATION | Prisma-миграция новых колонок + клиент-миграция дефолтов (restartCount=0, baseTier=0, l19Count=0) на старых сейвах без краша. |
+| UNIV31-I18N | RU/EN/ES для новой локации, экрана прогресса, confirm-рестарта, тостов. |
+| UNIV31-SMOKE | Smoke-чеклист: счётчик растёт на L19, рестарт вайпает+бампит тир, новая локация показывает прогресс, старая эволюция отсутствует, старый сейв мигрирует. |
+
+---
+
+**Last updated:** 2026-06-11 — Phase 31 Universe Restart prestige requirements (11 UNIV31-* IDs)

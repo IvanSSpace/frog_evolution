@@ -796,6 +796,24 @@ Plans:
 
 **Outcome:** Admin panel MVP shipped. Separate Vite 5 + React 19 + TypeScript standalone app in `admin/` (own package.json, port 5174) with Tailwind CSS v3 dark mode + shadcn/ui CSS variable tokens. Frontend: React Router v6 routes (/login + / + /users + /users/:id), ProtectedRoute + AppShell (top nav + sidebar), Zustand-free auth via sessionStorage helpers (getToken/setToken/clearToken/isAuthenticated), Axios with Bearer auth interceptor + 401→logout, TanStack Query v5 (staleTime 30s, refetchOnWindowFocus=false), TanStack Table v8 with server-side pagination + search on UsersPage, React Hook Form + Zod validation on grant forms, shadcn/ui components (Button/Input/Label/Card/Badge/Table/Toast). Backend: bcryptjs installed, User.banned Boolean @default(false) Prisma migration (non-breaking), @fastify/jwt + @fastify/cors plugins, requireAdmin JWT middleware, 6 admin routes (POST /admin/login bcrypt compare + JWT 24h; GET /admin/users paginated search; GET /admin/users/:id full game state; POST .../grant gold/essence/serum; POST .../ban). DashboardPage with Recharts LineChart (mock data 7-day signups — real analytics deferred Phase 30). SMOKE_TEST_29.md 9 scenarios A-I. 29/29 REQ-IDs covered (PHASE29-ADMIN-APP-SCAFFOLD, PHASE29-VITE-CONFIG, PHASE29-TAILWIND-CONFIG, PHASE29-SHADCN-INIT, PHASE29-ROUTER-SETUP, PHASE29-AXIOS-INTERCEPTOR, PHASE29-REACT-QUERY-SETUP, PHASE29-PRISMA-BANNED-FIELD, PHASE29-FASTIFY-JWT-PLUGIN, PHASE29-FASTIFY-CORS-PLUGIN, PHASE29-BCRYPT-DEP, PHASE29-ADMIN-LOGIN-ROUTE, PHASE29-JWT-MIDDLEWARE, PHASE29-ADMIN-USERS-LIST-ROUTE, PHASE29-ADMIN-USER-DETAIL-ROUTE, PHASE29-ADMIN-GRANT-ROUTE, PHASE29-ADMIN-BAN-ROUTE, PHASE29-LOGIN-SCREEN, PHASE29-DASHBOARD-PLACEHOLDER, PHASE29-USERS-LIST-TABLE, PHASE29-USER-DETAIL-VIEW, PHASE29-GRANT-FORMS, PHASE29-BAN-TOGGLE, PHASE29-APP-SHELL, PHASE29-PROTECTED-ROUTE, PHASE29-ENV-CONFIG, PHASE29-BUILD-CHAIN, PHASE29-SMOKE, PHASE29-FINALIZE).
 
+### Phase 31: Universe Restart (prestige) — rework evolution
+
+**Status:** planning (2026-06-11)
+**Goal:** Заменить текущую систему эволюции (`frogTiers` per-level 0/1/2) на prestige-механику **«Перезапуск вселенной»**. Игрок копит достижения L19 (создать L19-лягушку 5 раз кумулятивно за вселенную); по достижении — может перезапустить вселенную: теряет всех лягушек + золото + апгрейды + открытые локации (старт с нуля, только Loc1), НО базовый тир спавна лягушек поднимается на +1 (после рестарта спавнятся тир-2 вместо тир-1, и т.д.). Добавить отдельную 4-ю локацию-экран прогресса рестарта (в LocationStack). Большое обновление: фронт + бэкенд (новые поля стейта, миграция, restart-endpoint, cross-device sync).
+
+**Scope decisions (locked, user 2026-06-11):**
+- Триггер: кумулятивный счётчик «достиг L19» = 5 за текущую вселенную → рестарт доступен; после рестарта счётчик обнуляется (снова 5).
+- Рестарт сбрасывает: лягушки на локациях, золото, апгрейды прокачки, открытые локации (назад к Loc1). Сохраняет: `baseTier`, `universeRestartCount`. Бестиарий/космос-анлок — решить в плане (по умолчанию сохранить как мета-коллекцию/гейт).
+- База-тир: каждый рестарт +1 базовый тир спавна, КАП на 3 тирах (текущие 0/1/2). После макс-тира рестарт продолжает работать но tier-бонуса нет (расширение тиров — позже с новыми ассетами, placeholder).
+- Новая 4-я локация: переключаемая, экран прогресса («сколько ещё L19 нужно») + кнопка рестарта (confirm). Иконка-слот в `LocationStack`.
+- Старая эволюция (`frogTiers` UI / evoblock на Loc3 / FrogShopModal evolution) — удаляется полностью; `frogTiers`-спавн перепривязывается к `baseTier` как полу.
+
+**Source design:** inline scope session 2026-06-11 (no spec file — memory `feedback_superpowers_workflow`)
+**Requirements**: UNIV31-RESTART-TRIGGER, UNIV31-L19-COUNTER, UNIV31-RESTART-ACTION, UNIV31-BASE-TIER, UNIV31-NEW-LOCATION, UNIV31-REMOVE-EVOLUTION, UNIV31-STATE, UNIV31-BACKEND, UNIV31-MIGRATION, UNIV31-I18N, UNIV31-SMOKE
+**Depends on:** Phase 29 (текущая база — 30 мая после отката)
+
+**Plans:** TBD (full pipeline: research → pattern → plan → check)
+
 ---
 
-**Last updated:** 2026-05-19 — Phase 29 complete (6 plans; separate admin/ app in monorepo)
+**Last updated:** 2026-06-11 — Phase 31 added (Universe Restart prestige; reworks evolution; front+back)
